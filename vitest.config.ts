@@ -21,6 +21,7 @@ export default defineConfig({
     include: [
       'src/**/*.test.{ts,tsx}',
       'supabase/functions/_shared/**/*.test.ts',
+      'tests/**/*.test.ts',
     ],
     exclude: ['e2e/**', 'node_modules/**'],
     coverage: {

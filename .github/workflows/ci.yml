@@ -28,6 +28,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Generated seed is up to date
+        run: npm run seed:check
+
       - name: Unit tests
         run: npm run test
 

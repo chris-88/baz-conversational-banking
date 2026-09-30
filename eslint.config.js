@@ -122,6 +122,8 @@ export default tseslint.config(
       'src/test/**/*.{ts,tsx}',
       'e2e/**/*.ts',
       'evals/**/*.ts',
+      // CLI scripts: printing is the point.
+      'scripts/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
@@ -137,7 +139,7 @@ export default tseslint.config(
 
   // ---- Node-side config and scripts ----
   {
-    files: ['*.config.{ts,js}', 'eslint.config.js', 'evals/**/*.ts'],
+    files: ['*.config.{ts,js}', 'eslint.config.js', 'evals/**/*.ts', 'scripts/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
 )

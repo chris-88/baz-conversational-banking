@@ -12,6 +12,8 @@
     "vitest.config.ts",
     "playwright.config.ts",
     "e2e",
-    "evals"
+    "evals",
+    "scripts",
+    "tests"
   ]
 }

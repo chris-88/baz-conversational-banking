@@ -43,3 +43,41 @@ section.
   partner and audience surfaces is the obvious fix, deferred to M9 unless §60 bites sooner.
 - **Base path**: `VITE_BASE_PATH` is `/` locally. It must become `/<repo>/` for
   `github.io` hosting, or stay `/` behind a custom domain.
+
+## 2026-09-30 — M1 domain core
+
+- **2026-09-30** — `Requirement` carries an explicit `kind` discriminant rather than inferring
+  "fact" from the presence of a `fact` property, as CLAUDE.md's illustrative snippet does. The
+  representation is an implementation decision (§8), and an explicit discriminant is what lets
+  every consumer switch exhaustively as the engineering standards require. §8
+- **2026-09-30** — A journey requirement's `reuse` may only *tighten* the catalogue's policy.
+  The stricter of the two wins, so nothing can loosen `never` on health data however a journey
+  asks for it. §11, Invariant 6
+- **2026-09-30** — A branch condition receives a confirmation reader as well as a fact reader.
+  This is what keeps protection's health questions behind an explicit consent confirmation
+  rather than behind a fact, and the partner behind their own consent. §7.5, Invariant 6
+- **2026-09-30** — A fact with `capturedFor = null` (general conversation, or bank-held) counts
+  as *reused* rather than asked. So `auto` reuses it silently, `confirm` offers it for
+  confirmation, and `fresh` still re-asks — which is what stops a legal declaration being
+  satisfied by something said in passing. §11, §53
+- **2026-09-30** — Added an `application_confirmations` table, which is not in CLAUDE.md's table
+  list. The requirement engine needs per-application confirmations, and they are distinct from
+  `consents`: a reuse confirmation is not a consent. The schema is left to the team (§9).
+- **2026-09-30** — Database literals are `CHECK` constraints, not Postgres enums, so the spec
+  can still move during the build. The cost is drift, so `state-literals.test.ts` parses the
+  migration and fails if the literals disagree with the TypeScript unions.
+- **2026-09-30** — One application per product per case (`unique (case_id, product)`). §12
+  independence is per product; the demo never needs two of the same product.
+- **2026-09-30** — `supabase/seed.sql` is generated from `seed/canonical.ts` by
+  `npm run seed:generate`, and CI fails if it is stale. The canonical case is defined once, in
+  the place where it is tested against the fact catalogue. §43
+- **2026-09-30** — Reset state is the *start* of the story: existing customer, authenticated,
+  bank-held facts loaded, but no applications, product interests or conversation. Baz discovers
+  all of that live. §43, §46
+
+## Open, needs a decision
+
+- **The migration is unverified.** `supabase/migrations/20260930210000_init.sql` has never been
+  applied: the Docker daemon is not running on this machine and the user is not in the `docker`
+  group, and there is no local Postgres to check the SQL against. It needs
+  `npx supabase start && npx supabase db reset` before it can be trusted.
