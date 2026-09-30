@@ -1,0 +1,36 @@
+/*
+ * Bank of Ireland look, expressed only as token overrides.
+ * CLAUDE.md > shadcn/ui: "BOI look comes from theme tokens ... not per-component overrides."
+ *
+ * PLACEHOLDER BRAND VALUES. These are a credible navy/amber approximation, not the
+ * official BOI palette. Replace with the real brand values before filming (§61).
+ */
+
+.boi-theme {
+  --boi-navy: oklch(0.29 0.075 260);
+  --boi-navy-deep: oklch(0.22 0.065 262);
+  --boi-amber: oklch(0.78 0.16 78);
+  --boi-slate: oklch(0.96 0.005 260);
+
+  --background: oklch(1 0 0);
+  --foreground: var(--boi-navy-deep);
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--boi-navy-deep);
+
+  --primary: var(--boi-navy);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: var(--boi-slate);
+  --secondary-foreground: var(--boi-navy);
+
+  --accent: var(--boi-amber);
+  --accent-foreground: var(--boi-navy-deep);
+
+  --muted: var(--boi-slate);
+  --muted-foreground: oklch(0.52 0.02 260);
+
+  --border: oklch(0.9 0.012 260);
+  --input: oklch(0.9 0.012 260);
+  --ring: var(--boi-navy);
+}

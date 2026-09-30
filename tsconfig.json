@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "cn": ["./src/lib/utils.ts"],
+      "@domain/*": ["./supabase/functions/_shared/domain/*"],
+      "@contracts/*": ["./supabase/functions/_shared/contracts/*"]
+    }
+  }
+}

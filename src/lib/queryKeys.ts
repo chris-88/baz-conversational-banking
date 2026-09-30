@@ -1,0 +1,42 @@
+/**
+ * The single source of query keys (CLAUDE.md > TanStack Query). Realtime handlers
+ * invalidate by these keys; they never write to the cache.
+ */
+export const queryKeys = {
+  session: {
+    current: () => ['session', 'current'] as const,
+  },
+
+  case: {
+    all: () => ['case'] as const,
+    detail: (caseId: string) => ['case', caseId] as const,
+    digest: (caseId: string) => ['case', caseId, 'digest'] as const,
+    facts: (caseId: string) => ['case', caseId, 'facts'] as const,
+    messages: (caseId: string) => ['case', caseId, 'messages'] as const,
+    events: (caseId: string) => ['case', caseId, 'events'] as const,
+    participants: (caseId: string) => ['case', caseId, 'participants'] as const,
+    productInterests: (caseId: string) => ['case', caseId, 'product-interests'] as const,
+    metrics: (caseId: string) => ['case', caseId, 'metrics'] as const,
+  },
+
+  applications: {
+    forCase: (caseId: string) => ['case', caseId, 'applications'] as const,
+    detail: (applicationId: string) => ['application', applicationId] as const,
+    outstanding: (applicationId: string) =>
+      ['application', applicationId, 'outstanding'] as const,
+    requests: (applicationId: string) => ['application', applicationId, 'requests'] as const,
+  },
+
+  partner: {
+    tasks: (token: string) => ['partner', token, 'tasks'] as const,
+    applications: (token: string) => ['partner', token, 'applications'] as const,
+  },
+
+  admin: {
+    cases: () => ['admin', 'cases'] as const,
+    caseInspection: (caseId: string) => ['admin', 'case', caseId] as const,
+    persona: () => ['admin', 'persona'] as const,
+    domainConfig: () => ['admin', 'domain-config'] as const,
+    audienceMetrics: () => ['admin', 'audience-metrics'] as const,
+  },
+} as const

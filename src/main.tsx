@@ -1,0 +1,21 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router-dom'
+import { Providers } from '@/app/providers'
+import { router } from '@/app/router'
+import { initSentry } from '@/lib/sentry'
+import '@/index.css'
+import '@/shells/boi/theme.css'
+
+initSentry()
+
+const rootElement = document.getElementById('root')
+if (!rootElement) throw new Error('Root element #root is missing from index.html')
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <Providers>
+      <RouterProvider router={router} />
+    </Providers>
+  </StrictMode>,
+)

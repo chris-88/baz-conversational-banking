@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bank of Ireland prototype">
+  <rect width="64" height="64" rx="12" fill="#12345e"/>
+  <path d="M32 13 13 25h6v20h-6v6h38v-6h-6V25h6z" fill="#f0b429"/>
+  <rect x="24" y="29" width="4" height="14" fill="#12345e"/>
+  <rect x="36" y="29" width="4" height="14" fill="#12345e"/>
+</svg>
