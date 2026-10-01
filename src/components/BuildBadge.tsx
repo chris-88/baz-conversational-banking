@@ -5,9 +5,10 @@ import type { ReactNode } from 'react'
  *
  * Rendered once in `providers.tsx`, so it covers every surface including the 404. To remove
  * it: delete this file, its line in `providers.tsx`, the `define` block and `buildInfo()` in
- * `vite.config.ts`, and the three declarations in `src/vite-env.d.ts`.
+ * `vite.config.ts`, the mirrored define in `vitest.config.ts`, the three declarations in
+ * `src/vite-env.d.ts`, and the two e2e tests.
  *
- * `pointer-events-none` matters: this sits over the bottom of a 390px-wide screen, and it must
+ * `pointer-events-none` matters: this sits over the bottom of a 390px-wide screen, and must
  * never swallow a tap meant for a button underneath it.
  */
 export function BuildBadge(): ReactNode {
@@ -22,12 +23,12 @@ export function BuildBadge(): ReactNode {
       aria-label={`Build: branch ${__BUILD_BRANCH__}, commit ${__BUILD_SHA__}, built ${when}`}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[env(safe-area-inset-bottom)]"
     >
-      <p className="bg-foreground/80 text-background rounded-t-md px-2 py-0.5 font-mono text-[10px] leading-tight tracking-tight tabular-nums backdrop-blur-sm">
+      <p className="bg-foreground/85 text-background text-2xs tabular rounded-t-md px-2.5 py-1 font-mono leading-none backdrop-blur-sm">
         <span className="font-semibold">{__BUILD_BRANCH__}</span>
-        <span className="opacity-60"> · </span>
+        <span className="opacity-50"> · </span>
         {__BUILD_SHA__}
-        <span className="opacity-60"> · </span>
-        <span className="opacity-80">{when}</span>
+        <span className="opacity-50"> · </span>
+        <span className="opacity-75">{when}</span>
       </p>
     </div>
   )

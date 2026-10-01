@@ -9,7 +9,7 @@ export function AppHome(): ReactNode {
       <SetupNotice />
 
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Your applications</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Your applications</h1>
         <p className="text-muted-foreground text-sm">
           One conversation across everything you have in progress.
         </p>
@@ -21,10 +21,10 @@ export function AppHome(): ReactNode {
         description="Status cards render from the database, never from model text."
         sections={['§13', '§14', '§36', '§59']}
         scope={[
-          'Product selection creating several independent applications at once',
-          'Outstanding requirements computed from facts, not remembered by the model',
-          'Review and confirm before any submission',
-          'Return summary describing exactly what changed since the last visit',
+          'Choosing products creates several independent applications at once',
+          'What each one still needs is computed from facts, not remembered by the model',
+          'Nothing is submitted without being shown to you and confirmed',
+          'Coming back shows exactly what changed while you were away',
         ]}
       />
     </div>

@@ -1,25 +1,25 @@
 import type { ReactNode } from 'react'
-import { TriangleAlertIcon } from 'lucide-react'
+import { InfoIcon } from 'lucide-react'
 
 /**
- * Sits above the simulated bank chrome on every surface, so it reads as the real page talking
- * rather than part of the prototype.
+ * Says plainly what this is, on every surface.
  *
- * Invariant 10 is about data; this is about the person looking at the screen. The site carries
- * Bank of Ireland branding on a public personal domain, so it says plainly what it is.
+ * Uses the `warning` token rather than a palette colour, so it follows the theme instead of
+ * fighting it (CLAUDE.md: the look comes from theme tokens, not per-component overrides).
  */
 export function PrototypeBanner(): ReactNode {
   return (
     <div
       role="note"
-      className="flex items-start gap-2 bg-amber-100 px-3 py-2 text-[11px] leading-snug text-amber-950"
+      className="bg-warning text-warning-foreground border-warning-border border-b"
     >
-      <TriangleAlertIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-      <p>
-        <strong className="font-semibold">Prototype, not a real banking service.</strong> A
-        demonstration of conversational banking, not operated by or affiliated with Bank of
-        Ireland. All data is invented. Never enter real personal or banking details.
-      </p>
+      <div className="mx-auto flex w-full max-w-md items-start gap-2 px-4 py-2">
+        <InfoIcon aria-hidden className="mt-[0.15em] size-3.5 shrink-0" />
+        <p className="text-2xs leading-snug text-pretty">
+          <span className="font-semibold">Prototype.</span> Not a real banking service. All data
+          is invented — never enter real personal or banking details.
+        </p>
+      </div>
     </div>
   )
 }

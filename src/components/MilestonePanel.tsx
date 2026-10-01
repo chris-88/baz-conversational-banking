@@ -13,8 +13,9 @@ export type MilestonePanelProps = {
 }
 
 /**
- * Placeholder for a surface that is routed but not yet built. M0 is "routes for all
- * five surfaces"; each panel names the milestone that fills it.
+ * Placeholder for a surface that is routed but not yet built. Each panel names the milestone
+ * that fills it and the sections that govern it, so the deployed prototype reads as a plan
+ * rather than as something half-finished.
  */
 export function MilestonePanel({
   milestone,
@@ -26,21 +27,24 @@ export function MilestonePanel({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{milestone}</Badge>
-          <span className="text-muted-foreground text-xs">{sections.join(' · ')}</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Badge variant="secondary" className="text-2xs">
+            {milestone}
+          </Badge>
+          <span className="text-muted-foreground text-2xs tabular">{sections.join(' · ')}</span>
         </div>
-        <CardTitle className="mt-2">{title}</CardTitle>
+        <CardTitle className="text-base">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ul className="text-muted-foreground space-y-1.5 text-sm">
+        <ul className="text-muted-foreground space-y-2 text-sm">
           {scope.map((item) => (
-            <li key={item} className="flex gap-2">
-              <span aria-hidden className="text-foreground/30">
-                —
-              </span>
-              <span>{item}</span>
+            <li key={item} className="relative pl-4 leading-snug">
+              <span
+                aria-hidden
+                className="bg-border absolute top-[0.5em] left-0 size-1.5 rounded-full"
+              />
+              {item}
             </li>
           ))}
         </ul>

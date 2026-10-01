@@ -26,7 +26,8 @@ describe('surfaces', () => {
         <AppLogin />
       </MemoryRouter>,
     )
-    expect(screen.getByText(/simulated bank of ireland login/i)).toBeInTheDocument()
+    expect(screen.getByText(/simulated sign-in for demonstration purposes/i)).toBeInTheDocument()
+    expect(screen.getByText(/connects to no real banking system/i)).toBeInTheDocument()
   })
 
   it('the partner surface reads the invite token from the path', () => {

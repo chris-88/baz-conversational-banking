@@ -145,3 +145,32 @@ section.
 - **2026-10-01** — `@anthropic-ai/sdk` is a devDependency: the browser never imports it (the
   LLM is called only from Edge Functions), and Node needs it only to run the guardrail eval.
   Deno resolves it through `supabase/functions/deno.json`.
+
+## 2026-10-01 — Design system
+
+- **2026-10-01** — **Visual direction: a deliberately neutral prototype, not a replica of any
+  bank.** The product still refers to Bank of Ireland in copy, because the POC is meaningless
+  without it, but the chrome is plainly a prototype: a neutral mark, one restrained accent, no
+  brand assets. This also retires the impersonation concern raised when the site went public.
+  §61, Invariant 10
+- **2026-10-01** — **Tokens live on `:root`, never on a wrapper element.** `.boi-theme` was
+  applied to a `<div>` inside `#root` on five surfaces. Radix portals every dialog, sheet,
+  dropdown, tooltip and toast to `document.body`, outside that div — so none of them would have
+  received the theme. That was a defect, not untidiness. `src/shells/boi/theme.css` is deleted.
+- **2026-10-01** — Added `--warning` / `--warning-foreground` / `--warning-border` tokens. The
+  prototype notice previously hardcoded `bg-amber-100 text-amber-950`, breaking CLAUDE.md's own
+  rule that the look comes from theme tokens rather than per-component overrides.
+- **2026-10-01** — Added a `--text-2xs` step to the theme, replacing the `text-[10px]` and
+  `text-[11px]` arbitrary values that had crept into four components.
+- **2026-10-01** — Dark tokens are defined correctly, but nothing applies `.dark`: the demo
+  stays light deliberately, so what is filmed does not depend on the presenter's OS appearance
+  setting.
+- **2026-10-01** — **Inter Variable, self-hosted, base Latin only (48KB).** Self-hosted rather
+  than Google Fonts because the demo must survive conference wifi and the service worker
+  precaches woff2 — no external request, no flash of unstyled text mid-presentation. Latin
+  Extended, Cyrillic, Greek and Vietnamese subsets were dropped: they added ~175KB for glyphs
+  this prototype never renders, and Irish fadas, the euro sign, em-dashes and curly quotes all
+  sit in the base Latin range. §60
+- **2026-10-01** — The admin tab bar is now shadcn `Tabs` with the `line` variant, triggers
+  rendered `asChild` as router links and selection driven by the URL rather than Radix state.
+  It was a hand-rolled `<nav>`.

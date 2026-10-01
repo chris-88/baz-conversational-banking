@@ -4,8 +4,8 @@ import { RouterProvider } from 'react-router-dom'
 import { Providers } from '@/app/providers'
 import { router } from '@/app/router'
 import { initSentry } from '@/lib/sentry'
+import '@/styles/fonts.css'
 import '@/index.css'
-import '@/shells/boi/theme.css'
 
 initSentry()
 

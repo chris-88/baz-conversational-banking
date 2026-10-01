@@ -9,7 +9,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 const surfaces = [
   { route: '/#/', name: 'public site', expect: /Tell us what you.{0,3}re trying to do/i },
-  { route: '/#/app/login', name: 'simulated login', expect: /simulated Bank of Ireland login/i },
+  { route: '/#/app/login', name: 'simulated login', expect: /simulated sign-in for demonstration/i },
   { route: '/#/join/opaque-token', name: 'partner join', expect: /You.{0,3}ve been invited/i },
   { route: '/#/try', name: 'audience entry', expect: /Try Baz/i },
   { route: '/#/admin', name: 'presenter console', expect: /presenter console/i },
