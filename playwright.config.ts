@@ -19,13 +19,22 @@ export default defineConfig({
   projects: [
     {
       name: 'iphone',
-      use: { ...devices['iPhone 14'] },
+      // iPhone 14 geometry and touch emulation, but driven by Chromium rather than WebKit:
+      // WebKit needs system libraries this machine cannot install without root. Revisit if
+      // iOS-specific behaviour (PWA storage partitioning, §30) needs real WebKit.
+      use: { ...devices['iPhone 14'], browserName: 'chromium' },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://127.0.0.1:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  // Point E2E_BASE_URL at a deployed environment to run against it instead of a local dev
+  // server: `E2E_BASE_URL=https://baz.chrisquinn.ie npm run e2e`.
+  ...(process.env.E2E_BASE_URL
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev',
+          url: 'http://127.0.0.1:5173',
+          reuseExistingServer: !process.env.CI,
+          timeout: 60_000,
+        },
+      }),
 })

@@ -16,13 +16,20 @@ export type BrowserEnv = z.infer<typeof browserEnvSchema>
 const parsed = browserEnvSchema.safeParse(import.meta.env)
 
 /**
- * Fails soft on purpose. M0 must deploy and render before the Supabase project exists,
+ * Fails soft on purpose. The site must deploy and render before the Supabase project exists,
  * so a missing backend shows a setup notice rather than a blank page.
  */
 export const env: BrowserEnv | null = parsed.success ? parsed.data : null
 
 export const isBackendConfigured = parsed.success
 
-export const envProblems: readonly string[] = parsed.success
+/** Just the variable names that need setting — not Zod's internal wording. */
+export const missingEnvVars: readonly string[] = parsed.success
   ? []
-  : parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+  : [
+      ...new Set(
+        parsed.error.issues
+          .map((issue) => issue.path[0])
+          .filter((name): name is string => typeof name === 'string'),
+      ),
+    ]

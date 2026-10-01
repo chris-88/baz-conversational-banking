@@ -81,9 +81,31 @@ section.
   applied: the Docker daemon is not running on this machine and the user is not in the `docker`
   group, and there is no local Postgres to check the SQL against. It needs
   `npx supabase start && npx supabase db reset` before it can be trusted.
-- **GitHub Pages is unavailable.** The repo `chris-88/baz-conversational-banking` is private and
-  the account is on the free plan, so `POST /repos/.../pages` returns 422: "Your current plan does
-  not support GitHub Pages for this repository." `deploy-pages.yml` will fail until the repo is
-  made public (the data is synthetic and no secrets are committed), the account upgrades, or
-  hosting moves to something that serves private repos free. Changing host is a stack decision,
-  so it needs a call. §61
+
+## 2026-10-01 — Live at baz.chrisquinn.ie
+
+- **2026-10-01** — The repo is public, because GitHub Pages needs that on a free plan. The two
+  internal source documents are untracked and gitignored; `docs/README.md` records where they
+  live. Nothing in the build reads them. §61
+- **2026-10-01** — The site carries Bank of Ireland branding on a personal domain, so it states
+  what it is: a persistent disclosure banner above the simulated chrome on every surface,
+  `noindex, nofollow, noarchive, nosnippet`, and a `robots.txt` disallowing everything. A unit
+  test and an e2e test both assert the disclosure, so it cannot quietly disappear. Invariant 10
+- **2026-10-01** — For Actions-based Pages the `CNAME` file in the artifact does NOT configure
+  the custom domain; it is only served as a file. The domain must be set through
+  `PUT /repos/.../pages`, and that call fails with "the certificate does not exist yet" until
+  DNS resolves. Order is: DNS record, then set the domain, then enforce HTTPS.
+- **2026-10-01** — `VITE_BASE_PATH` is `/`. The `github.io/<repo>/` URL therefore serves a page
+  whose assets 404; that is expected and harmless, since the custom domain is the real address.
+- **2026-10-01** — `deploy-supabase.yml` gates on a first step rather than a job-level `if`: the
+  `secrets` context is not available there. It skips with a notice until the hosted project
+  exists, so it stops failing every push and masking real failures.
+- **2026-10-01** — Playwright runs Chromium with iPhone 14 emulation rather than WebKit. WebKit
+  needs system libraries that cannot be installed without root on this machine. Revisit if
+  iOS-specific behaviour matters (§30 PWA storage partitioning).
+- **2026-10-01** — Testing Library's automatic cleanup only registers under Vitest `globals:
+  true`. This project imports test helpers explicitly, so `afterEach(cleanup)` is registered by
+  hand in `src/test/setup.ts`; without it, rendered DOM accumulated between tests in a file.
+- **2026-10-01** — Email for the project goes to `*@chrisquinn.ie`, which ImprovMX forwards to
+  Chris's personal address. Use a descriptive local part per purpose, e.g. `baz-admin@` for the
+  Supabase admin login.
