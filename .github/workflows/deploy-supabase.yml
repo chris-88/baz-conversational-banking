@@ -20,17 +20,35 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
+      # The `secrets` context is not available in a job-level `if`, so the gate is a step.
+      # Until the hosted project exists this skips cleanly rather than failing every push and
+      # drowning out real failures.
+      - name: Is a Supabase project configured?
+        id: check
+        run: |
+          if [ -z "${PROJECT_REF}" ] || [ -z "${SUPABASE_ACCESS_TOKEN}" ]; then
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo '::notice title=Skipped::No Supabase project configured. Set the SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PASSWORD secrets to enable this deploy.'
+          else
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v5
+        if: steps.check.outputs.configured == 'true'
 
       - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.configured == 'true'
         with:
           version: latest
 
       - name: Link project
+        if: steps.check.outputs.configured == 'true'
         run: supabase link --project-ref "$PROJECT_REF"
 
       - name: Push migrations
+        if: steps.check.outputs.configured == 'true'
         run: supabase db push
 
       - name: Deploy functions
+        if: steps.check.outputs.configured == 'true'
         run: supabase functions deploy
