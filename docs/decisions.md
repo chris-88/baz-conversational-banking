@@ -272,3 +272,10 @@ section.
 - **2026-10-01** — The public hero carries the first message across to the app as a query
   parameter rather than making the customer retype it (§6 Stage 1). It is not sensitive — it is
   what they just typed in public — so it does not need a token.
+- **2026-10-01** — `/#/baz` is the conversation on the public website; `/#/app/baz` is the same
+  `BazChat` inside the app shell. Only the chrome differs, which is the point of §32.
+- **2026-10-01** — The conversation is loaded from persisted messages on join. Without it the
+  model and the customer saw different conversations: the model reads history and would refer
+  to a card it showed last time, while the screen started empty — it read as Baz apologising
+  for something the customer never saw. Cards are not yet persisted, so they do not come back
+  on reload; the text does.

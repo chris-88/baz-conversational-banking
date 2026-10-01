@@ -86,5 +86,13 @@ export function useConversation(caseId: string | null) {
     [caseId, streaming],
   )
 
-  return { entries, streaming, error, send }
+  /** Replaces the transcript with what is persisted, before any new turn is taken. */
+  const loadFrom = useCallback(
+    (messages: readonly { id: string; author: 'baz' | 'customer'; text: string }[]) => {
+      setEntries(messages.map((message) => ({ kind: 'message', ...message })))
+    },
+    [],
+  )
+
+  return { entries, streaming, error, send, loadFrom }
 }

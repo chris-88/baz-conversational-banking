@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CreditCardIcon, HomeIcon, PiggyBankIcon, ShieldCheckIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { IconTile } from '@/components/IconTile'
@@ -8,6 +8,11 @@ import { SetupNotice } from '@/components/SetupNotice'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { SiteHeader } from '@/shells/boi/SiteHeader'
 import { Composer } from '@/baz/Composer'
+import { BazAvatar } from '@/baz/BazAvatar'
+import { SuggestionList } from '@/baz/SuggestionList'
+import { OPENING_SUGGESTIONS } from '@/baz/suggestions'
+import { Button } from '@/components/ui/button'
+import { MessageCircleIcon } from 'lucide-react'
 import { routes } from '@/app/routes'
 
 const products = [
@@ -65,13 +70,24 @@ export function PublicSite(): ReactNode {
                 placeholder="Tell Baz what you’re trying to do…"
                 className="border-transparent bg-white/95 text-foreground shadow-lg"
                 onSend={(message) => {
-                  // The conversation lives in the app shell; carry the opening line across.
-                  void navigate(`${routes.app.baz}?say=${encodeURIComponent(message)}`)
+                  void navigate(`${routes.baz}?say=${encodeURIComponent(message)}`)
                 }}
               />
-              <p className="text-2xs opacity-75">
-                Baz is live. Say what you&rsquo;re trying to do and it will take it from there.
-              </p>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <Button
+                  asChild
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full"
+                >
+                  <Link to={routes.baz}>
+                    <MessageCircleIcon />
+                    Chat to Baz
+                  </Link>
+                </Button>
+                <span className="text-2xs opacity-80">Or pick one of the starters below.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -97,6 +113,30 @@ export function PublicSite(): ReactNode {
             </Card>
           ))}
         </div>
+
+        <section className="mt-12 max-w-xl space-y-4">
+          <Card className="gap-0 overflow-hidden p-0">
+            <div className="flex items-start gap-3 p-4">
+              <BazAvatar />
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-sm font-semibold">Baz</p>
+                <p className="text-muted-foreground text-sm">
+                  Tell me what you&rsquo;re trying to do and I&rsquo;ll work out what you need —
+                  no need to know which product to look for.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t p-4">
+              <SuggestionList
+                suggestions={OPENING_SUGGESTIONS}
+                onSelect={(suggestion) => {
+                  void navigate(`${routes.baz}?say=${encodeURIComponent(suggestion.label)}`)
+                }}
+              />
+            </div>
+          </Card>
+        </section>
 
         <div className="mt-10 max-w-xl space-y-4">
           <SetupNotice />

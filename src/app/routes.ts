@@ -2,6 +2,9 @@
 export const routes = {
   public: '/',
 
+  /** §6 Stage 1 — the conversation on the public website, before signing in. */
+  baz: '/baz',
+
   app: {
     root: '/app',
     login: '/app/login',

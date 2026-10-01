@@ -1,5 +1,6 @@
 import { createHashRouter, Navigate, type RouteObject } from 'react-router-dom'
 import { PublicSite } from '@/shells/boi/PublicSite'
+import { PublicBaz } from '@/shells/boi/PublicBaz'
 import { AppShell } from '@/shells/boi/AppShell'
 import { AppLogin } from '@/shells/boi/AppLogin'
 import { AppHome } from '@/shells/boi/AppHome'
@@ -12,6 +13,7 @@ import { NotFound } from '@/components/NotFound'
 
 const routeObjects: RouteObject[] = [
   { path: '/', element: <PublicSite /> },
+  { path: '/baz', element: <PublicBaz /> },
 
   {
     path: '/app',

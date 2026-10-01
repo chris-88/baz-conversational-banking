@@ -40,6 +40,10 @@ export function SiteHeader({ className }: { className?: string }): ReactNode {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <Button asChild size="sm" variant="ghost" className="rounded-full">
+            <Link to={routes.baz}>Chat to Baz</Link>
+          </Button>
+
           <button
             type="button"
             disabled
