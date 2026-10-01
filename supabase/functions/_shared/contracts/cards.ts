@@ -1,0 +1,101 @@
+import { z } from 'zod'
+import { PRODUCTS } from '../domain/journey.ts'
+import { APPLICATION_STATES } from '../domain/state-machine.ts'
+
+/**
+ * Cards are what the model asks for and the server renders.
+ *
+ * Every card's content is built from the database by the server — the model supplies only an
+ * identifier and, where it is genuinely the model's job, the wording of a reason. That is what
+ * stops a status card from agreeing with model text that is wrong (Invariant 2, §59).
+ */
+
+const applicationId = z.uuid()
+
+export const productOptionCardSchema = z.object({
+  type: z.literal('product_options'),
+  options: z
+    .array(
+      z.object({
+        product: z.enum(PRODUCTS),
+        displayName: z.string(),
+        oneLine: z.string(),
+        /** The model's words, tied to what the customer said (§49). */
+        reason: z.string(),
+        /** Already offered and declined — shown as such rather than offered again. */
+        previouslyDeclined: z.boolean(),
+      }),
+    )
+    .min(1),
+})
+
+export const statusCardSchema = z.object({
+  type: z.literal('status'),
+  applications: z.array(
+    z.object({
+      id: applicationId,
+      product: z.enum(PRODUCTS),
+      displayName: z.string(),
+      state: z.enum(APPLICATION_STATES),
+      /** From the state machine, never from model text. */
+      stateLabel: z.string(),
+      outstandingCount: z.number().int().nonnegative(),
+      waitingOn: z.enum(['primary', 'partner']).nullable(),
+    }),
+  ),
+})
+
+export const reviewCardSchema = z.object({
+  type: z.literal('review'),
+  applicationId,
+  displayName: z.string(),
+  /** Built from the case, not written by the model. */
+  summary: z.array(z.object({ label: z.string(), value: z.string() })),
+  declarations: z.array(z.string()),
+  /** The tap that calls case-action. Until then nothing is submitted (§48). */
+  confirmLabel: z.string(),
+})
+
+export const pausePromptCardSchema = z.object({
+  type: z.literal('pause_prompt'),
+  applicationId,
+  displayName: z.string(),
+  advisoryTitle: z.string(),
+  advisoryExplanation: z.string(),
+})
+
+export const partnerInviteCardSchema = z.object({
+  type: z.literal('partner_invite'),
+  applicationIds: z.array(applicationId).min(1),
+  applicationNames: z.array(z.string()).min(1),
+  partnerName: z.string().nullable(),
+})
+
+export const uploadRequestCardSchema = z.object({
+  type: z.literal('upload_request'),
+  requestId: z.uuid(),
+  applicationId,
+  label: z.string(),
+  documentType: z.string(),
+})
+
+export const cardSchema = z.discriminatedUnion('type', [
+  productOptionCardSchema,
+  statusCardSchema,
+  reviewCardSchema,
+  pausePromptCardSchema,
+  partnerInviteCardSchema,
+  uploadRequestCardSchema,
+])
+
+export type Card = z.infer<typeof cardSchema>
+export type CardType = Card['type']
+
+export const CARD_TYPES = [
+  'product_options',
+  'status',
+  'review',
+  'pause_prompt',
+  'partner_invite',
+  'upload_request',
+] as const satisfies readonly CardType[]
