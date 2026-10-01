@@ -174,3 +174,30 @@ section.
 - **2026-10-01** — The admin tab bar is now shadcn `Tabs` with the `line` variant, triggers
   rendered `asChild` as router links and selection driven by the URL rather than Radix state.
   It was a hand-rolled `<nav>`.
+
+## 2026-10-01 — Design, second pass (against the mock-up)
+
+- **2026-10-01** — Direction reversed from the neutral pass: the supplied mock-up is a Bank of
+  Ireland retail look, and that is now the brief. Vivid blue actions on white, a deep navy for
+  feature panels, tinted icon tiles. The prototype banner and `noindex` stay, and the wordmark
+  is a synthetic three-stroke mark — **not** a reproduction of BOI's actual logo, which is a
+  registered trademark. §61, Invariant 10
+- **2026-10-01** — Added `--brand-deep` and four `--state-*` tokens. Application state colour is
+  keyed by the state machine's own union in `StatusDot`, so a new state cannot be added without
+  deciding how it reads, and colour is never the only signal — every use pairs it with the
+  state's label. §13, §14
+- **2026-10-01** — Baz sits raised in the centre of the app's tab bar. That placement is the
+  proposition in one piece of UI: the conversation is the primary route through the app, not a
+  help widget in a corner.
+- **2026-10-01** — Chat components live in `src/baz/` and import no tenant and no shell, so the
+  conversation surface stays portable. The BOI shell supplies the chrome. §32, Invariant 11
+- **2026-10-01** — The hero gradient is absolutely positioned, so it painted *above* the product
+  cards that follow it in the DOM — positioned elements paint after static content in the same
+  stacking context regardless of order. The cards need `relative z-10`.
+- **2026-10-01** — Added explicit emoji fonts to `--font-sans`. Inter carries no emoji glyphs,
+  and with only the Latin subset loaded the 👋 in Baz's greeting rendered as tofu.
+- **2026-10-01** — `ListRow` renders a link when it navigates, a button when it acts, and a
+  plain row when it does neither, so a row is never announced as interactive when it is not and
+  a row that goes somewhere can be opened in a new tab.
+- **2026-10-01** — The branch badge moved from a fixed bottom overlay into normal flow at the
+  top: pinned to the bottom it covered the app tab bar's labels.

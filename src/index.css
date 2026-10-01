@@ -10,48 +10,58 @@
  * dropdowns, tooltips and toasts to document.body, which is outside any wrapper — a themed
  * <div> would leave every one of them unstyled.
  *
- * Direction: a clean, neutral prototype. This is deliberately not a replica of any particular
- * bank's visual identity; one restrained accent carries the brand weight.
+ * Direction follows the design mock-up: a Bank of Ireland retail look — vivid blue actions on
+ * white, a deep navy for feature panels, soft tinted icon tiles, and status colours that carry
+ * meaning (blue in progress, amber waiting, green approved, grey paused).
  */
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  /* Surfaces and text: neutral greys, very slightly cool. */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.21 0.006 286);
+  /* Surfaces: white cards on a very light cool grey page. */
+  --background: oklch(0.985 0.002 255);
+  --foreground: oklch(0.21 0.015 258);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.006 286);
+  --card-foreground: oklch(0.21 0.015 258);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.006 286);
+  --popover-foreground: oklch(0.21 0.015 258);
 
-  /* The one accent. */
-  --primary: oklch(0.47 0.137 258);
-  --primary-foreground: oklch(0.985 0 0);
+  /* The action blue. */
+  --primary: oklch(0.52 0.175 256);
+  --primary-foreground: oklch(0.99 0 0);
 
-  --secondary: oklch(0.967 0.002 286);
-  --secondary-foreground: oklch(0.27 0.006 286);
+  /* The deep navy used for feature panels and the site header. */
+  --brand-deep: oklch(0.29 0.095 258);
+  --brand-deep-foreground: oklch(0.985 0.005 255);
 
-  --muted: oklch(0.967 0.002 286);
-  --muted-foreground: oklch(0.552 0.013 286);
+  --secondary: oklch(0.965 0.006 255);
+  --secondary-foreground: oklch(0.3 0.03 258);
 
-  --accent: oklch(0.955 0.015 258);
-  --accent-foreground: oklch(0.37 0.11 258);
+  --muted: oklch(0.965 0.006 255);
+  --muted-foreground: oklch(0.52 0.02 258);
 
-  /* Semantic. `warning` exists so the prototype notice can use a token instead of a
-     hardcoded palette colour. */
+  --accent: oklch(0.955 0.025 255);
+  --accent-foreground: oklch(0.4 0.14 256);
+
+  /* Semantic. These carry meaning in status rows, so they are tokens, not decoration. */
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.953 0.045 95);
-  --warning-foreground: oklch(0.42 0.07 70);
-  --warning-border: oklch(0.87 0.07 90);
-  --success: oklch(0.58 0.12 155);
+  --warning: oklch(0.96 0.04 90);
+  --warning-foreground: oklch(0.44 0.08 70);
+  --warning-border: oklch(0.88 0.07 88);
+  --success: oklch(0.6 0.13 155);
   --success-foreground: oklch(0.985 0 0);
 
-  --border: oklch(0.92 0.004 286);
-  --input: oklch(0.92 0.004 286);
-  --ring: oklch(0.47 0.137 258);
+  /* Application state (§13), so a status dot never invents its own colour. */
+  --state-progress: oklch(0.56 0.17 256);
+  --state-waiting: oklch(0.73 0.15 70);
+  --state-done: oklch(0.6 0.14 155);
+  --state-idle: oklch(0.72 0.012 258);
+
+  --border: oklch(0.915 0.006 258);
+  --input: oklch(0.9 0.008 258);
+  --ring: oklch(0.52 0.175 256);
 }
 
 /*
@@ -68,8 +78,11 @@
   --popover: oklch(0.21 0.006 286);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.7 0.13 255);
-  --primary-foreground: oklch(0.17 0.02 258);
+  --primary: oklch(0.68 0.15 256);
+  --primary-foreground: oklch(0.15 0.03 258);
+
+  --brand-deep: oklch(0.24 0.07 258);
+  --brand-deep-foreground: oklch(0.985 0.005 255);
 
   --secondary: oklch(0.27 0.006 286);
   --secondary-foreground: oklch(0.985 0 0);
@@ -88,6 +101,11 @@
   --success: oklch(0.65 0.13 155);
   --success-foreground: oklch(0.17 0.02 155);
 
+  --state-progress: oklch(0.68 0.15 256);
+  --state-waiting: oklch(0.78 0.14 70);
+  --state-done: oklch(0.66 0.14 155);
+  --state-idle: oklch(0.45 0.012 258);
+
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.7 0.13 255);
@@ -95,7 +113,9 @@
 
 @theme inline {
   --font-sans:
-    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif,
+    /* Inter carries no emoji, so name the platform emoji fonts explicitly. */
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
 
   /* Replaces the text-[10px] / text-[11px] arbitrary values that were scattered about. */
   --text-2xs: 0.6875rem;
@@ -120,6 +140,12 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-deep-foreground: var(--brand-deep-foreground);
+  --color-state-progress: var(--state-progress);
+  --color-state-waiting: var(--state-waiting);
+  --color-state-done: var(--state-done);
+  --color-state-idle: var(--state-idle);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);

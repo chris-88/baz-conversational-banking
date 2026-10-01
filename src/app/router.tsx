@@ -3,6 +3,7 @@ import { PublicSite } from '@/shells/boi/PublicSite'
 import { AppShell } from '@/shells/boi/AppShell'
 import { AppLogin } from '@/shells/boi/AppLogin'
 import { AppHome } from '@/shells/boi/AppHome'
+import { AppBaz } from '@/shells/boi/AppBaz'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { AudienceEntry } from '@/audience/AudienceEntry'
 import { AdminConsole } from '@/admin/AdminConsole'
@@ -18,6 +19,7 @@ const routeObjects: RouteObject[] = [
     children: [
       { index: true, element: <AppHome /> },
       { path: 'login', element: <AppLogin /> },
+      { path: 'baz', element: <AppBaz /> },
     ],
   },
 

@@ -27,9 +27,9 @@ export function Providers({ children }: { children: ReactNode }): ReactNode {
     <Sentry.ErrorBoundary fallback={<Fallback />}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          <BuildBadge />
           {children}
           <Toaster position="top-center" />
-          <BuildBadge />
         </TooltipProvider>
       </QueryClientProvider>
     </Sentry.ErrorBoundary>

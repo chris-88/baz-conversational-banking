@@ -11,13 +11,15 @@ import { AdminConsole } from '@/admin/AdminConsole'
 
 /** M0: every surface is routed and renders. */
 describe('surfaces', () => {
-  it('the public site offers the Baz entry point', () => {
+  it('the public site leads with the Baz entry point, not a product menu', () => {
     render(
       <MemoryRouter>
         <PublicSite />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('button', { name: /chat to baz/i })).toBeInTheDocument()
+    // The proposition is "tell us what you're trying to do", so the composer is the hero.
+    expect(screen.getByRole('textbox', { name: /message baz/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/life brings next/i)
   })
 
   it('the simulated login discloses that it is not a real banking system', () => {

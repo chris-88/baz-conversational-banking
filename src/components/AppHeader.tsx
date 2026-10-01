@@ -11,8 +11,8 @@ export function AppHeader({
   subtitle,
   className,
 }: {
-  subtitle?: string
-  className?: string
+  subtitle?: string | undefined
+  className?: string | undefined
 }): ReactNode {
   return (
     <header

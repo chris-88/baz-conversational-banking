@@ -1,17 +1,25 @@
 import type { ReactNode } from 'react'
-import { Outlet } from 'react-router-dom'
-import { AppHeader } from '@/components/AppHeader'
+import { Outlet, useLocation } from 'react-router-dom'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
+import { BottomTabBar } from '@/shells/boi/BottomTabBar'
+import { routes } from '@/app/routes'
 
-/** §30 — authenticated mobile shell, installable as a PWA. Mobile first at 390px. */
+/** §30 — the authenticated mobile shell, installable as a PWA. Mobile first at 390px. */
 export function AppShell(): ReactNode {
+  const { pathname } = useLocation()
+
+  // The login screen is pre-authentication, so it gets no app navigation.
+  const showTabs = pathname !== routes.app.login
+
   return (
     <div className="bg-background flex min-h-dvh flex-col">
       <PrototypeBanner />
-      <AppHeader subtitle="Simulated mobile banking" />
-      <main className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-6 pb-20">
+
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <Outlet />
-      </main>
+      </div>
+
+      {showTabs && <BottomTabBar />}
     </div>
   )
 }

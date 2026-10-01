@@ -5,6 +5,8 @@ export const routes = {
   app: {
     root: '/app',
     login: '/app/login',
+    baz: '/app/baz',
+    products: '/app/products',
   },
 
   partnerJoin: (token = ':token') => `/join/${token}`,
