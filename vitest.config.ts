@@ -6,6 +6,13 @@ const resolve = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
+  // TEMPORARY: mirrors the branch-badge `define` block in vite.config.ts so any test that
+  // renders Providers can resolve them. Remove alongside BuildBadge.
+  define: {
+    __BUILD_BRANCH__: JSON.stringify('test'),
+    __BUILD_SHA__: JSON.stringify('0000000'),
+    __BUILD_TIME__: JSON.stringify('2026-10-01T00:00:00.000Z'),
+  },
   resolve: {
     alias: {
       '@': resolve('./src'),

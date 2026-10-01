@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -6,6 +7,28 @@ import { defineConfig, loadEnv } from 'vite'
 
 const resolve = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
+/**
+ * TEMPORARY (2026-10-01): build provenance for the badge in the corner, so it is obvious which
+ * branch is deployed. Remove this, the `define` block below, `BuildBadge` and its line in
+ * `providers.tsx` when it has served its purpose.
+ */
+function buildInfo(): { branch: string; sha: string; time: string } {
+  const git = (command: string): string => {
+    try {
+      return execSync(command, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    } catch {
+      return ''
+    }
+  }
+
+  return {
+    // CI checks out a detached HEAD, where `rev-parse --abbrev-ref` just says "HEAD".
+    branch: process.env.GITHUB_REF_NAME || git('git rev-parse --abbrev-ref HEAD') || 'unknown',
+    sha: (process.env.GITHUB_SHA || git('git rev-parse HEAD') || '').slice(0, 7) || 'unknown',
+    time: new Date().toISOString(),
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
@@ -13,8 +36,16 @@ export default defineConfig(({ mode }) => {
   const raw = env.VITE_BASE_PATH?.trim() || '/'
   const base = raw.endsWith('/') ? raw : `${raw}/`
 
+  const build = buildInfo()
+
   return {
     base,
+    // TEMPORARY: see buildInfo() above.
+    define: {
+      __BUILD_BRANCH__: JSON.stringify(build.branch),
+      __BUILD_SHA__: JSON.stringify(build.sha),
+      __BUILD_TIME__: JSON.stringify(build.time),
+    },
     resolve: {
       alias: {
         '@': resolve('./src'),

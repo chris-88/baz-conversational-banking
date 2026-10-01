@@ -4,6 +4,8 @@ import * as Sentry from '@sentry/react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { createQueryClient } from '@/lib/queryClient'
+// TEMPORARY: branch badge. See BuildBadge.tsx for how to remove it.
+import { BuildBadge } from '@/components/BuildBadge'
 
 function Fallback(): ReactNode {
   return (
@@ -27,6 +29,7 @@ export function Providers({ children }: { children: ReactNode }): ReactNode {
         <TooltipProvider>
           {children}
           <Toaster position="top-center" />
+          <BuildBadge />
         </TooltipProvider>
       </QueryClientProvider>
     </Sentry.ErrorBoundary>

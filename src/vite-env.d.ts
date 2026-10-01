@@ -14,3 +14,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** TEMPORARY: build provenance for the branch badge. Injected by `define` in vite.config.ts. */
+declare const __BUILD_BRANCH__: string
+declare const __BUILD_SHA__: string
+declare const __BUILD_TIME__: string
