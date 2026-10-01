@@ -1,32 +1,44 @@
 import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
+import { SparklesIcon, UserRoundIcon } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { IconTile } from '@/components/IconTile'
+import { ListRow } from '@/components/ListRow'
 import { MilestonePanel } from '@/components/MilestonePanel'
-import { AppHeader } from '@/components/AppHeader'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
+import { MobileHeader } from '@/shells/boi/MobileHeader'
 
 /** §45, §46 — QR entry for the audience. An isolated case, never the presenter's. */
 export function AudienceEntry(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
       <PrototypeBanner />
-      <AppHeader subtitle="Try it yourself" />
+      <MobileHeader subtitle="Try it yourself" />
 
-      <main className="mx-auto w-full max-w-md space-y-6 px-4 py-8 pb-20">
-        <div className="space-y-1">
+      <main className="mx-auto w-full max-w-md space-y-6 px-4 py-6">
+        <section className="space-y-3">
           <h1 className="text-xl font-semibold tracking-tight">Try Baz</h1>
           <p className="text-muted-foreground text-sm">
-            Your own private conversation, separate from the demonstration.
+            Your own private conversation, completely separate from the demonstration on screen.
           </p>
-        </div>
+        </section>
 
-        <div className="grid gap-2">
-          <Button size="lg" disabled>
-            Start fresh
-          </Button>
-          <Button size="lg" variant="outline" disabled>
-            Use the demo customer
-          </Button>
-        </div>
+        <Card className="gap-0 divide-y p-0">
+          <ListRow
+            leading={<IconTile tone="primary"><SparklesIcon /></IconTile>}
+            title="Start fresh"
+            subtitle="A brand new customer with nothing known about them"
+            disabled
+            onClick={() => undefined}
+          />
+          <ListRow
+            leading={<IconTile tone="deep"><UserRoundIcon /></IconTile>}
+            title="Use the demo customer"
+            subtitle="Already signed in, with the facts the bank holds"
+            disabled
+            onClick={() => undefined}
+          />
+        </Card>
+        <p className="text-muted-foreground text-2xs">Both options arrive in M8.</p>
 
         <MilestonePanel
           milestone="M8"

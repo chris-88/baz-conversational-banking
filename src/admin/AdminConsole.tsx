@@ -27,9 +27,17 @@ export function AdminConsole(): ReactNode {
       <header className="sticky top-0 z-40 border-b">
         <div className="bg-background/85 supports-[backdrop-filter]:bg-background/70 backdrop-blur">
           <div className="mx-auto w-full max-w-3xl space-y-3 px-4 pt-3 pb-2">
-            <div>
-              <h1 className="text-sm font-semibold tracking-tight">Presenter console</h1>
-              <p className="text-muted-foreground text-2xs">Baz · conversational banking</p>
+            <div className="flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="bg-brand-deep text-brand-deep-foreground grid size-7 shrink-0 place-items-center rounded-lg text-2xs font-bold"
+              >
+                B
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate text-sm font-semibold tracking-tight">Presenter console</h1>
+                <p className="text-muted-foreground text-2xs">Baz · conversational banking</p>
+              </div>
             </div>
 
             <Tabs value={active}>
@@ -45,7 +53,7 @@ export function AdminConsole(): ReactNode {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 pb-20">
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6">
         <Outlet />
       </main>
     </div>

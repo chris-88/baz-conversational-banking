@@ -1,14 +1,54 @@
 import type { ReactNode } from 'react'
+import {
+  GaugeIcon,
+  PowerIcon,
+  RotateCcwIcon,
+  SendIcon,
+  ShieldAlertIcon,
+  SlidersHorizontalIcon,
+  UsersIcon,
+} from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { IconTile } from '@/components/IconTile'
+import { ListRow } from '@/components/ListRow'
 import { MilestonePanel, type MilestonePanelProps } from '@/components/MilestonePanel'
 import { SetupNotice } from '@/components/SetupNotice'
 
 type Section = 'cases' | 'persona' | 'domain' | 'audience'
 
+/** The controls the presenter reaches for, listed where they will live. */
+const controls: Readonly<
+  Record<Section | 'overview', readonly { icon: ReactNode; title: string; subtitle: string }[]>
+> = {
+  overview: [
+    { icon: <RotateCcwIcon />, title: 'Reset to the canonical case', subtitle: 'Restores the presenter case · §43' },
+    { icon: <SendIcon />, title: 'Send a notification', subtitle: 'A separate, deliberate action · §42' },
+    { icon: <PowerIcon />, title: 'Demo kill switch', subtitle: 'The gate returns "demo paused" · §43' },
+  ],
+  cases: [
+    { icon: <GaugeIcon />, title: 'Case inspector', subtitle: 'Context with provenance, applications, events · §40' },
+    { icon: <ShieldAlertIcon />, title: 'Event simulator', subtitle: 'Each button is a state-machine transition · §41' },
+  ],
+  persona: [
+    { icon: <SlidersHorizontalIcon />, title: 'Six sliders', subtitle: 'Length, humour, sarcasm, formality, playfulness, poetic' },
+    { icon: <SlidersHorizontalIcon />, title: 'Presets', subtitle: 'Default, concise, friendly, formal, dry humour, poetic' },
+  ],
+  domain: [
+    { icon: <ShieldAlertIcon />, title: 'Permitted domain', subtitle: 'The categories the gate routes on · §39' },
+    { icon: <ShieldAlertIcon />, title: 'Blocked requests', subtitle: 'With the category that caused each one' },
+  ],
+  audience: [
+    { icon: <UsersIcon />, title: 'Live audience activity', subtitle: 'Sessions, turns used against the cap · §44' },
+    { icon: <RotateCcwIcon />, title: 'Purge audience cases', subtitle: 'Never touches the presenter case' },
+  ],
+}
+
 const panels: Record<Section | 'overview', MilestonePanelProps> = {
   overview: {
     milestone: 'M1 · M7',
     title: 'Presenter console',
-    description: 'Everything the presenter needs to drive and recover the demonstration.',
+    description: 'Everything needed to drive and recover the demonstration.',
     sections: ['§37', '§43'],
     scope: [
       'Reset to the canonical presenter case — built in M1, because it is needed constantly',
@@ -65,12 +105,32 @@ const panels: Record<Section | 'overview', MilestonePanelProps> = {
 }
 
 export function AdminOverview({ section }: { section?: Section }): ReactNode {
-  const panel = panels[section ?? 'overview']
+  const key = section ?? 'overview'
 
   return (
     <div className="space-y-6">
       <SetupNotice />
-      <MilestonePanel {...panel} />
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Controls</h2>
+          <Badge variant="secondary" className="text-2xs">
+            Not wired up yet
+          </Badge>
+        </div>
+        <Card className="gap-0 divide-y p-0">
+          {controls[key].map((control) => (
+            <ListRow
+              key={control.title}
+              leading={<IconTile tone="neutral" size="sm">{control.icon}</IconTile>}
+              title={control.title}
+              subtitle={control.subtitle}
+            />
+          ))}
+        </Card>
+      </section>
+
+      <MilestonePanel {...panels[key]} />
     </div>
   )
 }
