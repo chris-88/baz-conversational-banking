@@ -14,7 +14,8 @@
     "e2e": "playwright test",
     "eval:guardrails": "node --env-file-if-exists=.env.local evals/guardrails/run.ts",
     "seed:generate": "node scripts/generate-seed.ts",
-    "seed:check": "node scripts/generate-seed.ts check"
+    "seed:check": "node scripts/generate-seed.ts check",
+    "check:bundle": "node scripts/check-bundle-secrets.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -1,8 +1,17 @@
 import { z } from 'zod'
 
 /**
- * Browser environment. Nothing secret is ever exposed through `VITE_*`
- * (CLAUDE.md > Secrets): the Anthropic and Twilio keys live only as Edge Function secrets.
+ * Browser environment.
+ *
+ * SAFETY: every variable named here is compiled into the public JavaScript bundle. Only
+ * `VITE_`-prefixed values reach `import.meta.env` at all, and each is read EXPLICITLY below
+ * rather than by handing the whole `import.meta.env` object to Zod — a wholesale reference
+ * makes Vite inline every `VITE_` variable that happens to be defined, so one mis-prefixed
+ * secret in a `.env` file would ship to every visitor.
+ *
+ * Secrets never carry a `VITE_` prefix. They belong in `supabase/.env.local` as Edge Function
+ * secrets (CLAUDE.md > Secrets). `scripts/check-bundle-secrets.ts` fails the build if one
+ * reaches `dist/`.
  */
 const browserEnvSchema = z.object({
   VITE_SUPABASE_URL: z.url(),
@@ -13,7 +22,12 @@ const browserEnvSchema = z.object({
 
 export type BrowserEnv = z.infer<typeof browserEnvSchema>
 
-const parsed = browserEnvSchema.safeParse(import.meta.env)
+const parsed = browserEnvSchema.safeParse({
+  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
+  VITE_BASE_PATH: import.meta.env.VITE_BASE_PATH,
+})
 
 /**
  * Fails soft on purpose. The site must deploy and render before the Supabase project exists,

@@ -40,3 +40,7 @@ jobs:
           VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
+      # The site is public: anything in dist/ is readable by anyone.
+      - name: No secrets in the published bundle
+        run: npm run check:bundle

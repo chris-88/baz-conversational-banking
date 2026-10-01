@@ -36,6 +36,9 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
 
+      - name: No secrets in the published bundle
+        run: npm run check:bundle
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v4

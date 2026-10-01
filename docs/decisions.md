@@ -77,10 +77,8 @@ section.
 
 ## Open, needs a decision
 
-- **The migration is unverified.** `supabase/migrations/20260930210000_init.sql` has never been
-  applied: the Docker daemon is not running on this machine and the user is not in the `docker`
-  group, and there is no local Postgres to check the SQL against. It needs
-  `npx supabase start && npx supabase db reset` before it can be trusted.
+- ~~The migration is unverified.~~ Resolved 2026-10-01: pushed to the hosted project and
+  verified through PostgREST. See below.
 
 ## 2026-10-01 — Live at baz.chrisquinn.ie
 
@@ -109,3 +107,29 @@ section.
 - **2026-10-01** — Email for the project goes to `*@chrisquinn.ie`, which ImprovMX forwards to
   Chris's personal address. Use a descriptive local part per purpose, e.g. `baz-admin@` for the
   Supabase admin login.
+
+## 2026-10-01 — Backend connected
+
+- **2026-10-01** — **A secret must never carry a `VITE_` prefix.** Vite compiles every
+  `VITE_*` value into the public bundle, and `env.ts` previously handed the whole
+  `import.meta.env` object to Zod, which makes Vite inline *all* of them. It now reads each
+  variable explicitly, `src/vite-env.d.ts` declares exactly the four that exist, and
+  `scripts/check-bundle-secrets.ts` fails CI if a credential shape or any non-`VITE_` value
+  from `.env` appears in `dist/`. The guard is tested by planting a leak and confirming it
+  fails. CLAUDE.md > Secrets
+- **2026-10-01** — **The migration is verified.** Both migrations are applied to the hosted
+  project. RLS behaves as designed: `persona_config` and `domain_config` read (they have
+  `using (true)`), `cases` and `facts` return empty under RLS, and the four internal tables
+  return 401.
+- **2026-10-01** — Added `20261001140000_revoke_internal_tables.sql`. RLS already denied every
+  row on `customers`, `participant_sessions`, `tokens` and `admin_users`, but the `SELECT`
+  grant remained, so PostgREST still treated them as readable relations returning `[]`.
+  Revoking the grant denies them at two levels. §58, Invariant 8
+- **2026-10-01** — The canonical seed is applied to the hosted database through the Management
+  API query endpoint, because `supabase db push` does not run `seed.sql` against a remote
+  project. The in-app reset (§43) supersedes this in M7.
+- **2026-10-01** — Anonymous sign-ins enabled, and `rate_limit_anonymous_users` raised from the
+  default 30 to 500 through the Management API, matching the local `config.toml`. An audience
+  sharing one NAT'd IP would otherwise lock itself out mid-demonstration. §28, §45
+- **2026-10-01** — `BAZ_MODEL=claude-sonnet-5-5` confirmed against the live model list, where it
+  is the current Sonnet. `GATE_MODEL=claude-haiku-4-5-20251001` likewise.
