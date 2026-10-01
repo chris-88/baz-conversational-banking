@@ -1,0 +1,163 @@
+import { z } from 'zod'
+import { FACT_KEYS, type FactKey } from '../domain/facts.ts'
+import { PRODUCTS } from '../domain/journey.ts'
+
+/**
+ * The tools Baz may call.
+ *
+ * Invariant 1 — the model proposes, the UI commits. Read the list and note what is absent:
+ * there is no tool that creates, submits, pauses or resumes an application, grants consent,
+ * invites a partner, or makes a declaration. Every one of those is a `case-action` call made
+ * by the customer's own tap. The model can only record what it was told, and ask for a card
+ * to be rendered.
+ *
+ * Every input is validated here before any effect. Invalid input returns a tool error to the
+ * model and is never thrown to the user.
+ */
+
+const factKeyEnum = z.enum(FACT_KEYS as unknown as [FactKey, ...FactKey[]])
+const productEnum = z.enum(PRODUCTS)
+const applicationId = z.uuid()
+
+export const recordFactsInput = z.object({
+  facts: z
+    .array(
+      z.object({
+        key: factKeyEnum,
+        /** Whose fact it is. The server resolves the role to a participant. */
+        subject: z.enum(['primary', 'partner', 'household']),
+        value: z.unknown(),
+      }),
+    )
+    .min(1)
+    .max(12),
+})
+
+export const showProductOptionsInput = z.object({
+  products: z
+    .array(
+      z.object({
+        product: productEnum,
+        /** Must tie back to something the customer actually said (§49). */
+        reason: z.string().min(10).max(200),
+      }),
+    )
+    .min(1)
+    .max(5),
+})
+
+export const showReviewInput = z.object({ applicationId })
+export const showPausePromptInput = z.object({ applicationId })
+export const showStatusInput = z.object({
+  /** Omit for every application on the case. */
+  applicationId: applicationId.optional(),
+})
+
+export const requestUploadInput = z.object({
+  /** Must match an application_request row that is already open. */
+  requestId: z.uuid(),
+})
+
+export const showPartnerInviteInput = z.object({
+  applicationIds: z.array(applicationId).min(1).max(5),
+})
+
+export const TOOL_INPUTS = {
+  record_facts: recordFactsInput,
+  show_product_options: showProductOptionsInput,
+  show_review: showReviewInput,
+  show_pause_prompt: showPausePromptInput,
+  request_upload: requestUploadInput,
+  show_partner_invite: showPartnerInviteInput,
+  show_status: showStatusInput,
+} as const
+
+export type ToolName = keyof typeof TOOL_INPUTS
+export const TOOL_NAMES = Object.keys(TOOL_INPUTS) as readonly ToolName[]
+
+export type ToolDefinition = {
+  readonly name: ToolName
+  readonly description: string
+  readonly schema: z.ZodType
+}
+
+export const TOOLS: readonly ToolDefinition[] = [
+  {
+    name: 'record_facts',
+    description:
+      'Record something the customer just told you, so it is never asked for again. Only for ' +
+      'what they actually said — never a guess, an inference, or anything about health.',
+    schema: recordFactsInput,
+  },
+  {
+    name: 'show_product_options',
+    description:
+      'Offer products for the customer to choose from. Give a one-line reason for each, tied ' +
+      'to something they told you. The customer chooses in the card; you do not create ' +
+      'anything by calling this.',
+    schema: showProductOptionsInput,
+  },
+  {
+    name: 'show_review',
+    description:
+      'Show what is about to be submitted for an application, for the customer to confirm. ' +
+      'The content is built from the case, not from you. Nothing is submitted until they tap.',
+    schema: showReviewInput,
+  },
+  {
+    name: 'show_pause_prompt',
+    description:
+      'Offer to hold an application. Use after explaining why, for example when a loan would ' +
+      'affect a mortgage. The customer decides in the card.',
+    schema: showPausePromptInput,
+  },
+  {
+    name: 'request_upload',
+    description:
+      'Ask for a document that the case already lists as outstanding. You cannot invent a ' +
+      'request; pass the id of one that is already open.',
+    schema: requestUploadInput,
+  },
+  {
+    name: 'show_partner_invite',
+    description:
+      'Offer to invite the second applicant to the applications they are needed for. The ' +
+      'invitation is only sent when the customer taps.',
+    schema: showPartnerInviteInput,
+  },
+  {
+    name: 'show_status',
+    description:
+      'Show the status card for one application, or for all of them. The card renders from the ' +
+      'case, independently of whatever you write alongside it.',
+    schema: showStatusInput,
+  },
+]
+
+export type ToolValidation =
+  | { readonly ok: true; readonly name: ToolName; readonly input: unknown }
+  | { readonly ok: false; readonly name: string; readonly error: string }
+
+/**
+ * Validates a tool call before anything happens. An unknown name or invalid input becomes a
+ * tool error the model can correct, never an exception the customer sees.
+ */
+export function validateToolCall(name: string, input: unknown): ToolValidation {
+  if (!Object.prototype.hasOwnProperty.call(TOOL_INPUTS, name)) {
+    return { ok: false, name, error: `Unknown tool "${name}".` }
+  }
+
+  const toolName = name as ToolName
+  const result = TOOL_INPUTS[toolName].safeParse(input)
+  if (!result.success) {
+    return {
+      ok: false,
+      name,
+      error: result.error.issues
+        .map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`)
+        .join('; '),
+    }
+  }
+
+  return { ok: true, name: toolName, input: result.data }
+}
