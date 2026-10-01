@@ -1,0 +1,182 @@
+import type { Product } from '../../domain/journey.ts'
+
+/**
+ * §51 — product information integrity.
+ *
+ * Baz states product details ONLY from this catalogue. Anything not here, Baz does not know:
+ * no invented rates, eligibility criteria, fees or application requirements. Every figure
+ * below is illustrative and marked as such, and the disclaimer travels with it into the
+ * prompt so the model cannot present these as real terms.
+ */
+
+export type IllustrativeTerm = {
+  readonly label: string
+  readonly value: string
+}
+
+export type ProductInfo = {
+  readonly product: Product
+  readonly name: string
+  /** One sentence, in the customer's language rather than the bank's. */
+  readonly oneLine: string
+  readonly description: string
+  /** Circumstances in which this is genuinely worth raising (§49: discovery, not cross-selling). */
+  readonly relevantWhen: readonly string[]
+  readonly eligibility: readonly string[]
+  readonly illustrativeTerms: readonly IllustrativeTerm[]
+  /** Anything Baz should be careful about when explaining this product. */
+  readonly cautions: readonly string[]
+}
+
+/** Travels with the catalogue into every prompt. */
+export const SYNTHETIC_TERMS_DISCLAIMER =
+  'Every rate, fee, limit and term in this catalogue is ILLUSTRATIVE and invented for a ' +
+  'prototype. Never present these as real Bank of Ireland terms. If a customer asks for exact ' +
+  'pricing, say the figures here are illustrative for the demonstration and that real terms ' +
+  'would come from the live product pages.'
+
+export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
+  mortgage: {
+    product: 'mortgage',
+    name: 'Mortgage',
+    oneLine: 'A loan secured on the home you are buying.',
+    description:
+      'A long-term loan to buy a property, repaid monthly over an agreed term. How much can be ' +
+      'lent depends on income, existing commitments and the deposit available.',
+    relevantWhen: [
+      'The customer is buying a property.',
+      'The customer is moving home or switching an existing mortgage.',
+    ],
+    eligibility: [
+      'Applicants must be 18 or over.',
+      'A deposit is required; first-time buyers typically need at least 10% of the purchase price.',
+      'Lending is subject to assessment of income, outgoings and existing credit commitments.',
+      'The property must be in the Republic of Ireland.',
+    ],
+    illustrativeTerms: [
+      { label: 'Illustrative fixed rate', value: '3.85% for 3 years' },
+      { label: 'Illustrative term', value: 'Up to 35 years' },
+      { label: 'Illustrative maximum loan', value: '4 times combined gross annual income' },
+    ],
+    cautions: [
+      'Never state or imply an approval decision. Assessment is done by the mortgage team.',
+      'Do not estimate how much the customer can borrow.',
+    ],
+  },
+
+  joint_account: {
+    product: 'joint_account',
+    name: 'Joint current account',
+    oneLine: 'A day-to-day account in two names.',
+    description:
+      'A current account held by two people, both able to pay in, spend and see everything on ' +
+      'the account. Commonly opened when a couple starts running household costs together.',
+    relevantWhen: [
+      'The customer manages, or wants to start managing, money together with someone else.',
+      'The customer has recently married or moved in with a partner.',
+    ],
+    eligibility: [
+      'Both applicants must be 18 or over and resident in the Republic of Ireland.',
+      'Both applicants must complete identity verification.',
+      'Both applicants must agree to the account terms.',
+    ],
+    illustrativeTerms: [
+      { label: 'Illustrative monthly maintenance fee', value: '€6' },
+      { label: 'Illustrative overdraft', value: 'Subject to application' },
+    ],
+    cautions: [
+      'Both parties see all transactions. Mention this if the customer seems unsure about ' +
+        'combining finances.',
+    ],
+  },
+
+  credit_card: {
+    product: 'credit_card',
+    name: 'Credit card',
+    oneLine: 'A card with a borrowing limit, repaid monthly.',
+    description:
+      'A revolving credit facility with an assigned limit. The balance can be repaid in full ' +
+      'each month or carried, with interest charged on what is carried.',
+    relevantWhen: [
+      'The customer expects irregular or one-off costs.',
+      'The customer has no card with us and wants a payment method with some flexibility.',
+    ],
+    eligibility: [
+      'Applicants must be 18 or over with a regular income.',
+      'Subject to credit assessment.',
+      'The credit limit offered is set by that assessment, not chosen by the customer.',
+    ],
+    illustrativeTerms: [
+      { label: 'Illustrative purchase APR', value: '22.9% variable' },
+      { label: 'Illustrative minimum repayment', value: '5% of the balance, or €5' },
+      { label: 'Illustrative government stamp duty', value: '€30 a year' },
+    ],
+    cautions: [
+      'Do not state the limit the customer will receive.',
+      'If the customer is applying for a mortgage, mention that new credit forms part of the ' +
+        'wider affordability picture.',
+    ],
+  },
+
+  personal_loan: {
+    product: 'personal_loan',
+    name: 'Personal loan',
+    oneLine: 'A fixed amount borrowed over a fixed term.',
+    description:
+      'A lump sum borrowed and repaid in equal monthly instalments over an agreed period. ' +
+      'Often used for a specific, known cost.',
+    relevantWhen: [
+      'The customer has a specific cost in mind and a sense of the amount.',
+      'The customer is furnishing or renovating a new home.',
+    ],
+    eligibility: [
+      'Applicants must be 18 or over with a regular income.',
+      'Subject to credit assessment.',
+      'Minimum and maximum loan amounts apply.',
+    ],
+    illustrativeTerms: [
+      { label: 'Illustrative rate', value: '8.5% APR' },
+      { label: 'Illustrative amount', value: '€2,000 to €75,000' },
+      { label: 'Illustrative term', value: '1 to 5 years' },
+    ],
+    cautions: [
+      'Where a mortgage application is active, additional borrowing affects affordability. ' +
+        'The loan_vs_mortgage advisory covers this; explain it rather than pushing the loan.',
+    ],
+  },
+
+  protection: {
+    product: 'protection',
+    name: 'Life assurance and family protection',
+    oneLine: 'A payment to the people who depend on you, if you die during the cover term.',
+    description:
+      'Life cover pays an agreed amount if the insured person dies within the term of the ' +
+      'policy. Mortgage protection is a form of this, sized to clear the outstanding mortgage.',
+    relevantWhen: [
+      'Someone depends financially on the customer, such as a child or a partner.',
+      'The customer is taking on a mortgage.',
+    ],
+    eligibility: [
+      'Applicants must be 18 or over.',
+      'Cover is subject to health questions, which the customer answers themselves.',
+      'Premiums depend on age, cover amount, term and the health information provided.',
+    ],
+    illustrativeTerms: [
+      { label: 'Illustrative cover', value: '€100,000 to €1,000,000' },
+      { label: 'Illustrative term', value: 'Up to 40 years, or the mortgage term' },
+    ],
+    cautions: [
+      'NEVER infer health information from anything the customer has said, and never ask a ' +
+        'health question in conversation. Health data is collected only through the consented ' +
+        'structured form (§7.5).',
+      'This is a sensitive subject. Do not use humour when discussing death, illness or ' +
+        'dependants.',
+    ],
+  },
+}
+
+export const ALL_PRODUCTS: readonly ProductInfo[] = Object.values(boiProducts)
+
+export function productInfo(product: Product): ProductInfo {
+  return boiProducts[product]
+}

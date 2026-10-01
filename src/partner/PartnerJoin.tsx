@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { MilestonePanel } from '@/components/MilestonePanel'
 import { BoiHeader } from '@/shells/boi/BoiHeader'
+import { PrototypeBanner } from '@/components/PrototypeBanner'
 
 /** §6 Stage 9, §33 — partner joins through a single-use token and sees only their own tasks. */
 export function PartnerJoin(): ReactNode {
@@ -9,6 +10,7 @@ export function PartnerJoin(): ReactNode {
 
   return (
     <div className="boi-theme bg-background min-h-dvh">
+      <PrototypeBanner />
       <BoiHeader />
       <main className="mx-auto w-full max-w-md space-y-6 px-4 py-8">
         <div className="space-y-1">

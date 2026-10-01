@@ -16,6 +16,8 @@
   "include": [
     "src",
     "supabase/functions/_shared/domain",
-    "supabase/functions/_shared/contracts"
+    "supabase/functions/_shared/contracts",
+    "supabase/functions/_shared/tenants",
+    "supabase/functions/_shared/llm"
   ]
 }

@@ -81,3 +81,9 @@ section.
   applied: the Docker daemon is not running on this machine and the user is not in the `docker`
   group, and there is no local Postgres to check the SQL against. It needs
   `npx supabase start && npx supabase db reset` before it can be trusted.
+- **GitHub Pages is unavailable.** The repo `chris-88/baz-conversational-banking` is private and
+  the account is on the free plan, so `POST /repos/.../pages` returns 422: "Your current plan does
+  not support GitHub Pages for this repository." `deploy-pages.yml` will fail until the repo is
+  made public (the data is synthetic and no secrets are committed), the account upgrades, or
+  hosting moves to something that serves private repos free. Changing host is a stack decision,
+  so it needs a call. §61

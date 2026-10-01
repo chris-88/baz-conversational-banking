@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { routes } from '@/app/routes'
+import { PrototypeBanner } from '@/components/PrototypeBanner'
 
 const tabs = [
   { to: routes.admin.root, label: 'Overview', end: true },
@@ -15,6 +16,7 @@ const tabs = [
 export function AdminConsole(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
+      <PrototypeBanner />
       <header className="border-b px-4 py-3">
         <h1 className="text-sm font-semibold">Baz presenter console</h1>
       </header>

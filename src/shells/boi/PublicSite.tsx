@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { MilestonePanel } from '@/components/MilestonePanel'
 import { SetupNotice } from '@/components/SetupNotice'
 import { BoiHeader } from '@/shells/boi/BoiHeader'
+import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { routes } from '@/app/routes'
 
 /** §6 Stage 1 — public website. Anonymous entry point into the Baz conversation. */
 export function PublicSite(): ReactNode {
   return (
     <div className="boi-theme bg-background min-h-dvh">
+      <PrototypeBanner />
       <BoiHeader />
 
       <main className="mx-auto w-full max-w-md space-y-6 px-4 py-8">

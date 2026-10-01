@@ -2,11 +2,13 @@ import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { MilestonePanel } from '@/components/MilestonePanel'
 import { BoiHeader } from '@/shells/boi/BoiHeader'
+import { PrototypeBanner } from '@/components/PrototypeBanner'
 
 /** §45, §46 — QR entry for the audience. Isolated case, never touches the presenter case. */
 export function AudienceEntry(): ReactNode {
   return (
     <div className="boi-theme bg-background min-h-dvh">
+      <PrototypeBanner />
       <BoiHeader />
       <main className="mx-auto w-full max-w-md space-y-6 px-4 py-8">
         <div className="space-y-1">
