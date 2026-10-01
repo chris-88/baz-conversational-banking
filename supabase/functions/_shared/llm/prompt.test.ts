@@ -27,8 +27,17 @@ describe('section order (CLAUDE.md > A Baz turn)', () => {
   it('places policy, domain, catalogue, persona and digest in that order', () => {
     const prompt = composeSystemPrompt(baseInput())
 
-    const order = ['# Policy', '# Domain', '# Products', '## Style', '# Case'].map((heading) =>
-      prompt.indexOf(heading),
+    const order = [
+      '# Policy',
+      '# Domain',
+      '# Using your tools',
+      '# Facts you can record',
+      '# Products',
+      '## Style',
+      '# Case',
+    ].map(
+      (heading) =>
+        prompt.indexOf(heading),
     )
 
     expect(order.every((index) => index >= 0), 'every section is present').toBe(true)
@@ -201,5 +210,60 @@ describe('identifiers never reach the model as noise', () => {
     // Application ids are needed for tool calls, so they appear — but exactly once, labelled.
     expect(prompt.match(/3f8b0c7e-0000-4000-8000-000000000001/g)).toHaveLength(1)
     expect(prompt).not.toContain(asParticipantId('should-not-appear'))
+  })
+})
+
+/**
+ * The policy says what Baz may not do. Without this section a model holds a pleasant
+ * conversation and records nothing — which looks fine on screen and orchestrates nothing
+ * underneath. Haiku 4.5 did exactly that before this existed.
+ */
+describe('tool guidance', () => {
+  const prompt = composeSystemPrompt(baseInput())
+
+  it('tells the model to record facts in the same turn they are stated', () => {
+    expect(prompt).toMatch(/record_facts/)
+    expect(prompt).toMatch(/same\s+turn/i)
+  })
+
+  it('tells the model to offer products with a card rather than in prose', () => {
+    expect(prompt).toMatch(/show_product_options/)
+    expect(prompt).toMatch(/cannot be chosen/i)
+  })
+
+  it('sits inside the cacheable prefix, since it never varies by case', () => {
+    const { stablePrefix } = composeSystemPrompt.withBreakpoint(baseInput())
+    expect(stablePrefix).toContain('# Using your tools')
+  })
+})
+
+/**
+ * `record_facts` types its value as unknown, so without this the model guesses. It guessed
+ * "spouse" for a key whose enum is alone/partner/other, and the fact was silently refused.
+ */
+describe('the fact reference', () => {
+  const prompt = composeSystemPrompt(baseInput())
+
+  it('names the allowed values for an enum key', () => {
+    expect(prompt).toMatch(/household\.buyingWith.*one of alone, partner, other/)
+  })
+
+  it('says which keys belong to a person rather than the household', () => {
+    expect(prompt).toMatch(/income\.annualBasic.*\[per person\]/)
+    expect(prompt).not.toMatch(/household\.dependantCount.*\[per person\]/)
+  })
+
+  it('describes numbers as digits, so a model does not write them out in words', () => {
+    expect(prompt).toMatch(/income\.annualBasic.*digits only/)
+  })
+
+  it('never lists a key the model is forbidden from writing (Invariant 6)', () => {
+    expect(prompt).not.toContain('protection.health.smoker')
+    expect(prompt).not.toContain('protection.health.conditions')
+  })
+
+  it('is part of the cacheable prefix, since the catalogue never varies by case', () => {
+    const { stablePrefix } = composeSystemPrompt.withBreakpoint(baseInput())
+    expect(stablePrefix).toContain('# Facts you can record')
   })
 })

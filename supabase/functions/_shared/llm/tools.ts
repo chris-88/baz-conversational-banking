@@ -24,8 +24,12 @@ export const recordFactsInput = z.object({
     .array(
       z.object({
         key: factKeyEnum,
-        /** Whose fact it is. The server resolves the role to a participant. */
-        subject: z.enum(['primary', 'partner', 'household']),
+        /**
+         * Only needed when the fact belongs to the second applicant. The catalogue already
+         * knows whether a key is household-level or personal, so the model is not asked to
+         * decide — it got that wrong often enough to lose facts.
+         */
+        subject: z.enum(['primary', 'partner']).optional(),
         value: z.unknown(),
       }),
     )

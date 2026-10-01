@@ -226,3 +226,31 @@ section.
 - **2026-10-01** — `BAZ_MAX_TOKENS` is 1024 and the tool loop is bounded at 3 rounds. The first
   is §47 — "count to 10,000" cannot succeed even if it reached the model. The second is because
   no tool takes an action, so there is no legitimate reason to loop.
+
+## 2026-10-01 — Model choice, measured
+
+- **2026-10-01** — **`BAZ_MODEL` stays `claude-sonnet-5-5`; Haiku 4.5 was measured and rejected.**
+  `npm run compare:models` runs the same turns through both. Across two runs of three turns,
+  Sonnet called the right tools 6/6 times with identical behaviour on both runs. Haiku called a
+  tool 1/6 times — `record_facts` on one run and nothing on the next, same input — and never
+  called `show_product_options` at all. Without tool calls there is no orchestration, which is
+  §63 priority 4 and the whole of §67. Haiku is roughly 3× faster and half the price, and
+  neither pays for losing the orchestration. Re-run the harness whenever this is worth
+  revisiting.
+- **2026-10-01** — `GATE_MODEL` is already the cheapest model available and scores 100% on both
+  guardrail sets. Classification is what Haiku is good at; this is the right place for it.
+- **2026-10-01** — Added `TOOL_GUIDANCE` to the prompt. The policy said what Baz may not do but
+  nothing said what it must actively do, so a model would hold a pleasant conversation and
+  record nothing — which looks fine on screen and orchestrates nothing underneath.
+- **2026-10-01** — Added a generated fact reference to the prompt. `record_facts` types `value`
+  as unknown, so the model was guessing: it sent `"spouse"` for a key whose enum is
+  alone/partner/other, and the write was silently refused — a fact lost for a reason the
+  customer never caused. Generated from the catalogue so it cannot drift, and it omits
+  non-extractable keys so health data is not even named (Invariant 6).
+- **2026-10-01** — **The catalogue decides whether a fact is household-level or personal, not
+  the model.** Asking the model to classify it lost facts: it sent household keys under
+  `primary` and the write was refused. `subject` is now optional and only means "this belongs
+  to the second applicant".
+- **2026-10-01** — Prompt caching verified: the stable prefix is ~3,900 tokens, written once
+  and read from cache thereafter, at roughly a tenth of the input cost. This is the real cost
+  lever, not the model tier.

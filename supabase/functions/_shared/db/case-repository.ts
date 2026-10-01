@@ -262,7 +262,8 @@ export async function writeEvent(
 
 export type FactWrite = {
   readonly key: FactKey
-  readonly subject: 'primary' | 'partner' | 'household'
+  /** Only meaningful for person-level keys. Defaults to the primary customer. */
+  readonly subject?: 'primary' | 'partner' | undefined
   readonly value: unknown
 }
 
@@ -278,6 +279,10 @@ export type FactWriteOutcome = {
  * catalogue, the catalogue must mark it extractable (Invariant 6), and the value must satisfy
  * the key's schema. A rejection is returned to the model as a tool error, never shown to the
  * customer.
+ *
+ * Whether a fact is household-level or personal comes from the catalogue, not from the model.
+ * Asking the model to classify it lost facts: it would send a household key under `primary`
+ * and the write would be refused for a reason the customer never caused.
  */
 export async function recordFacts(
   client: SupabaseClient,
@@ -310,21 +315,12 @@ export async function recordFacts(
       continue
     }
 
-    const household = fact.subject === 'household'
-    const participantId = household ? null : input.participants[fact.subject]
+    const household = definition.subject === 'household'
+    const role = fact.subject ?? 'primary'
+    const participantId = household ? null : input.participants[role]
 
     if (!household && participantId === null) {
-      rejected.push({ key: fact.key, reason: `There is no ${fact.subject} on this case yet.` })
-      continue
-    }
-
-    // The catalogue decides whether a key is personal or household, not the model.
-    if (definition.subject === 'household' && !household) {
-      rejected.push({ key: fact.key, reason: 'This is household information, not one person’s.' })
-      continue
-    }
-    if (definition.subject === 'person' && household) {
-      rejected.push({ key: fact.key, reason: 'This belongs to a person, not the household.' })
+      rejected.push({ key: fact.key, reason: `There is no ${role} on this case yet.` })
       continue
     }
 

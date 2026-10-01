@@ -1,4 +1,11 @@
-import type { ApplicationId, FactSource, ParticipantRole } from '../domain/facts.ts'
+import { z } from 'zod'
+import {
+  FACT_KEYS,
+  factCatalogue,
+  type ApplicationId,
+  type FactSource,
+  type ParticipantRole,
+} from '../domain/facts.ts'
 import type { Product } from '../domain/journey.ts'
 import type { ApplicationState } from '../domain/state-machine.ts'
 import type { DomainConfig } from '../tenants/boi/domain-config.ts'
@@ -42,6 +49,76 @@ change them.
    already holds something, do not ask for it again.
 8. The customer decides what to pursue. Explain why something might be relevant to what they
    have told you, then let them choose. Never press.`
+
+/**
+ * When to reach for a tool.
+ *
+ * The policy says what Baz may not do; this says what it must actively do. Without it a model
+ * will happily hold a pleasant conversation and record nothing, which looks fine on screen and
+ * orchestrates nothing underneath.
+ */
+export const TOOL_GUIDANCE = `# Using your tools
+
+These are not optional extras. The conversation is only useful if what the customer tells you is
+captured, and if what you offer is something they can act on.
+
+- Record as you go. The moment a customer states something — a name, a salary, who they are
+  buying with, that they have a child, where they are buying — call record_facts in that same
+  turn. Do not wait until the end of the conversation, do not ask permission, and never ask
+  again for something you have just been told. If several facts arrive in one sentence, record
+  them all in one call.
+- Offer with a card, not with prose. When you have identified products worth considering, call
+  show_product_options with a one-line reason for each, tied to something the customer actually
+  said. Do not list products in a sentence instead: the customer chooses in the card, so a
+  product you only mention cannot be chosen.
+- Show status with a card. When asked where things stand, call show_status rather than
+  describing it. The card is rendered from the case, so it is always right.
+- Writing about a product or a status without calling the matching tool leaves the customer with
+  nothing to act on. Call the tool, and keep your own words short.`
+
+/**
+ * What each fact key accepts, generated from the catalogue.
+ *
+ * The `record_facts` schema types `value` as unknown, so without this the model is guessing.
+ * It guessed "spouse" for a key whose enum is alone/partner/other, and the write was silently
+ * refused — a fact lost for a reason the customer never caused. Generated rather than written
+ * by hand so it cannot drift from the catalogue.
+ */
+export function factReference(): string {
+  const lines = FACT_KEYS.filter((key) => factCatalogue[key].extractable).map((key) => {
+    const definition = factCatalogue[key]
+    const schema = z.toJSONSchema(definition.schema, { io: 'input' }) as {
+      type?: string
+      enum?: readonly unknown[]
+      items?: { type?: string }
+    }
+
+    const accepts =
+      schema.enum !== undefined
+        ? `one of ${schema.enum.map(String).join(', ')}`
+        : schema.type === 'boolean'
+          ? 'true or false'
+          : schema.type === 'integer' || schema.type === 'number'
+            ? 'a whole number, digits only'
+            : schema.type === 'array'
+              ? 'a list of short strings'
+              : 'text'
+
+    const whose = definition.subject === 'household' ? '' : ' [per person]'
+    return `- ${key} — ${definition.label}: ${accepts}${whose}`
+  })
+
+  return [
+    '# Facts you can record',
+    '',
+    'These are the only keys record_facts accepts, and the only values each one allows. A key',
+    'or value outside this list is refused and the information is lost, so use them exactly.',
+    'Keys marked [per person] belong to one applicant; pass subject: "partner" for the second',
+    'applicant, and leave subject out otherwise. Everything else is household-level.',
+    '',
+    ...lines,
+  ].join('\n')
+}
 
 // ---------------------------------------------------------------------------
 // The case digest
@@ -262,6 +339,8 @@ function stableSections(input: PromptInput): readonly string[] {
   return [
     POLICY,
     domainSection(input.domainConfig),
+    TOOL_GUIDANCE,
+    factReference(),
     productSection(input.products),
     composePersona(sliders),
   ]

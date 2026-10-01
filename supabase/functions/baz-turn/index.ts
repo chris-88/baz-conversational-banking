@@ -193,7 +193,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           executeTool: async (name, input) => {
             switch (name) {
               case 'record_facts': {
-                const { facts } = input as { facts: { key: any; subject: any; value: unknown }[] }
+                const { facts } = input as { facts: { key: any; subject?: any; value: unknown }[] }
                 const outcome = await recordFacts(admin, {
                   caseId: turn.caseId,
                   facts,
