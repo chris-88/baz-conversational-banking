@@ -1,6 +1,8 @@
 {
   "imports": {
-    "zod": "npm:zod@^4.6.5"
+    "zod": "npm:zod@^4.6.5",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.131.0",
+    "@anthropic-ai/sdk/": "npm:/@anthropic-ai/sdk@^0.131.0/"
   },
   "compilerOptions": {
     "strict": true,
@@ -8,11 +10,16 @@
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
-    "lib": ["deno.window", "esnext"]
+    "lib": [
+      "deno.window",
+      "esnext"
+    ]
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": [
+        "recommended"
+      ]
     }
   },
   "fmt": {

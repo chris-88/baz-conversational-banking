@@ -133,3 +133,15 @@ section.
   sharing one NAT'd IP would otherwise lock itself out mid-demonstration. §28, §45
 - **2026-10-01** — `BAZ_MODEL=claude-sonnet-5-5` confirmed against the live model list, where it
   is the current Sonnet. `GATE_MODEL=claude-haiku-4-5-20251001` likewise.
+- **2026-10-01** — The gate classifier uses structured outputs (`output_config.format` with
+  `zodOutputFormat`), not an assistant prefill. Prefill returns a 400 on the current model
+  generation, and constraining the shape at the API level is stronger anyway. §25
+- **2026-10-01** — The classifier's system prompt is built from the tenant's `DomainConfig`, so
+  the permitted domain stays configurable rather than hard-coded, and Baz stays portable.
+  §20, §32
+- **2026-10-01** — `npm run eval:guardrails` is NOT in CI: it makes live API calls and costs
+  money per run. It is a release gate run by hand before any presentation, as CLAUDE.md
+  requires. First full run scored 100% on both sets.
+- **2026-10-01** — `@anthropic-ai/sdk` is a devDependency: the browser never imports it (the
+  LLM is called only from Edge Functions), and Node needs it only to run the guardrail eval.
+  Deno resolves it through `supabase/functions/deno.json`.
