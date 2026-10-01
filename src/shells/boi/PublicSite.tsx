@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CreditCardIcon, HomeIcon, PiggyBankIcon, ShieldCheckIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { IconTile } from '@/components/IconTile'
@@ -28,6 +29,8 @@ const products = [
  * proposition is "tell us what you're trying to do", so that is the first thing on the page.
  */
 export function PublicSite(): ReactNode {
+  const navigate = useNavigate()
+
   return (
     <div className="bg-background min-h-dvh">
       <PrototypeBanner />
@@ -60,11 +63,14 @@ export function PublicSite(): ReactNode {
 
               <Composer
                 placeholder="Tell Baz what you’re trying to do…"
-                disabled
                 className="border-transparent bg-white/95 text-foreground shadow-lg"
+                onSend={(message) => {
+                  // The conversation lives in the app shell; carry the opening line across.
+                  void navigate(`${routes.app.baz}?say=${encodeURIComponent(message)}`)
+                }}
               />
               <p className="text-2xs opacity-75">
-                The conversation arrives in M2. Everything else here is live.
+                Baz is live. Say what you&rsquo;re trying to do and it will take it from there.
               </p>
             </div>
           </div>

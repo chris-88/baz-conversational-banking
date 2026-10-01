@@ -254,3 +254,21 @@ section.
 - **2026-10-01** — Prompt caching verified: the stable prefix is ~3,900 tokens, written once
   and read from cache thereafter, at roughly a tenth of the input cost. This is the real cost
   lever, not the model tier.
+
+## 2026-10-01 — Baz is live
+
+- **2026-10-01** — The `session` function attaches an anonymous visitor to a participant. If the
+  caller is already attached it returns the same case, which is what makes a browser tab and an
+  installed PWA land on the same conversation rather than starting two (§12, §28).
+- **2026-10-01** — `/#/app/baz` joins the canonical presenter case, so the conversation starts
+  with the bank-held facts in place. `mode: 'fresh'` creates an empty case and is what the
+  audience entry will use in M8 (§46).
+- **2026-10-01** — The SSE client uses `fetch`, not `EventSource`: the turn is a POST carrying
+  an Authorization header and EventSource supports neither. Frames are buffered until the
+  blank-line boundary, so a partial frame is never parsed.
+- **2026-10-01** — The card registry is an exhaustive `switch`, so adding a card type to the
+  contract without building its component fails the typecheck rather than silently rendering
+  nothing at the customer.
+- **2026-10-01** — The public hero carries the first message across to the app as a query
+  parameter rather than making the customer retype it (§6 Stage 1). It is not sensitive — it is
+  what they just typed in public — so it does not need a token.

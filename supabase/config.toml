@@ -423,3 +423,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/deno.json"
 entrypoint = "./functions/baz-turn/index.ts"
+
+[functions.session]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deno.json"
+entrypoint = "./functions/session/index.ts"
