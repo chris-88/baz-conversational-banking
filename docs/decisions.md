@@ -201,3 +201,28 @@ section.
   a row that goes somewhere can be opened in a new tab.
 - **2026-10-01** — The branch badge moved from a fixed bottom overlay into normal flow at the
   top: pinned to the bottom it covered the app tab bar's labels.
+
+## 2026-10-01 — baz-turn
+
+- **2026-10-01** — **The shared-domain double-compile is proven.** `_shared/domain` now compiles
+  under Deno (via `supabase functions deploy`) and under Vite, from the same files. The two
+  things that make it work are the explicit `.ts` extensions on relative imports and the
+  `zod` entry in `supabase/functions/deno.json`.
+- **2026-10-01** — Edge Functions need `[functions.<name>]` in `config.toml` with an explicit
+  `import_map`. Without it the bundler ignores `supabase/functions/deno.json` and fails on the
+  first bare npm specifier.
+- **2026-10-01** — `_shared/db/**` takes a `SupabaseClient` as a parameter and touches no Deno
+  global, so it typechecks and tests under Node as well as Deno. Only the function entrypoint
+  reads `Deno.env`.
+- **2026-10-01** — Database rows are parsed with Zod rather than trusted. The database is a
+  boundary like any other, and this catches a migration that has drifted from the domain at
+  the point of reading instead of somewhere inside the requirement engine.
+- **2026-10-01** — **Cards are buffered until the turn's text is finished.** The model calls its
+  tool in the first round and explains itself in the second, so emitting cards as they happened
+  put the options on screen before the sentence introducing them. Baz explains, then offers.
+- **2026-10-01** — M2 exposes only `record_facts`, `show_product_options` and `show_status`.
+  The tools whose cards need M3 are left out of the tool list entirely rather than offered and
+  failed: the model cannot misuse what it cannot see.
+- **2026-10-01** — `BAZ_MAX_TOKENS` is 1024 and the tool loop is bounded at 3 rounds. The first
+  is §47 — "count to 10,000" cannot succeed even if it reached the model. The second is because
+  no tool takes an action, so there is no legitimate reason to loop.

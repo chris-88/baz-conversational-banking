@@ -1,0 +1,98 @@
+import { z } from 'zod'
+import { FACT_SOURCES, isFactKey } from '../domain/facts.ts'
+import { PRODUCTS } from '../domain/journey.ts'
+import { APPLICATION_STATES } from '../domain/state-machine.ts'
+
+/**
+ * Row schemas.
+ *
+ * The database is a boundary, so rows are parsed rather than trusted. This is what catches a
+ * migration that has drifted from the domain — at the point of reading, with a clear error,
+ * instead of somewhere deep in the requirement engine.
+ */
+
+export const caseRow = z.object({
+  id: z.uuid(),
+  kind: z.enum(['presenter', 'audience']),
+  auth_level: z.enum(['anonymous', 'authenticated']),
+  last_seen_at: z.string().nullable(),
+  customer_id: z.uuid().nullable(),
+})
+
+export const participantRow = z.object({
+  id: z.uuid(),
+  role: z.enum(['primary', 'partner']),
+  display_name: z.string().nullable(),
+})
+
+export const factRow = z.object({
+  id: z.uuid(),
+  key: z.string().refine(isFactKey, 'not a catalogue fact key'),
+  participant_id: z.uuid().nullable(),
+  subject_kind: z.enum(['participant', 'household']),
+  value: z.unknown(),
+  source: z.enum(FACT_SOURCES),
+  verified: z.boolean(),
+  captured_for: z.uuid().nullable(),
+  superseded_by: z.uuid().nullable(),
+  captured_at: z.string(),
+})
+
+export const applicationRow = z.object({
+  id: z.uuid(),
+  product: z.enum(PRODUCTS),
+  state: z.enum(APPLICATION_STATES),
+  resume_to: z.enum(APPLICATION_STATES).nullable(),
+})
+
+export const confirmationRow = z.object({
+  application_id: z.uuid(),
+  requirement_id: z.string(),
+})
+
+export const documentRow = z.object({
+  application_id: z.uuid().nullable(),
+  requirement_id: z.string().nullable(),
+  verified: z.boolean(),
+})
+
+export const requestRow = z.object({
+  id: z.uuid(),
+  application_id: z.uuid(),
+  requirement_id: z.string(),
+  status: z.enum(['open', 'fulfilled', 'cancelled']),
+  detail: z.string().nullable(),
+})
+
+export const productInterestRow = z.object({
+  product: z.enum(PRODUCTS),
+  status: z.enum(['offered', 'accepted', 'declined', 'deferred']),
+  reason: z.string().nullable(),
+})
+
+export const messageRow = z.object({
+  role: z.enum(['customer', 'baz', 'system']),
+  content: z.string(),
+})
+
+export const eventRow = z.object({
+  type: z.string(),
+  created_at: z.string(),
+  payload: z.record(z.string(), z.unknown()).nullable(),
+})
+
+export const personaRow = z.object({
+  preset: z.string(),
+  sliders: z.object({
+    length: z.number(),
+    humour: z.number(),
+    sarcasm: z.number(),
+    formality: z.number(),
+    playfulness: z.number(),
+    poetic: z.number(),
+  }),
+})
+
+export const domainConfigRow = z.object({ kill_switch: z.boolean() })
+
+export const customerRow = z.object({ full_name: z.string() })

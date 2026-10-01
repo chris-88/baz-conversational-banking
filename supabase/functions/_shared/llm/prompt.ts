@@ -60,7 +60,10 @@ export type DigestApplication = {
   readonly state: ApplicationState
   /** Plain-language label from the state machine, never written by the model. */
   readonly stateLabel: string
+  /** What the customer themselves must still supply. */
   readonly outstanding: readonly string[]
+  /** What is waiting on the second applicant. An application can be waiting on both. */
+  readonly outstandingForPartner?: readonly string[]
   readonly waitingOn: ParticipantRole | null
   /** Needed when the model asks for a card to be shown for this application. */
   readonly id?: ApplicationId
@@ -144,12 +147,16 @@ function applicationLines(application: DigestApplication): readonly string[] {
     ...(application.id === undefined ? [] : [`Application id: ${application.id}`]),
   ]
 
-  if (application.outstanding.length === 0) {
+  const forPartner = application.outstandingForPartner ?? []
+
+  if (application.outstanding.length === 0 && forPartner.length === 0) {
     lines.push('Nothing outstanding.')
-  } else {
-    const who =
-      application.waitingOn === 'partner' ? 'Waiting on the partner for' : 'Still needed from the customer'
-    lines.push(`${who}:`, ...application.outstanding.map((item) => `- ${item}`))
+  }
+  if (application.outstanding.length > 0) {
+    lines.push('Still needed from the customer:', ...application.outstanding.map((item) => `- ${item}`))
+  }
+  if (forPartner.length > 0) {
+    lines.push('Waiting on the partner for:', ...forPartner.map((item) => `- ${item}`))
   }
 
   return lines

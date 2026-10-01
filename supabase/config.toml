@@ -415,3 +415,11 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# The Edge Functions share one import map so `_shared/domain` resolves `zod` identically to the
+# app, and so npm packages are named rather than pinned at each import site.
+[functions.baz-turn]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deno.json"
+entrypoint = "./functions/baz-turn/index.ts"
