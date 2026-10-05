@@ -3,6 +3,10 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { routes } from '@/app/routes'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { AdminLogin } from '@/admin/AdminLogin'
+import { useAdminAuth } from '@/admin/useAdminAuth'
 
 const tabs = [
   { to: routes.admin.root, label: 'Overview' },
@@ -15,6 +19,7 @@ const tabs = [
 /** §37 to §44 — presenter console. Real Supabase email auth plus an `admin` role. */
 export function AdminConsole(): ReactNode {
   const { pathname } = useLocation()
+  const auth = useAdminAuth()
 
   // Tabs here are routes, so selection comes from the URL rather than Radix state. The
   // triggers render as links (`asChild`) so they behave like navigation, not like buttons.
@@ -34,13 +39,21 @@ export function AdminConsole(): ReactNode {
               >
                 B
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h1 className="truncate text-sm font-semibold tracking-tight">Presenter console</h1>
-                <p className="text-muted-foreground text-2xs">Baz · conversational banking</p>
+                <p className="text-muted-foreground truncate text-2xs">
+                  {auth.email ?? 'Baz · conversational banking'}
+                </p>
               </div>
+              {auth.email !== null && (
+                <Button size="sm" variant="ghost" onClick={() => void auth.signOut()}>
+                  Sign out
+                </Button>
+              )}
             </div>
 
-            <Tabs value={active}>
+            {auth.email !== null && (
+              <Tabs value={active}>
               <TabsList variant="line" className="w-full justify-start gap-0">
                 {tabs.map((tab) => (
                   <TabsTrigger key={tab.to} value={tab.to} asChild className="px-2 text-xs sm:px-3 sm:text-sm">
@@ -48,13 +61,22 @@ export function AdminConsole(): ReactNode {
                   </TabsTrigger>
                 ))}
               </TabsList>
-            </Tabs>
+              </Tabs>
+            )}
           </div>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6">
-        <Outlet />
+        {auth.checking ? (
+          <Skeleton className="h-40 w-full" />
+        ) : auth.email === null ? (
+          // The server checks admin status on every call regardless; this only decides what
+          // is drawn (§37).
+          <AdminLogin onSignIn={auth.signIn} />
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   )

@@ -1,0 +1,87 @@
+import { z } from 'zod'
+import { PRESET_NAMES, SLIDER_NAMES } from '../llm/persona.ts'
+
+/**
+ * `admin` — the presenter console (§37 to §44).
+ *
+ * Every action here can break a live demonstration, and the site is on a public URL, so the
+ * server checks the caller is a known admin on every single call. Client-side routing is a
+ * convenience, never the control.
+ */
+
+const sliders = z.object(
+  Object.fromEntries(SLIDER_NAMES.map((name) => [name, z.number().min(0).max(1)])) as Record<
+    (typeof SLIDER_NAMES)[number],
+    z.ZodNumber
+  >,
+)
+
+export const adminRequestSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('overview') }),
+  /** §43 — restores the canonical presenter case. Audience cases are untouched. */
+  z.object({ action: z.literal('reset_case') }),
+  /** §43 — the gate returns "demo paused" to everything. */
+  z.object({ action: z.literal('set_kill_switch'), enabled: z.boolean() }),
+  /** §38, §56 — style changes apply to the very next turn. */
+  z.object({
+    action: z.literal('set_persona'),
+    preset: z.enum(PRESET_NAMES).optional(),
+    sliders: sliders.optional(),
+  }),
+  /** §40 — the structured context behind the conversation. */
+  z.object({ action: z.literal('inspect_case'), caseId: z.uuid() }),
+])
+
+export const adminOverviewSchema = z.object({
+  killSwitch: z.boolean(),
+  persona: z.object({ preset: z.string(), sliders: sliders }),
+  cases: z.array(
+    z.object({
+      id: z.uuid(),
+      kind: z.enum(['presenter', 'audience']),
+      label: z.string().nullable(),
+      applications: z.number().int(),
+      messages: z.number().int(),
+      updatedAt: z.string(),
+    }),
+  ),
+  metrics: z.object({
+    /** §53 — the headline measure. */
+    questionsAvoided: z.number().int(),
+    factsCaptured: z.number().int(),
+    productsOffered: z.number().int(),
+    applicationsStarted: z.number().int(),
+    requestsBlocked: z.number().int(),
+  }),
+  /** §39 — enforcement made observable. */
+  blocked: z.array(z.object({ category: z.string(), at: z.string() })),
+})
+
+export const adminCaseSchema = z.object({
+  caseId: z.uuid(),
+  facts: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      value: z.string(),
+      source: z.string(),
+      verified: z.boolean(),
+      superseded: z.boolean(),
+      sensitive: z.boolean(),
+    }),
+  ),
+  applications: z.array(
+    z.object({
+      product: z.string(),
+      displayName: z.string(),
+      state: z.string(),
+      stateLabel: z.string(),
+      outstanding: z.array(z.string()),
+    }),
+  ),
+  events: z.array(z.object({ type: z.string(), actor: z.string(), at: z.string() })),
+})
+
+export type AdminRequest = z.infer<typeof adminRequestSchema>
+export type AdminOverview = z.infer<typeof adminOverviewSchema>
+export type AdminCase = z.infer<typeof adminCaseSchema>

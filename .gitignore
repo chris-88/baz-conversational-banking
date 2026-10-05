@@ -46,3 +46,6 @@ supabase/.temp
 # Internal source documents. Held locally, deliberately not published (the repo is public).
 docs/01-conversational-banking-poc-vision.md
 docs/03-baz-conversational-banking-poc-requirements.md
+
+# Admin console login, written once by the setup script.
+.admin-credentials

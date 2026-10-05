@@ -20,6 +20,8 @@ export default defineConfig({
         cn: resolve('./src/lib/utils.ts'),
       '@domain': resolve('./supabase/functions/_shared/domain'),
       '@contracts': resolve('./supabase/functions/_shared/contracts'),
+        '@llm': resolve('./supabase/functions/_shared/llm'),
+        '@tenants': resolve('./supabase/functions/_shared/tenants'),
     },
   },
   test: {

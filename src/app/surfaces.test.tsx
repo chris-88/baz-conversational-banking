@@ -5,7 +5,6 @@ import { PublicSite } from '@/shells/boi/PublicSite'
 import { AppLogin } from '@/shells/boi/AppLogin'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { AudienceEntry } from '@/audience/AudienceEntry'
-import { AdminOverview } from '@/admin/AdminOverview'
 import { AppShell } from '@/shells/boi/AppShell'
 import { AdminConsole } from '@/admin/AdminConsole'
 
@@ -53,13 +52,15 @@ describe('surfaces', () => {
     expect(screen.getByRole('button', { name: /use the demo customer/i })).toBeInTheDocument()
   })
 
-  it('the admin console renders a section per tab', () => {
+  it('the admin console asks for a sign-in before showing anything (§37)', () => {
     render(
       <MemoryRouter>
-        <AdminOverview section="persona" />
+        <AdminConsole />
       </MemoryRouter>,
     )
-    expect(screen.getByText(/persona controls/i)).toBeInTheDocument()
+    // The server checks admin status on every call regardless, but the console must not
+    // present controls to someone who has not signed in.
+    expect(screen.queryByText(/reset the presenter case/i)).not.toBeInTheDocument()
   })
 })
 

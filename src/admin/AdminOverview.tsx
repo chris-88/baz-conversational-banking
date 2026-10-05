@@ -1,136 +1,327 @@
-import type { ReactNode } from 'react'
-import {
-  GaugeIcon,
-  PowerIcon,
-  RotateCcwIcon,
-  SendIcon,
-  ShieldAlertIcon,
-  SlidersHorizontalIcon,
-  UsersIcon,
-} from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { PowerIcon, RotateCcwIcon, ShieldAlertIcon } from 'lucide-react'
+import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Slider } from '@/components/ui/slider'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { IconTile } from '@/components/IconTile'
-import { ListRow } from '@/components/ListRow'
-import { MilestonePanel, type MilestonePanelProps } from '@/components/MilestonePanel'
-import { SetupNotice } from '@/components/SetupNotice'
+import { queryKeys } from '@/lib/queryKeys'
+import { adminApi } from '@/admin/adminClient'
+import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
 
 type Section = 'cases' | 'persona' | 'domain' | 'audience'
-
-/** The controls the presenter reaches for, listed where they will live. */
-const controls: Readonly<
-  Record<Section | 'overview', readonly { icon: ReactNode; title: string; subtitle: string }[]>
-> = {
-  overview: [
-    { icon: <RotateCcwIcon />, title: 'Reset to the canonical case', subtitle: 'Restores the presenter case · §43' },
-    { icon: <SendIcon />, title: 'Send a notification', subtitle: 'A separate, deliberate action · §42' },
-    { icon: <PowerIcon />, title: 'Demo kill switch', subtitle: 'The gate returns "demo paused" · §43' },
-  ],
-  cases: [
-    { icon: <GaugeIcon />, title: 'Case inspector', subtitle: 'Context with provenance, applications, events · §40' },
-    { icon: <ShieldAlertIcon />, title: 'Event simulator', subtitle: 'Each button is a state-machine transition · §41' },
-  ],
-  persona: [
-    { icon: <SlidersHorizontalIcon />, title: 'Six sliders', subtitle: 'Length, humour, sarcasm, formality, playfulness, poetic' },
-    { icon: <SlidersHorizontalIcon />, title: 'Presets', subtitle: 'Default, concise, friendly, formal, dry humour, poetic' },
-  ],
-  domain: [
-    { icon: <ShieldAlertIcon />, title: 'Permitted domain', subtitle: 'The categories the gate routes on · §39' },
-    { icon: <ShieldAlertIcon />, title: 'Blocked requests', subtitle: 'With the category that caused each one' },
-  ],
-  audience: [
-    { icon: <UsersIcon />, title: 'Live audience activity', subtitle: 'Sessions, turns used against the cap · §44' },
-    { icon: <RotateCcwIcon />, title: 'Purge audience cases', subtitle: 'Never touches the presenter case' },
-  ],
-}
-
-const panels: Record<Section | 'overview', MilestonePanelProps> = {
-  overview: {
-    milestone: 'M1 · M7',
-    title: 'Presenter console',
-    description: 'Everything needed to drive and recover the demonstration.',
-    sections: ['§37', '§43'],
-    scope: [
-      'Reset to the canonical presenter case — built in M1, because it is needed constantly',
-      'Global kill switch making the gate return a "demo paused" response',
-      'Notification send as a separate, deliberate action',
-    ],
-  },
-  cases: {
-    milestone: 'M7',
-    title: 'Case inspection and event control',
-    description: 'See the structured context behind the conversation, and move state deliberately.',
-    sections: ['§40', '§41'],
-    scope: [
-      'Context with provenance: where each fact came from and whether it is verified',
-      'Applications with outstanding requirements, computed not remembered',
-      'Conversation and the full event log with actor',
-      'Event simulator: each button is a state-machine transition, never a random timer',
-    ],
-  },
-  persona: {
-    milestone: 'M7',
-    title: 'Persona controls',
-    description: 'Six sliders and named presets. Style only — never scope, tools or protections.',
-    sections: ['§17', '§18', '§38'],
-    scope: [
-      'Sliders: length, humour, sarcasm, formality, playfulness, poetic',
-      'Presets: default, concise, friendly, formal, dry humour, poetic',
-      'Read fresh every turn so a change applies to the next message',
-      'No free-text persona instructions, ever',
-    ],
-  },
-  domain: {
-    milestone: 'M7',
-    title: 'Domain controls',
-    description: 'What is in scope, and proof that enforcement sits in front of the model.',
-    sections: ['§19', '§25', '§39'],
-    scope: [
-      'The permitted domain, shown as categories',
-      'Blocked-request log with the gate category that caused it',
-      'Evidence that the model never saw the blocked input',
-    ],
-  },
-  audience: {
-    milestone: 'M8',
-    title: 'Audience activity',
-    description: 'Live view of audience sessions, with purge.',
-    sections: ['§44', '§47'],
-    scope: [
-      'Session and case counts, turns used against the cap',
-      'Needs discovered and questions avoided, derived from events',
-      'Purge audience cases without touching the presenter case',
-    ],
-  },
-}
+type Pane = Section | 'overview'
 
 export function AdminOverview({ section }: { section?: Section }): ReactNode {
-  const key = section ?? 'overview'
+  const queryClient = useQueryClient()
+  const overview = useQuery({ queryKey: queryKeys.admin.cases(), queryFn: adminApi.overview })
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: queryKeys.admin.cases() })
+
+  if (overview.isPending) return <Skeleton className="h-40 w-full" />
+  if (overview.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{overview.error.message}</AlertDescription>
+      </Alert>
+    )
+  }
+
+  const data = overview.data
+
+  const pane: Pane = section ?? 'overview'
+
+  switch (pane) {
+    case 'persona':
+      return <PersonaControls persona={data.persona} onChanged={refresh} />
+    case 'domain':
+      return <DomainView blocked={data.blocked} killSwitch={data.killSwitch} onChanged={refresh} />
+    case 'cases':
+    case 'audience':
+      return <CaseList cases={data.cases} metrics={data.metrics} />
+    case 'overview':
+      return <Overview data={data} onChanged={refresh} />
+  }
+}
+
+function Overview({
+  data,
+  onChanged,
+}: {
+  data: Awaited<ReturnType<typeof adminApi.overview>>
+  onChanged: () => void
+}): ReactNode {
+  const [message, setMessage] = useState<string | null>(null)
+
+  const reset = useMutation({
+    mutationFn: adminApi.resetCase,
+    onSuccess: () => {
+      setMessage('Presenter case restored. Audience cases untouched.')
+      onChanged()
+    },
+    onError: (error: Error) => setMessage(error.message),
+  })
+
+  const kill = useMutation({
+    mutationFn: adminApi.setKillSwitch,
+    onSuccess: () => onChanged(),
+  })
 
   return (
     <div className="space-y-6">
-      <SetupNotice />
+      <Metrics metrics={data.metrics} />
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Controls</h2>
-          <Badge variant="secondary" className="text-2xs">
-            Not wired up yet
-          </Badge>
-        </div>
+        <h2 className="text-sm font-semibold">Controls</h2>
         <Card className="gap-0 divide-y p-0">
-          {controls[key].map((control) => (
-            <ListRow
-              key={control.title}
-              leading={<IconTile tone="neutral" size="sm">{control.icon}</IconTile>}
-              title={control.title}
-              subtitle={control.subtitle}
+          <div className="flex items-center gap-3 p-4">
+            <IconTile tone="neutral" size="sm">
+              <RotateCcwIcon />
+            </IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Reset the presenter case</p>
+              <p className="text-muted-foreground text-xs">
+                Back to the start: signed in, bank-held facts, nothing else. §43
+              </p>
+            </div>
+            <Button size="sm" variant="outline" disabled={reset.isPending} onClick={() => reset.mutate()}>
+              {reset.isPending ? 'Resetting…' : 'Reset'}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 p-4">
+            <IconTile tone={data.killSwitch ? 'warning' : 'neutral'} size="sm">
+              <PowerIcon />
+            </IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Demo paused</p>
+              <p className="text-muted-foreground text-xs">
+                The gate turns every request away, without calling a model. §43
+              </p>
+            </div>
+            <Switch
+              checked={data.killSwitch}
+              onCheckedChange={(enabled) => kill.mutate(enabled)}
+              aria-label="Pause the demonstration"
             />
+          </div>
+        </Card>
+
+        {message !== null && (
+          <Alert>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
+      </section>
+
+      <CaseList cases={data.cases} metrics={data.metrics} compact />
+    </div>
+  )
+}
+
+function Metrics({ metrics }: { metrics: Awaited<ReturnType<typeof adminApi.overview>>['metrics'] }): ReactNode {
+  const tiles = [
+    { label: 'Questions avoided', value: metrics.questionsAvoided, note: '§53' },
+    { label: 'Facts captured', value: metrics.factsCaptured, note: '' },
+    { label: 'Applications started', value: metrics.applicationsStarted, note: '' },
+    { label: 'Requests blocked', value: metrics.requestsBlocked, note: '§25' },
+  ]
+
+  return (
+    <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {tiles.map((tile) => (
+        <Card key={tile.label} className="gap-1 p-3">
+          <p className="tabular text-2xl font-semibold leading-none">{tile.value}</p>
+          <p className="text-muted-foreground text-2xs">
+            {tile.label} {tile.note}
+          </p>
+        </Card>
+      ))}
+    </section>
+  )
+}
+
+function CaseList({
+  cases,
+  metrics,
+  compact,
+}: {
+  cases: Awaited<ReturnType<typeof adminApi.overview>>['cases']
+  metrics: Awaited<ReturnType<typeof adminApi.overview>>['metrics']
+  compact?: boolean
+}): ReactNode {
+  return (
+    <section className="space-y-2">
+      {compact !== true && <Metrics metrics={metrics} />}
+      <h2 className="text-sm font-semibold">Cases</h2>
+      <Card className="gap-0 divide-y p-0">
+        {cases.length === 0 && <p className="text-muted-foreground p-4 text-sm">No cases yet.</p>}
+        {cases.map((item) => (
+          <div key={item.id} className="flex items-center gap-3 p-4">
+            <Badge variant={item.kind === 'presenter' ? 'default' : 'secondary'} className="text-2xs">
+              {item.kind}
+            </Badge>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{item.label ?? item.id.slice(0, 8)}</p>
+              <p className="text-muted-foreground tabular text-xs">
+                {item.applications} applications · {item.messages} messages
+              </p>
+            </div>
+          </div>
+        ))}
+      </Card>
+    </section>
+  )
+}
+
+function PersonaControls({
+  persona,
+  onChanged,
+}: {
+  persona: Awaited<ReturnType<typeof adminApi.overview>>['persona']
+  onChanged: () => void
+}): ReactNode {
+  const [sliders, setSliders] = useState(persona.sliders)
+
+  const save = useMutation({
+    mutationFn: adminApi.setPersona,
+    onSuccess: () => onChanged(),
+  })
+
+  return (
+    <div className="space-y-6">
+      <Alert>
+        <AlertDescription>
+          Style only. Changing these cannot alter what Baz may discuss, what it can do, or any
+          customer protection — and it applies to the very next message. §18, §56
+        </AlertDescription>
+      </Alert>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Presets</h2>
+        <div className="flex flex-wrap gap-2">
+          {PRESET_NAMES.map((preset: PresetName) => (
+            <Button
+              key={preset}
+              size="sm"
+              variant={persona.preset === preset ? 'default' : 'outline'}
+              disabled={save.isPending}
+              onClick={() => save.mutate({ preset })}
+            >
+              {preset.replace('_', ' ')}
+            </Button>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold">Sliders</h2>
+        <Card className="space-y-5 p-4">
+          {SLIDER_NAMES.map((name) => (
+            <div key={name} className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <Label className="text-sm font-normal capitalize">{name}</Label>
+                <span className="text-muted-foreground tabular text-xs">
+                  {sliders[name].toFixed(2)}
+                </span>
+              </div>
+              <Slider
+                value={[sliders[name]]}
+                min={0}
+                max={1}
+                step={0.05}
+                onValueChange={([value]) =>
+                  setSliders((current) => ({ ...current, [name]: value ?? 0 }))
+                }
+              />
+            </div>
+          ))}
+          <Button
+            size="sm"
+            className="w-full"
+            disabled={save.isPending}
+            onClick={() => save.mutate({ sliders })}
+          >
+            {save.isPending ? 'Applying…' : 'Apply to the next message'}
+          </Button>
+        </Card>
+      </section>
+    </div>
+  )
+}
+
+function DomainView({
+  blocked,
+  killSwitch,
+  onChanged,
+}: {
+  blocked: Awaited<ReturnType<typeof adminApi.overview>>['blocked']
+  killSwitch: boolean
+  onChanged: () => void
+}): ReactNode {
+  const kill = useMutation({ mutationFn: adminApi.setKillSwitch, onSuccess: () => onChanged() })
+
+  return (
+    <div className="space-y-6">
+      <Alert>
+        <ShieldAlertIcon />
+        <AlertDescription>
+          Enforcement sits in front of the model, not inside it. A blocked request never reaches
+          Baz at all. §25
+        </AlertDescription>
+      </Alert>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Categories</h2>
+        <Card className="gap-0 divide-y p-0">
+          {boiDomainConfig.categories.map((category) => (
+            <div key={category.id} className="flex items-start gap-3 p-4">
+              <Badge
+                variant={category.reachesModel ? 'default' : 'secondary'}
+                className="text-2xs shrink-0"
+              >
+                {category.reachesModel ? 'reaches Baz' : 'blocked'}
+              </Badge>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{category.label}</p>
+                <p className="text-muted-foreground text-xs">{category.description}</p>
+              </div>
+            </div>
           ))}
         </Card>
       </section>
 
-      <MilestonePanel {...panels[key]} />
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Recently blocked</h2>
+        <Card className="gap-0 divide-y p-0">
+          {blocked.length === 0 && (
+            <p className="text-muted-foreground p-4 text-sm">Nothing blocked yet.</p>
+          )}
+          {blocked.map((item, index) => (
+            <div key={`${item.at}-${String(index)}`} className="flex items-center gap-3 p-4">
+              <Badge variant="secondary" className="text-2xs">
+                {item.category}
+              </Badge>
+              <span className="text-muted-foreground tabular text-xs">
+                {new Date(item.at).toLocaleTimeString()}
+              </span>
+            </div>
+          ))}
+        </Card>
+      </section>
+
+      <div className="flex items-center justify-between gap-3 rounded-xl border p-4">
+        <div>
+          <p className="text-sm font-medium">Demo paused</p>
+          <p className="text-muted-foreground text-xs">Turns every request away. §43</p>
+        </div>
+        <Switch checked={killSwitch} onCheckedChange={(v) => kill.mutate(v)} aria-label="Pause" />
+      </div>
     </div>
   )
 }

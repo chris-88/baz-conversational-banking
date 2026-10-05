@@ -368,3 +368,21 @@ section.
 - **2026-10-05** — Naming a product in conversation does not start an application, and the
   model assumed it did. The prompt now says so explicitly: `show_product_options` is the only
   route in, even when the customer names the product themselves.
+
+## 2026-10-05 — The presenter console, wired up
+
+- **2026-10-05** — The console is behind real email auth, and the server checks `admin_users` on
+  every single call. The site is on a public URL, so client-side routing decides only what is
+  drawn — anyone could otherwise reset the case or flip the kill switch mid-presentation. §28, §37
+- **2026-10-05** — Admin account is `baz-admin@chrisquinn.ie`, created through the auth admin
+  API with `email_confirm: true` rather than turning on project-wide `mailer_autoconfirm`,
+  which would have made every signup self-confirming. The password is in `.admin-credentials`,
+  gitignored.
+- **2026-10-05** — `reset_case` deletes only `kind = 'presenter'`. Audience cases are deliberately
+  untouched (§43, §45).
+- **2026-10-05** — Metrics are counted from the event log rather than recomputed, so the number
+  on screen is the same number the §53 definition describes.
+- **2026-10-05** — Added `@llm` and `@tenants` aliases. The admin screen had been importing
+  through `@domain/../llm/...`, which works but breaks the moment anything moves.
+- **2026-10-05** — `site_url` corrected to the real domain; it was still `localhost:3000`, which
+  would have broken any auth email link.

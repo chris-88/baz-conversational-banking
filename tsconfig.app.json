@@ -10,7 +10,9 @@
       "@/*": ["./src/*"],
       "cn": ["./src/lib/utils.ts"],
       "@domain/*": ["./supabase/functions/_shared/domain/*"],
-      "@contracts/*": ["./supabase/functions/_shared/contracts/*"]
+      "@contracts/*": ["./supabase/functions/_shared/contracts/*"],
+      "@llm/*": ["./supabase/functions/_shared/llm/*"],
+      "@tenants/*": ["./supabase/functions/_shared/tenants/*"]
     }
   },
   "include": [
