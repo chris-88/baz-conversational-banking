@@ -5,6 +5,17 @@ import { defineJourney } from '../journey.ts'
  * requirements, documents, and post-submission state changes.
  *
  * Information gathered here is what every other journey then reuses.
+ *
+ * Sized for a demonstration (2026-10-05). It carried 41 applicable requirements, which cannot
+ * be completed in front of an audience — and because every admin move starts from
+ * `received_by_bank`, an application that can never be submitted means the bank can never move
+ * it, so the whole second half of §67 was unreachable. What was cut is the form-filling that
+ * carries no part of the story: occupation, employment start date, bonus, childcare, and three
+ * of the five documents. What was kept is everything the bank already holds (free to satisfy,
+ * and the point of §53), everything the affordability conversation turns on, and enough of the
+ * second applicant to show one answer landing in several applications.
+ *
+ * The recordings still have not been translated, so this stays `draft` either way.
  */
 export const mortgage = defineJourney({
   product: 'mortgage',
@@ -14,11 +25,11 @@ export const mortgage = defineJourney({
   supportsPartner: true,
   requirements: [
     // ---- Identity ----
+    // Bank-held for a signed-in customer, so these cost nothing and are the clearest
+    // demonstration of §53: the questions that never had to be asked.
     { kind: 'fact', id: 'name', fact: 'identity.fullName', subject: 'primary', label: 'Your full name' },
     { kind: 'fact', id: 'dob', fact: 'identity.dateOfBirth', subject: 'primary', label: 'Your date of birth' },
     { kind: 'fact', id: 'address', fact: 'identity.address', subject: 'primary', label: 'Your home address' },
-    { kind: 'fact', id: 'years-at-address', fact: 'identity.yearsAtAddress', subject: 'primary', label: 'Years at that address' },
-    { kind: 'fact', id: 'nationality', fact: 'identity.nationality', subject: 'primary', label: 'Your nationality' },
     { kind: 'fact', id: 'marital-status', fact: 'identity.maritalStatus', subject: 'primary', label: 'Your marital status' },
     { kind: 'fact', id: 'ppsn', fact: 'identity.ppsn', subject: 'primary', label: 'Your PPS number' },
 
@@ -29,15 +40,11 @@ export const mortgage = defineJourney({
     // ---- Employment and income ----
     { kind: 'fact', id: 'employment-status', fact: 'employment.status', subject: 'primary', label: 'Your employment status' },
     { kind: 'fact', id: 'employer', fact: 'employment.employerName', subject: 'primary', label: 'Your employer' },
-    { kind: 'fact', id: 'occupation', fact: 'employment.occupation', subject: 'primary', label: 'Your occupation' },
-    { kind: 'fact', id: 'employment-start', fact: 'employment.startDate', subject: 'primary', label: 'When you started that job' },
     { kind: 'fact', id: 'income-basic', fact: 'income.annualBasic', subject: 'primary', label: 'Your annual basic salary' },
-    { kind: 'fact', id: 'income-variable', fact: 'income.annualVariable', subject: 'primary', label: 'Your bonus or commission', optional: true },
 
     // ---- Outgoings, assets, liabilities ----
     { kind: 'fact', id: 'current-tenure', fact: 'housing.currentTenure', subject: 'household', label: 'Your current housing' },
     { kind: 'fact', id: 'rent', fact: 'expenditure.monthlyRent', subject: 'household', label: 'Monthly rent' },
-    { kind: 'fact', id: 'childcare', fact: 'expenditure.monthlyChildcare', subject: 'household', label: 'Monthly childcare' },
     { kind: 'fact', id: 'savings', fact: 'assets.savingsBalance', subject: 'household', label: 'Your savings' },
     { kind: 'fact', id: 'deposit', fact: 'assets.depositAmount', subject: 'household', label: 'Deposit available' },
     { kind: 'fact', id: 'loan-repayments', fact: 'liabilities.monthlyLoanRepayments', subject: 'primary', label: 'Monthly loan repayments' },
@@ -49,11 +56,10 @@ export const mortgage = defineJourney({
     { kind: 'fact', id: 'first-time-buyer', fact: 'housing.firstTimeBuyer', subject: 'household', label: 'First-time buyer' },
 
     // ---- Documents ----
+    // Two, not five. Each one is a file picker on camera, and the payslip alone carries the
+    // verification beat.
     { kind: 'document', id: 'doc-payslip', subject: 'primary', label: 'Your most recent payslip', documentType: 'payslip', requiresVerification: true },
-    { kind: 'document', id: 'doc-salary-cert', subject: 'primary', label: 'Salary certificate', documentType: 'salary_certificate' },
-    { kind: 'document', id: 'doc-bank-statement', subject: 'primary', label: 'Six months of bank statements', documentType: 'bank_statement' },
     { kind: 'document', id: 'doc-id', subject: 'primary', label: 'Photo ID', documentType: 'photo_id' },
-    { kind: 'document', id: 'doc-address', subject: 'primary', label: 'Proof of address', documentType: 'proof_of_address' },
 
     // ---- Declaration ----
     { kind: 'declaration', id: 'mortgage-declaration', subject: 'primary', label: 'Mortgage application declaration', fresh: true },
@@ -68,10 +74,7 @@ export const mortgage = defineJourney({
         { kind: 'fact', id: 'partner-dob', fact: 'identity.dateOfBirth', subject: 'partner', label: "Your partner's date of birth" },
         { kind: 'fact', id: 'partner-ppsn', fact: 'identity.ppsn', subject: 'partner', label: "Your partner's PPS number" },
         { kind: 'fact', id: 'partner-employment-status', fact: 'employment.status', subject: 'partner', label: "Your partner's employment status" },
-        { kind: 'fact', id: 'partner-employer', fact: 'employment.employerName', subject: 'partner', label: "Your partner's employer" },
         { kind: 'fact', id: 'partner-income-basic', fact: 'income.annualBasic', subject: 'partner', label: "Your partner's annual basic salary" },
-        { kind: 'fact', id: 'partner-loan-repayments', fact: 'liabilities.monthlyLoanRepayments', subject: 'partner', label: "Your partner's monthly loan repayments" },
-        { kind: 'document', id: 'partner-doc-payslip', subject: 'partner', label: "Your partner's most recent payslip", documentType: 'payslip', requiresVerification: true },
         { kind: 'declaration', id: 'partner-mortgage-declaration', subject: 'partner', label: 'Mortgage application declaration', fresh: true },
       ],
     },

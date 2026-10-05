@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileCheckIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
+import { ExternalLinkIcon, FileCheckIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { IconTile } from '@/components/IconTile'
 import { queryKeys } from '@/lib/queryKeys'
 import { adminApi } from '@/admin/adminClient'
+import { routes } from '@/app/routes'
 import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
 import { CaseInspector } from '@/admin/CaseInspector'
 
@@ -172,6 +173,29 @@ function DemoActions({
           One tap each
         </Badge>
       </div>
+
+      {/*
+        §55 opens on the public website, and a public conversation normally starts a case of
+        its own that these moves cannot touch. This link starts it on the presenter case
+        instead, so the whole story runs as one take.
+      */}
+      <a
+        href={`#${routes.baz}?demo=1`}
+        target="_blank"
+        rel="noreferrer"
+        className="bg-card hover:bg-muted/60 focus-visible:ring-ring mb-2 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <IconTile tone="deep" size="sm">
+          <ExternalLinkIcon />
+        </IconTile>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">Open the public site for the demo</span>
+          <span className="text-muted-foreground block text-2xs">
+            Starts the public conversation on this case, so the moves below reach it. An
+            ordinary visitor still gets a case of their own. §55
+          </span>
+        </span>
+      </a>
 
       <div className="grid gap-2 sm:grid-cols-2">
         {data.demoActions.map((move) => (

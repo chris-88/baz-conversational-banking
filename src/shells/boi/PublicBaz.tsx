@@ -43,9 +43,18 @@ export function PublicBaz(): ReactNode {
         className="mx-auto flex w-full max-w-md flex-1 flex-col"
         suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
-        // The public conversation knows nothing about the visitor until they sign in (§6
-        // Stage 1). Signing in is what links it to the customer the bank already knows.
-        mode="fresh"
+        /**
+         * The public conversation knows nothing about the visitor until they sign in (§6
+         * Stage 1), so every visitor gets a case of their own.
+         *
+         * `?demo=1` is the exception, and it exists because §55 opens on the public website
+         * while §67 ends with the bank moving an application and the customer being notified.
+         * A fresh case is an audience case, and the presenter console's moves act on the
+         * presenter case — so without this the two halves of the story could not happen in
+         * one take. Only the console hands out this link; an ordinary visitor never sees it,
+         * and audience isolation is unchanged.
+         */
+        mode={searchParams.get('demo') === '1' ? 'demo' : 'fresh'}
         footer={() => <ContinueInApp />}
         greeting={
           <div className="space-y-2">
