@@ -746,3 +746,34 @@ section.
   confidence, the evidence in the customer's own words, the plan, and what the bank is
   watching for. That is §15's audit view, and without it the needs engine was unobservable —
   which is how a missing watch went unnoticed.
+
+## 2026-10-05 — Customer Plans
+
+- **2026-10-05** — Decisions are stored, derivations never are. A plan holds what the customer
+  agreed, when a milestone was actually reached and when a check-in is due; progress, the gap,
+  the projected date and whether it is on track are computed from the case every read. A stored
+  percentage is a number that can disagree with the balance printed beside it.
+- **2026-10-05** — The plan engine owns every figure (§40). Where the case cannot support a
+  projection — no saving rate — it returns null and tells the model not to guess, because a
+  projected date is something a customer acts on.
+- **2026-10-05** — `propose_plan` is the first tool not named show_/record_/request_, so the
+  Invariant 1 test says why in writing: it writes a draft nobody is held to, and the plan
+  becomes the customer's when they tap. Proposing is not acting.
+- **2026-10-05** — Check-in agendas are written when the check-in is created, not when it
+  fires. A check-in whose reason is invented at the moment of contact is a marketing trigger
+  wearing a different hat (§20).
+- **2026-10-05** — The console's balance control reports what the engine evaluated: the balance
+  read back, active plans found, milestones checked, milestones reached. "No milestone reached"
+  means the same thing whether nothing qualified, nothing was looked at, or the read was stale.
+  Those counts turned three runs of guessing into one run that named the bug.
+- **2026-10-05** — Facts are written through `recordFacts` only. A hand-rolled insert paired
+  `subject_kind: household` with a participant id, which `participant_matches_subject_kind`
+  rejects — correctly — and the rejection went unread, so `set_savings_balance` was a no-op
+  that reported success from the moment it shipped. One writer, which reads the catalogue.
+- **2026-10-05** — PATTERN, four times today: a failure that presents as silence. Unchecked
+  `.error`, `data ?? []`, a diagnostic whose condition hid `null`, and an insert whose result
+  was never examined. In every case the system reported "nothing here" where it meant "this
+  broke". Worth treating `?? []` on a query result as a smell.
+- **2026-10-05** — The schema-drift test extracts check constraints per table now. It compared
+  application states against `need_decisions.state` the moment a second table had a column of
+  that name, because it took the last match in the whole migration set.
