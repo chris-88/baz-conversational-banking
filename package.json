@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "eval:guardrails": "node --env-file-if-exists=.env.local evals/guardrails/run.ts",
+    "eval:guardrails": "node --env-file=.env evals/guardrails/run.ts",
     "seed:generate": "node scripts/generate-seed.ts",
     "seed:check": "node scripts/generate-seed.ts check",
     "check:bundle": "node scripts/check-bundle-secrets.ts",
