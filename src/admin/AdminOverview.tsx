@@ -14,6 +14,7 @@ import { IconTile } from '@/components/IconTile'
 import { queryKeys } from '@/lib/queryKeys'
 import { adminApi } from '@/admin/adminClient'
 import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
+import { CaseInspector } from '@/admin/CaseInspector'
 
 type Section = 'cases' | 'persona' | 'domain' | 'audience'
 type Pane = Section | 'overview'
@@ -42,6 +43,7 @@ export function AdminOverview({ section }: { section?: Section }): ReactNode {
     case 'domain':
       return <DomainView blocked={data.blocked} killSwitch={data.killSwitch} onChanged={refresh} />
     case 'cases':
+      return <Cases cases={data.cases} metrics={data.metrics} />
     case 'audience':
       return <CaseList cases={data.cases} metrics={data.metrics} />
     case 'overview':
@@ -143,6 +145,44 @@ function Metrics({ metrics }: { metrics: Awaited<ReturnType<typeof adminApi.over
         </Card>
       ))}
     </section>
+  )
+}
+
+/** §40, §41 — pick a case, then drive it. */
+function Cases({
+  cases,
+  metrics,
+}: {
+  cases: Awaited<ReturnType<typeof adminApi.overview>>['cases']
+  metrics: Awaited<ReturnType<typeof adminApi.overview>>['metrics']
+}): ReactNode {
+  const [selected, setSelected] = useState<string | null>(cases[0]?.id ?? null)
+
+  return (
+    <div className="space-y-6">
+      <Metrics metrics={metrics} />
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Cases</h2>
+        <div className="flex flex-wrap gap-2">
+          {cases.map((item) => (
+            <Button
+              key={item.id}
+              size="sm"
+              variant={selected === item.id ? 'default' : 'outline'}
+              onClick={() => setSelected(item.id)}
+            >
+              <Badge variant="secondary" className="text-2xs">
+                {item.kind}
+              </Badge>
+              {item.label ?? item.id.slice(0, 8)}
+            </Button>
+          ))}
+        </div>
+      </section>
+
+      {selected !== null && <CaseInspector caseId={selected} />}
+    </div>
   )
 }
 

@@ -5,6 +5,7 @@ import {
   adminOverviewSchema,
   type AdminCase,
   type AdminOverview,
+  notificationSchema,
   type AdminRequest,
 } from '@contracts/admin.ts'
 
@@ -39,4 +40,9 @@ export const adminApi = {
   setKillSwitch: (enabled: boolean) => call({ action: 'set_kill_switch', enabled }),
   setPersona: (body: Omit<Extract<AdminRequest, { action: 'set_persona' }>, 'action'>) =>
     call({ action: 'set_persona', ...body }),
+  simulate: (
+    body: Omit<Extract<AdminRequest, { action: 'simulate_event' }>, 'action'>,
+  ) => call({ action: 'simulate_event', ...body }),
+  notify: async (caseId: string): Promise<{ message: string; url: string }> =>
+    notificationSchema.parse(await call({ action: 'send_notification', caseId })),
 }

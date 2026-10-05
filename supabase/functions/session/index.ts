@@ -32,6 +32,22 @@ function env(name: string): string {
   return value
 }
 
+/**
+ * §36 — did anything happen that is worth leading with?
+ *
+ * Only changes the customer would recognise. Sending the notification is not itself news, and
+ * a return summary that opens with "we sent you a message" is worse than not opening at all.
+ */
+const NARRATABLE = [
+  'application_received',
+  'information_requested',
+  'document_received',
+  'application_approved',
+  'application_declined',
+  'application_completed',
+  'partner_completed',
+] as const
+
 Deno.serve(async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return errorResponse('bad_request', 'Use POST.')
@@ -56,6 +72,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const caller = await admin.auth.getUser(authorization.replace('Bearer ', ''))
   if (caller.error || !caller.data.user) return errorResponse('unauthorised', 'No session.')
   const authUserId = caller.data.user.id
+
+  async function updatesSince(caseId: string): Promise<boolean> {
+    const theCase = await admin.from('cases').select('last_seen_at').eq('id', caseId).maybeSingle()
+    const lastSeen = (theCase.data as { last_seen_at?: string | null } | null)?.last_seen_at
+    if (!lastSeen) return false
+
+    const since = await admin
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('case_id', caseId)
+      .in('type', NARRATABLE as unknown as string[])
+      .gt('created_at', lastSeen)
+
+    return (since.count ?? 0) > 0
+  }
 
   // ---- Handoff (§29, §58) --------------------------------------------------
   if (parsed.data.action === 'create_handoff') {
@@ -154,6 +185,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         authLevel: 'authenticated',
         customerFirstName: canonicalCase.customer.firstName,
         created: false,
+        hasUpdates: await updatesSince(token.case_id),
       } satisfies SessionResponse),
       200,
     )
@@ -185,6 +217,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         authLevel: theCase.data?.auth_level ?? 'anonymous',
         customerFirstName: theCase.data?.customer_id ? canonicalCase.customer.firstName : null,
         created: false,
+        hasUpdates: await updatesSince(found.participants.case_id),
       } satisfies SessionResponse),
       200,
     )
@@ -215,6 +248,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         authLevel: participant.cases.auth_level,
         customerFirstName: participant.cases.customer_id ? canonicalCase.customer.firstName : null,
         created: false,
+        hasUpdates: await updatesSince(participant.case_id),
       } satisfies SessionResponse),
       200,
     )
@@ -258,6 +292,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       authLevel: 'anonymous',
       customerFirstName: null,
       created: true,
+      hasUpdates: false,
     } satisfies SessionResponse),
     200,
   )

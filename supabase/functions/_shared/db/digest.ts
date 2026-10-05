@@ -133,6 +133,8 @@ function describeEvent(event: { type: string; payload: Record<string, unknown> }
       return `${name} was approved.`
     case 'application_declined':
       return `${name} was not approved.`
+    case 'application_completed':
+      return `${name} is complete.`
     case 'partner_completed':
       return typeof event.payload.partnerName === 'string'
         ? `${event.payload.partnerName} completed their part.`

@@ -25,13 +25,13 @@ export function useConversation(caseId: string | null) {
   }
 
   const send = useCallback(
-    async (message: string, trigger: 'message' | 'opening' = 'message') => {
+    async (message: string, trigger: 'message' | 'opening' | 'return' = 'message') => {
       if (!caseId || streaming) return
 
       setError(null)
       setStreaming(true)
 
-      if (trigger === 'message') {
+      if (trigger === 'message' && message.length > 0) {
         // Shown immediately: the customer should never wonder whether it sent.
         setEntries((current) => [
           ...current,

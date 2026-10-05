@@ -397,7 +397,8 @@ function digestSection(digest: CaseDigest): string {
   if (digest.eventsSinceLastSeen.length > 0) {
     lines.push(
       '## Changed since they were last here',
-      'Lead with this if they are returning.',
+      'If they are returning, lead with these and name each one. Do not summarise them as',
+      '"things have moved on" — the customer wants to know what actually happened.',
       ...digest.eventsSinceLastSeen.map((event) => `- ${event}`),
       '',
     )

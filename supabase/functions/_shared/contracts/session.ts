@@ -37,6 +37,8 @@ export const sessionResponseSchema = z.object({
   customerFirstName: z.string().nullable(),
   /** True when this call created the case rather than joining an existing one. */
   created: z.boolean(),
+  /** §36 — something happened while they were away, so the next turn should be a return. */
+  hasUpdates: z.boolean().default(false),
 })
 
 export type SessionStartRequest = z.infer<typeof sessionStartRequestSchema>

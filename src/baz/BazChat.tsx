@@ -45,6 +45,8 @@ export function BazChat({
 
   const bottom = useRef<HTMLDivElement>(null)
   const openingSent = useRef(false)
+  const returnSent = useRef(false)
+  const [hasUpdates, setHasUpdates] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   /**
@@ -69,6 +71,7 @@ export function BazChat({
       .then(async (session) => {
         if (cancelled) return
         setCaseId(session.caseId)
+        setHasUpdates(session.hasUpdates)
 
         // Show what was said before, so the screen matches what the model remembers.
         try {
@@ -99,6 +102,17 @@ export function BazChat({
     openingSent.current = true
     void send(openingMessage)
   }, [caseId, loadingHistory, openingMessage, send])
+
+  /**
+   * §36 — the customer did not ask anything, they came back. The turn runs itself so the first
+   * thing they see is what changed, not an empty composer.
+   */
+  useEffect(() => {
+    if (caseId === null || loadingHistory || !hasUpdates || returnSent.current) return
+    if (openingMessage) return
+    returnSent.current = true
+    void send('', 'return')
+  }, [caseId, loadingHistory, hasUpdates, openingMessage, send])
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })

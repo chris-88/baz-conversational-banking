@@ -300,3 +300,33 @@ describe('outstanding items say why they are outstanding', () => {
     )
   })
 })
+
+/**
+ * `hasUpdates` and the narration are driven by two lists, and they drifted: a completed
+ * application counted as worth returning for but had no words written for it, so Baz said
+ * something had changed and then could not say what.
+ */
+describe('every event worth returning for can be described', () => {
+  const NARRATABLE = [
+    'application_received',
+    'information_requested',
+    'document_received',
+    'application_approved',
+    'application_declined',
+    'application_completed',
+    'partner_completed',
+  ]
+
+  it('produces a sentence for each one', () => {
+    for (const type of NARRATABLE) {
+      const digest = buildCaseDigest(
+        loaded({
+          eventsSinceLastSeen: [
+            { type, createdAt: '2026-10-05T09:00:00Z', payload: { applicationName: 'Your mortgage' } },
+          ],
+        }),
+      )
+      expect(digest.eventsSinceLastSeen, type).toHaveLength(1)
+    }
+  })
+})

@@ -22,6 +22,7 @@ import {
   loadCase,
   recordFacts,
   saveMessage,
+  touchLastSeen,
   writeEvent,
 } from '../_shared/db/case-repository.ts'
 import { buildCaseDigest } from '../_shared/db/digest.ts'
@@ -177,6 +178,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
     .map((message) => ({ role: message.role === 'customer' ? 'user' as const : 'assistant' as const, content: message.content }))
 
   if (isCustomerTurn) history.push({ role: 'user', content: customerMessage })
+
+  if (turn.trigger === 'return') {
+    // §36 — the customer did not ask anything; they came back. Lead with what changed.
+    history.push({
+      role: 'user',
+      content:
+        '(The customer has just come back after being away. Open by naming each thing under ' +
+        '"Changed since they were last here" — say what actually happened, in your own words, ' +
+        'not that something "moved on". Then call show_status and ask what they want to deal ' +
+        'with first. This is the one turn where a short list is right.)',
+    })
+  }
+
   if (history.length === 0) {
     history.push({ role: 'user', content: '(The customer has just arrived. Open the conversation.)' })
   }
@@ -482,6 +496,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
           role: 'baz',
           content: spoken.join(''),
         })
+
+        // Everything up to now has been seen, so the next return summarises only what is
+        // genuinely new (§36).
+        await touchLastSeen(admin, turn.caseId)
 
         send({ type: 'status', caseId: turn.caseId, invalidate: ['case', 'facts', 'applications'] })
         send({ type: 'done', messageId, gateCategory: gate.category })

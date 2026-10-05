@@ -4,7 +4,7 @@ import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { adminRequestSchema, type AdminCase, type AdminOverview } from '../_shared/contracts/admin.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
-import { stateLabel } from '../_shared/domain/state-machine.ts'
+import { stateLabel, transition, type TransitionEvent } from '../_shared/domain/state-machine.ts'
 import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { loadCase, writeEvent } from '../_shared/db/case-repository.ts'
@@ -221,6 +221,94 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json(ok(overview), 200)
     }
 
+    case 'simulate_event': {
+      const found = await admin
+        .from('applications')
+        .select('id, case_id, product, state, resume_to')
+        .eq('id', action.applicationId)
+        .maybeSingle()
+
+      const row = found.data as any
+      if (!row) return errorResponse('not_found', 'No such application.')
+
+      // §41 — the state machine decides, so an illegal move is refused rather than faked.
+      const result = transition(
+        { id: row.id, product: row.product, state: row.state, resumeTo: row.resume_to },
+        { type: action.event } as TransitionEvent,
+      )
+
+      if (!result.ok) return errorResponse('illegal_transition', result.error.message)
+
+      await admin
+        .from('applications')
+        .update({ state: result.application.state, resume_to: result.application.resumeTo })
+        .eq('id', action.applicationId)
+
+      const names: Record<typeof action.event, string> = {
+        received_by_bank: 'application_received',
+        information_requested: 'information_requested',
+        information_supplied: 'document_received',
+        assessment_approved: 'application_approved',
+        assessment_declined: 'application_declined',
+        completed: 'application_completed',
+      }
+
+      await writeEvent(admin, {
+        caseId: row.case_id,
+        type: names[action.event],
+        actor: 'admin',
+        applicationId: action.applicationId,
+        payload: {
+          applicationName: journeyFor(row.product).displayName,
+          ...(action.detail === undefined ? {} : { detail: action.detail }),
+        },
+      })
+
+      return json(ok({ state: result.application.state }), 200)
+    }
+
+    case 'send_notification': {
+      // §58 — the link carries an opaque single-use code, never anything about the case.
+      const code = crypto.randomUUID().replaceAll('-', '')
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code))
+      const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+
+      const participant = await admin
+        .from('participants')
+        .select('id')
+        .eq('case_id', action.caseId)
+        .eq('role', 'primary')
+        .maybeSingle()
+
+      await admin.from('tokens').insert({
+        case_id: action.caseId,
+        kind: 'notification',
+        token_hash: hash,
+        participant_id: (participant.data as { id?: string } | null)?.id ?? null,
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      })
+
+      await writeEvent(admin, {
+        caseId: action.caseId,
+        type: 'notification_sent',
+        actor: 'admin',
+        payload: { channel: 'in_app' },
+      })
+
+      const base = (globalThis as any).Deno?.env?.get('APP_BASE_URL') ?? ''
+
+      return json(
+        ok({
+          // Fixed copy, saying nothing about the application itself (§35).
+          message:
+            'Bank of Ireland: Baz has an update about something you’re working on with us. ' +
+            'Open the app to continue securely.',
+          url: `${base}/#/app/login?n=${code}`,
+        }),
+        200,
+      )
+    }
+
     case 'inspect_case': {
       const loaded = await loadCase(admin, action.caseId)
       if (!loaded) return errorResponse('not_found', 'No such case.')
@@ -246,6 +334,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           sensitive: factCatalogue[fact.key].sensitivity === 'special',
         })),
         applications: loaded.applications.map((application) => ({
+          id: String(application.id),
           product: application.product,
           displayName: journeyFor(application.product).displayName,
           state: application.state,
@@ -253,6 +342,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
           outstanding: evaluateFor(loaded, application)
             .outstanding.filter((item) => item.blocking)
             .map((item) => item.requirement.label),
+          // Only offer the presenter moves the machine will actually accept.
+          canSimulate: (
+            [
+              'received_by_bank',
+              'information_requested',
+              'information_supplied',
+              'assessment_approved',
+              'assessment_declined',
+              'completed',
+            ] as const
+          ).filter((event) => transition(application, { type: event } as TransitionEvent).ok),
         })),
         events: ((events.data ?? []) as { type: string; actor: string; created_at: string }[]).map(
           (row) => ({ type: row.type, actor: row.actor, at: row.created_at }),

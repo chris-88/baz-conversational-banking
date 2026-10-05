@@ -423,3 +423,22 @@ section.
 - **2026-10-05** — Enum facts render as a chooser with the catalogue's own values. They were
   free text, so answering `employment.status` meant typing `employed_full_time` — and the
   server correctly rejected anything else.
+
+## 2026-10-05 — M6 return
+
+- **2026-10-05** — `baz-turn` marks the case as seen when a turn completes, so "since last seen"
+  means something. Without it the return summary would either repeat everything or nothing.
+- **2026-10-05** — `hasUpdates` counts only events a customer would recognise. Sending the
+  notification is not itself news, and a return summary opening with "we sent you a message" is
+  worse than not opening at all.
+- **2026-10-05** — The two lists that drive this — what counts as an update, and what Baz can
+  narrate — drifted: a completed application counted as worth returning for but had no words
+  written for it, so Baz said something had changed and then could not say what. A test now
+  asserts every narratable type produces a sentence.
+- **2026-10-05** — The event simulator only offers transitions the state machine will accept,
+  computed per application. The presenter cannot reach an impossible state live, and "received
+  by the bank" simply is not offered for something that was never submitted (§41).
+- **2026-10-05** — The notification carries fixed copy saying nothing about the application, and
+  its link is an opaque single-use code requiring a sign-in before anything is shown (§35, §58).
+  Delivery is in-app rather than SMS: Twilio is not configured, and CLAUDE.md names the in-app
+  notification as the fallback for exactly this reason.

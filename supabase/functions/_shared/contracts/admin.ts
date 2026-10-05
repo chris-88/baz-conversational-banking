@@ -30,6 +30,30 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   }),
   /** §40 — the structured context behind the conversation. */
   z.object({ action: z.literal('inspect_case'), caseId: z.uuid() }),
+
+  /**
+   * §41 — the downstream events the bank would raise. Each one is a state-machine transition,
+   * never a random timer, so an illegal move is refused rather than faked.
+   */
+  z.object({
+    action: z.literal('simulate_event'),
+    applicationId: z.uuid(),
+    event: z.enum([
+      'received_by_bank',
+      'information_requested',
+      'information_supplied',
+      'assessment_approved',
+      'assessment_declined',
+      'completed',
+    ]),
+    detail: z.string().max(120).optional(),
+  }),
+
+  /**
+   * §35, §42 — a separate, deliberate action. Carries nothing about the application, and the
+   * link requires signing in before anything is shown.
+   */
+  z.object({ action: z.literal('send_notification'), caseId: z.uuid() }),
 ])
 
 export const adminOverviewSchema = z.object({
@@ -57,6 +81,12 @@ export const adminOverviewSchema = z.object({
   blocked: z.array(z.object({ category: z.string(), at: z.string() })),
 })
 
+export const notificationSchema = z.object({
+  /** Fixed copy. It says nothing about what changed (§35). */
+  message: z.string(),
+  url: z.string(),
+})
+
 export const adminCaseSchema = z.object({
   caseId: z.uuid(),
   facts: z.array(
@@ -72,11 +102,14 @@ export const adminCaseSchema = z.object({
   ),
   applications: z.array(
     z.object({
+      id: z.uuid(),
       product: z.string(),
       displayName: z.string(),
       state: z.string(),
       stateLabel: z.string(),
       outstanding: z.array(z.string()),
+      /** Which §41 events the state machine will currently accept. */
+      canSimulate: z.array(z.string()),
     }),
   ),
   events: z.array(z.object({ type: z.string(), actor: z.string(), at: z.string() })),
