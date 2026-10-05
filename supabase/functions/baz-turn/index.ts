@@ -297,6 +297,26 @@ Deno.serve(async (request: Request): Promise<Response> => {
                   type: 'status',
                   applications: loaded.applications.map((application) => {
                     const match = digest.applications.find((a) => a.id === application.id)
+                    const evaluation = evaluateFor(loaded, application)
+
+                    // Journey order, not satisfied-then-outstanding: the customer reads this as
+                    // a path through the application, and reordering it as things complete
+                    // would make the same card look different for no reason.
+                    const steps = [
+                      ...evaluation.satisfied.map((item) => ({
+                        label: item.requirement.label,
+                        done: true,
+                        waitingOnPartner: false,
+                      })),
+                      ...evaluation.outstanding
+                        .filter((item) => item.blocking)
+                        .map((item) => ({
+                          label: item.requirement.label,
+                          done: false,
+                          waitingOnPartner: item.waitingOn === 'partner',
+                        })),
+                    ]
+
                     return {
                       id: String(application.id),
                       product: application.product,
@@ -305,6 +325,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
                       stateLabel: stateLabel(application.state),
                       outstandingCount: match?.outstanding.length ?? 0,
                       waitingOn: match?.waitingOn ?? null,
+                      steps,
                     }
                   }),
                 }

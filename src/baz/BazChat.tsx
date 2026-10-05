@@ -57,13 +57,23 @@ export function BazChat({
    * Runs an action, then tells Baz what happened so it can react. The follow-up is phrased as
    * the customer, because from the model's point of view the customer did it — which is true.
    */
-  const commit = async (action: Parameters<typeof runCaseAction>[0], followUp: string) => {
+  /**
+   * Returns whether the action actually went through. A card may only tell the customer
+   * something is done once the server has said so — the model's reply arrives separately and
+   * cannot be the evidence (Invariant 2).
+   */
+  const commit = async (
+    action: Parameters<typeof runCaseAction>[0],
+    followUp: string,
+  ): Promise<boolean> => {
     setActionError(null)
     try {
       const result = await runCaseAction(action)
       await send(`${result.summary} ${followUp}`)
+      return true
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : 'That did not work.')
+      return false
     }
   }
 
@@ -131,16 +141,18 @@ export function BazChat({
    * (Invariant 1, Invariant 2).
    */
   const actions: CardActions = {
-    onSelectProducts: (products) =>
-      commit(
+    onSelectProducts: async (products) => {
+      await commit(
         { action: 'select_products', caseId: caseId ?? '', products: products as Product[] },
         'What did that start, and what do you need from me first?',
-      ),
-    onDeclineProducts: (products) =>
-      commit(
+      )
+    },
+    onDeclineProducts: async (products) => {
+      await commit(
         { action: 'decline_product', caseId: caseId ?? '', product: products[0] as Product },
         'I will leave those for now.',
-      ),
+      )
+    },
     onSubmit: (applicationId, confirmations) =>
       commit(
         { action: 'submit_application', applicationId, confirmations: [...confirmations] },
@@ -157,20 +169,23 @@ export function BazChat({
         return undefined
       }
     },
-    onConsent: (applicationId, requirementId) =>
-      commit(
+    onConsent: async (applicationId, requirementId) => {
+      await commit(
         { action: 'grant_consent', applicationId, requirementId },
         'What do you need from me now?',
-      ),
-    onHealthForm: (applicationId, values) =>
-      commit(
+      )
+    },
+    onHealthForm: async (applicationId, values) => {
+      await commit(
         { action: 'submit_health_form', applicationId, values: [...values] },
         'Where does that leave the application?',
-      ),
-    onPauseDecision: (applicationId, decision) =>
-      decision === 'pause'
-        ? commit({ action: 'pause_application', applicationId }, 'I have put that on hold.')
-        : Promise.resolve(),
+      )
+    },
+    onPauseDecision: async (applicationId, decision) => {
+      if (decision === 'pause') {
+        await commit({ action: 'pause_application', applicationId }, 'I have put that on hold.')
+      }
+    },
   }
 
   return (

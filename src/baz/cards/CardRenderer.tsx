@@ -17,10 +17,11 @@ import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
 export type CardActions = {
   readonly onSelectProducts?: (products: readonly string[]) => Promise<void> | void
   readonly onDeclineProducts?: (products: readonly string[]) => Promise<void> | void
+  /** Resolves true only when the server accepted the submit. */
   readonly onSubmit?: (
     applicationId: string,
     confirmations: readonly string[],
-  ) => Promise<void> | void
+  ) => Promise<boolean> | boolean
   readonly onPauseDecision?: (
     applicationId: string,
     decision: 'pause' | 'continue',

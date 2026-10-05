@@ -20,6 +20,12 @@ export type ListRowProps = {
   to?: string | undefined
   onClick?: (() => void) | undefined
   disabled?: boolean | undefined
+  /**
+   * Lets the title and subtitle run onto more lines. A row is one line tall by default so a
+   * list of them stays scannable, but the same component stacked into a card has the width to
+   * spare and truncating there just hides the description.
+   */
+  wrap?: boolean | undefined
   className?: string | undefined
 }
 
@@ -31,15 +37,25 @@ export function ListRow({
   to,
   onClick,
   disabled,
+  wrap = false,
   className,
 }: ListRowProps): ReactNode {
   const content = (
     <>
       {leading}
       <span className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-sm font-medium">{title}</span>
+        <span className={cn('block text-sm font-medium', wrap ? 'text-pretty' : 'truncate')}>
+          {title}
+        </span>
         {subtitle !== undefined && (
-          <span className="text-muted-foreground mt-0.5 block truncate text-xs">{subtitle}</span>
+          <span
+            className={cn(
+              'text-muted-foreground mt-0.5 block text-xs',
+              wrap ? 'text-pretty' : 'truncate',
+            )}
+          >
+            {subtitle}
+          </span>
         )}
       </span>
       {trailing ?? (to ?? onClick ? <ChevronRightIcon aria-hidden className="text-muted-foreground size-4 shrink-0" /> : null)}

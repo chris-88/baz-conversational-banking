@@ -41,6 +41,17 @@ export const statusCardSchema = z.object({
       stateLabel: z.string(),
       outstandingCount: z.number().int().nonnegative(),
       waitingOn: z.enum(['primary', 'partner']).nullable(),
+      /**
+       * The journey's requirements in order, each with whether it is met. Built from the
+       * requirement engine, so the card can show what is actually left rather than a count.
+       */
+      steps: z.array(
+        z.object({
+          label: z.string(),
+          done: z.boolean(),
+          waitingOnPartner: z.boolean(),
+        }),
+      ),
     }),
   ),
 })

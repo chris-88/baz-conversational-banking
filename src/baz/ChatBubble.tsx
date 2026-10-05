@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { BazAvatar } from '@/baz/BazAvatar'
+import { CustomerAvatar } from '@/baz/CustomerAvatar'
 
 export type ChatAuthor = 'baz' | 'customer'
 
@@ -35,6 +36,13 @@ export function ChatBubble({
       >
         {children}
       </div>
+
+      {!isBaz &&
+        (showAvatar ? (
+          <CustomerAvatar className="self-start" />
+        ) : (
+          <span className="size-8 shrink-0" />
+        ))}
     </div>
   )
 }

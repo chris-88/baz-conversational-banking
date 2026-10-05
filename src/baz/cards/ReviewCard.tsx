@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { IconTile } from '@/components/IconTile'
+import { ConfirmationCard } from '@/baz/cards/ConfirmationCard'
 
 type Payload = Extract<CardPayload, { type: 'review' }>
 
@@ -27,11 +28,22 @@ export function ReviewCard({
   disabled,
 }: {
   card: Payload
-  onSubmit?: (applicationId: string, confirmations: readonly string[]) => Promise<void> | void
+  onSubmit?: (applicationId: string, confirmations: readonly string[]) => Promise<boolean> | boolean
   disabled?: boolean
 }): ReactNode {
   const [agreed, setAgreed] = useState<readonly string[]>([])
   const [busy, setBusy] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+
+  // Only after the server accepted it. Baz's reply arrives separately and is not evidence.
+  if (submitted) {
+    return (
+      <ConfirmationCard
+        title="Application submitted"
+        body={`Your ${card.displayName.toLowerCase()} application is with us. Baz will tell you the moment anything changes.`}
+      />
+    )
+  }
 
   const outstanding = card.confirmations.filter((item) => !agreed.includes(item.requirementId))
   const canSubmit = outstanding.length === 0 && !busy && disabled !== true
@@ -102,9 +114,11 @@ export function ReviewCard({
           disabled={!canSubmit}
           onClick={() => {
             setBusy(true)
-            void Promise.resolve(onSubmit?.(card.applicationId, agreed)).finally(() =>
-              setBusy(false),
-            )
+            void Promise.resolve(onSubmit?.(card.applicationId, agreed))
+              .then((accepted) => {
+                if (accepted === true) setSubmitted(true)
+              })
+              .finally(() => setBusy(false))
           }}
         >
           {busy

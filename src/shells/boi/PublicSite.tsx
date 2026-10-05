@@ -14,6 +14,7 @@ import { OPENING_SUGGESTIONS } from '@/baz/suggestions'
 import { Button } from '@/components/ui/button'
 import { MessageCircleIcon } from 'lucide-react'
 import { routes } from '@/app/routes'
+import heroCoast from '@/assets/illustrations/hero-coast-family.svg'
 
 /**
  * Each card opens the conversation with what a person browsing it probably wants, rather than
@@ -69,16 +70,18 @@ export function PublicSite(): ReactNode {
 
       <div className="relative">
         {/*
-          Stands in for the photograph in the design. A real image would be dropped in here
-          as a background layer; the gradient keeps the contrast ratio predictable either way.
+          The hero artwork from the asset pack, with the brand gradient over it. The overlay is
+          what makes the white text legible, so it stays opaque at the top where the heading
+          sits and thins towards the bottom where the coastline comes through.
         */}
+        <img src={heroCoast} alt="" aria-hidden className="absolute inset-0 size-full object-cover" />
         <div
           aria-hidden
-          className="from-brand-deep to-primary/90 absolute inset-0 bg-gradient-to-br via-[oklch(0.33_0.11_252)]"
+          className="from-brand-deep via-brand-deep/90 to-brand-deep/60 absolute inset-0 bg-gradient-to-b"
         />
         <div
           aria-hidden
-          className="absolute inset-0 bg-[radial-gradient(60%_80%_at_80%_10%,oklch(1_0_0/0.16),transparent)]"
+          className="from-brand-deep/70 absolute inset-0 bg-gradient-to-r to-transparent"
         />
 
         <div className="text-brand-deep-foreground relative">
@@ -124,14 +127,15 @@ export function PublicSite(): ReactNode {
         {/* Product cards overlap the hero, as in the design. */}
         {/* `relative` is load-bearing: the hero gradient is absolutely positioned, so it
             paints above later static content regardless of DOM order. */}
-        <div className="relative z-10 -mt-16 grid gap-3 sm:grid-cols-2 lg:-mt-20 lg:grid-cols-4">
+        <div className="relative z-10 -mt-16 grid grid-cols-2 gap-3 lg:-mt-20 lg:grid-cols-4">
           {products.map((product) => (
             <Card key={product.id} className="gap-0 p-0 shadow-sm">
               <ListRow
-                className="h-full flex-col items-start gap-3 p-5"
+                wrap
+                className="h-full flex-col items-start gap-3 p-4 lg:p-5"
                 to={`${routes.baz}?say=${encodeURIComponent(product.opener)}`}
                 leading={<IconTile size="lg" tone={product.tone}>{product.icon}</IconTile>}
-                title={<span className="text-base">{product.title}</span>}
+                title={<span className="text-sm lg:text-base">{product.title}</span>}
                 subtitle={product.description}
               />
             </Card>
@@ -143,7 +147,7 @@ export function PublicSite(): ReactNode {
             <div className="flex items-start gap-3 p-4">
               <BazAvatar />
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-sm font-semibold">Baz</p>
+                <p className="text-sm font-semibold">Need a hand?</p>
                 <p className="text-muted-foreground text-sm">
                   Tell me what you&rsquo;re trying to do. You don&rsquo;t need to know which
                   product it is — that&rsquo;s my job.

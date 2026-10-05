@@ -63,6 +63,7 @@ describe('cards', () => {
           stateLabel: 'Being assessed',
           outstandingCount: 0,
           waitingOn: null,
+          steps: [{ label: 'Proof of address', done: true, waitingOnPartner: false }],
         },
       ],
     })
@@ -81,6 +82,7 @@ describe('cards', () => {
           stateLabel: 'Nearly done',
           outstandingCount: 0,
           waitingOn: null,
+          steps: [{ label: 'Proof of address', done: true, waitingOnPartner: false }],
         },
       ],
     })

@@ -25,7 +25,7 @@ const navigation = [
 export function SiteHeader({ className }: { className?: string }): ReactNode {
   return (
     <header className={cn('relative z-20', className)}>
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 lg:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:gap-6 lg:px-8">
         <Link to={routes.public} className="shrink-0" aria-label="Bank of Ireland, home">
           <Wordmark />
         </Link>
@@ -43,14 +43,14 @@ export function SiteHeader({ className }: { className?: string }): ReactNode {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button asChild size="sm" variant="ghost" className="rounded-full">
+          <Button asChild size="sm" variant="ghost" className="hidden rounded-full sm:inline-flex">
             <Link to={routes.baz}>Chat to Baz</Link>
           </Button>
 
           <Link
             to={routes.baz}
             aria-label="Search"
-            className="grid size-9 place-items-center rounded-full opacity-80 transition-opacity hover:opacity-100"
+            className="hidden size-9 place-items-center rounded-full opacity-80 transition-opacity hover:opacity-100 sm:grid"
           >
             <SearchIcon aria-hidden className="size-4" />
           </Link>
