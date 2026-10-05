@@ -6,6 +6,7 @@ import { ReviewCard } from '@/baz/cards/ReviewCard'
 import { PausePromptCard } from '@/baz/cards/PausePromptCard'
 import { ConsentCard } from '@/baz/cards/ConsentCard'
 import { HealthFormCard } from '@/baz/cards/HealthFormCard'
+import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
 
 /**
  * The card registry.
@@ -29,6 +30,7 @@ export type CardActions = {
     applicationId: string,
     values: readonly { key: string; value: unknown }[],
   ) => Promise<void> | void
+  readonly onInvitePartner?: (name: string) => Promise<string | undefined> | string | undefined
 }
 
 export function CardRenderer({
@@ -90,8 +92,16 @@ export function CardRenderer({
         />
       )
 
-    // Built in M5, alongside the partner experience.
     case 'partner_invite':
+      return (
+        <PartnerInviteCard
+          card={card}
+          {...(actions.onInvitePartner ? { onInvite: actions.onInvitePartner } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    // Documents arrive with the upload flow.
     case 'upload_request':
       return null
   }

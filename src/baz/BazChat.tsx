@@ -128,6 +128,17 @@ export function BazChat({
         { action: 'submit_application', applicationId, confirmations: [...confirmations] },
         'What happens next?',
       ),
+    onInvitePartner: async (name) => {
+      setActionError(null)
+      try {
+        const result = await runCaseAction({ action: 'invite_partner', caseId: caseId ?? '', name })
+        await send(`${result.summary} What happens on their side?`)
+        return result.inviteUrl
+      } catch (caught) {
+        setActionError(caught instanceof Error ? caught.message : 'That did not work.')
+        return undefined
+      }
+    },
     onConsent: (applicationId, requirementId) =>
       commit(
         { action: 'grant_consent', applicationId, requirementId },

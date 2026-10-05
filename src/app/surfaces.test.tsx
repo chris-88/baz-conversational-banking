@@ -42,14 +42,18 @@ describe('surfaces', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
-  it('the partner surface reads the invite token from the path', () => {
+  it('the partner surface shows nothing about the case until the invite is redeemed', () => {
     renderSurface(
       <Routes>
         <Route path="/join/:token" element={<PartnerJoin />} />
       </Routes>,
       ['/join/opaque-token'],
     )
-    expect(screen.getByText(/invite token present: yes/i)).toBeInTheDocument()
+
+    // §33, Invariant 7: a partner sees their own tasks and nothing else — and before the
+    // token is redeemed, not even those.
+    expect(screen.queryByText(/your tasks/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
   it('the audience surface offers both starting options', () => {

@@ -43,6 +43,7 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'show_review',
   'show_pause_prompt',
   'show_form',
+  'show_partner_invite',
 ]
 
 const CORS = {
@@ -438,6 +439,30 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 }
 
                 return { result: 'Health form shown. They answer it themselves.', card }
+              }
+
+              case 'show_partner_invite': {
+                const { applicationIds } = input as { applicationIds: string[] }
+                const names = applicationIds
+                  .map((id) => findApplication(loaded, id))
+                  .filter((application) => application !== undefined)
+                  .map((application) => journeyFor(application.product).displayName)
+
+                if (names.length === 0) return { result: 'There is no such application.' }
+
+                const partner = loaded.participants.find((p) => p.role === 'partner')
+
+                const card: Card = {
+                  type: 'partner_invite',
+                  applicationIds,
+                  applicationNames: names,
+                  partnerName: partner?.displayName ?? null,
+                }
+
+                return {
+                  result: 'Invite offered. Nothing is sent until the customer taps and shares it.',
+                  card,
+                }
               }
 
               default:

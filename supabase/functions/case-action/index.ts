@@ -91,6 +91,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   if (!loaded) return errorResponse('not_found', 'That case does not exist.')
 
   let summary = ''
+  let inviteUrl: string | undefined
 
   switch (action.action) {
     case 'select_products': {
@@ -218,6 +219,50 @@ Deno.serve(async (request: Request): Promise<Response> => {
       })
 
       summary = `${journeyFor(application.product).displayName} submitted.`
+      break
+    }
+
+    case 'invite_partner': {
+      const existing = loaded.participants.find((participant) => participant.role === 'partner')
+
+      const partnerId =
+        existing?.id ??
+        ((
+          await admin
+            .from('participants')
+            .insert({ case_id: caseId, role: 'partner', display_name: action.name })
+            .select('id')
+            .single()
+        ).data as { id: string }).id
+
+      if (existing) {
+        await admin.from('participants').update({ display_name: action.name }).eq('id', partnerId)
+      }
+
+      // Opaque, hashed, single-use, and good for a day — longer than a handoff because the
+      // customer has to pass it to someone else (§58, Invariant 8).
+      const token = crypto.randomUUID().replaceAll('-', '')
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+      const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+
+      await admin.from('tokens').insert({
+        case_id: caseId,
+        kind: 'partner_invite',
+        token_hash: hash,
+        participant_id: partnerId,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      })
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'partner_invited',
+        actor: 'customer',
+        payload: { partnerName: action.name },
+      })
+
+      const base = (globalThis as any).Deno?.env?.get('APP_BASE_URL') ?? ''
+      inviteUrl = `${base}/#/join/${token}`
+      summary = `${action.name} can join with that link.`
       break
     }
 
@@ -368,7 +413,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
   loaded = (await loadCase(admin, caseId))!
   const applications = await recomputeApplications(admin, loaded)
 
-  return json(ok({ applications, summary } satisfies CaseActionResponse), 200)
+  return json(
+    ok({ applications, summary, ...(inviteUrl === undefined ? {} : { inviteUrl }) } satisfies CaseActionResponse),
+    200,
+  )
 })
 
 async function caseIdForApplication(

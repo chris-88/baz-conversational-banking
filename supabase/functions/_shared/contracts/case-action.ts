@@ -59,6 +59,18 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
     applicationId,
   }),
 
+  /**
+   * §6 Stage 9 — invites the second applicant.
+   *
+   * Creates the partner participant and a single-use link. Nothing is sent anywhere: the
+   * customer shares the link themselves, which keeps the prototype free of real delivery.
+   */
+  z.object({
+    action: z.literal('invite_partner'),
+    caseId,
+    name: z.string().min(1).max(80),
+  }),
+
   /** §7.5 — explicit consent, recorded, before any sensitive question is asked. */
   z.object({
     action: z.literal('grant_consent'),
@@ -100,6 +112,8 @@ export const applicationSummarySchema = z.object({
 
 export const caseActionResponseSchema = z.object({
   applications: z.array(applicationSummarySchema),
+  /** Present only after an invite: the link for the customer to share (§29, §58). */
+  inviteUrl: z.string().optional(),
   /** What changed, in the customer's language, for the confirmation line. */
   summary: z.string(),
 })

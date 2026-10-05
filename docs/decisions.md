@@ -404,3 +404,22 @@ section.
   "View all" no longer looks like a link. Unbuilt tab bar entries say so.
 - **2026-10-05** — Surface tests render through a helper with the real providers, rather than
   each test discovering a missing one for itself.
+
+## 2026-10-05 — M5 partner
+
+- **2026-10-05** — The `partner` function returns scoped DTOs and the partner never touches a
+  table. Not RLS — code that cannot accidentally widen. They see their own tasks and the names
+  and states of applications they are party to, never the primary's conversation or facts
+  (§33, Invariant 7).
+- **2026-10-05** — Tasks are grouped by **fact**, not by application, which is what makes one
+  answer satisfy several journeys. Each task carries the applications it covers, so §6 Stage 9
+  is visible on screen rather than merely true underneath.
+- **2026-10-05** — Partner facts are written with `source: 'partner_stated'`, so provenance
+  records who actually said it (§10).
+- **2026-10-05** — A partner cannot be asked for special-category data this way either: the
+  submit refuses any key the catalogue marks `special` (Invariant 6).
+- **2026-10-05** — Completed tasks are shown as done rather than dropped. Building the list only
+  from outstanding requirements meant finished rows vanished, which reads as a bug.
+- **2026-10-05** — Enum facts render as a chooser with the catalogue's own values. They were
+  free text, so answering `employment.status` meant typing `employed_full_time` — and the
+  server correctly rejected anything else.
