@@ -53,6 +53,13 @@ const ENABLED_TOOLS: readonly ToolName[] = [
 const INVITE_CARD_WINDOW = 8
 
 /**
+ * Status is worth refreshing as things change, so this window is short — it only stops the
+ * same card appearing twice in a row, which is what happens when the model reaches for it as
+ * something to say.
+ */
+const STATUS_CARD_WINDOW = 2
+
+/**
  * §6 Stages 2–4 — needs conversation and context discovery come before product discovery.
  *
  * What the customer has told us about their situation, as opposed to who they are or what they
@@ -344,6 +351,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
               }
 
               case 'show_status': {
+                const justShown = loaded.messages
+                  .slice(-STATUS_CARD_WINDOW)
+                  .some((message) => message.cards.includes('status'))
+
+                if (justShown) {
+                  return {
+                    result:
+                      'The status card is already on screen from the previous turn. Say what has changed in your own words rather than showing it again.',
+                  }
+                }
+
                 const card: Card = {
                   type: 'status',
                   applications: loaded.applications.map((application) => {
