@@ -199,10 +199,12 @@ export function PlanControls({
         </div>
         {setBalance.data && (
           <p className="text-muted-foreground mt-2 text-2xs">
-            Now {euro(setBalance.data.amount)}.{' '}
-            {setBalance.data.milestonesReached > 0
-              ? `${String(setBalance.data.milestonesReached)} milestone${setBalance.data.milestonesReached === 1 ? '' : 's'} reached.`
-              : 'No milestone reached by that.'}
+            Engine read back {setBalance.data.seen === null ? 'nothing' : euro(setBalance.data.seen)} ·{' '}
+            {String(setBalance.data.plansActive)} active plan
+            {setBalance.data.plansActive === 1 ? '' : 's'} ·{' '}
+            {String(setBalance.data.milestonesConsidered)} milestone
+            {setBalance.data.milestonesConsidered === 1 ? '' : 's'} checked ·{' '}
+            {String(setBalance.data.milestonesReached)} reached
           </p>
         )}
       </Card>

@@ -26,6 +26,9 @@ export const adminApi = {
   setSavingsBalance: (caseId: string, amount: number) =>
     call({ action: 'set_savings_balance', caseId, amount }) as Promise<{
       amount: number
+      seen: number | null
+      plansActive: number
+      milestonesConsidered: number
       milestonesReached: number
     }>,
   planMove: (

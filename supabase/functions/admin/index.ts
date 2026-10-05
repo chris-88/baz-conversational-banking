@@ -11,7 +11,7 @@ import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { loadCase, writeEvent, type Insert } from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor } from '../_shared/db/needs.ts'
-import { loadPlans, reconcilePlans } from '../_shared/db/plans.ts'
+import { loadPlans, planContextFor, reconcilePlans } from '../_shared/db/plans.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { evaluateNeeds } from '../_shared/domain/needs/engine.ts'
@@ -502,6 +502,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
 
       const loadedCase = await loadCase(admin, action.caseId)
+      const seen = loadedCase === null ? null : planContextFor(loadedCase).savingsBalance
       const reached = loadedCase === null ? [] : await reconcilePlans(admin, action.caseId, loadedCase)
 
       for (const { milestone } of reached) {
@@ -520,7 +521,28 @@ Deno.serve(async (request: Request): Promise<Response> => {
         payload: { amount: action.amount, milestones: reached.length },
       })
 
-      return json(ok({ amount: action.amount, milestonesReached: reached.length }), 200)
+      /**
+       * Report what was evaluated, not just what changed.
+       *
+       * "No milestone reached" is ambiguous — it means the same whether nothing qualified,
+       * nothing was looked at, or the read came back stale. The counts make the difference
+       * visible, which is the whole point of a presenter console.
+       */
+      const after = loadedCase === null ? [] : await loadPlans(admin, action.caseId, loadedCase)
+      const considered = after
+        .filter((entry) => entry.plan.status === 'active')
+        .flatMap((entry) => entry.plan.milestones)
+
+      return json(
+        ok({
+          amount: action.amount,
+          seen,
+          plansActive: after.filter((entry) => entry.plan.status === 'active').length,
+          milestonesConsidered: considered.length,
+          milestonesReached: reached.length,
+        }),
+        200,
+      )
     }
 
     case 'plan_move': {
