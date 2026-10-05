@@ -10,6 +10,9 @@ import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { loadCase, writeEvent, type Insert } from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
+import { needContextFor } from '../_shared/db/needs.ts'
+import { evaluateNeeds } from '../_shared/domain/needs/engine.ts'
+import { buildPlan } from '../_shared/domain/needs/plan.ts'
 
 /**
  * The presenter console (§37 to §44).
@@ -591,8 +594,36 @@ Deno.serve(async (request: Request): Promise<Response> => {
         .order('created_at', { ascending: false })
         .limit(40)
 
+      const needContext = needContextFor(loaded, { sensitiveDisclosure: false })
+      const candidates = needContext === null ? [] : evaluateNeeds(needContext)
+      const plan = needContext === null ? null : buildPlan(needContext, candidates)
+
+      const watchRows = await admin
+        .from('plan_watches')
+        .select('describe, met_at, created_at')
+        .eq('case_id', action.caseId)
+        .order('created_at', { ascending: false })
+
       const inspected: AdminCase = {
         caseId: action.caseId,
+        needs: candidates
+          .filter((candidate) => candidate.confidence > 0 || candidate.state !== 'latent')
+          .map((candidate) => ({
+            id: candidate.need.id,
+            name: candidate.need.name,
+            state: candidate.state,
+            confidence: candidate.confidence,
+            evidence: candidate.evidence.map((item) => item.describe),
+            reason: candidate.reason,
+          })),
+        planSteps: (plan?.steps ?? []).map((step) => `${step.title} — ${step.because}`),
+        watches: (
+          (watchRows.data ?? []) as { describe: string; met_at: string | null; created_at: string }[]
+        ).map((row) => ({
+          describe: row.describe,
+          met: row.met_at !== null,
+          createdAt: row.created_at,
+        })),
         // The inspector DOES show that sensitive facts exist, flagged — this surface is for
         // the person running the demonstration, not for the model.
         facts: loaded.facts.map((fact) => ({

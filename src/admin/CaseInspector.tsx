@@ -151,6 +151,65 @@ export function CaseInspector({ caseId }: { caseId: string }): ReactNode {
         </Card>
       </section>
 
+      {(data.needs.length > 0 || data.watches.length > 0) && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">What Baz makes of this, and why</h2>
+
+          {data.needs.length > 0 && (
+            <Card className="gap-0 divide-y p-0">
+              {data.needs.map((need) => (
+                <div key={need.id} className="space-y-1 px-4 py-2.5">
+                  <div className="flex items-baseline gap-3">
+                    <span className="min-w-0 flex-1 text-sm font-medium">{need.name}</span>
+                    <span className="text-muted-foreground tabular text-2xs">
+                      {need.confidence.toFixed(2)}
+                    </span>
+                    <Badge variant="secondary" className="text-2xs">
+                      {need.state.replaceAll('_', ' ')}
+                    </Badge>
+                  </div>
+                  {/* The audit trail: why this appeared, in the customer's own terms. */}
+                  {need.evidence.length > 0 && (
+                    <p className="text-muted-foreground text-2xs">
+                      {need.evidence.join(' · ')}
+                    </p>
+                  )}
+                  {need.reason !== null && (
+                    <p className="text-muted-foreground text-2xs italic">{need.reason}</p>
+                  )}
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {data.planSteps.length > 0 && (
+            <Card className="gap-0 p-4">
+              <p className="text-sm font-medium">The plan</p>
+              <ol className="text-muted-foreground mt-1.5 list-decimal space-y-0.5 pl-4 text-xs">
+                {data.planSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </Card>
+          )}
+
+          {data.watches.length > 0 && (
+            <Card className="gap-0 divide-y p-0">
+              {data.watches.map((watch) => (
+                <div key={watch.createdAt} className="flex items-baseline gap-3 px-4 py-2.5">
+                  <span className="min-w-0 flex-1 text-xs">
+                    The bank is watching for {watch.describe}
+                  </span>
+                  <Badge variant={watch.met ? 'default' : 'secondary'} className="text-2xs">
+                    {watch.met ? 'met' : 'waiting'}
+                  </Badge>
+                </div>
+              ))}
+            </Card>
+          )}
+        </section>
+      )}
+
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Context, with provenance</h2>
         <Card className="gap-0 divide-y p-0">

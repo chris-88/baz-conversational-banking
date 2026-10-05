@@ -58,11 +58,20 @@ const healthNotCommercialised: NeedSuppression = {
  * no price means no gap, not a gap of zero.
  */
 export function depositGap(context: NeedContext): { target: number; saved: number; short: number } | null {
-  const price = context.facts.number('housing.purchasePrice', 'household')
-  if (price === null || price <= 0) return null
-
+  // A target the customer stated outright beats one worked out from the price. Either will do:
+  // requiring the price meant someone who said "we're aiming for 60k" had no plan at all.
   const stated = context.facts.number('goals.savingsTarget', 'household')
-  const target = stated !== null && stated > 0 ? stated : Math.round(price * 0.1)
+  const price = context.facts.number('housing.purchasePrice', 'household')
+
+  const target =
+    stated !== null && stated > 0
+      ? stated
+      : price !== null && price > 0
+        ? Math.round(price * 0.1)
+        : null
+
+  if (target === null) return null
+
   const saved =
     context.facts.number('assets.depositAmount', 'household') ??
     context.facts.number('assets.savingsBalance', 'household') ??
@@ -83,7 +92,10 @@ export const needCatalogue: readonly NeedDefinition[] = [
         id: 'said-so',
         strength: 'explicit',
         describe: 'they said they want to buy a home',
-        when: (context) => /buy|purchas|mortgage|first home|own place/i.test(objective(context)),
+        when: (context) =>
+          /buy|purchas|mortgage|first home|own place|deposit|house|new build/i.test(
+            objective(context),
+          ),
       },
       {
         id: 'first-time-buyer',

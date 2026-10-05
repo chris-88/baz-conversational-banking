@@ -152,6 +152,24 @@ export const adminCaseSchema = z.object({
     }),
   ),
   events: z.array(z.object({ type: z.string(), actor: z.string(), at: z.string() })),
+  /**
+   * What the needs engine makes of this case, and what the bank has committed to watching
+   * for. The presenter can answer "why did Baz offer that" without reading the prompt.
+   */
+  needs: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      state: z.string(),
+      confidence: z.number(),
+      evidence: z.array(z.string()),
+      reason: z.string().nullable(),
+    }),
+  ),
+  planSteps: z.array(z.string()),
+  watches: z.array(
+    z.object({ describe: z.string(), met: z.boolean(), createdAt: z.string() }),
+  ),
 })
 
 export type AdminRequest = z.infer<typeof adminRequestSchema>
