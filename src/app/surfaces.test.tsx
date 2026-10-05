@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { PublicSite } from '@/shells/boi/PublicSite'
 import { AppLogin } from '@/shells/boi/AppLogin'
 import { PartnerJoin } from '@/partner/PartnerJoin'
@@ -8,56 +10,56 @@ import { AudienceEntry } from '@/audience/AudienceEntry'
 import { AppShell } from '@/shells/boi/AppShell'
 import { AdminConsole } from '@/admin/AdminConsole'
 
+/**
+ * Surfaces increasingly need the query client, so they are rendered the way the app renders
+ * them rather than each test discovering the missing provider for itself.
+ */
+function renderSurface(element: ReactNode, initialEntries: string[] = ['/']): void {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={initialEntries}>{element}</MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
 /** M0: every surface is routed and renders. */
 describe('surfaces', () => {
   it('the public site leads with the Baz entry point, not a product menu', () => {
-    render(
-      <MemoryRouter>
-        <PublicSite />
-      </MemoryRouter>,
-    )
+    renderSurface(<PublicSite />)
     // The proposition is "tell us what you're trying to do", so the composer is the hero.
     expect(screen.getByRole('textbox', { name: /message baz/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/life brings next/i)
   })
 
   it('the simulated login discloses that it is not a real banking system', () => {
-    render(
-      <MemoryRouter>
-        <AppLogin />
-      </MemoryRouter>,
-    )
+    renderSurface(<AppLogin />)
     expect(screen.getByText(/simulated sign-in for demonstration purposes/i)).toBeInTheDocument()
     expect(screen.getByText(/connects to no real banking system/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
   it('the partner surface reads the invite token from the path', () => {
-    render(
-      <MemoryRouter initialEntries={['/join/opaque-token']}>
-        <Routes>
-          <Route path="/join/:token" element={<PartnerJoin />} />
-        </Routes>
-      </MemoryRouter>,
+    renderSurface(
+      <Routes>
+        <Route path="/join/:token" element={<PartnerJoin />} />
+      </Routes>,
+      ['/join/opaque-token'],
     )
     expect(screen.getByText(/invite token present: yes/i)).toBeInTheDocument()
   })
 
   it('the audience surface offers both starting options', () => {
-    render(
-      <MemoryRouter>
-        <AudienceEntry />
-      </MemoryRouter>,
-    )
+    renderSurface(<AudienceEntry />)
     expect(screen.getByRole('button', { name: /start fresh/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /use the demo customer/i })).toBeInTheDocument()
   })
 
   it('the admin console asks for a sign-in before showing anything (§37)', () => {
-    render(
-      <MemoryRouter>
-        <AdminConsole />
-      </MemoryRouter>,
-    )
+    renderSurface(<AdminConsole />)
     // The server checks admin status on every call regardless, but the console must not
     // present controls to someone who has not signed in.
     expect(screen.queryByText(/reset the presenter case/i)).not.toBeInTheDocument()
@@ -79,7 +81,7 @@ describe('prototype disclosure', () => {
 
   for (const [name, element] of Object.entries(surfaces)) {
     it(`${name} states it is not a real banking service`, () => {
-      render(<MemoryRouter>{element}</MemoryRouter>)
+      renderSurface(element)
 
       expect(screen.getByRole('note')).toHaveTextContent(/not a real banking service/i)
       expect(screen.getByRole('note')).toHaveTextContent(/never enter real personal/i)

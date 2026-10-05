@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { ArrowUpIcon, MicIcon } from 'lucide-react'
+import { ArrowUpIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -47,14 +47,6 @@ export function Composer({
         className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent py-2 text-sm outline-none disabled:opacity-60"
       />
 
-      <button
-        type="button"
-        disabled
-        aria-label="Dictate (not available in this prototype)"
-        className="text-muted-foreground grid size-9 shrink-0 place-items-center rounded-full disabled:opacity-40"
-      >
-        <MicIcon aria-hidden className="size-4" />
-      </button>
 
       <button
         type="submit"

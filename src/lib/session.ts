@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { requireSupabase } from '@/lib/supabase'
 import { sessionResponseSchema, type SessionResponse } from '@contracts/session.ts'
 import { apiErrorSchema } from '@contracts/common.ts'
@@ -20,17 +21,14 @@ export async function ensureAnonymousUser(): Promise<string> {
   return created.data.session.access_token
 }
 
-export async function startSession(mode: 'demo' | 'fresh'): Promise<SessionResponse> {
+async function invoke(body: Record<string, unknown>): Promise<unknown> {
   const supabase = requireSupabase()
   await ensureAnonymousUser()
 
-  const invoked = await supabase.functions.invoke<unknown>('session', {
-    body: { action: 'start', mode },
-  })
+  const invoked = await supabase.functions.invoke<unknown>('session', { body })
 
   if (invoked.error) {
-    const message = invoked.error instanceof Error ? invoked.error.message : 'Could not reach the server.'
-    throw new Error(message)
+    throw new Error(invoked.error instanceof Error ? invoked.error.message : 'Could not reach the server.')
   }
 
   const envelope = invoked.data as { ok?: boolean; data?: unknown; error?: unknown }
@@ -39,5 +37,19 @@ export async function startSession(mode: 'demo' | 'fresh'): Promise<SessionRespo
     throw new Error(parsed.success ? parsed.data.message : 'Could not start a session.')
   }
 
-  return sessionResponseSchema.parse(envelope.data)
+  return envelope.data
+}
+
+/** §29 — hands this conversation to the app. The code is opaque and single-use. */
+export async function createHandoff(): Promise<string> {
+  const data = await invoke({ action: 'create_handoff' })
+  return z.object({ code: z.string() }).parse(data).code
+}
+
+export async function redeemHandoff(code: string): Promise<SessionResponse> {
+  return sessionResponseSchema.parse(await invoke({ action: 'redeem_handoff', code }))
+}
+
+export async function startSession(mode: 'demo' | 'fresh'): Promise<SessionResponse> {
+  return sessionResponseSchema.parse(await invoke({ action: 'start', mode }))
 }

@@ -15,16 +15,39 @@ import { Button } from '@/components/ui/button'
 import { MessageCircleIcon } from 'lucide-react'
 import { routes } from '@/app/routes'
 
+/**
+ * Each card opens the conversation with what a person browsing it probably wants, rather than
+ * a product page that does not exist. The opener is written as the customer would say it.
+ */
 const products = [
   {
     id: 'everyday',
     title: 'Everyday banking',
     description: 'Accounts, cards and digital banking.',
+    opener: 'I want to sort out my day-to-day banking',
     icon: <CreditCardIcon />,
   },
-  { id: 'mortgages', title: 'Mortgages', description: 'Find, apply and manage your mortgage.', icon: <HomeIcon /> },
-  { id: 'loans', title: 'Loans', description: 'For home, car or whatever’s next.', icon: <PiggyBankIcon /> },
-  { id: 'insurance', title: 'Insurance', description: 'Protect what matters most.', icon: <ShieldCheckIcon /> },
+  {
+    id: 'mortgages',
+    title: 'Mortgages',
+    description: 'Find, apply and manage your mortgage.',
+    opener: 'I want to buy a home',
+    icon: <HomeIcon />,
+  },
+  {
+    id: 'loans',
+    title: 'Loans',
+    description: 'For home, car or whatever’s next.',
+    opener: 'I am thinking about borrowing some money',
+    icon: <PiggyBankIcon />,
+  },
+  {
+    id: 'insurance',
+    title: 'Insurance',
+    description: 'Protect what matters most.',
+    opener: 'I want to protect my family',
+    icon: <ShieldCheckIcon />,
+  },
 ] as const
 
 /**
@@ -102,11 +125,8 @@ export function PublicSite(): ReactNode {
             <Card key={product.id} className="gap-0 p-0 shadow-sm">
               <ListRow
                 className="h-full flex-col items-start gap-3 p-5"
-                leading={
-                  <IconTile size="lg">
-                    {product.icon}
-                  </IconTile>
-                }
+                to={`${routes.baz}?say=${encodeURIComponent(product.opener)}`}
+                leading={<IconTile size="lg">{product.icon}</IconTile>}
                 title={<span className="text-base">{product.title}</span>}
                 subtitle={product.description}
               />

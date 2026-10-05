@@ -22,6 +22,7 @@ export function AppBaz(): ReactNode {
         className="flex min-h-0 flex-1 flex-col"
         suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
+        mode="demo"
         greeting={
           <div className="space-y-2">
             <p>Hi again — Baz here. Still an AI, still better than a form.</p>

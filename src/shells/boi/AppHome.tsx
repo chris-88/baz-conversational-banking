@@ -76,7 +76,7 @@ export function AppHome(): ReactNode {
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold">Your accounts</h2>
-          <span className="text-muted-foreground text-xs">View all</span>
+          <span className="text-muted-foreground text-2xs">Synthetic</span>
         </div>
         <Card className="gap-0 p-0">
           <ListRow

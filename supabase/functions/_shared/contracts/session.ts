@@ -6,6 +6,20 @@ import { z } from 'zod'
  * One participant can span several auth users, because Safari and an installed PWA have
  * separate storage on iOS: the same person arrives twice and must land on the same case.
  */
+export const sessionRequestSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('start'),
+    mode: z.enum(['demo', 'fresh']).default('fresh'),
+  }),
+  /** §29 — hands the case to the app. The code is opaque and single-use. */
+  z.object({ action: z.literal('create_handoff') }),
+  z.object({ action: z.literal('redeem_handoff'), code: z.string().min(16).max(64) }),
+])
+
+export type SessionRequest = z.infer<typeof sessionRequestSchema>
+
+export const handoffResponseSchema = z.object({ code: z.string() })
+
 export const sessionStartRequestSchema = z.object({
   action: z.literal('start'),
   /**

@@ -68,9 +68,11 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): ReactNode {
     !tab.enabled && 'opacity-45',
   )
 
+  // Not built in the prototype. Shown so the shell reads as a real app, and marked so it
+  // reads as deliberately absent rather than broken.
   if (!tab.enabled) {
     return (
-      <span className={className} aria-disabled>
+      <span className={className} aria-disabled title={`${tab.label} is not part of this prototype`}>
         {tab.icon}
         {tab.label}
       </span>

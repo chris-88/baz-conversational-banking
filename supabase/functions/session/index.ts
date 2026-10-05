@@ -1,8 +1,8 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
-import { sessionStartRequestSchema, type SessionResponse } from '../_shared/contracts/session.ts'
-import { canonicalCustomer } from '../_shared/domain/seed/canonical.ts'
+import { sessionRequestSchema, type SessionResponse } from '../_shared/contracts/session.ts'
+import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 
 /**
  * Attaches an anonymous visitor to a case (§12, §28).
@@ -46,7 +46,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     body = {}
   }
 
-  const parsed = sessionStartRequestSchema.safeParse(body)
+  const parsed = sessionRequestSchema.safeParse(body)
   if (!parsed.success) return errorResponse('bad_request', 'Unrecognised request.')
 
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
@@ -56,6 +56,110 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const caller = await admin.auth.getUser(authorization.replace('Bearer ', ''))
   if (caller.error || !caller.data.user) return errorResponse('unauthorised', 'No session.')
   const authUserId = caller.data.user.id
+
+  // ---- Handoff (§29, §58) --------------------------------------------------
+  if (parsed.data.action === 'create_handoff') {
+    const attached = await admin
+      .from('participant_sessions')
+      .select('participant_id, participants!inner(case_id)')
+      .eq('auth_user_id', authUserId)
+      .limit(1)
+
+    const row = (attached.data ?? [])[0] as any
+    if (!row) return errorResponse('not_found', 'There is no conversation to carry over.')
+
+    // 128 bits of randomness, stored only as a hash, valid for ten minutes, single use.
+    const code = crypto.randomUUID().replaceAll('-', '')
+    const hash = await sha256(code)
+
+    await admin.from('tokens').insert({
+      case_id: row.participants.case_id,
+      kind: 'handoff',
+      token_hash: hash,
+      participant_id: row.participant_id,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    })
+
+    await writeEventRow(admin, row.participants.case_id, 'handoff_created')
+    return json(ok({ code }), 200)
+  }
+
+  if (parsed.data.action === 'redeem_handoff') {
+    const hash = await sha256(parsed.data.code)
+    const found = await admin
+      .from('tokens')
+      .select('id, case_id, participant_id, expires_at, consumed_at')
+      .eq('token_hash', hash)
+      .eq('kind', 'handoff')
+      .maybeSingle()
+
+    const token = found.data as any
+    // One check per failure mode, and the same answer for all of them: a caller learns
+    // nothing about which part was wrong.
+    if (!token || token.consumed_at || new Date(token.expires_at) < new Date()) {
+      return errorResponse('not_found', 'That link has expired. Start again from the website.')
+    }
+
+    await admin.from('tokens').update({ consumed_at: new Date().toISOString() }).eq('id', token.id)
+
+    // The new session joins the SAME participant, which is what makes the conversation
+    // continue rather than restart (§12, §29).
+    await admin
+      .from('participant_sessions')
+      .upsert(
+        { participant_id: token.participant_id, auth_user_id: authUserId },
+        { onConflict: 'participant_id,auth_user_id' },
+      )
+
+    // §6 Stage 5 — signing in is what links the case to the customer the bank already knows,
+    // and loads what it holds.
+    const customer = await admin
+      .from('customers')
+      .select('id')
+      .eq('bank_reference', canonicalCase.customer.bankReference)
+      .maybeSingle()
+
+    const customerId = (customer.data as { id?: string } | null)?.id ?? null
+
+    await admin
+      .from('cases')
+      .update({ auth_level: 'authenticated', customer_id: customerId })
+      .eq('id', token.case_id)
+
+    const existing = await admin.from('facts').select('key').eq('case_id', token.case_id)
+    const known = new Set(((existing.data ?? []) as { key: string }[]).map((f) => f.key))
+
+    const toLoad = canonicalCase.bankHeldFacts.filter((fact) => !known.has(fact.key))
+    if (toLoad.length > 0) {
+      await admin.from('facts').insert(
+        toLoad.map((fact) => ({
+          case_id: token.case_id,
+          key: fact.key,
+          participant_id: fact.subject === 'household' ? null : token.participant_id,
+          subject_kind: fact.subject === 'household' ? 'household' : 'participant',
+          value: fact.value,
+          source: fact.source,
+          verified: fact.verified,
+        })),
+      )
+    }
+
+    await writeEventRow(admin, token.case_id, 'customer_authenticated', { loaded: toLoad.length })
+
+    return json(
+      ok({
+        caseId: token.case_id,
+        participantId: token.participant_id,
+        role: 'primary',
+        authLevel: 'authenticated',
+        customerFirstName: canonicalCase.customer.firstName,
+        created: false,
+      } satisfies SessionResponse),
+      200,
+    )
+  }
+
+  const startMode = parsed.data.action === 'start' ? parsed.data.mode : 'fresh'
 
   // Already attached? Return the same case — this is what makes a PWA and a browser tab land
   // on the same conversation rather than starting two.
@@ -79,14 +183,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
         participantId: found.participants.id,
         role: found.participants.role,
         authLevel: theCase.data?.auth_level ?? 'anonymous',
-        customerFirstName: theCase.data?.customer_id ? canonicalCustomer.firstName : null,
+        customerFirstName: theCase.data?.customer_id ? canonicalCase.customer.firstName : null,
         created: false,
       } satisfies SessionResponse),
       200,
     )
   }
 
-  if (parsed.data.mode === 'demo') {
+  if (startMode === 'demo') {
     const presenter = await admin
       .from('participants')
       .select('id, case_id, cases!inner(kind, auth_level, customer_id)')
@@ -109,7 +213,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         participantId: participant.id,
         role: 'primary',
         authLevel: participant.cases.auth_level,
-        customerFirstName: participant.cases.customer_id ? canonicalCustomer.firstName : null,
+        customerFirstName: participant.cases.customer_id ? canonicalCase.customer.firstName : null,
         created: false,
       } satisfies SessionResponse),
       200,
@@ -158,3 +262,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
     200,
   )
 })
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function writeEventRow(
+  admin: ReturnType<typeof createClient>,
+  caseId: string,
+  type: string,
+  payload: Record<string, unknown> = {},
+): Promise<void> {
+  await admin.from('events').insert({ case_id: caseId, type, actor: 'customer', payload })
+}

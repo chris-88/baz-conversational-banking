@@ -386,3 +386,21 @@ section.
   through `@domain/../llm/...`, which works but breaks the moment anything moves.
 - **2026-10-05** — `site_url` corrected to the real domain; it was still `localhost:3000`, which
   would have broken any auth email link.
+
+## 2026-10-05 — M4 continuity, and the dead frontend
+
+- **2026-10-05** — **The public conversation now starts anonymous** (`mode: 'fresh'`). It was
+  joining the seeded customer directly, which skipped §6 Stages 4 and 5 entirely and faked the
+  continuity the whole demo is built on.
+- **2026-10-05** — Handoff codes are 128-bit, stored only as a SHA-256 hash, valid ten minutes
+  and consumed on redemption. Expired, consumed and unknown all return the same message, so a
+  caller learns nothing about which part was wrong. §29, §58, Invariant 8
+- **2026-10-05** — Redeeming attaches the new auth user to the **same participant**, which is
+  what makes the conversation continue rather than restart, then links the case to the customer
+  and loads the bank-held facts (§6 Stage 5). Facts already captured anonymously are kept.
+- **2026-10-05** — Dead frontend fixed: product cards and site nav now open the conversation
+  with an opener written as the customer would say it, rather than being inert text. The mic
+  button is gone — there is no speech input planned and a dead button is worse than no button.
+  "View all" no longer looks like a link. Unbuilt tab bar entries say so.
+- **2026-10-05** — Surface tests render through a helper with the real providers, rather than
+  each test discovering a missing one for itself.

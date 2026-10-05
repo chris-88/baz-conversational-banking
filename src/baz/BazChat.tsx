@@ -23,12 +23,18 @@ export function BazChat({
   suggestions,
   openingMessage,
   greeting,
+  mode = 'demo',
+  footer,
   className,
 }: {
   suggestions: readonly Suggestion[]
   /** A line typed elsewhere and carried in, sent automatically on arrival. */
   openingMessage?: string | null
   greeting: ReactNode
+  /** `fresh` knows nothing about the visitor; `demo` joins the seeded customer (§46). */
+  mode?: 'demo' | 'fresh'
+  /** Shown once there is something worth carrying into the app (§29). */
+  footer?: (caseId: string) => ReactNode
   className?: string | undefined
 }): ReactNode {
   const [caseId, setCaseId] = useState<string | null>(null)
@@ -59,7 +65,7 @@ export function BazChat({
     if (!isBackendConfigured) return
 
     let cancelled = false
-    startSession('demo')
+    startSession(mode)
       .then(async (session) => {
         if (cancelled) return
         setCaseId(session.caseId)
@@ -86,7 +92,7 @@ export function BazChat({
       cancelled = true
     }
     // loadFrom is stable; listed to satisfy the exhaustive-deps rule honestly.
-  }, [loadFrom])
+  }, [loadFrom, mode])
 
   useEffect(() => {
     if (caseId === null || loadingHistory || !openingMessage || openingSent.current) return
@@ -188,6 +194,10 @@ export function BazChat({
 
         <div ref={bottom} />
       </div>
+
+      {footer !== undefined && caseId !== null && entries.length > 0 && (
+        <div className="px-4 pb-2">{footer(caseId)}</div>
+      )}
 
       <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-0 border-t px-4 py-3 backdrop-blur">
         <Composer disabled={!ready || streaming} onSend={(message) => void send(message)} />

@@ -6,6 +6,7 @@ import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { BazChat } from '@/baz/BazChat'
 import { OPENING_SUGGESTIONS } from '@/baz/suggestions'
+import { ContinueInApp } from '@/shells/boi/ContinueInApp'
 import { routes } from '@/app/routes'
 
 /**
@@ -42,6 +43,10 @@ export function PublicBaz(): ReactNode {
         className="mx-auto flex w-full max-w-md flex-1 flex-col"
         suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
+        // The public conversation knows nothing about the visitor until they sign in (§6
+        // Stage 1). Signing in is what links it to the customer the bank already knows.
+        mode="fresh"
+        footer={() => <ContinueInApp />}
         greeting={
           <div className="space-y-2">
             <p>
