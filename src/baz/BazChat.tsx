@@ -234,6 +234,17 @@ export function BazChat({
         'Where does that leave the application?',
       )
     },
+    onConfirmPlan: (planId) =>
+      commit(
+        { action: 'decide_plan', caseId: caseId ?? '', planId, decision: 'keep' },
+        'What should we do first?',
+      ),
+    onDeclinePlan: async (planId) => {
+      await commit(
+        { action: 'decide_plan', caseId: caseId ?? '', planId, decision: 'not_now' },
+        'We can come back to it.',
+      )
+    },
     onUpload: async (requestId, file, documentType) => {
       setActionError(null)
       const form = new FormData()

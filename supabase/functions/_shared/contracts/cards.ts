@@ -147,7 +147,30 @@ export const healthFormCardSchema = z.object({
   ),
 })
 
+/**
+ * §10 — the plan Baz is offering to keep, before the customer has agreed to it.
+ *
+ * Every figure is computed by the plan engine from the case, never by the model: a projected
+ * date a customer acts on has to be one the bank can stand over (§40).
+ */
+export const planProposalCardSchema = z.object({
+  type: z.literal('plan_proposal'),
+  planId: z.uuid(),
+  title: z.string(),
+  /** What they are building towards, and where they are now. */
+  targetAmount: z.number().nullable(),
+  currentAmount: z.number().nullable(),
+  projectedDate: z.string().nullable(),
+  monthsRemaining: z.number().int().nullable(),
+  milestones: z.array(z.object({ label: z.string(), achieved: z.boolean() })),
+  checkin: z
+    .object({ purpose: z.string(), when: z.string(), agenda: z.array(z.string()) })
+    .nullable(),
+  confirmLabel: z.string(),
+})
+
 export const cardSchema = z.discriminatedUnion('type', [
+  planProposalCardSchema,
   consentCardSchema,
   healthFormCardSchema,
   productOptionCardSchema,
@@ -162,6 +185,7 @@ export type Card = z.infer<typeof cardSchema>
 export type CardType = Card['type']
 
 export const CARD_TYPES = [
+  'plan_proposal',
   'product_options',
   'status',
   'review',

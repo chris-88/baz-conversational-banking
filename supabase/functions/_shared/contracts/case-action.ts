@@ -65,6 +65,17 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
    * Creates the partner participant and a single-use link. Nothing is sent anywhere: the
    * customer shares the link themselves, which keeps the prototype free of real delivery.
    */
+  /**
+   * §10, §37 — the customer takes the plan on, or changes their mind about it later. Keeping
+   * and abandoning are the same kind of decision and go through the same door.
+   */
+  z.object({
+    action: z.literal('decide_plan'),
+    caseId: z.uuid(),
+    planId: z.uuid(),
+    decision: z.enum(['keep', 'not_now', 'pause', 'resume', 'abandon']),
+  }),
+
   z.object({
     action: z.literal('invite_partner'),
     caseId,

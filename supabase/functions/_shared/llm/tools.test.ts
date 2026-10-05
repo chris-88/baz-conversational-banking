@@ -37,7 +37,13 @@ describe('the model has no tool that takes an action', () => {
     // CLAUDE.md lists seven. `show_form` is the eighth, added for §7.5: health data cannot be
     // collected in conversation, so there has to be a way to surface the form. It still only
     // shows — the server decides which form is due, and the customer's tap is what commits.
+    //
+    // `propose_plan` is the ninth and the only one not named show_/record_/request_, so it is
+    // worth being explicit: it writes a DRAFT plan nobody is held to. The plan becomes the
+    // customer's when they tap the card, which calls case-action like every other commitment.
+    // Proposing is not acting.
     expect([...TOOL_NAMES].sort()).toEqual([
+      'propose_plan',
       'record_facts',
       'request_upload',
       'show_form',

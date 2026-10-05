@@ -27,7 +27,10 @@ import {
   writeEvent,
 } from '../_shared/db/case-repository.ts'
 import { buildCaseDigest } from '../_shared/db/digest.ts'
-import { needsFor } from '../_shared/db/needs.ts'
+import { needContextFor, needsFor } from '../_shared/db/needs.ts'
+import { describePlan, loadPlans, planContextFor, proposePlan, reconcilePlans } from '../_shared/db/plans.ts'
+import { depositGap } from '../_shared/domain/needs/catalogue.ts'
+import type { PlanGoal } from '../_shared/domain/plans/types.ts'
 import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case.ts'
 
 /**
@@ -48,6 +51,7 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'show_form',
   'show_partner_invite',
   'request_upload',
+  'propose_plan',
 ]
 
 /** How far back a card still counts as "on screen" rather than scrolled into history. */
@@ -193,7 +197,27 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   // ---- Generate ---------------------------------------------------------
   const primary = participantFor(loaded, 'primary')
-  const digest = buildCaseDigest(loaded, { sensitiveDisclosure: gate.suppressHumour })
+  // Catch the plan up with what has actually happened before anything is said about it.
+  const achievedMilestones = await reconcilePlans(admin, turn.caseId, loaded)
+  for (const { milestone } of achievedMilestones) {
+    await writeEvent(admin, {
+      caseId: turn.caseId,
+      type: 'plan_milestone_reached',
+      actor: 'system',
+      payload: { label: milestone.label },
+    })
+  }
+
+  const loadedPlans = await loadPlans(admin, turn.caseId, loaded)
+  const keptPlans = loadedPlans
+    .filter((entry) => entry.plan.status === 'active')
+    .map((entry) => ({ title: entry.plan.title, lines: [...describePlan(entry)] }))
+
+  const digest = buildCaseDigest(loaded, {
+    sensitiveDisclosure: gate.suppressHumour,
+    plans: keptPlans,
+  })
+  const needContext = needContextFor(loaded, { sensitiveDisclosure: gate.suppressHumour })
 
   /**
    * Record what the bank has committed to watching for.
@@ -624,6 +648,143 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
                 return {
                   result: 'Invite offered. Nothing is sent until the customer taps and shares it.',
+                  card,
+                }
+              }
+
+              /**
+               * §10 — propose, never impose.
+               *
+               * The model picks the goal and the words; every figure comes from the plan
+               * engine. A projected date is something the customer will act on, so it is not
+               * the model's to invent (§40).
+               */
+              case 'propose_plan': {
+                const input_ = input as {
+                  goal: PlanGoal
+                  title: string
+                  targetAmount?: number
+                  targetDate?: string
+                }
+
+                const context = planContextFor(loaded)
+                const gap = needContext === null ? null : depositGap(needContext)
+                const target = input_.targetAmount ?? gap?.target ?? null
+
+                if (target === null) {
+                  return {
+                    result:
+                      'There is nothing measurable to plan towards yet. Find out what they are aiming for first.',
+                  }
+                }
+
+                const existing = await admin
+                  .from('plans')
+                  .select('id')
+                  .eq('case_id', turn.caseId)
+                  .in('status', ['draft', 'active'])
+                  .limit(1)
+
+                if (((existing.data ?? []) as unknown[]).length > 0) {
+                  return {
+                    result:
+                      'They already have a plan open. Talk about that one rather than starting another.',
+                  }
+                }
+
+                const targetDate = input_.targetDate ?? null
+                const milestones = [
+                  {
+                    kind: 'numeric' as const,
+                    label: `Deposit reaches €${Math.round(target / 2).toLocaleString('en-IE')}`,
+                    targetAmount: Math.round(target / 2),
+                    targetDate: null,
+                    targetProduct: null,
+                    targetState: null,
+                  },
+                  {
+                    kind: 'numeric' as const,
+                    label: `Deposit reaches €${target.toLocaleString('en-IE')}`,
+                    targetAmount: target,
+                    targetDate: null,
+                    targetProduct: null,
+                    targetState: null,
+                  },
+                  {
+                    kind: 'application' as const,
+                    label: 'Mortgage application submitted',
+                    targetAmount: null,
+                    targetDate: null,
+                    targetProduct: 'mortgage' as const,
+                    targetState: 'submitted' as const,
+                  },
+                  {
+                    kind: 'application' as const,
+                    label: 'Mortgage approved',
+                    targetAmount: null,
+                    targetDate: null,
+                    targetProduct: 'mortgage' as const,
+                    targetState: 'approved' as const,
+                  },
+                ]
+
+                const planId = await proposePlan(admin, turn.caseId, {
+                  goal: input_.goal,
+                  title: input_.title,
+                  targetAmount: target,
+                  targetDate: targetDate === null || targetDate.length === 7 ? null : targetDate,
+                  milestones,
+                  checkin: {
+                    purpose: 'Mortgage readiness review',
+                    agenda: [
+                      'Check how the deposit is going',
+                      'Confirm income and outgoings have not changed',
+                      'Decide whether to start the mortgage application',
+                      'Revisit anything we parked',
+                    ],
+                    triggerKind: 'event',
+                    dueAt: null,
+                    triggerEvent: 'savings_target_reached',
+                  },
+                })
+
+                if (planId === null) return { result: 'That plan could not be saved just now.' }
+
+                const months =
+                  context.monthlySaving !== null && context.monthlySaving > 0
+                    ? Math.ceil(
+                        Math.max(0, target - (context.savingsBalance ?? 0)) /
+                          context.monthlySaving,
+                      )
+                    : null
+
+                const card: Card = {
+                  type: 'plan_proposal',
+                  planId,
+                  title: input_.title,
+                  targetAmount: target,
+                  currentAmount: context.savingsBalance,
+                  projectedDate: null,
+                  monthsRemaining: months,
+                  milestones: milestones.map((milestone) => ({
+                    label: milestone.label,
+                    achieved: false,
+                  })),
+                  checkin: {
+                    purpose: 'Mortgage readiness review',
+                    when: 'when you reach the target',
+                    agenda: [
+                      'Check how the deposit is going',
+                      'Confirm income and outgoings have not changed',
+                      'Decide whether to start the mortgage application',
+                    ],
+                  },
+                  confirmLabel: 'Keep this plan',
+                }
+
+                return {
+                  result:
+                    'Plan proposed. It is a draft and belongs to nobody until they tap it. Explain what it does for them in a sentence; do not list the milestones back.',
                   card,
                 }
               }

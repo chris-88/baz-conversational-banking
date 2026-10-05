@@ -191,7 +191,12 @@ function describeEvent(event: { type: string; payload: Record<string, unknown> }
 
 export function buildCaseDigest(
   loaded: LoadedCase,
-  options: { readonly sensitiveDisclosure?: boolean } = {},
+  options: {
+    readonly sensitiveDisclosure?: boolean
+    /** Plans already loaded, described by the plan engine. Kept out of here so the digest
+     *  stays synchronous and the database round trip happens once, in the caller. */
+    readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
+  } = {},
 ): CaseDigest {
   const needContext = needContextFor(loaded, {
     sensitiveDisclosure: options.sensitiveDisclosure ?? false,
@@ -258,6 +263,7 @@ export function buildCaseDigest(
     sensitiveHeld: sensitiveAreas,
     needs: digestNeeds,
     plan: digestPlan,
+    ...(options.plans === undefined ? {} : { plans: options.plans }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

@@ -72,6 +72,30 @@ export const requestUploadInput = z.object({
     .optional(),
 })
 
+/**
+ * §10 — Baz proposes, the customer accepts. The plan is written as a draft and only becomes
+ * theirs when they tap, which is the same rule every other commitment follows (Invariant 1).
+ */
+export const proposePlanInput = z.object({
+  goal: z.enum([
+    'buy_first_home',
+    'move_home',
+    'emergency_fund',
+    'save_for_child',
+    'buy_car',
+    'renovate',
+    'retire',
+    'become_debt_free',
+    'other',
+  ]),
+  /** In the customer's words: "Buy our first home", not "First-Time Buyer Journey". */
+  title: z.string().min(4).max(80),
+  /** What they are aiming at. The server checks it against what the case can support. */
+  targetAmount: z.number().int().positive().optional(),
+  /** YYYY-MM or YYYY-MM-DD, when they named one. */
+  targetDate: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).optional(),
+})
+
 export const showPartnerInviteInput = z.object({
   applicationIds: z.array(applicationId).min(1).max(5),
 })
@@ -91,6 +115,7 @@ export const TOOL_INPUTS = {
   show_product_options: showProductOptionsInput,
   show_review: showReviewInput,
   show_pause_prompt: showPausePromptInput,
+  propose_plan: proposePlanInput,
   request_upload: requestUploadInput,
   show_partner_invite: showPartnerInviteInput,
   show_status: showStatusInput,
@@ -144,6 +169,16 @@ export const TOOLS: readonly ToolDefinition[] = [
       'application and, if they named one, the kind of document; the server picks whichever ' +
       'is outstanding. One at a time.',
     schema: requestUploadInput,
+  },
+  {
+    name: 'propose_plan',
+    description:
+      'Offer to keep this as a plan: a goal that outlives any one application, with ' +
+      'milestones and a check-in. Use it when what the customer wants takes months rather ' +
+      'than one conversation — saving towards something, or a purchase some way off. The ' +
+      'card is how they accept; nothing is kept until they tap it. Do not propose a plan for ' +
+      'something they can simply do today.',
+    schema: proposePlanInput,
   },
   {
     name: 'show_partner_invite',

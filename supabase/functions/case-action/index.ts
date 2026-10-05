@@ -10,6 +10,8 @@ import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { transition } from '../_shared/domain/state-machine.ts'
 import { loadCase, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
+import { canTransition } from '../_shared/domain/plans/engine.ts'
+import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import {
   createApplications,
   evaluateFor,
@@ -220,6 +222,72 @@ Deno.serve(async (request: Request): Promise<Response> => {
       })
 
       summary = `${journeyFor(application.product).displayName} submitted.`
+      break
+    }
+
+    /**
+     * §10, §37 — the customer decides what happens to the plan.
+     *
+     * The transition table refuses anything incoherent, so a completed plan cannot quietly
+     * reactivate and an abandoned one cannot be paused. Nothing here infers intent: every
+     * change came from a tap.
+     */
+    case 'decide_plan': {
+      const row = await admin
+        .from('plans')
+        .select('id, status, title')
+        .eq('id', action.planId)
+        .eq('case_id', caseId)
+        .maybeSingle()
+
+      const current = row.data as { id: string; status: PlanStatus; title: string } | null
+      if (!current) return errorResponse('not_found', 'There is no such plan.')
+
+      const target: PlanStatus =
+        action.decision === 'keep'
+          ? 'active'
+          : action.decision === 'not_now' || action.decision === 'abandon'
+            ? 'abandoned'
+            : action.decision === 'pause'
+              ? 'paused'
+              : 'active'
+
+      if (!canTransition(current.status, target)) {
+        return errorResponse('conflict', `That plan cannot move from ${current.status}.`)
+      }
+
+      const now = new Date().toISOString()
+      await admin
+        .from('plans')
+        .update({
+          status: target,
+          ...(action.decision === 'keep' ? { confirmed_at: now, last_confirmed_at: now } : {}),
+          ...(target === 'paused' ? { paused_at: now } : {}),
+        })
+        .eq('id', current.id)
+
+      await writeEvent(admin, {
+        caseId,
+        type:
+          action.decision === 'keep'
+            ? 'plan_created'
+            : action.decision === 'pause'
+              ? 'plan_paused'
+              : action.decision === 'resume'
+                ? 'plan_resumed'
+                : 'plan_abandoned',
+        actor: 'customer',
+        payload: { planId: current.id, title: current.title },
+      })
+
+      summary =
+        action.decision === 'keep'
+          ? `Kept "${current.title}" as a plan.`
+          : action.decision === 'pause'
+            ? `Paused "${current.title}".`
+            : action.decision === 'resume'
+              ? `Picked "${current.title}" back up.`
+              : `Dropped "${current.title}".`
       break
     }
 

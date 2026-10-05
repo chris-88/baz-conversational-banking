@@ -316,6 +316,11 @@ export type CaseDigest = {
    * the case; present only when there is genuinely a sequence.
    */
   readonly plan?: DigestPlan | null
+  /**
+   * §33 — plans the customer has actually kept, with progress worked out by the plan engine.
+   * Lines are ready to say; none of the arithmetic is yours to redo.
+   */
+  readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
   readonly partner: DigestPartner | null
   /** §36 — what changed while the customer was away. */
   readonly eventsSinceLastSeen: readonly string[]
@@ -458,6 +463,18 @@ function digestSection(digest: CaseDigest): string {
     lines.push(
       'Anything not listed here is not established. Do not offer it, however reasonable it',
       'sounds.',
+      '',
+    )
+  }
+
+  const kept = digest.plans ?? []
+  if (kept.length > 0) {
+    lines.push(
+      '## Plans they are keeping',
+      'These outlive any one application. Refer to them as a shared thing in progress rather',
+      'than re-explaining them, and never recalculate a figure here — it was worked out from',
+      'their actual balance:',
+      ...kept.flatMap((item) => [`- ${item.title}`, ...item.lines.map((line) => `  ${line}`)]),
       '',
     )
   }

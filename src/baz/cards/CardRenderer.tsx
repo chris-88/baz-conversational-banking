@@ -8,6 +8,7 @@ import { ConsentCard } from '@/baz/cards/ConsentCard'
 import { HealthFormCard } from '@/baz/cards/HealthFormCard'
 import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
 import { UploadRequestCard } from '@/baz/cards/UploadRequestCard'
+import { PlanProposalCard } from '@/baz/cards/PlanProposalCard'
 
 /**
  * The card registry.
@@ -34,6 +35,9 @@ export type CardActions = {
   ) => Promise<void> | void
   readonly onInvitePartner?: (name: string) => Promise<string | undefined> | string | undefined
   readonly onUpload?: (requestId: string, file: File, documentType: string) => Promise<void>
+  /** Resolves true only when the server accepted the plan. */
+  readonly onConfirmPlan?: (planId: string) => Promise<boolean> | boolean
+  readonly onDeclinePlan?: (planId: string) => Promise<void> | void
 }
 
 export function CardRenderer({
@@ -46,6 +50,16 @@ export function CardRenderer({
   disabled?: boolean
 }): ReactNode {
   switch (card.type) {
+    case 'plan_proposal':
+      return (
+        <PlanProposalCard
+          card={card}
+          {...(actions.onConfirmPlan ? { onConfirm: actions.onConfirmPlan } : {})}
+          {...(actions.onDeclinePlan ? { onDecline: actions.onDeclinePlan } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
     case 'product_options':
       return (
         <ProductOptionsCard

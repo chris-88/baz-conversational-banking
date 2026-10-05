@@ -155,6 +155,7 @@ export type Database = {
           case_id: string
           created_at: string
           id: string
+          plan_id: string | null
           product: string
           resume_to: string | null
           state: string
@@ -165,6 +166,7 @@ export type Database = {
           case_id: string
           created_at?: string
           id?: string
+          plan_id?: string | null
           product: string
           resume_to?: string | null
           state?: string
@@ -175,6 +177,7 @@ export type Database = {
           case_id?: string
           created_at?: string
           id?: string
+          plan_id?: string | null
           product?: string
           resume_to?: string | null
           state?: string
@@ -187,6 +190,13 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -553,6 +563,60 @@ export type Database = {
           },
         ]
       }
+      need_decisions: {
+        Row: {
+          case_id: string
+          decided_at: string
+          id: string
+          need_id: string
+          plan_id: string | null
+          reason: string | null
+          revisit_on: string | null
+          revisit_when: string | null
+          revisited_at: string | null
+          state: string
+        }
+        Insert: {
+          case_id: string
+          decided_at?: string
+          id?: string
+          need_id: string
+          plan_id?: string | null
+          reason?: string | null
+          revisit_on?: string | null
+          revisit_when?: string | null
+          revisited_at?: string | null
+          state: string
+        }
+        Update: {
+          case_id?: string
+          decided_at?: string
+          id?: string
+          need_id?: string
+          plan_id?: string | null
+          reason?: string | null
+          revisit_on?: string | null
+          revisit_when?: string | null
+          revisited_at?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "need_decisions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "need_decisions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_sessions: {
         Row: {
           auth_user_id: string
@@ -635,6 +699,103 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_checkins: {
+        Row: {
+          agenda: Json
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          plan_id: string
+          purpose: string
+          state: string
+          trigger_event: string | null
+          trigger_kind: string
+        }
+        Insert: {
+          agenda?: Json
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          plan_id: string
+          purpose: string
+          state?: string
+          trigger_event?: string | null
+          trigger_kind: string
+        }
+        Update: {
+          agenda?: Json
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          plan_id?: string
+          purpose?: string
+          state?: string
+          trigger_event?: string | null
+          trigger_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_checkins_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_milestones: {
+        Row: {
+          achieved_at: string | null
+          id: string
+          kind: string
+          label: string
+          plan_id: string
+          sort: number
+          state: string
+          target_amount: number | null
+          target_date: string | null
+          target_product: string | null
+          target_state: string | null
+        }
+        Insert: {
+          achieved_at?: string | null
+          id?: string
+          kind: string
+          label: string
+          plan_id: string
+          sort?: number
+          state?: string
+          target_amount?: number | null
+          target_date?: string | null
+          target_product?: string | null
+          target_state?: string | null
+        }
+        Update: {
+          achieved_at?: string | null
+          id?: string
+          kind?: string
+          label?: string
+          plan_id?: string
+          sort?: number
+          state?: string
+          target_amount?: number | null
+          target_date?: string | null
+          target_product?: string | null
+          target_state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_milestones_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_watches: {
         Row: {
           case_id: string
@@ -672,6 +833,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "plan_watches_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          case_id: string
+          completed_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          goal: string
+          id: string
+          last_confirmed_at: string | null
+          paused_at: string | null
+          status: string
+          target_amount: number | null
+          target_date: string | null
+          title: string
+        }
+        Insert: {
+          case_id: string
+          completed_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          goal: string
+          id?: string
+          last_confirmed_at?: string | null
+          paused_at?: string | null
+          status?: string
+          target_amount?: number | null
+          target_date?: string | null
+          title: string
+        }
+        Update: {
+          case_id?: string
+          completed_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          goal?: string
+          id?: string
+          last_confirmed_at?: string | null
+          paused_at?: string | null
+          status?: string
+          target_amount?: number | null
+          target_date?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plans_case_id_fkey"
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"

@@ -1,0 +1,290 @@
+import type { Db, Insert } from './case-repository.ts'
+import type { Json } from './database.types.ts'
+import type { LoadedCase } from './loaded-case.ts'
+import type { Product } from '../domain/journey.ts'
+import type { ApplicationState } from '../domain/state-machine.ts'
+import {
+  checkinDue,
+  describeProjection,
+  planProgress,
+  reached,
+} from '../domain/plans/engine.ts'
+import type {
+  Checkin,
+  Milestone,
+  Plan,
+  PlanContext,
+  PlanGoal,
+  PlanProgress,
+} from '../domain/plans/types.ts'
+
+/**
+ * Reading and writing plans.
+ *
+ * Only decisions cross this boundary in either direction. Progress and projections are
+ * computed from the case on the way out and never persisted, so the plan on screen and the
+ * balance it describes cannot drift apart.
+ */
+
+export type LoadedPlan = { readonly plan: Plan; readonly progress: PlanProgress }
+
+export function planContextFor(loaded: LoadedCase, today = new Date()): PlanContext {
+  const read = (key: string): number | null => {
+    const fact = loaded.facts.find(
+      (candidate) => String(candidate.key) === key && candidate.supersededBy === null,
+    )
+    return typeof fact?.value === 'number' ? fact.value : null
+  }
+
+  return {
+    savingsBalance: read('assets.savingsBalance') ?? read('assets.depositAmount'),
+    monthlySaving: read('goals.monthlySaving'),
+    today: today.toISOString().slice(0, 10),
+  }
+}
+
+export async function loadPlans(
+  client: Db,
+  caseId: string,
+  loaded: LoadedCase,
+): Promise<readonly LoadedPlan[]> {
+  const planRows = await client
+    .from('plans')
+    .select('id, goal, title, status, target_amount, target_date, last_confirmed_at')
+    .eq('case_id', caseId)
+    .order('created_at', { ascending: true })
+
+  const plans = (planRows.data ?? []) as {
+    id: string
+    goal: string
+    title: string
+    status: string
+    target_amount: number | null
+    target_date: string | null
+    last_confirmed_at: string | null
+  }[]
+
+  if (plans.length === 0) return []
+
+  const ids = plans.map((plan) => plan.id)
+
+  const [milestoneRows, checkinRows] = await Promise.all([
+    client
+      .from('plan_milestones')
+      .select(
+        'id, plan_id, kind, label, sort, target_amount, target_date, target_product, target_state, state, achieved_at',
+      )
+      .in('plan_id', ids)
+      .order('sort', { ascending: true }),
+    client
+      .from('plan_checkins')
+      .select('id, plan_id, purpose, agenda, trigger_kind, due_at, trigger_event, state')
+      .in('plan_id', ids),
+  ])
+
+  const context = planContextFor(loaded)
+
+  return plans.map((row) => {
+    const milestones: Milestone[] = (
+      (milestoneRows.data ?? []) as Record<string, unknown>[]
+    )
+      .filter((milestone) => milestone['plan_id'] === row.id)
+      .map((milestone) => ({
+        id: String(milestone['id']),
+        kind: milestone['kind'] as Milestone['kind'],
+        label: String(milestone['label']),
+        sort: Number(milestone['sort'] ?? 0),
+        targetAmount: milestone['target_amount'] === null ? null : Number(milestone['target_amount']),
+        targetDate: (milestone['target_date'] as string | null) ?? null,
+        targetProduct: (milestone['target_product'] as Product | null) ?? null,
+        targetState: (milestone['target_state'] as ApplicationState | null) ?? null,
+        state: milestone['state'] as Milestone['state'],
+        achievedAt: (milestone['achieved_at'] as string | null) ?? null,
+      }))
+
+    const checkins: Checkin[] = ((checkinRows.data ?? []) as Record<string, unknown>[])
+      .filter((checkin) => checkin['plan_id'] === row.id)
+      .map((checkin) => ({
+        id: String(checkin['id']),
+        purpose: String(checkin['purpose']),
+        agenda: Array.isArray(checkin['agenda']) ? (checkin['agenda'] as string[]) : [],
+        triggerKind: checkin['trigger_kind'] as 'date' | 'event',
+        dueAt: (checkin['due_at'] as string | null) ?? null,
+        triggerEvent: (checkin['trigger_event'] as string | null) ?? null,
+        state: checkin['state'] as Checkin['state'],
+      }))
+
+    const plan: Plan = {
+      id: row.id,
+      goal: row.goal as PlanGoal,
+      title: row.title,
+      status: row.status as Plan['status'],
+      targetAmount: row.target_amount === null ? null : Number(row.target_amount),
+      targetDate: row.target_date,
+      milestones,
+      checkins,
+      applications: loaded.applications.map((application) => ({
+        product: application.product,
+        state: application.state,
+      })),
+      lastConfirmedAt: row.last_confirmed_at,
+    }
+
+    return { plan, progress: planProgress(plan, context) }
+  })
+}
+
+/**
+ * Catch the plan up with what has actually happened.
+ *
+ * Milestone state is stored because "when did they reach it" is a fact about the past, but
+ * whether the condition holds is computed — so this is the one place the two meet. Returns
+ * what changed, so the caller can write events for the things a customer would recognise.
+ */
+export async function reconcilePlans(
+  client: Db,
+  caseId: string,
+  loaded: LoadedCase,
+): Promise<readonly { planId: string; milestone: Milestone }[]> {
+  const plans = await loadPlans(client, caseId, loaded)
+  const context = planContextFor(loaded)
+  const achieved: { planId: string; milestone: Milestone }[] = []
+
+  for (const { plan } of plans) {
+    if (plan.status !== 'active') continue
+
+    for (const milestone of plan.milestones) {
+      if (milestone.state === 'achieved' || milestone.state === 'no_longer_relevant') continue
+      if (!reached(milestone, context, [...plan.applications])) continue
+
+      await client
+        .from('plan_milestones')
+        .update({ state: 'achieved', achieved_at: new Date().toISOString() })
+        .eq('id', milestone.id)
+
+      achieved.push({ planId: plan.id, milestone })
+    }
+  }
+
+  return achieved
+}
+
+/** Check-ins whose moment has arrived, so Baz has a reason to speak rather than an excuse. */
+export function dueCheckins(
+  plans: readonly LoadedPlan[],
+  loaded: LoadedCase,
+  firedEvents: readonly string[] = [],
+): readonly { plan: Plan; checkin: Checkin }[] {
+  const context = planContextFor(loaded)
+
+  return plans
+    .filter(({ plan }) => plan.status === 'active')
+    .flatMap(({ plan }) =>
+      plan.checkins
+        .filter((checkin) => checkinDue(checkin, context, firedEvents))
+        .map((checkin) => ({ plan, checkin })),
+    )
+}
+
+export type PlanDraft = {
+  readonly goal: PlanGoal
+  readonly title: string
+  readonly targetAmount: number | null
+  readonly targetDate: string | null
+  readonly milestones: readonly {
+    readonly kind: Milestone['kind']
+    readonly label: string
+    readonly targetAmount: number | null
+    readonly targetDate: string | null
+    readonly targetProduct: Product | null
+    readonly targetState: ApplicationState | null
+  }[]
+  readonly checkin: {
+    readonly purpose: string
+    readonly agenda: readonly string[]
+    readonly triggerKind: 'date' | 'event'
+    readonly dueAt: string | null
+    readonly triggerEvent: string | null
+  } | null
+}
+
+/**
+ * Writes a proposal. `draft` until the customer says yes — §10 is explicit that Baz must not
+ * silently create a persistent plan, so proposing and accepting are separate events.
+ */
+export async function proposePlan(
+  client: Db,
+  caseId: string,
+  draft: PlanDraft,
+): Promise<string | null> {
+  const created = await client
+    .from('plans')
+    .insert({
+      case_id: caseId,
+      goal: draft.goal,
+      title: draft.title,
+      status: 'draft',
+      target_amount: draft.targetAmount,
+      target_date: draft.targetDate,
+    } satisfies Insert<'plans'>)
+    .select('id')
+    .single()
+
+  const planId = (created.data as { id?: string } | null)?.id
+  if (planId === undefined) return null
+
+  if (draft.milestones.length > 0) {
+    await client.from('plan_milestones').insert(
+      draft.milestones.map((milestone, index) => ({
+        plan_id: planId,
+        kind: milestone.kind,
+        label: milestone.label,
+        sort: index,
+        target_amount: milestone.targetAmount,
+        target_date: milestone.targetDate,
+        target_product: milestone.targetProduct,
+        target_state: milestone.targetState,
+      })),
+    )
+  }
+
+  if (draft.checkin !== null) {
+    await client.from('plan_checkins').insert({
+      plan_id: planId,
+      purpose: draft.checkin.purpose,
+      agenda: draft.checkin.agenda as unknown as Json,
+      trigger_kind: draft.checkin.triggerKind,
+      due_at: draft.checkin.dueAt,
+      trigger_event: draft.checkin.triggerEvent,
+    })
+  }
+
+  return planId
+}
+
+/** What the model is told about the plan, in words it can use without doing arithmetic. */
+export function describePlan({ plan, progress }: LoadedPlan): readonly string[] {
+  const lines = [`${plan.title} — ${plan.status}`]
+
+  const projection = describeProjection(progress)
+  if (projection !== null) lines.push(projection)
+
+  if (progress.nextMilestone !== null) {
+    lines.push(`Next milestone: ${progress.nextMilestone.label}.`)
+  }
+
+  const done = plan.milestones.filter((milestone) => milestone.state === 'achieved')
+  if (done.length > 0) {
+    lines.push(`Already reached: ${done.map((milestone) => milestone.label).join(', ')}.`)
+  }
+
+  if (progress.nextCheckin !== null) {
+    const when =
+      progress.nextCheckin.dueAt === null
+        ? `when ${progress.nextCheckin.triggerEvent ?? 'something changes'}`
+        : progress.nextCheckin.dueAt.slice(0, 10)
+    lines.push(`Next check-in: ${progress.nextCheckin.purpose}, ${when}.`)
+  }
+
+  return lines
+}

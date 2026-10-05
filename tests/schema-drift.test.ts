@@ -23,13 +23,28 @@ const migrations = readdirSync(migrationsDir)
   .join('\n')
 
 /**
- * Pulls the literals out of the LAST `check (<column> in (...))` for a column, so a later
- * migration that widens a constraint is the one that counts.
+ * Pulls the literals out of the last `check (<column> in (...))` for a column ON ONE TABLE.
+ *
+ * Scoped to the table because column names repeat: `need_decisions.state` is a different
+ * thing from `applications.state`, and an unscoped search quietly started comparing the
+ * application states against the wrong constraint the moment the second table existed. The
+ * last match within the table still wins, so a later migration widening a constraint counts.
  */
-function checkConstraintLiterals(column: string): readonly string[] {
+function checkConstraintLiterals(table: string, column: string): readonly string[] {
+  // Everything the migrations say about this table: its definition and any later alters.
+  const blocks = [
+    ...migrations.matchAll(
+      new RegExp(`create table public\\.${table}\\s*\\(([\\s\\S]*?)\\n\\);`, 'gi'),
+    ),
+    ...migrations.matchAll(
+      new RegExp(`alter table public\\.${table}[\\s\\S]*?;`, 'gi'),
+    ),
+  ]
+    .map((match) => match[0])
+    .join('\n')
+
   const pattern = new RegExp(`${column}\\s+in\\s*\\(([^)]*)\\)`, 'gis')
-  const matches = [...migrations.matchAll(pattern)]
-  const last = matches.at(-1)
+  const last = [...blocks.matchAll(pattern)].at(-1)
   if (!last?.[1]) return []
 
   return [...last[1].matchAll(/'([^']+)'/g)]
@@ -43,23 +58,23 @@ describe('the database agrees with the TypeScript unions', () => {
   })
 
   it('accepts exactly the twelve application states (§13)', () => {
-    expect([...checkConstraintLiterals('state')].sort()).toEqual([...APPLICATION_STATES].sort())
+    expect([...checkConstraintLiterals('applications', 'state')].sort()).toEqual([...APPLICATION_STATES].sort())
   })
 
   it('accepts exactly the five products (§7)', () => {
-    expect([...checkConstraintLiterals('product')].sort()).toEqual([...PRODUCTS].sort())
+    expect([...checkConstraintLiterals('applications', 'product')].sort()).toEqual([...PRODUCTS].sort())
   })
 
   it('accepts exactly the six fact sources (§10)', () => {
-    expect([...checkConstraintLiterals('source')].sort()).toEqual([...FACT_SOURCES].sort())
+    expect([...checkConstraintLiterals('facts', 'source')].sort()).toEqual([...FACT_SOURCES].sort())
   })
 
   it('accepts exactly the five document types', () => {
-    expect([...checkConstraintLiterals('document_type')].sort()).toEqual([...DOCUMENT_TYPES].sort())
+    expect([...checkConstraintLiterals('documents', 'document_type')].sort()).toEqual([...DOCUMENT_TYPES].sort())
   })
 
   it('only allows resuming into a pre-submission state', () => {
-    expect([...checkConstraintLiterals('resume_to')].sort()).toEqual(
+    expect([...checkConstraintLiterals('applications', 'resume_to')].sort()).toEqual(
       ['in_progress', 'ready', 'waiting_customer', 'waiting_partner'],
     )
   })
