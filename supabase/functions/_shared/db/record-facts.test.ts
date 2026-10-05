@@ -2,26 +2,71 @@ import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { recordFacts } from './case-repository.ts'
 
-/** Captures what would have been inserted, so the rules can be tested without a database. */
-function stubClient(): { client: SupabaseClient; inserted: Record<string, unknown>[] } {
+/**
+ * Captures what would have been written, so the rules can be tested without a database.
+ *
+ * `existing` stands for the facts already live on the case, which is what decides whether a
+ * write is a correction, a duplicate, or new.
+ */
+type LiveFact = { id: string; key: string; participant_id: string | null; value: unknown }
+
+function stubClient(existing: readonly LiveFact[] = []): {
+  client: SupabaseClient
+  inserted: Record<string, unknown>[]
+  superseded: string[]
+} {
   const inserted: Record<string, unknown>[] = []
-  const client = {
-    from: () => ({
-      insert: (rows: Record<string, unknown>[]) => {
-        inserted.push(...rows)
-        return Promise.resolve({ data: null, error: null })
+  const superseded: string[] = []
+
+  const from = () => {
+    let mode: 'read' | 'insert' | 'update' = 'read'
+    let rows: Record<string, unknown>[] = []
+
+    const chain: Record<string, unknown> = {
+      select: () => chain,
+      eq: () => chain,
+      is: () => chain,
+      in: (_column: string, values: string[]) => {
+        if (mode === 'update') superseded.push(...values)
+        return chain
       },
-    }),
-  } as unknown as SupabaseClient
-  return { client, inserted }
+      insert: (payload: Record<string, unknown>[]) => {
+        mode = 'insert'
+        rows = payload
+        inserted.push(...payload)
+        return chain
+      },
+      update: () => {
+        mode = 'update'
+        return chain
+      },
+      then: (resolve: (value: unknown) => unknown) => {
+        if (mode === 'insert') {
+          return resolve({
+            data: rows.map((row, index) => ({ ...row, id: `new-${String(index)}` })),
+            error: null,
+          })
+        }
+        if (mode === 'update') return resolve({ data: null, error: null })
+        return resolve({ data: existing, error: null })
+      },
+    }
+
+    return chain
+  }
+
+  return { client: { from } as unknown as SupabaseClient, inserted, superseded }
 }
 
 const participants = { primary: 'p-primary', partner: 'p-partner' }
 
-const write = (facts: Parameters<typeof recordFacts>[1]['facts']) => {
-  const { client, inserted } = stubClient()
+const write = (
+  facts: Parameters<typeof recordFacts>[1]['facts'],
+  existing: readonly LiveFact[] = [],
+) => {
+  const { client, inserted, superseded } = stubClient(existing)
   return recordFacts(client, { caseId: 'c-1', facts, participants, source: 'customer_stated' }).then(
-    (outcome) => ({ outcome, inserted }),
+    (outcome) => ({ outcome, inserted, superseded }),
   )
 }
 
@@ -108,5 +153,40 @@ describe('values are validated against the catalogue schema', () => {
   it('writes nothing at all when every fact is refused', async () => {
     const { inserted } = await write([{ key: 'protection.health.smoker', value: true }])
     expect(inserted).toEqual([])
+  })
+})
+
+describe('a new answer replaces the old one', () => {
+  it('supersedes the previous value for the same person', async () => {
+    const { inserted, superseded } = await write(
+      [{ key: 'income.annualBasic', value: 150_000 }],
+      [{ id: 'old-1', key: 'income.annualBasic', participant_id: 'p-primary', value: 92_000 }],
+    )
+
+    expect(inserted).toHaveLength(1)
+    expect(superseded).toEqual(['old-1'])
+  })
+
+  it('does not write the same value twice', async () => {
+    // Restating something is not a correction. Written again it inflated the captured count
+    // and left the inspector showing the same number several times over.
+    const { inserted, superseded } = await write(
+      [{ key: 'income.annualBasic', value: 92_000 }],
+      [{ id: 'old-1', key: 'income.annualBasic', participant_id: 'p-primary', value: 92_000 }],
+    )
+
+    expect(inserted).toHaveLength(0)
+    expect(superseded).toEqual([])
+  })
+
+  it('leaves the other applicant alone', async () => {
+    // The partner's salary and the customer's are the same key on different people, so one
+    // must never supersede the other.
+    const { superseded } = await write(
+      [{ key: 'income.annualBasic', subject: 'partner', value: 100_000 }],
+      [{ id: 'old-1', key: 'income.annualBasic', participant_id: 'p-primary', value: 150_000 }],
+    )
+
+    expect(superseded).toEqual([])
   })
 })

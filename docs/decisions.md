@@ -605,3 +605,18 @@ section.
   catalogue" from "not allowed", which is how the dead end happened. The key stays hidden
   because the key is the one string a write would need (Invariant 6). The digest marks the same
   requirements as form-only rather than telling Baz to ask.
+
+## 2026-10-05 — Facts recorded against the wrong person
+
+- **2026-10-05** — `superseded_by` is now written. It never was, so a corrected answer sat
+  beside the old one and the domain's "superseded facts never satisfy anything" rule was dead
+  code. Found in a real case: the customer's salary was recorded twice, 150,000 and then
+  100,000 — the second being his wife's, attributed to him — and because the engine takes the
+  newest, the case had him earning her salary. Silent, and wrong in the direction that matters
+  for affordability.
+- **2026-10-05** — An identical value is not written again. Restating something is not a
+  correction; written each time it inflated the captured-facts metric and filled the inspector
+  with the same number repeated.
+- **2026-10-05** — The fact reference now warns whose answer is being recorded: a number the
+  customer quotes about their partner is still the partner's. Guessing wrong is worse than
+  asking, because the wrong subject silently replaces a correct answer.

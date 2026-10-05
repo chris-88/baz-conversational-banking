@@ -340,9 +340,63 @@ export async function recordFacts(
     })
   }
 
-  if (inserts.length > 0) {
-    const result = (await client.from('facts').insert(inserts)) as Query
-    unwrap(result, 'the recorded facts')
+  if (inserts.length === 0) return { accepted, rejected }
+
+  /**
+   * A new answer replaces the old one rather than sitting beside it.
+   *
+   * `superseded_by` was never written, so every correction left both values live and the
+   * domain's "superseded facts never satisfy anything" rule was dead code. Worse, a value
+   * recorded against the wrong person — a partner's salary attributed to the customer —
+   * silently became the newer of two and won.
+   *
+   * An identical value is not written at all: re-stating something is not a correction, and
+   * recording it again inflates the captured-facts count and clutters the inspector.
+   */
+  const keys = [...new Set(inserts.map((row) => row['key'] as string))]
+  const current = (await client
+    .from('facts')
+    .select('id, key, participant_id, value')
+    .eq('case_id', input.caseId)
+    .in('key', keys)
+    .is('superseded_by', null)) as Query
+
+  const live = ((current.data ?? []) as {
+    id: string
+    key: string
+    participant_id: string | null
+    value: unknown
+  }[])
+
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+  const matching = (row: Record<string, unknown>) =>
+    live.filter(
+      (existing) =>
+        existing.key === row['key'] && existing.participant_id === row['participant_id'],
+    )
+
+  const changed = inserts.filter((row) => !matching(row).some((e) => same(e.value, row['value'])))
+  if (changed.length === 0) return { accepted, rejected }
+
+  const written = (await client
+    .from('facts')
+    .insert(changed)
+    .select('id, key, participant_id')) as Query
+
+  unwrap(written, 'the recorded facts')
+
+  for (const row of (written.data ?? []) as {
+    id: string
+    key: string
+    participant_id: string | null
+  }[]) {
+    const replaced = live
+      .filter((e) => e.key === row.key && e.participant_id === row.participant_id)
+      .map((e) => e.id)
+
+    if (replaced.length > 0) {
+      await client.from('facts').update({ superseded_by: row.id }).in('id', replaced)
+    }
   }
 
   return { accepted, rejected }

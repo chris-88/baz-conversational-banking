@@ -137,6 +137,12 @@ export function factReference(): string {
     'Keys marked [per person] belong to one applicant; pass subject: "partner" for the second',
     'applicant, and leave subject out otherwise. Everything else is household-level.',
     '',
+    'Be careful whose answer you are recording. A number the customer quotes about their',
+    'partner is still the partner\'s: "my wife earns 100k" is subject: "partner", never the',
+    'customer\'s own income. Recorded against the wrong person it silently replaces a correct',
+    'answer, and the case then shows the customer earning what their partner earns. If you are',
+    'not certain whose it is, ask rather than guess.',
+    '',
     ...lines,
     '',
     /**
