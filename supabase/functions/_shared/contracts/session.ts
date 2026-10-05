@@ -9,7 +9,7 @@ import { z } from 'zod'
 export const sessionRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('start'),
-    mode: z.enum(['demo', 'fresh']).default('fresh'),
+    mode: z.enum(['demo', 'fresh', 'clone']).default('fresh'),
   }),
   /** §29 — hands the case to the app. The code is opaque and single-use. */
   z.object({ action: z.literal('create_handoff') }),
@@ -26,7 +26,7 @@ export const sessionStartRequestSchema = z.object({
    * `demo` joins the canonical presenter case, already signed in with the facts the bank
    * holds. `fresh` creates a new case that knows nothing (§46).
    */
-  mode: z.enum(['demo', 'fresh']).default('fresh'),
+  mode: z.enum(['demo', 'fresh', 'clone']).default('fresh'),
 })
 
 export const sessionResponseSchema = z.object({

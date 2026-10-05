@@ -254,6 +254,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
     )
   }
 
+  // §47 — a hard ceiling on audience cases, so a room full of people cannot exhaust the
+  // project. Configured rather than hard-coded.
+  const maxCases = Number((globalThis as any).Deno?.env?.get('AUDIENCE_MAX_CASES') ?? '50')
+  const audienceCount = await admin
+    .from('cases')
+    .select('id', { count: 'exact', head: true })
+    .eq('kind', 'audience')
+
+  if ((audienceCount.count ?? 0) >= maxCases) {
+    return errorResponse(
+      'rate_limited',
+      'The demonstration is at capacity right now. Try again in a few minutes.',
+    )
+  }
+
   // A fresh case knows nothing about the visitor (§46 "start fresh").
   const created = await admin
     .from('cases')
@@ -277,11 +292,42 @@ Deno.serve(async (request: Request): Promise<Response> => {
     .from('participant_sessions')
     .insert({ participant_id: participant.data.id, auth_user_id: authUserId })
 
+  // §46 "use demo customer" — the same starting point as the presenter case, in a case of
+  // their own. Isolation is by ownership: an audience case can never touch the presenter's.
+  if (startMode === 'clone') {
+    const customer = await admin
+      .from('customers')
+      .select('id')
+      .eq('bank_reference', canonicalCase.customer.bankReference)
+      .maybeSingle()
+
+    await admin
+      .from('cases')
+      .update({
+        auth_level: 'authenticated',
+        customer_id: (customer.data as { id?: string } | null)?.id ?? null,
+        label: 'Audience · demo customer',
+      })
+      .eq('id', created.data.id)
+
+    await admin.from('facts').insert(
+      canonicalCase.bankHeldFacts.map((fact) => ({
+        case_id: created.data.id,
+        key: fact.key,
+        participant_id: fact.subject === 'household' ? null : participant.data.id,
+        subject_kind: fact.subject === 'household' ? 'household' : 'participant',
+        value: fact.value,
+        source: fact.source,
+        verified: fact.verified,
+      })),
+    )
+  }
+
   await admin.from('events').insert({
     case_id: created.data.id,
     type: 'case_created',
     actor: 'system',
-    payload: { mode: 'fresh' },
+    payload: { mode: startMode },
   })
 
   return json(
@@ -289,8 +335,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       caseId: created.data.id,
       participantId: participant.data.id,
       role: 'primary',
-      authLevel: 'anonymous',
-      customerFirstName: null,
+      authLevel: startMode === 'clone' ? 'authenticated' : 'anonymous',
+      customerFirstName: startMode === 'clone' ? canonicalCase.customer.firstName : null,
       created: true,
       hasUpdates: false,
     } satisfies SessionResponse),

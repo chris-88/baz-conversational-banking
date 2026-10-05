@@ -54,6 +54,9 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
    * link requires signing in before anything is shown.
    */
   z.object({ action: z.literal('send_notification'), caseId: z.uuid() }),
+
+  /** §44 — clears the room's conversations. Never touches the presenter case. */
+  z.object({ action: z.literal('purge_audience') }),
 ])
 
 export const adminOverviewSchema = z.object({

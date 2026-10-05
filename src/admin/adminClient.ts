@@ -43,6 +43,7 @@ export const adminApi = {
   simulate: (
     body: Omit<Extract<AdminRequest, { action: 'simulate_event' }>, 'action'>,
   ) => call({ action: 'simulate_event', ...body }),
+  purgeAudience: () => call({ action: 'purge_audience' }),
   notify: async (caseId: string): Promise<{ message: string; url: string }> =>
     notificationSchema.parse(await call({ action: 'send_notification', caseId })),
 }

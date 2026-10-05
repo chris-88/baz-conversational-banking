@@ -32,7 +32,7 @@ export function BazChat({
   openingMessage?: string | null
   greeting: ReactNode
   /** `fresh` knows nothing about the visitor; `demo` joins the seeded customer (§46). */
-  mode?: 'demo' | 'fresh'
+  mode?: 'demo' | 'fresh' | 'clone'
   /** Shown once there is something worth carrying into the app (§29). */
   footer?: (caseId: string) => ReactNode
   className?: string | undefined

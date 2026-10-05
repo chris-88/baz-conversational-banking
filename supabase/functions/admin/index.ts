@@ -309,6 +309,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
       )
     }
 
+    case 'purge_audience': {
+      const audience = await admin.from('cases').select('id').eq('kind', 'audience')
+      const ids = ((audience.data ?? []) as { id: string }[]).map((row) => row.id)
+      for (const id of ids) await admin.from('cases').delete().eq('id', id)
+      return json(ok({ purged: ids.length }), 200)
+    }
+
     case 'inspect_case': {
       const loaded = await loadCase(admin, action.caseId)
       if (!loaded) return errorResponse('not_found', 'No such case.')

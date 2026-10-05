@@ -1,14 +1,37 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { SparklesIcon, UserRoundIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { IconTile } from '@/components/IconTile'
 import { ListRow } from '@/components/ListRow'
-import { MilestonePanel } from '@/components/MilestonePanel'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { MobileHeader } from '@/shells/boi/MobileHeader'
+import { startSession } from '@/lib/session'
+import { routes } from '@/app/routes'
 
-/** §45, §46 — QR entry for the audience. An isolated case, never the presenter's. */
+/**
+ * §45, §46 — the audience entry point.
+ *
+ * Every scan gets its own case. Isolation is by ownership, so nothing anyone does here can
+ * reach the presenter's case on screen.
+ */
 export function AudienceEntry(): ReactNode {
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const start = (mode: 'fresh' | 'clone') => {
+    setBusy(mode)
+    setError(null)
+    startSession(mode)
+      .then(() => void navigate(routes.baz))
+      .catch((caught: unknown) =>
+        setError(caught instanceof Error ? caught.message : 'Could not start a conversation.'),
+      )
+      .finally(() => setBusy(null))
+  }
+
   return (
     <div className="bg-background min-h-dvh">
       <PrototypeBanner />
@@ -26,32 +49,29 @@ export function AudienceEntry(): ReactNode {
           <ListRow
             leading={<IconTile tone="primary"><SparklesIcon /></IconTile>}
             title="Start fresh"
-            subtitle="A brand new customer with nothing known about them"
-            disabled
-            onClick={() => undefined}
+            subtitle="A brand new customer, with nothing known about them"
+            disabled={busy !== null}
+            onClick={() => start('fresh')}
           />
           <ListRow
             leading={<IconTile tone="deep"><UserRoundIcon /></IconTile>}
             title="Use the demo customer"
             subtitle="Already signed in, with the facts the bank holds"
-            disabled
-            onClick={() => undefined}
+            disabled={busy !== null}
+            onClick={() => start('clone')}
           />
         </Card>
-        <p className="text-muted-foreground text-2xs">Both options arrive in M8.</p>
 
-        <MilestonePanel
-          milestone="M8"
-          title="Audience experience"
-          description="Isolation enforced by case ownership, with hard caps."
-          sections={['§45', '§46', '§47']}
-          scope={[
-            'A fresh session and a new case per scan',
-            'Or clone the demo customer, already signed in with bank-held facts',
-            'Turn and concurrent-case caps set by configuration',
-            'No notifications, and the guardrails hold under deliberate probing',
-          ]}
-        />
+        {error !== null && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <p className="text-muted-foreground text-2xs">
+          Nothing you do here can affect the demonstration. Conversations are capped, and no
+          notifications are sent.
+        </p>
       </main>
     </div>
   )

@@ -196,6 +196,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   const spoken: string[] = []
+  const shown: unknown[] = []
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -487,6 +488,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
         for await (const event of events) {
           if (event.type === 'text_delta') spoken.push(event.text)
+          if (event.type === 'card') shown.push(event.card)
           send(event)
         }
 
@@ -495,6 +497,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           participantId: null,
           role: 'baz',
           content: spoken.join(''),
+          cards: shown,
         })
 
         // Everything up to now has been seen, so the next return summarises only what is

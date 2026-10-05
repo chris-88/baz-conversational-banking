@@ -45,7 +45,7 @@ export function AdminOverview({ section }: { section?: Section }): ReactNode {
     case 'cases':
       return <Cases cases={data.cases} metrics={data.metrics} />
     case 'audience':
-      return <CaseList cases={data.cases} metrics={data.metrics} />
+      return <Audience cases={data.cases} metrics={data.metrics} onChanged={refresh} />
     case 'overview':
       return <Overview data={data} onChanged={refresh} />
   }
@@ -216,6 +216,60 @@ function CaseList({
         ))}
       </Card>
     </section>
+  )
+}
+
+/** §44, §47 — what the room is doing, and how to clear it. */
+function Audience({
+  cases,
+  metrics,
+  onChanged,
+}: {
+  cases: Awaited<ReturnType<typeof adminApi.overview>>['cases']
+  metrics: Awaited<ReturnType<typeof adminApi.overview>>['metrics']
+  onChanged: () => void
+}): ReactNode {
+  const audience = cases.filter((item) => item.kind === 'audience')
+  const purge = useMutation({ mutationFn: adminApi.purgeAudience, onSuccess: onChanged })
+
+  return (
+    <div className="space-y-6">
+      <Metrics metrics={metrics} />
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Audience conversations</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={purge.isPending || audience.length === 0}
+            onClick={() => purge.mutate()}
+          >
+            {purge.isPending ? 'Clearing…' : `Purge ${String(audience.length)}`}
+          </Button>
+        </div>
+        <Card className="gap-0 divide-y p-0">
+          {audience.length === 0 && (
+            <p className="text-muted-foreground p-4 text-sm">Nobody has tried it yet.</p>
+          )}
+          {audience.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 p-4">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {item.label ?? item.id.slice(0, 8)}
+                </span>
+                <span className="text-muted-foreground tabular block text-xs">
+                  {item.applications} applications · {item.messages} messages
+                </span>
+              </span>
+            </div>
+          ))}
+        </Card>
+        <p className="text-muted-foreground text-2xs">
+          Purging clears audience conversations only. The presenter case is never touched. §45
+        </p>
+      </section>
+    </div>
   )
 }
 

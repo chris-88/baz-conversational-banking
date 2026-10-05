@@ -442,3 +442,18 @@ section.
   its link is an opaque single-use code requiring a sign-in before anything is shown (§35, §58).
   Delivery is in-app rather than SMS: Twilio is not configured, and CLAUDE.md names the in-app
   notification as the fallback for exactly this reason.
+
+## 2026-10-05 — M8 audience, and cards that survive a reload
+
+- **2026-10-05** — Every audience scan gets its own case. Isolation is by ownership, so nothing
+  anyone in the room does can reach the presenter's case. Verified: an audience visitor calling
+  `admin` gets 403 (§45, §47).
+- **2026-10-05** — `AUDIENCE_MAX_CASES` is a hard ceiling checked before a case is created, so a
+  room cannot exhaust the project. Configured, not hard-coded (§47).
+- **2026-10-05** — `clone` gives an audience visitor the same starting point as the presenter
+  case — authenticated, bank-held facts — in a case of their own (§46).
+- **2026-10-05** — Cards are persisted on the message. Without it a reload showed the text but
+  none of the cards, so the customer lost the options they had been offered while the model,
+  which does read history, would refer to a card no longer on screen. A card that no longer
+  parses is dropped rather than breaking the whole transcript.
+- **2026-10-05** — Purging clears audience cases only, and says so on screen (§44).

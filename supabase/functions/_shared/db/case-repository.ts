@@ -222,6 +222,8 @@ export async function saveMessage(
     role: 'customer' | 'baz' | 'system'
     content: string
     gateCategory?: string | null
+    /** Rendered alongside this turn, so a reload restores the whole thing. */
+    cards?: readonly unknown[]
   },
 ): Promise<string> {
   const result = (await client
@@ -232,6 +234,7 @@ export async function saveMessage(
       role: message.role,
       content: message.content,
       gate_category: message.gateCategory ?? null,
+      cards: message.cards ?? [],
     })
     .select('id')
     .single()) as Query
