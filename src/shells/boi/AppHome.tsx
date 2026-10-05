@@ -7,7 +7,8 @@ import { IconTile } from '@/components/IconTile'
 import { ListRow } from '@/components/ListRow'
 import { SetupNotice } from '@/components/SetupNotice'
 import { routes } from '@/app/routes'
-import { StatusDot } from '@/components/StatusDot'
+import { StatusBadge } from '@/components/StatusBadge'
+import { ProductIcon } from '@/components/ProductIcon'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApplications } from '@/lib/useApplications'
 import { useCaseSession } from '@/lib/useCaseSession'
@@ -119,16 +120,12 @@ export function AppHome(): ReactNode {
           <Card className="gap-0 divide-y p-0">
             {applications.data?.map((application) => (
               <div key={application.id} className="flex items-center gap-3 px-4 py-3">
-                <StatusDot state={application.state} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">
-                    {application.displayName}
-                  </span>
-                  {/* The label always accompanies the dot: colour is never the only signal. */}
-                  <span className="text-muted-foreground block text-xs">
-                    {application.stateLabel}
-                  </span>
+                <ProductIcon product={application.product} size="sm" />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {application.displayName}
                 </span>
+                {/* The badge carries the state's own words, so colour is never the only signal. */}
+                <StatusBadge state={application.state} />
               </div>
             ))}
           </Card>

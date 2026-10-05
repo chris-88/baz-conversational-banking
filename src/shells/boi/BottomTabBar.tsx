@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { GridIcon, HomeIcon, LifeBuoyIcon, WalletIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BazAvatar } from '@/baz/BazAvatar'
 import { routes } from '@/app/routes'
 
 type Tab = { to: string; label: string; icon: ReactNode; enabled: boolean }
@@ -43,13 +44,10 @@ export function BottomTabBar(): ReactNode {
             aria-current={bazActive ? 'page' : undefined}
             className={cn(
               'focus-visible:ring-ring -mt-5 grid size-12 place-items-center rounded-full shadow-md transition-transform focus-visible:ring-2 focus-visible:outline-none active:scale-95',
-              bazActive ? 'bg-brand-deep text-brand-deep-foreground' : 'bg-primary text-primary-foreground',
+              bazActive && 'ring-primary/25 ring-4',
             )}
           >
-            <svg viewBox="0 0 24 24" aria-hidden className="size-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M5 9a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4H9l-4 3z" />
-              <path d="M9.5 11h.01M14.5 11h.01" />
-            </svg>
+            <BazAvatar size="lg" />
           </Link>
         </div>
 

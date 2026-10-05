@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PowerIcon, RotateCcwIcon, ShieldAlertIcon } from 'lucide-react'
+import { PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -78,6 +78,8 @@ function Overview({
     <div className="space-y-6">
       <Metrics metrics={data.metrics} />
 
+      <DemoActions data={data} onChanged={onChanged} />
+
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Controls</h2>
         <Card className="gap-0 divide-y p-0">
@@ -123,6 +125,87 @@ function Overview({
 
       <CaseList cases={data.cases} metrics={data.metrics} compact />
     </div>
+  )
+}
+
+/**
+ * §41 — the moves a presenter actually wants, named for the outcome rather than the
+ * transition. Each is disabled with a reason when the state machine would refuse it, so
+ * nothing fails live.
+ */
+function DemoActions({
+  data,
+  onChanged,
+}: {
+  data: Awaited<ReturnType<typeof adminApi.overview>>
+  onChanged: () => void
+}): ReactNode {
+  const [notification, setNotification] = useState<string | null>(null)
+  const caseId = data.presenterCaseId
+
+  const run = useMutation({
+    mutationFn: (move: Parameters<typeof adminApi.demoAction>[1]) =>
+      adminApi.demoAction(caseId ?? '', move),
+    onSuccess: onChanged,
+  })
+
+  const notify = useMutation({
+    mutationFn: () => adminApi.notify(caseId ?? ''),
+    onSuccess: (result) => {
+      setNotification(result.url)
+      onChanged()
+    },
+  })
+
+  if (caseId === null) return null
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold">Demo controls</h2>
+        <Badge variant="secondary" className="text-2xs">
+          One tap each
+        </Badge>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {data.demoActions.map((move) => (
+          <button
+            key={move.id}
+            type="button"
+            disabled={!move.available || run.isPending}
+            title={move.note}
+            onClick={() => run.mutate(move.id as Parameters<typeof adminApi.demoAction>[1])}
+            className="bg-card hover:bg-muted/60 focus-visible:ring-ring flex items-start gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          >
+            <IconTile tone={move.available ? 'primary' : 'neutral'} size="sm">
+              <ZapIcon />
+            </IconTile>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{move.label}</span>
+              <span className="text-muted-foreground block text-2xs">{move.note}</span>
+            </span>
+          </button>
+        ))}
+
+        <button
+          type="button"
+          disabled={notify.isPending}
+          onClick={() => notify.mutate()}
+          className="bg-card hover:bg-muted/60 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors disabled:opacity-50 sm:col-span-2"
+        >
+          <IconTile tone="deep" size="sm">
+            <SendIcon />
+          </IconTile>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Send the update notification</span>
+            <span className="text-muted-foreground block text-2xs">
+              {notification ?? 'Says nothing about the application; the link needs a sign-in. §35'}
+            </span>
+          </span>
+        </button>
+      </div>
+    </section>
   )
 }
 

@@ -1,0 +1,55 @@
+{
+  "bottomNav": {
+    "home": "icons/navigation/home.svg",
+    "accounts": "icons/navigation/accounts.svg",
+    "products": "icons/navigation/products.svg",
+    "baz": "icons/navigation/baz.svg",
+    "support": "icons/navigation/support.svg",
+    "more": "icons/navigation/more.svg"
+  },
+  "products": {
+    "loan": "icons/product/loan.svg",
+    "mortgage": "icons/product/mortgage.svg",
+    "pension": "icons/product/pension.svg",
+    "current-account": "icons/product/current-account.svg",
+    "savings": "icons/product/savings.svg",
+    "investing": "icons/product/investing.svg",
+    "credit-card": "icons/product/credit-card.svg",
+    "protection": "icons/product/protection.svg"
+  },
+  "statuses": {
+    "under-review": "icons/status/under-review.svg",
+    "error": "icons/status/error.svg",
+    "paused": "icons/status/paused.svg",
+    "approved": "icons/status/approved.svg",
+    "warning": "icons/status/warning.svg",
+    "waiting": "icons/status/waiting.svg",
+    "in-progress": "icons/status/in-progress.svg"
+  },
+  "utility": {
+    "chevron-right": "icons/utility/chevron-right.svg",
+    "notification": "icons/utility/notification.svg",
+    "download": "icons/utility/download.svg",
+    "settings": "icons/utility/settings.svg",
+    "upload": "icons/utility/upload.svg",
+    "document": "icons/utility/document.svg",
+    "search": "icons/utility/search.svg",
+    "calendar": "icons/utility/calendar.svg",
+    "info": "icons/utility/info.svg",
+    "link": "icons/utility/link.svg",
+    "chevron-left": "icons/utility/chevron-left.svg",
+    "user": "icons/utility/user.svg",
+    "chevron-down": "icons/utility/chevron-down.svg",
+    "menu": "icons/utility/menu.svg",
+    "chat": "icons/utility/chat.svg",
+    "close": "icons/utility/close.svg"
+  },
+  "illustrations": {
+    "document-upload": "illustrations/document-upload.svg",
+    "home-property": "illustrations/home-property.svg",
+    "hero-coast-family": "illustrations/hero-coast-family.svg",
+    "protection-security": "illustrations/protection-security.svg",
+    "partner-invitation": "illustrations/partner-invitation.svg",
+    "application-progress": "illustrations/application-progress.svg"
+  }
+}

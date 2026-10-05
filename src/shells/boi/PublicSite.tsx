@@ -26,6 +26,7 @@ const products = [
     description: 'Accounts, cards and digital banking.',
     opener: 'I want to sort out my day-to-day banking',
     icon: <CreditCardIcon />,
+    tone: 'primary' as const,
   },
   {
     id: 'mortgages',
@@ -33,6 +34,7 @@ const products = [
     description: 'Find, apply and manage your mortgage.',
     opener: 'I want to buy a home',
     icon: <HomeIcon />,
+    tone: 'mortgage' as const,
   },
   {
     id: 'loans',
@@ -40,6 +42,7 @@ const products = [
     description: 'For home, car or whatever’s next.',
     opener: 'I am thinking about borrowing some money',
     icon: <PiggyBankIcon />,
+    tone: 'loan' as const,
   },
   {
     id: 'insurance',
@@ -47,6 +50,7 @@ const products = [
     description: 'Protect what matters most.',
     opener: 'I want to protect my family',
     icon: <ShieldCheckIcon />,
+    tone: 'protection' as const,
   },
 ] as const
 
@@ -82,10 +86,10 @@ export function PublicSite(): ReactNode {
 
           <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 lg:px-8 lg:pt-14 lg:pb-36">
             <div className="max-w-xl space-y-5">
-              <h1 className="text-3xl leading-[1.1] font-semibold tracking-tight text-balance lg:text-5xl">
+              <h1 className="text-h1 lg:text-display font-bold text-balance">
                 For whatever life brings next
               </h1>
-              <p className="text-sm opacity-90 lg:text-base">
+              <p className="text-sm opacity-90 lg:text-body-lg">
                 Accounts, mortgages, loans, insurance and more. Real support for real life.
               </p>
 
@@ -126,7 +130,7 @@ export function PublicSite(): ReactNode {
               <ListRow
                 className="h-full flex-col items-start gap-3 p-5"
                 to={`${routes.baz}?say=${encodeURIComponent(product.opener)}`}
-                leading={<IconTile size="lg">{product.icon}</IconTile>}
+                leading={<IconTile size="lg" tone={product.tone}>{product.icon}</IconTile>}
                 title={<span className="text-base">{product.title}</span>}
                 subtitle={product.description}
               />

@@ -49,3 +49,6 @@ docs/03-baz-conversational-banking-poc-requirements.md
 
 # Admin console login, written once by the setup script.
 .admin-credentials
+
+# The asset pack itself; its contents are committed under src/assets and docs/design.
+baz-boi-poc-asset-pack.zip

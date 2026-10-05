@@ -9,7 +9,7 @@ export function AppBaz(): ReactNode {
   const [searchParams] = useSearchParams()
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col pb-20">
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-30 flex items-center gap-3 border-b px-4 py-3 backdrop-blur">
         <BazAvatar />
         <div className="min-w-0 flex-1">
@@ -20,6 +20,7 @@ export function AppBaz(): ReactNode {
 
       <BazChat
         className="flex min-h-0 flex-1 flex-col"
+        composerClassName="pb-[calc(0.75rem+4.5rem)]"
         suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
         mode="demo"

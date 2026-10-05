@@ -1,48 +1,87 @@
 import type { ReactNode } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
-import { routes } from '@/app/routes'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import {
+  LayoutDashboardIcon,
+  MessagesSquareIcon,
+  ShieldAlertIcon,
+  SlidersHorizontalIcon,
+  UsersIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdminLogin } from '@/admin/AdminLogin'
 import { useAdminAuth } from '@/admin/useAdminAuth'
+import { PrototypeBanner } from '@/components/PrototypeBanner'
+import { BazAvatar } from '@/baz/BazAvatar'
+import { routes } from '@/app/routes'
+import { cn } from '@/lib/utils'
 
-const tabs = [
-  { to: routes.admin.root, label: 'Overview' },
-  { to: routes.admin.cases, label: 'Cases' },
-  { to: routes.admin.persona, label: 'Persona' },
-  { to: routes.admin.domain, label: 'Domain' },
-  { to: routes.admin.audience, label: 'Audience' },
+const sections = [
+  { to: routes.admin.root, label: 'Overview', icon: <LayoutDashboardIcon />, end: true },
+  { to: routes.admin.cases, label: 'Cases', icon: <MessagesSquareIcon />, end: false },
+  { to: routes.admin.domain, label: 'Guardrails', icon: <ShieldAlertIcon />, end: false },
+  { to: routes.admin.persona, label: 'Persona', icon: <SlidersHorizontalIcon />, end: false },
+  { to: routes.admin.audience, label: 'Audience', icon: <UsersIcon />, end: false },
 ] as const
 
-/** §37 to §44 — presenter console. Real Supabase email auth plus an `admin` role. */
+/**
+ * §37 to §44 — the presenter console.
+ *
+ * Sidebar on a desk, a scrolling row on a phone. Signing in only decides what is drawn: the
+ * server checks admin status on every call, which is what actually protects it.
+ */
 export function AdminConsole(): ReactNode {
-  const { pathname } = useLocation()
   const auth = useAdminAuth()
-
-  // Tabs here are routes, so selection comes from the URL rather than Radix state. The
-  // triggers render as links (`asChild`) so they behave like navigation, not like buttons.
-  const active = tabs.find((tab) => tab.to === pathname)?.to ?? routes.admin.root
+  const { pathname } = useLocation()
 
   return (
     <div className="bg-background min-h-dvh">
       <PrototypeBanner />
 
-      <header className="sticky top-0 z-40 border-b">
-        <div className="bg-background/85 supports-[backdrop-filter]:bg-background/70 backdrop-blur">
-          <div className="mx-auto w-full max-w-3xl space-y-3 px-4 pt-3 pb-2">
-            <div className="flex items-center gap-2.5">
-              <span
-                aria-hidden
-                className="bg-brand-deep text-brand-deep-foreground grid size-7 shrink-0 place-items-center rounded-lg text-2xs font-bold"
-              >
-                B
+      <div className="mx-auto flex w-full max-w-6xl gap-0 lg:gap-6 lg:px-6 lg:py-6">
+        <aside className="hidden w-56 shrink-0 lg:block">
+          <div className="sticky top-6 space-y-6">
+            <Link to={routes.admin.root} className="flex items-center gap-2.5 px-2">
+              <BazAvatar size="sm" />
+              <span className="leading-tight">
+                <span className="block text-sm font-bold tracking-tight">Baz</span>
+                <span className="text-muted-foreground block text-2xs">Admin console</span>
               </span>
+            </Link>
+
+            {auth.email !== null && (
+              <nav className="space-y-0.5">
+                {sections.map((section) => (
+                  <NavLink
+                    key={section.to}
+                    to={section.to}
+                    end={section.end}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors [&>svg]:size-4',
+                        isActive
+                          ? 'bg-accent text-accent-foreground font-medium'
+                          : 'text-muted-foreground hover:bg-muted',
+                      )
+                    }
+                  >
+                    {section.icon}
+                    {section.label}
+                  </NavLink>
+                ))}
+              </nav>
+            )}
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          <header className="bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30 border-b backdrop-blur lg:border-0 lg:bg-transparent">
+            <div className="flex items-center gap-3 px-4 py-3 lg:px-0">
+              <BazAvatar size="sm" className="lg:hidden" />
               <div className="min-w-0 flex-1">
-                <h1 className="truncate text-sm font-semibold tracking-tight">Presenter console</h1>
-                <p className="text-muted-foreground truncate text-2xs">
-                  {auth.email ?? 'Baz · conversational banking'}
+                <h1 className="text-h3 truncate font-semibold">Presenter console</h1>
+                <p className="text-muted-foreground truncate text-xs">
+                  {auth.email ?? 'Run the demonstration from here.'}
                 </p>
               </div>
               {auth.email !== null && (
@@ -53,31 +92,39 @@ export function AdminConsole(): ReactNode {
             </div>
 
             {auth.email !== null && (
-              <Tabs value={active}>
-              <TabsList variant="line" className="w-full justify-start gap-0">
-                {tabs.map((tab) => (
-                  <TabsTrigger key={tab.to} value={tab.to} asChild className="px-2 text-xs sm:px-3 sm:text-sm">
-                    <Link to={tab.to}>{tab.label}</Link>
-                  </TabsTrigger>
+              <nav className="flex gap-1 overflow-x-auto px-2 pb-2 lg:hidden">
+                {sections.map((section) => (
+                  <NavLink
+                    key={section.to}
+                    to={section.to}
+                    end={section.end}
+                    className={({ isActive }) =>
+                      cn(
+                        'rounded-lg px-3 py-1.5 text-xs whitespace-nowrap',
+                        isActive
+                          ? 'bg-accent text-accent-foreground font-medium'
+                          : 'text-muted-foreground',
+                      )
+                    }
+                  >
+                    {section.label}
+                  </NavLink>
                 ))}
-              </TabsList>
-              </Tabs>
+              </nav>
             )}
-          </div>
-        </div>
-      </header>
+          </header>
 
-      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6">
-        {auth.checking ? (
-          <Skeleton className="h-40 w-full" />
-        ) : auth.email === null ? (
-          // The server checks admin status on every call regardless; this only decides what
-          // is drawn (§37).
-          <AdminLogin onSignIn={auth.signIn} />
-        ) : (
-          <Outlet />
-        )}
-      </main>
+          <main className="space-y-6 px-4 py-6 lg:px-0 lg:pt-4" key={pathname}>
+            {auth.checking ? (
+              <Skeleton className="h-40 w-full" />
+            ) : auth.email === null ? (
+              <AdminLogin onSignIn={auth.signIn} />
+            ) : (
+              <Outlet />
+            )}
+          </main>
+        </div>
+      </div>
     </div>
   )
 }

@@ -16,6 +16,10 @@ const iconTileVariants = cva(
         success: 'bg-success/10 text-success',
         warning: 'bg-warning-border/35 text-warning-foreground',
         neutral: 'bg-muted text-muted-foreground',
+        // Product accents, so a list of products reads as several things rather than one.
+        mortgage: 'bg-product-mortgage/10 text-product-mortgage',
+        loan: 'bg-product-personal-loan/10 text-product-personal-loan',
+        protection: 'bg-product-protection/10 text-product-protection',
       },
       size: {
         sm: 'size-8',

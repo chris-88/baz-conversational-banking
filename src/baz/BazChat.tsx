@@ -12,6 +12,7 @@ import { runCaseAction } from '@/lib/caseActions'
 import type { CardActions } from '@/baz/cards/CardRenderer'
 import type { Product } from '@domain/journey.ts'
 import { isBackendConfigured } from '@/lib/env'
+import { cn } from '@/lib/utils'
 
 /**
  * The conversation itself: joins a case, shows the turns, offers openers, takes input.
@@ -25,6 +26,7 @@ export function BazChat({
   greeting,
   mode = 'demo',
   footer,
+  composerClassName,
   className,
 }: {
   suggestions: readonly Suggestion[]
@@ -35,6 +37,8 @@ export function BazChat({
   mode?: 'demo' | 'fresh' | 'clone'
   /** Shown once there is something worth carrying into the app (§29). */
   footer?: (caseId: string) => ReactNode
+  /** Extra space under the composer, for shells with a fixed bar of their own. */
+  composerClassName?: string | undefined
   className?: string | undefined
 }): ReactNode {
   const [caseId, setCaseId] = useState<string | null>(null)
@@ -224,7 +228,12 @@ export function BazChat({
         <div className="px-4 pb-2">{footer(caseId)}</div>
       )}
 
-      <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-0 border-t px-4 py-3 backdrop-blur">
+      <div
+        className={cn(
+          'bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-0 border-t px-4 py-3 backdrop-blur',
+          composerClassName,
+        )}
+      >
         <Composer disabled={!ready || streaming} onSend={(message) => void send(message)} />
         <p className="text-muted-foreground mt-2 text-center text-2xs">
           {joining ? 'Connecting…' : streaming ? 'Baz is typing…' : 'Baz is an AI assistant.'}

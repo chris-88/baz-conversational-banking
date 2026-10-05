@@ -4,64 +4,83 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens.
+ * Design tokens, from the supplied asset pack and design boards.
  *
- * Everything lives on :root, NOT on a wrapper element. Radix portals dialogs, sheets,
- * dropdowns, tooltips and toasts to document.body, which is outside any wrapper — a themed
- * <div> would leave every one of them unstyled.
- *
- * Direction follows the design mock-up: a Bank of Ireland retail look — vivid blue actions on
- * white, a deep navy for feature panels, soft tinted icon tiles, and status colours that carry
- * meaning (blue in progress, amber waiting, green approved, grey paused).
+ * The slate scale and the BOI blue are the two things every board agrees on, so they are the
+ * spine of this. Everything lives on :root, not on a wrapper: Radix portals dialogs, sheets,
+ * dropdowns and toasts to document.body, where a scoped theme would never reach them.
  */
 
 :root {
+  /* Radius, from tokens.json: control 12, card 16, feature 24, chat 18. */
   --radius: 0.75rem;
 
-  /* Surfaces: white cards on a very light cool grey page. */
-  --background: oklch(0.985 0.002 255);
-  --foreground: oklch(0.21 0.015 258);
+  /* Slate, the neutral spine. */
+  --slate-900: oklch(0.21 0.034 264);
+  --slate-700: oklch(0.37 0.029 257);
+  --slate-500: oklch(0.55 0.027 257);
+  --slate-300: oklch(0.87 0.014 254);
+  --slate-100: oklch(0.968 0.007 248);
+  --slate-50: oklch(0.984 0.003 248);
+
+  /* BOI blue. */
+  --boi-blue: oklch(0.49 0.2 264);
+  --boi-navy: oklch(0.26 0.09 266);
+  --blue-100: oklch(0.93 0.035 258);
+
+  --background: var(--slate-50);
+  --foreground: var(--slate-900);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.015 258);
+  --card-foreground: var(--slate-900);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.015 258);
+  --popover-foreground: var(--slate-900);
 
-  /* The action blue. */
-  --primary: oklch(0.52 0.175 256);
+  --primary: var(--boi-blue);
   --primary-foreground: oklch(0.99 0 0);
 
-  /* The deep navy used for feature panels and the site header. */
-  --brand-deep: oklch(0.29 0.095 258);
-  --brand-deep-foreground: oklch(0.985 0.005 255);
+  --brand-deep: var(--boi-navy);
+  --brand-deep-foreground: oklch(0.985 0.003 248);
 
-  --secondary: oklch(0.965 0.006 255);
-  --secondary-foreground: oklch(0.3 0.03 258);
+  --secondary: var(--slate-100);
+  --secondary-foreground: var(--slate-700);
 
-  --muted: oklch(0.965 0.006 255);
-  --muted-foreground: oklch(0.52 0.02 258);
+  --muted: var(--slate-100);
+  --muted-foreground: var(--slate-500);
 
-  --accent: oklch(0.955 0.025 255);
-  --accent-foreground: oklch(0.4 0.14 256);
+  --accent: var(--blue-100);
+  --accent-foreground: var(--boi-blue);
 
-  /* Semantic. These carry meaning in status rows, so they are tokens, not decoration. */
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.96 0.04 90);
-  --warning-foreground: oklch(0.44 0.08 70);
-  --warning-border: oklch(0.88 0.07 88);
-  --success: oklch(0.6 0.13 155);
-  --success-foreground: oklch(0.985 0 0);
+  /* Semantic, from the palette on the boards. */
+  --destructive: oklch(0.63 0.21 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.96 0.045 90);
+  --warning-foreground: oklch(0.45 0.1 70);
+  --warning-border: oklch(0.86 0.09 85);
+  --success: oklch(0.63 0.16 150);
+  --success-foreground: oklch(0.99 0 0);
 
-  /* Application state (§13), so a status dot never invents its own colour. */
-  --state-progress: oklch(0.56 0.17 256);
-  --state-waiting: oklch(0.73 0.15 70);
-  --state-done: oklch(0.6 0.14 155);
-  --state-idle: oklch(0.72 0.012 258);
+  /*
+   * Application state (§13, §14). Every board uses colour AND a label for these, never colour
+   * alone, which is why StatusBadge renders both.
+   */
+  --state-progress: oklch(0.55 0.19 262);
+  --state-waiting: oklch(0.76 0.16 70);
+  --state-review: oklch(0.6 0.2 295);
+  --state-done: oklch(0.63 0.16 150);
+  --state-declined: oklch(0.63 0.21 25);
+  --state-idle: oklch(0.6 0.02 257);
 
-  --border: oklch(0.915 0.006 258);
-  --input: oklch(0.9 0.008 258);
-  --ring: oklch(0.52 0.175 256);
+  /* Product accents, so each product reads as itself on the cards. */
+  --product-mortgage: oklch(0.65 0.16 162);
+  --product-joint-account: oklch(0.49 0.2 264);
+  --product-credit-card: oklch(0.49 0.2 264);
+  --product-personal-loan: oklch(0.63 0.21 25);
+  --product-protection: oklch(0.6 0.2 295);
+
+  --border: var(--slate-300);
+  --input: var(--slate-300);
+  --ring: var(--boi-blue);
 }
 
 /*
@@ -143,6 +162,8 @@
   --color-brand-deep: var(--brand-deep);
   --color-brand-deep-foreground: var(--brand-deep-foreground);
   --color-state-progress: var(--state-progress);
+  --color-state-review: var(--state-review);
+  --color-state-declined: var(--state-declined);
   --color-state-waiting: var(--state-waiting);
   --color-state-done: var(--state-done);
   --color-state-idle: var(--state-idle);
@@ -153,6 +174,11 @@
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-product-mortgage: var(--product-mortgage);
+  --color-product-joint-account: var(--product-joint-account);
+  --color-product-credit-card: var(--product-credit-card);
+  --color-product-personal-loan: var(--product-personal-loan);
+  --color-product-protection: var(--product-protection);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

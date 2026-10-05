@@ -35,6 +35,48 @@ function env(name: string): string {
   return value
 }
 
+/**
+ * What each one-click move means, in transitions.
+ *
+ * A sequence rather than one step, because "approved" from the presenter's point of view means
+ * submitted, received, assessed — three transitions the machine insists on in order.
+ */
+const DEMO_MOVES: Record<
+  string,
+  { product: string; label: string; steps: readonly string[]; note: string }
+> = {
+  credit_card_approved: {
+    product: 'credit_card',
+    label: 'Credit card approved',
+    steps: ['received_by_bank', 'assessment_approved'],
+    note: 'Takes the submitted card through assessment to approved.',
+  },
+  joint_account_approved: {
+    product: 'joint_account',
+    label: 'Joint account approved',
+    steps: ['received_by_bank', 'assessment_approved'],
+    note: 'Takes the submitted joint account through to approved.',
+  },
+  mortgage_to_assessment: {
+    product: 'mortgage',
+    label: 'Mortgage moved to assessment',
+    steps: ['received_by_bank'],
+    note: 'Moves the submitted mortgage into assessment.',
+  },
+  mortgage_requests_document: {
+    product: 'mortgage',
+    label: 'Mortgage requests a document',
+    steps: ['information_requested'],
+    note: 'The mortgage team asks for one more payslip.',
+  },
+  protection_approved: {
+    product: 'protection',
+    label: 'Protection approved',
+    steps: ['received_by_bank', 'assessment_approved'],
+    note: 'Takes the submitted protection through to approved.',
+  },
+}
+
 Deno.serve(async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return errorResponse('bad_request', 'Use POST.')
@@ -167,7 +209,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
         admin.from('domain_config').select('kill_switch').eq('scope', 'global').maybeSingle(),
         admin.from('persona_config').select('preset, sliders').eq('scope', 'global').maybeSingle(),
         admin.from('cases').select('id, kind, label, updated_at').order('updated_at', { ascending: false }).limit(25),
-        admin.from('events').select('type'),
+        // Capped: metrics are a headline, not an audit, and the log grows without bound.
+        admin.from('events').select('type').order('created_at', { ascending: false }).limit(5000),
         admin
           .from('events')
           .select('payload, created_at')
@@ -182,25 +225,75 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
 
       const caseRows = (cases.data ?? []) as { id: string; kind: string; label: string | null; updated_at: string }[]
-      const summaries = await Promise.all(
-        caseRows.map(async (row) => {
-          const [apps, messages] = await Promise.all([
-            admin.from('applications').select('id', { count: 'exact', head: true }).eq('case_id', row.id),
-            admin.from('messages').select('id', { count: 'exact', head: true }).eq('case_id', row.id),
-          ])
+      const caseIds = caseRows.map((row) => row.id)
+
+      // Two queries, not two per case. This is a console someone drives live, and the N+1
+      // version took long enough to look broken.
+      const [allApps, allMessages] = await Promise.all([
+        admin.from('applications').select('case_id').in('case_id', caseIds),
+        admin.from('messages').select('case_id').in('case_id', caseIds),
+      ])
+
+      const tally = (rows: unknown): Map<string, number> => {
+        const counts = new Map<string, number>()
+        for (const row of (rows ?? []) as { case_id: string }[]) {
+          counts.set(row.case_id, (counts.get(row.case_id) ?? 0) + 1)
+        }
+        return counts
+      }
+
+      const appCounts = tally(allApps.data)
+      const messageCounts = tally(allMessages.data)
+
+      const summaries = caseRows.map((row) => ({
+        id: row.id,
+        kind: row.kind as 'presenter' | 'audience',
+        label: row.label,
+        applications: appCounts.get(row.id) ?? 0,
+        messages: messageCounts.get(row.id) ?? 0,
+        updatedAt: row.updated_at,
+      }))
+
+      // Work out which one-click moves are possible from where the presenter case is now.
+      const presenter = caseRows.find((row) => row.kind === 'presenter') ?? null
+      const presenterApps = presenter
+        ? ((
+            await admin
+              .from('applications')
+              .select('product, state, resume_to, id')
+              .eq('case_id', presenter.id)
+          ).data ?? [])
+        : []
+
+      const demoActions = Object.entries(DEMO_MOVES).map(([id, move]) => {
+        const application = (presenterApps as any[]).find((a) => a.product === move.product)
+        if (!application) {
           return {
-            id: row.id,
-            kind: row.kind as 'presenter' | 'audience',
-            label: row.label,
-            applications: apps.count ?? 0,
-            messages: messages.count ?? 0,
-            updatedAt: row.updated_at,
+            id,
+            label: move.label,
+            available: false,
+            note: `No ${move.product.replaceAll('_', ' ')} on the case yet.`,
           }
-        }),
-      )
+        }
+
+        const first = move.steps[0]
+        const possible = transition(
+          { id: application.id, product: application.product, state: application.state, resumeTo: application.resume_to },
+          { type: first } as TransitionEvent,
+        ).ok
+
+        return {
+          id,
+          label: move.label,
+          available: possible,
+          note: possible ? move.note : `Not possible from "${String(application.state)}".`,
+        }
+      })
 
       const overview: AdminOverview = {
         killSwitch: (config.data as { kill_switch?: boolean } | null)?.kill_switch ?? false,
+        demoActions,
+        presenterCaseId: presenter?.id ?? null,
         persona: {
           preset: (persona.data as { preset?: string } | null)?.preset ?? 'default',
           sliders: ((persona.data as { sliders?: unknown } | null)?.sliders ?? slidersFor('default')) as AdminOverview['persona']['sliders'],
@@ -307,6 +400,57 @@ Deno.serve(async (request: Request): Promise<Response> => {
         }),
         200,
       )
+    }
+
+    case 'demo_action': {
+      const move = DEMO_MOVES[action.move]
+      if (!move) return errorResponse('bad_request', 'Unknown action.')
+
+      const found = await admin
+        .from('applications')
+        .select('id, case_id, product, state, resume_to')
+        .eq('case_id', action.caseId)
+        .eq('product', move.product)
+        .maybeSingle()
+
+      const row = found.data as any
+      if (!row) {
+        return errorResponse('not_found', `There is no ${move.product.replaceAll('_', ' ')} on this case yet.`)
+      }
+
+      let current = { id: row.id, product: row.product, state: row.state, resumeTo: row.resume_to }
+
+      for (const step of move.steps) {
+        const result = transition(current, { type: step } as TransitionEvent)
+        // Stop at the first step the machine refuses rather than forcing it: the presenter
+        // sees the real state, not a state we wished into place (§14).
+        if (!result.ok) break
+        current = result.application
+
+        await admin
+          .from('applications')
+          .update({ state: current.state, resume_to: current.resumeTo })
+          .eq('id', row.id)
+
+        const names: Record<string, string> = {
+          received_by_bank: 'application_received',
+          information_requested: 'information_requested',
+          assessment_approved: 'application_approved',
+        }
+
+        await writeEvent(admin, {
+          caseId: action.caseId,
+          type: names[step] ?? 'application_state_changed',
+          actor: 'admin',
+          applicationId: row.id,
+          payload: {
+            applicationName: journeyFor(row.product).displayName,
+            ...(step === 'information_requested' ? { detail: 'one more payslip' } : {}),
+          },
+        })
+      }
+
+      return json(ok({ state: current.state }), 200)
     }
 
     case 'purge_audience': {

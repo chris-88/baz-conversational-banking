@@ -2,35 +2,41 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * A synthetic mark. Deliberately NOT a reproduction of Bank of Ireland's actual logo, which is
- * a registered trademark — three stacked strokes suggesting a wordmark lockup, nothing more
- * (Invariant 10).
+ * The Bank of Ireland lockup, from the supplied asset pack.
+ *
+ * The pack states that this mark is a POC placeholder to be replaced with official brand
+ * artwork before any external use, so it stays a placeholder here too (Invariant 10).
  */
 export function Wordmark({
   className,
   tone = 'inherit',
+  showName = true,
 }: {
-  className?: string
-  tone?: 'inherit' | 'primary'
+  className?: string | undefined
+  tone?: 'inherit' | 'primary' | undefined
+  showName?: boolean | undefined
 }): ReactNode {
   return (
-    <span className={cn('flex items-center gap-2', className)}>
+    <span className={cn('flex items-center gap-2.5', className)}>
       <svg
         aria-hidden
         viewBox="0 0 24 24"
-        className={cn('size-5 shrink-0', tone === 'primary' && 'text-primary')}
+        className={cn('size-6 shrink-0', tone === 'primary' && 'text-primary')}
         fill="none"
         stroke="currentColor"
-        strokeWidth="2.25"
+        strokeWidth="2.6"
         strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        <path d="M3 7.5c3-2 6-2 9 0s6 2 9 0" />
-        <path d="M3 12c3-2 6-2 9 0s6 2 9 0" />
-        <path d="M3 16.5c3-2 6-2 9 0s6 2 9 0" />
+        <path d="M4 6.5 12 10l8-3.5" />
+        <path d="M4 11.5 12 15l8-3.5" />
+        <path d="M4 16.5 12 20l8-3.5" />
       </svg>
-      <span className="text-[0.95rem] font-semibold tracking-tight whitespace-nowrap">
-        Bank of Ireland
-      </span>
+      {showName && (
+        <span className="text-[0.95rem] leading-none font-bold tracking-tight whitespace-nowrap">
+          Bank of Ireland
+        </span>
+      )}
     </span>
   )
 }

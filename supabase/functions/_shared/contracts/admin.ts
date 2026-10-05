@@ -57,10 +57,40 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
 
   /** §44 — clears the room's conversations. Never touches the presenter case. */
   z.object({ action: z.literal('purge_audience') }),
+
+  /**
+   * One-click demo moves (§41).
+   *
+   * Named for what the presenter wants to happen — "credit card approved" — rather than for
+   * the transition underneath. The server finds the right application and applies the right
+   * sequence, so nobody is hunting through a list mid-presentation.
+   */
+  z.object({
+    action: z.literal('demo_action'),
+    caseId: z.uuid(),
+    move: z.enum([
+      'credit_card_approved',
+      'joint_account_approved',
+      'mortgage_to_assessment',
+      'mortgage_requests_document',
+      'protection_approved',
+    ]),
+  }),
 ])
+
+export const demoActionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  /** False when the state machine would refuse it right now, with the reason. */
+  available: z.boolean(),
+  note: z.string(),
+})
 
 export const adminOverviewSchema = z.object({
   killSwitch: z.boolean(),
+  /** The one-click moves, with whether each is possible from where the case currently is. */
+  demoActions: z.array(demoActionSchema).default([]),
+  presenterCaseId: z.uuid().nullable().default(null),
   persona: z.object({ preset: z.string(), sliders: sliders }),
   cases: z.array(
     z.object({

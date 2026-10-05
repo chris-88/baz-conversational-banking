@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconTile } from '@/components/IconTile'
-import { StatusDot } from '@/components/StatusDot'
+import { StatusBadge } from '@/components/StatusBadge'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { MobileHeader } from '@/shells/boi/MobileHeader'
 import { callPartner } from '@/partner/partnerClient'
@@ -117,7 +117,7 @@ export function PartnerJoin(): ReactNode {
                 <UsersIcon />
               </IconTile>
               <div className="space-y-1">
-                <h1 className="text-xl font-semibold tracking-tight">
+                <h1 className="text-h3 font-semibold">
                   {view.partnerName === null ? 'You’ve been invited' : `Hi ${view.partnerName}`}
                 </h1>
                 <p className="text-muted-foreground text-sm">
@@ -133,15 +133,12 @@ export function PartnerJoin(): ReactNode {
                 <Card className="gap-0 divide-y p-0">
                   {view.applications.map((application) => (
                     <div key={application.displayName} className="flex items-center gap-3 px-4 py-3">
-                      <StatusDot state={application.waitingOnYou ? 'waiting_partner' : 'in_progress'} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {application.displayName}
-                        </span>
-                        <span className="text-muted-foreground block text-xs">
-                          {application.stateLabel}
-                        </span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {application.displayName}
                       </span>
+                      <StatusBadge
+                        state={application.waitingOnYou ? 'waiting_partner' : 'in_progress'}
+                      />
                     </div>
                   ))}
                 </Card>

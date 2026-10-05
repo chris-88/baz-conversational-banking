@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bank of Ireland prototype">
-  <rect width="64" height="64" rx="12" fill="#12345e"/>
-  <path d="M32 13 13 25h6v20h-6v6h38v-6h-6V25h6z" fill="#f0b429"/>
-  <rect x="24" y="29" width="4" height="14" fill="#12345e"/>
-  <rect x="36" y="29" width="4" height="14" fill="#12345e"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="225" fill="#065BEA"/>
+<rect x="250" y="300" width="524" height="420" rx="150" fill="white"/>
+<rect x="465" y="180" width="94" height="145" rx="47" fill="white"/>
+<circle cx="410" cy="500" r="48" fill="#065BEA"/><circle cx="614" cy="500" r="48" fill="#065BEA"/>
+<path d="M400 605c70 55 154 55 224 0" fill="none" stroke="#065BEA" stroke-width="42" stroke-linecap="round"/></svg>
