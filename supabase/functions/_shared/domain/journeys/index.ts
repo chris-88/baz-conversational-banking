@@ -4,6 +4,7 @@ import { jointAccount } from './joint-account.ts'
 import { creditCard } from './credit-card.ts'
 import { personalLoan } from './personal-loan.ts'
 import { protection } from './protection.ts'
+import { savings } from './savings.ts'
 
 /**
  * Every supported journey, keyed by product (§7). All are `draft` until matched against their
@@ -15,6 +16,7 @@ export const journeys = {
   credit_card: creditCard,
   personal_loan: personalLoan,
   protection,
+  savings,
 } as const satisfies Record<Product, Journey>
 
 export function journeyFor(product: Product): Journey {
@@ -23,4 +25,4 @@ export function journeyFor(product: Product): Journey {
 
 export const ALL_JOURNEYS: readonly Journey[] = Object.values(journeys)
 
-export { mortgage, jointAccount, creditCard, personalLoan, protection }
+export { mortgage, jointAccount, creditCard, personalLoan, protection, savings }

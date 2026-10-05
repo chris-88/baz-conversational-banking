@@ -281,6 +281,18 @@ export type DigestNeeds = {
   readonly hold: readonly { readonly name: string; readonly reason: string }[]
 }
 
+export type DigestPlan = {
+  readonly steps: readonly { readonly title: string; readonly because: string; readonly when: string | null }[]
+  /** What the bank will watch for, so the customer need not remember to come back. */
+  readonly watch: string | null
+  /** The same thing in a form that can be stored and checked. Never shown to the model. */
+  readonly watchDetail?: PlanWatchDetail | null
+}
+
+export type PlanWatchDetail =
+  | { readonly kind: 'savings_target'; readonly target: number; readonly describe: string }
+  | { readonly kind: 'date'; readonly on: string; readonly describe: string }
+
 export type CaseDigest = {
   readonly customerName: string | null
   readonly authLevel: 'anonymous' | 'authenticated'
@@ -299,6 +311,11 @@ export type CaseDigest = {
    * before you see it — these are conclusions, not suggestions to reconsider.
    */
   readonly needs?: DigestNeeds
+  /**
+   * §7 — what to do when the answer takes months rather than one conversation. Derived from
+   * the case; present only when there is genuinely a sequence.
+   */
+  readonly plan?: DigestPlan | null
   readonly partner: DigestPartner | null
   /** §36 — what changed while the customer was away. */
   readonly eventsSinceLastSeen: readonly string[]
@@ -443,6 +460,29 @@ function digestSection(digest: CaseDigest): string {
       'sounds.',
       '',
     )
+  }
+
+  const plan = digest.plan
+  if (plan !== undefined && plan !== null && plan.steps.length > 0) {
+    lines.push(
+      '## The plan',
+      'This customer is not ready to apply for everything today, and that is fine. These steps',
+      'are worked out from what they told you — say them as a plan, in order, and do not',
+      'promise anything that is not here:',
+      ...plan.steps.map((step) =>
+        `- ${step.title} — ${step.because}${step.when === null ? '' : ` (${step.when})`}`,
+      ),
+      '',
+    )
+
+    if (plan.watch !== null) {
+      lines.push(
+        `You can tell them the bank will watch for this and come back to them: ${plan.watch}.`,
+        'That is a real commitment the system keeps, not a figure of speech. Do not offer to',
+        'set reminders of any other kind, because you cannot.',
+        '',
+      )
+    }
   }
 
   lines.push('## Applications')

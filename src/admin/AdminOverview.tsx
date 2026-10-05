@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLinkIcon, FileCheckIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
+import { ExternalLinkIcon, FileCheckIcon, PiggyBankIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -164,6 +164,11 @@ function DemoActions({
     onSuccess: onChanged,
   })
 
+  const savings = useMutation({
+    mutationFn: () => adminApi.reachSavingsTarget(caseId ?? ''),
+    onSuccess: onChanged,
+  })
+
   const verify = useMutation({
     mutationFn: () => adminApi.verifyDocuments(caseId ?? ''),
     onSuccess: onChanged,
@@ -230,6 +235,25 @@ function DemoActions({
             </span>
           </button>
         ))}
+
+        <button
+          type="button"
+          disabled={savings.isPending}
+          onClick={() => savings.mutate()}
+          className="bg-card hover:bg-muted/60 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors disabled:opacity-50 sm:col-span-2"
+        >
+          <IconTile tone="primary" size="sm">
+            <PiggyBankIcon />
+          </IconTile>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Their savings reach the target</span>
+            <span className="text-muted-foreground block text-2xs">
+              {savings.data?.reached === true
+                ? `Reached €${savings.data.target?.toLocaleString('en-IE') ?? ''}. They have something to come back for.`
+                : 'Months pass and the money is there — the thing the bank said it would watch for. §41'}
+            </span>
+          </span>
+        </button>
 
         <button
           type="button"

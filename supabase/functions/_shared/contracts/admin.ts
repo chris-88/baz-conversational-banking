@@ -61,6 +61,9 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   /** §41 — the bank checks what was sent in, so a document needing verification can pass. */
   z.object({ action: z.literal('verify_documents'), caseId: z.uuid() }),
 
+  /** §41 — time passes and the customer reaches what they were saving for. */
+  z.object({ action: z.literal('reach_savings_target'), caseId: z.uuid() }),
+
   /**
    * One-click demo moves (§41).
    *

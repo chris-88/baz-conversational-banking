@@ -173,6 +173,32 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
         'dependants.',
     ],
   },
+
+  savings: {
+    product: 'savings',
+    name: 'Savings account',
+    oneLine: 'Somewhere to build a deposit, separate from day-to-day money.',
+    description:
+      'A regular savings account you pay into each month. Keeping the deposit apart from your current account makes it harder to dip into, and a steady record of saving is something a mortgage assessment looks at in your favour.',
+    relevantWhen: [
+      'they are saving towards a home deposit and are not there yet',
+      'they hold savings elsewhere and want everything in one place',
+      'they want the deposit kept separate from everyday spending',
+    ],
+    eligibility: [
+      'Over 18 and resident in the Republic of Ireland',
+      'A current account is not required to open one',
+    ],
+    illustrativeTerms: [
+      { label: 'Monthly amount', value: 'From €50 to €2,500 a month' },
+      { label: 'Access', value: 'Withdraw at any time without notice' },
+      { label: 'Interest', value: 'Illustrative only — real rates come from the live product pages' },
+    ],
+    cautions: [
+      'Moving savings from another bank is the customer\'s decision, not a recommendation to make for them. Explain what having it in one place does and does not change, and leave the choice with them.',
+      'Saving towards a deposit is not the same as qualifying for a mortgage. Never imply that reaching a target guarantees an approval.',
+    ],
+  },
 }
 
 export const ALL_PRODUCTS: readonly ProductInfo[] = Object.values(boiProducts)

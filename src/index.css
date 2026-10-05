@@ -76,6 +76,7 @@
   --product-joint-account: oklch(0.49 0.2 264);
   --product-credit-card: oklch(0.49 0.2 264);
   --product-personal-loan: oklch(0.63 0.21 25);
+  --product-savings: oklch(0.68 0.12 196);
   --product-protection: oklch(0.6 0.2 295);
 
   --border: var(--slate-300);
@@ -178,6 +179,7 @@
   --color-product-joint-account: var(--product-joint-account);
   --color-product-credit-card: var(--product-credit-card);
   --color-product-personal-loan: var(--product-personal-loan);
+  --color-product-savings: var(--product-savings);
   --color-product-protection: var(--product-protection);
   --color-border: var(--border);
   --color-input: var(--input);

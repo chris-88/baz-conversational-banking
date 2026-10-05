@@ -23,6 +23,8 @@ export const adminApi = {
     adminCaseSchema.parse(await call({ action: 'inspect_case', caseId })),
   resetCase: () => call({ action: 'reset_case' }),
   purgeAudience: () => call({ action: 'purge_audience' }),
+  reachSavingsTarget: (caseId: string) =>
+    call({ action: 'reach_savings_target', caseId }) as Promise<{ reached: boolean; target: number | null }>,
   verifyDocuments: (caseId: string) =>
     call({ action: 'verify_documents', caseId }) as Promise<{ verified: number }>,
   demoAction: (caseId: string, move: Extract<AdminRequest, { action: 'demo_action' }>['move']) =>

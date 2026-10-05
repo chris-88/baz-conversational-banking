@@ -127,6 +127,11 @@ export const canonicalProductInterests: readonly {
     reason: 'Moving costs, and the customer has no card with us.',
   },
   {
+    product: 'savings',
+    discovered: true,
+    reason: 'Still building the deposit, and holding savings with another bank.',
+  },
+  {
     product: 'personal_loan',
     discovered: true,
     reason: 'Expecting significant costs on moving in.',

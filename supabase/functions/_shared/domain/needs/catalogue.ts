@@ -49,6 +49,28 @@ const healthNotCommercialised: NeedSuppression = {
     !/protect|cover|insur|if anything happen/i.test(objective(context)),
 }
 
+
+/**
+ * What the deposit still needs to reach, and whether they are there.
+ *
+ * A first-time buyer typically needs a tenth of the price, so a target price is enough to
+ * compute the gap without asking for it. Returns null when there is nothing to compute from:
+ * no price means no gap, not a gap of zero.
+ */
+export function depositGap(context: NeedContext): { target: number; saved: number; short: number } | null {
+  const price = context.facts.number('housing.purchasePrice', 'household')
+  if (price === null || price <= 0) return null
+
+  const stated = context.facts.number('goals.savingsTarget', 'household')
+  const target = stated !== null && stated > 0 ? stated : Math.round(price * 0.1)
+  const saved =
+    context.facts.number('assets.depositAmount', 'household') ??
+    context.facts.number('assets.savingsBalance', 'household') ??
+    0
+
+  return { target, saved, short: Math.max(0, target - saved) }
+}
+
 export const needCatalogue: readonly NeedDefinition[] = [
   {
     id: 'first_home_mortgage',
@@ -265,6 +287,55 @@ export const needCatalogue: readonly NeedDefinition[] = [
         when: beingAssessed,
       },
     ],
+  },
+
+  {
+    id: 'save_home_deposit',
+    name: 'Build the deposit',
+    family: 'savings',
+    sensitive: false,
+    priority: 'high',
+    signals: [
+      {
+        id: 'asked-about-saving',
+        strength: 'explicit',
+        describe: 'they asked about saving or where to keep their savings',
+        when: (context) => /sav(e|ing)|deposit account|put money (aside|away)/i.test(objective(context)),
+      },
+      {
+        id: 'deposit-short',
+        strength: 'strong_inferred',
+        describe: 'they are still short of the deposit they will need',
+        when: (context) => (depositGap(context)?.short ?? 0) > 0,
+      },
+      {
+        id: 'target-date-ahead',
+        strength: 'strong_inferred',
+        describe: 'they are buying at some point rather than right now',
+        when: (context) => context.facts.has('goals.targetDate', 'household'),
+      },
+      {
+        id: 'renting-now',
+        strength: 'soft_inferred',
+        describe: 'they are renting while they save',
+        when: (context) => context.facts.get('housing.currentTenure', 'household') === 'renting',
+      },
+    ],
+    clarifying: [
+      {
+        question: 'How much could you put away each month?',
+        answeredWhen: (context) => context.facts.has('goals.monthlySaving', 'household'),
+      },
+      {
+        question: 'When are you hoping to be ready to buy?',
+        answeredWhen: (context) => context.facts.has('goals.targetDate', 'household'),
+      },
+    ],
+    products: ['savings'],
+    framing:
+      'A savings account keeps the deposit separate from everyday money, and a steady record of saving is something a mortgage assessment looks at in your favour.',
+    suppressions: [],
+    deferrals: [],
   },
 
   {

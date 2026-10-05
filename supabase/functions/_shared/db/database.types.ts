@@ -635,6 +635,50 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_watches: {
+        Row: {
+          case_id: string
+          created_at: string
+          describe: string
+          id: string
+          kind: string
+          met_at: string | null
+          notified_at: string | null
+          on_date: string | null
+          target: number | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          describe: string
+          id?: string
+          kind: string
+          met_at?: string | null
+          notified_at?: string | null
+          on_date?: string | null
+          target?: number | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          describe?: string
+          id?: string
+          kind?: string
+          met_at?: string | null
+          notified_at?: string | null
+          on_date?: string | null
+          target?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_watches_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_interests: {
         Row: {
           case_id: string

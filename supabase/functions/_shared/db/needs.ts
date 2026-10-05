@@ -15,9 +15,18 @@ export function needsFor(
   loaded: LoadedCase,
   options: { readonly sensitiveDisclosure: boolean },
 ): readonly NeedCandidate[] {
+  const context = needContextFor(loaded, options)
+  return context === null ? [] : evaluateNeeds(context)
+}
+
+/** The same context, for callers that need more than the verdict — the plan builder. */
+export function needContextFor(
+  loaded: LoadedCase,
+  options: { readonly sensitiveDisclosure: boolean },
+): NeedContext | null {
   const primary = loaded.participants.find((participant) => participant.role === 'primary')
   const partner = loaded.participants.find((participant) => participant.role === 'partner')
-  if (!primary) return []
+  if (!primary) return null
 
   const facts = createFactReader({
     applicationId: asApplicationId('00000000-0000-4000-8000-000000000000'),
@@ -30,7 +39,7 @@ export function needsFor(
     documents: [],
   })
 
-  const context: NeedContext = {
+  return {
     facts,
     sensitiveDisclosure: options.sensitiveDisclosure,
     applications: loaded.applications.map((application) => ({
@@ -39,8 +48,6 @@ export function needsFor(
     })),
     decisions: decisionsFrom(loaded),
   }
-
-  return evaluateNeeds(context)
 }
 
 /**

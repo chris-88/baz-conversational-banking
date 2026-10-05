@@ -31,6 +31,11 @@ const PRODUCTS: Record<Product, { icon: ReactNode; tint: string; ink: string }> 
     tint: 'bg-product-personal-loan/10',
     ink: 'text-product-personal-loan',
   },
+  savings: {
+    icon: <PiggyBankIcon />,
+    tint: 'bg-product-savings/10',
+    ink: 'text-product-savings',
+  },
   protection: {
     icon: <ShieldCheckIcon />,
     tint: 'bg-product-protection/10',

@@ -386,6 +386,36 @@ export const factCatalogue = {
     extractable: true,
     label: 'What the customer is trying to do',
   },
+  /**
+   * What they are building towards, as opposed to what they already hold. A customer six
+   * months from a deposit has a different need from one who has it, and without the target
+   * there is no way to tell the two apart or to know when they have arrived.
+   */
+  'goals.savingsTarget': {
+    schema: z.number().int().positive(),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'What they are saving towards',
+  },
+  'goals.monthlySaving': {
+    schema: z.number().int().nonnegative(),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'How much they put away each month',
+  },
+  /** Roughly when they expect to be ready. Drives the follow-up, so it is a date not a mood. */
+  'goals.targetDate': {
+    schema: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/, 'expected YYYY-MM or YYYY-MM-DD'),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'When they expect to be ready',
+  },
   'lifeEvent.recentlyMarried': {
     schema: z.boolean(),
     subject: 'household',

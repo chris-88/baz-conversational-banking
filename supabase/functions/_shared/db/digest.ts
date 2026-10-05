@@ -4,8 +4,10 @@ import { evaluateJourney, type OutstandingItem, type RequirementContext } from '
 import { evaluateAdvisories } from '../domain/advisories.ts'
 import { stateLabel } from '../domain/state-machine.ts'
 import type { CaseDigest, DigestApplication, DigestFact, DigestNeeds } from '../llm/prompt.ts'
-import { needsFor } from './needs.ts'
-import { deferred, nextToClarify, readyToSurface } from '../domain/needs/engine.ts'
+import { needContextFor } from './needs.ts'
+import { deferred, evaluateNeeds, nextToClarify, readyToSurface } from '../domain/needs/engine.ts'
+import { buildPlan } from '../domain/needs/plan.ts'
+import type { DigestPlan } from '../llm/prompt.ts'
 import { participantFor, type LoadedCase } from './loaded-case.ts'
 
 /**
@@ -146,6 +148,10 @@ function describeEvent(event: { type: string; payload: Record<string, unknown> }
       return `${name} was not approved.`
     case 'application_completed':
       return `${name} is complete.`
+    case 'savings_target_reached':
+      return typeof event.payload.target === 'number'
+        ? `Your savings reached €${event.payload.target.toLocaleString('en-IE')} — the amount you were building towards.`
+        : 'Your savings reached the amount you were building towards.'
     case 'partner_completed':
       return typeof event.payload.partnerName === 'string'
         ? `${event.payload.partnerName} completed their part.`
@@ -163,9 +169,10 @@ export function buildCaseDigest(
   loaded: LoadedCase,
   options: { readonly sensitiveDisclosure?: boolean } = {},
 ): CaseDigest {
-  const needs = needsFor(loaded, {
+  const needContext = needContextFor(loaded, {
     sensitiveDisclosure: options.sensitiveDisclosure ?? false,
   })
+  const needs = needContext === null ? [] : evaluateNeeds(needContext)
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
 
@@ -208,10 +215,25 @@ export function buildCaseDigest(
     })),
   }
 
+  const plan = needContext === null ? null : buildPlan(needContext, needs)
+  const digestPlan: DigestPlan | null =
+    plan === null
+      ? null
+      : {
+          steps: plan.steps.map((step) => ({
+            title: step.title,
+            because: step.because,
+            when: step.when,
+          })),
+          watch: plan.watch?.describe ?? null,
+          watchDetail: plan.watch,
+        }
+
   return {
     customerName: loaded.customerName,
     sensitiveHeld: sensitiveAreas,
     needs: digestNeeds,
+    plan: digestPlan,
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

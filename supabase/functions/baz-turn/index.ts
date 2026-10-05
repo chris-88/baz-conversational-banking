@@ -195,6 +195,33 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const primary = participantFor(loaded, 'primary')
   const digest = buildCaseDigest(loaded, { sensitiveDisclosure: gate.suppressHumour })
 
+  /**
+   * Record what the bank has committed to watching for.
+   *
+   * Only once the customer has actually opened the savings account: telling someone you will
+   * watch for something is a promise, and a promise attaches to the thing they chose to do,
+   * not to Baz having mentioned a plan (Invariant 1).
+   */
+  const planWatch = digest.plan?.watchDetail ?? null
+  if (planWatch !== null && loaded.applications.some((a) => a.product === 'savings')) {
+    const open = await admin
+      .from('plan_watches')
+      .select('id')
+      .eq('case_id', turn.caseId)
+      .is('met_at', null)
+      .limit(1)
+
+    if (((open.data ?? []) as unknown[]).length === 0) {
+      await admin.from('plan_watches').insert({
+        case_id: turn.caseId,
+        kind: planWatch.kind,
+        target: planWatch.kind === 'savings_target' ? planWatch.target : null,
+        on_date: planWatch.kind === 'date' ? planWatch.on : null,
+        describe: planWatch.describe,
+      })
+    }
+  }
+
   const history = loaded.messages
     .filter((message) => message.role !== 'system')
     .map((message) => ({ role: message.role === 'customer' ? 'user' as const : 'assistant' as const, content: message.content }))

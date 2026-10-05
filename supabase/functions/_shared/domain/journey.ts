@@ -15,6 +15,7 @@ export const PRODUCTS = [
   'credit_card',
   'personal_loan',
   'protection',
+  'savings',
 ] as const
 export type Product = (typeof PRODUCTS)[number]
 

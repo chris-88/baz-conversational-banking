@@ -388,6 +388,69 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json(ok({ state: result.application.state }), 200)
     }
 
+    /**
+     * §41 — months pass and the money is there.
+     *
+     * Moves the balance to the target the bank said it would watch for, marks the watch met
+     * and writes an event the customer would recognise. Everything downstream — `hasUpdates`,
+     * the notification, the return conversation — is the machinery that already exists; this
+     * is only the thing that happened.
+     */
+    case 'reach_savings_target': {
+      const watches = await admin
+        .from('plan_watches')
+        .select('id, kind, target, describe')
+        .eq('case_id', action.caseId)
+        .is('met_at', null)
+        .eq('kind', 'savings_target')
+        .limit(1)
+
+      const watch = ((watches.data ?? []) as { id: string; target: number | null }[])[0]
+      if (!watch || watch.target === null) return json(ok({ reached: false, target: null }), 200)
+
+      const participants = await admin
+        .from('participants')
+        .select('id')
+        .eq('case_id', action.caseId)
+        .eq('role', 'primary')
+        .limit(1)
+
+      const primary = ((participants.data ?? []) as { id: string }[])[0]
+
+      // Supersede rather than add, so the case holds one balance and not a history of guesses.
+      await admin
+        .from('facts')
+        .update({ superseded_by: null })
+        .eq('case_id', action.caseId)
+        .eq('key', 'assets.savingsBalance')
+        .is('superseded_by', null)
+        .select('id')
+
+      await admin.from('facts').insert({
+        case_id: action.caseId,
+        key: 'assets.savingsBalance',
+        participant_id: primary?.id ?? null,
+        subject_kind: 'household',
+        value: watch.target as unknown as Json,
+        source: 'bank_held',
+        verified: true,
+      })
+
+      await admin
+        .from('plan_watches')
+        .update({ met_at: new Date().toISOString() })
+        .eq('id', watch.id)
+
+      await writeEvent(admin, {
+        caseId: action.caseId,
+        type: 'savings_target_reached',
+        actor: 'system',
+        payload: { target: watch.target },
+      })
+
+      return json(ok({ reached: true, target: watch.target }), 200)
+    }
+
     case 'verify_documents': {
       const applications = await admin
         .from('applications')
