@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TriangleAlertIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ChatBubble } from '@/baz/ChatBubble'
+import { TypingBubble } from '@/baz/TypingBubble'
 import { Composer } from '@/baz/Composer'
 import { SuggestionList, type Suggestion } from '@/baz/SuggestionList'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
@@ -48,7 +49,7 @@ export function BazChat({
   const { entries, streaming, error, send, loadFrom, reset } = useConversation(caseId)
   const [loadingHistory, setLoadingHistory] = useState(isBackendConfigured)
 
-  const bottom = useRef<HTMLDivElement>(null)
+  const transcript = useRef<HTMLDivElement>(null)
   const openingSent = useRef(false)
   const returnSent = useRef(false)
   const [hasUpdates, setHasUpdates] = useState(false)
@@ -159,9 +160,27 @@ export function BazChat({
     void send('', 'return')
   }, [caseId, loadingHistory, hasUpdates, openingMessage, send])
 
+  /**
+   * Keep the newest turn in view.
+   *
+   * `scrollIntoView` moved the nearest scrollable ancestor — the page, not the transcript —
+   * which nudged the whole screen and left Baz's reply under the composer. Scrolling the
+   * transcript itself is exact. It only follows when the customer is already at the bottom,
+   * so scrolling up to re-read something is not yanked back down mid-stream.
+   */
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    const el = transcript.current
+    if (el === null) return
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (distanceFromBottom > 160) return
+
+    el.scrollTop = el.scrollHeight
   }, [entries, streaming])
+
+  // Once Baz's own bubble exists the dots would sit beneath it saying the same thing.
+  const last = entries.at(-1)
+  const lastIsBaz = last !== undefined && last.kind === 'message' && last.author === 'baz'
 
   const ready = caseId !== null && !joining && !loadingHistory
   const problem = joinError ?? error ?? actionError
@@ -236,7 +255,7 @@ export function BazChat({
 
   return (
     <div className={className}>
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div ref={transcript} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         <ChatBubble author="baz">{greeting}</ChatBubble>
 
         {entries.map((entry, index) => {
@@ -258,6 +277,8 @@ export function BazChat({
             </ChatBubble>
           )
         })}
+
+        {streaming && !lastIsBaz && <TypingBubble />}
 
         {entries.length === 0 && ready && !openingMessage && (
           <SuggestionList
@@ -282,7 +303,6 @@ export function BazChat({
           </Alert>
         )}
 
-        <div ref={bottom} />
       </div>
 
       {footer !== undefined && caseId !== null && entries.length > 0 && (
@@ -297,7 +317,7 @@ export function BazChat({
       >
         <Composer disabled={!ready || streaming} onSend={(message) => void send(message)} />
         <p className="text-muted-foreground mt-2 text-center text-2xs">
-          {joining ? 'Connecting…' : streaming ? 'Baz is typing…' : 'Baz is an AI assistant.'}
+          {joining ? 'Connecting…' : 'Baz is an AI assistant.'}
         </p>
       </div>
     </div>

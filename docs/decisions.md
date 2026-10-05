@@ -657,3 +657,10 @@ section.
   arrives on the third exchange, the checkbox ticks, the button becomes "Start 1 application"
   and the application is created. Two earlier runs that looked like a selection bug were the
   test harness checking once after a single message and never looking again.
+- **2026-10-05** — The transcript scrolls itself rather than calling `scrollIntoView`, which
+  moved the nearest scrollable ancestor — the page — so sending a message nudged the whole
+  screen and left the reply under the composer. It follows only when the customer is already
+  near the bottom, so scrolling up to re-read is not yanked back down mid-stream.
+- **2026-10-05** — Waiting for Baz is three dots in the bubble the answer will arrive in, not a
+  line of text under the composer. That line was replacing the AI disclosure, which has to be
+  there at all times (§16).
