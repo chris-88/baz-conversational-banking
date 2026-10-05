@@ -634,3 +634,13 @@ section.
   linked project by `npm run db:types`. Untyped it resolved every insert payload to `never` and
   every column name was unchecked, so a misspelt column was a runtime error on the day. The
   generated file is excluded from lint.
+- **2026-10-05** — `show_status` refuses a second card in consecutive turns. Two in a row is
+  what happens when the model reaches for one as something to say. The window is two messages
+  rather than the invite card's eight, because status genuinely is worth refreshing.
+- **2026-10-05** — `e2e/film.spec.ts` covers the structure of §55, not the conversation. Every
+  turn is a live model call at roughly fifteen seconds, so asserting on Baz's words would be
+  slow, costly and flaky. What it asserts is what has actually broken: the openers being a
+  product menu, the demo entry landing somewhere other than the conversation, the console
+  sitting behind a real sign-in, an invalid invite refusing rather than rendering a page.
+- **2026-10-05** — Guardrail eval re-run after the voice and tool changes: 100% on both sets
+  (27 must-block, 20 must-allow). CLAUDE.md requires that before any presentation.
