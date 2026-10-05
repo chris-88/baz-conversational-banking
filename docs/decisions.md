@@ -777,3 +777,17 @@ section.
 - **2026-10-05** — The schema-drift test extracts check constraints per table now. It compared
   application states against `need_decisions.state` the moment a second table had a column of
   that name, because it took the last match in the whole migration set.
+- **2026-10-05** — §48 passes end to end, as one continuous story rather than verified in
+  pieces: the goal and the gap understood, the mortgage deliberately not started, a plan
+  proposed with the target computed from the price, kept by the customer and visible on their
+  home screen, savings reaching the target months later, the console signalling the milestone
+  and the check-in coming due, and the customer returning to "your savings have reached
+  €60,000, so that step is done — the next step is the mortgage application".
+- **2026-10-05** — The console event feed is built from one server-side describer, so the
+  overview and the case inspector cannot say different things about the same event. An
+  unrecognised type still renders readably, because a describer that silently does nothing for
+  unknown input is how the three NARRATABLE lists drifted apart earlier today.
+- **2026-10-05** — Deploy Pages waits a long time for a runner, while CI and Deploy Supabase
+  triggered by the same push get one immediately. With `cancel-in-progress: true`, pushing
+  again inside that window cancels the run already waiting — so retrying makes it worse. Wait,
+  do not retry, and verify by grepping the live bundle rather than trusting the run status.
