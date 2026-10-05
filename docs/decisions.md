@@ -664,3 +664,24 @@ section.
 - **2026-10-05** — Waiting for Baz is three dots in the bubble the answer will arrive in, not a
   line of text under the composer. That line was replacing the AI disclosure, which has to be
   there at all times (§16).
+
+## 2026-10-05 — A live console, and cases you can tell apart
+
+- **2026-10-05** — Realtime is given the signed-in token before the channel opens. The socket
+  is created with the anon key at module load, before anybody signs in, and Realtime
+  authorises every row against that token — so the console subscribed successfully and then
+  received nothing, because `is_admin()` was false for the connection. No error anywhere: the
+  WebSocket was open the whole time. The same trap waits on the customer side for §33, where
+  an anonymous participant's socket would be equally authorised for nothing.
+- **2026-10-05** — The Realtime handler only invalidates; nothing is written into the cache by
+  hand. Everything on the presenter's screen therefore came back through the same path as the
+  first load and cannot drift from the case it claims to show (Invariant 2).
+- **2026-10-05** — A case is labelled with the primary applicant's name, falling back to a
+  short stable id. Eleven rows all reading "Audience case" told the presenter nothing the
+  moment more than one person was talking.
+- **2026-10-05** — Baz records a name when it is offered. It did not: a case opened with "my
+  name is Niamh Gallagher" held exactly one fact, the objective. Today's discovery work is why
+  — the prompt drives hard at situation facts, and `identity.fullName` normally arrives from
+  bank-held data at sign-in, so nothing pressed for it in conversation. Worth having well
+  beyond the label: being told a name and carrying on regardless is the plainest way to look
+  like you are not listening.
