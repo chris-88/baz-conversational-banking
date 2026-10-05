@@ -54,6 +54,10 @@ export async function loadPlans(
     .eq('case_id', caseId)
     .order('created_at', { ascending: true })
 
+  // A failed query and an empty table look identical through `data ?? []`, which is how a
+  // broken read presents as "this customer has no plans" rather than as an error.
+  if (planRows.error) throw new Error(`plans: ${planRows.error.message}`)
+
   const plans = (planRows.data ?? []) as {
     id: string
     goal: string
@@ -81,6 +85,9 @@ export async function loadPlans(
       .select('id, plan_id, purpose, agenda, trigger_kind, due_at, trigger_event, state')
       .in('plan_id', ids),
   ])
+
+  if (milestoneRows.error) throw new Error(`plan_milestones: ${milestoneRows.error.message}`)
+  if (checkinRows.error) throw new Error(`plan_checkins: ${checkinRows.error.message}`)
 
   const context = planContextFor(loaded)
 
@@ -147,6 +154,7 @@ export async function reconcilePlans(
   loaded: LoadedCase,
 ): Promise<readonly { planId: string; milestone: Milestone }[]> {
   const plans = await loadPlans(client, caseId, loaded)
+
   const context = planContextFor(loaded)
   const achieved: { planId: string; milestone: Milestone }[] = []
 
@@ -175,6 +183,7 @@ export function dueCheckins(
   loaded: LoadedCase,
   firedEvents: readonly string[] = [],
 ): readonly { plan: Plan; checkin: Checkin }[] {
+
   const context = planContextFor(loaded)
 
   return plans
