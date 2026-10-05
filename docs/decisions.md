@@ -507,3 +507,30 @@ section.
 - **2026-10-05** — The bell was disabled and said nothing. It now carries a dot when
   `hasUpdates` and leads to the conversation, which is the only place what changed is actually
   explained (§36). The notification card beside it says nothing about the application itself.
+
+## 2026-10-05 — What the §67 run-through found
+
+- **2026-10-05** — A card reports its outcome when `case-action` confirms it, not when Baz
+  finishes narrating it. Both `commit` and `onInvitePartner` awaited the whole streamed turn
+  first, so "Create their link" sat on "Creating…" for ten to twenty seconds with the link
+  already in hand. Measured after the change: 1.4s. Cards are disabled while a turn streams,
+  so detaching the `send` cannot let a second action slip in.
+- **2026-10-05** — BLOCKER for §55 beats 17–20, found by running it: every one of the five
+  demo moves starts from `received_by_bank` or `information_requested`, so each needs a
+  *submitted* application. Submitting the mortgage means satisfying 39 blocking requirements,
+  which cannot be done on camera. The journeys are all `draft` and the recordings were never
+  translated, so the fix is to size them for the demo rather than to add a move that
+  force-submits — that would be faking the orchestration §68 forbids.
+- **2026-10-05** — BLOCKER for one continuous film: public Baz starts in `fresh` mode, which
+  creates a case with `kind: 'audience'`, while the demo moves and the notification are wired
+  to `presenterCaseId` (AdminOverview). So a run that starts on the public website — as §55
+  beat 3 requires — cannot be driven from the console afterwards. Needs either a presenter
+  entry to the public site that uses the presenter case, or demo controls that target the
+  selected case.
+- **2026-10-05** — Verified working in the run, not just in isolation: life-event discovery,
+  concurrent applications, web→app handoff with the conversation intact, bank-held facts
+  loading at sign-in without overwriting what the customer already said, partner isolation
+  (the join page names the inviter and shows only the partner's own tasks), cross-application
+  partner reuse shown as "Used for Mortgage and Life assurance", the loan advisory with its
+  Keep going / Hold it for now card, the notification's opaque sign-in-gated link, and the
+  return summary.

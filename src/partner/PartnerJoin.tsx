@@ -133,7 +133,7 @@ export function PartnerJoin(): ReactNode {
                 <Card className="gap-0 divide-y p-0">
                   {view.applications.map((application) => (
                     <div key={application.displayName} className="flex items-center gap-3 px-4 py-3">
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      <span className="min-w-0 flex-1 text-sm font-medium text-pretty">
                         {application.displayName}
                       </span>
                       <StatusBadge
