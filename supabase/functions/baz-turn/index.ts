@@ -574,27 +574,33 @@ Deno.serve(async (request: Request): Promise<Response> => {
               }
 
               case 'request_upload': {
-                const { applicationId, requirementId } = input as {
+                const { applicationId, documentType } = input as {
                   applicationId: string
-                  requirementId: string
+                  documentType?: string
                 }
                 const application = findApplication(loaded, applicationId)
                 if (!application) return { result: 'There is no such application.' }
 
-                // The journey decides what can be asked for, not the model (Invariant 3).
+                // The journey decides what can be asked for, not the model (Invariant 3). The
+                // named type narrows it; without one, the next outstanding document wins.
                 const evaluation = evaluateFor(loaded, application)
-                const outstanding = evaluation.outstanding.find(
-                  (item) =>
-                    item.requirement.id === requirementId &&
-                    item.requirement.kind === 'document',
+                const documents = evaluation.outstanding.filter(
+                  (item) => item.requirement.kind === 'document',
                 )
+                const outstanding =
+                  documents.find(
+                    (item) =>
+                      item.requirement.kind === 'document' &&
+                      item.requirement.documentType === documentType,
+                  ) ?? documents[0]
 
                 if (!outstanding || outstanding.requirement.kind !== 'document') {
                   return {
-                    result:
-                      'That is not an outstanding document on this application. Check the case for what is actually still needed.',
+                    result: 'This application is not waiting on any documents.',
                   }
                 }
+
+                const requirementId = outstanding.requirement.id
 
                 const journey = journeyFor(application.product)
 

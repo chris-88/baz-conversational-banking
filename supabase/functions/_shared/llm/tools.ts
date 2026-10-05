@@ -60,10 +60,16 @@ export const showStatusInput = z.object({
 export const requestUploadInput = z.object({
   applicationId,
   /**
-   * A document requirement of that application's journey. The server checks it exists, is a
-   * document, and is still outstanding — the model cannot invent a document to ask for.
+   * Which kind of document, when the customer has named one. Leave it out and the server picks
+   * the next one the application is waiting for.
+   *
+   * A closed set rather than a requirement id: ids live in the journey files and never reach
+   * the model, so asking for one left it guessing and then explaining to the customer that it
+   * could not.
    */
-  requirementId: z.string().min(1).max(64),
+  documentType: z
+    .enum(['payslip', 'bank_statement', 'photo_id', 'proof_of_address', 'salary_certificate'])
+    .optional(),
 })
 
 export const showPartnerInviteInput = z.object({
@@ -133,9 +139,10 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     name: 'request_upload',
     description:
-      'Ask for one document the case lists as outstanding, by its requirement id. The card is ' +
-      'how a document actually arrives — describing it or promising to send a link does ' +
-      'nothing. Ask for one at a time, and only when it is the sensible next thing.',
+      'Show the card that lets the customer send in a document. The card is how a document ' +
+      'actually arrives — describing it or promising a link does nothing. Pass only the ' +
+      'application and, if they named one, the kind of document; the server picks whichever ' +
+      'is outstanding. One at a time.',
     schema: requestUploadInput,
   },
   {

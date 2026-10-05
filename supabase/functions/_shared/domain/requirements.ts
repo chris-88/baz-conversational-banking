@@ -53,6 +53,8 @@ export type OutstandingReason =
   /** Known from elsewhere, but this journey demands a fresh answer. */
   | 'needs_fresh'
   | 'awaiting_document'
+  /** Sent in, but it needs checking before it counts. */
+  | 'awaiting_verification'
   | 'awaiting_declaration'
   /** Belongs to a partner who has not joined yet. */
   | 'awaiting_partner'
@@ -277,11 +279,17 @@ function evaluateRequirement(requirement: Requirement, context: RequirementConte
 
     case 'document': {
       const document = context.documents.find((d) => d.requirementId === requirement.id)
-      const satisfied =
-        document !== undefined && (requirement.requiresVerification !== true || document.verified)
-      return satisfied
-        ? { status: 'satisfied', fact: null, reused: false }
-        : { status: 'outstanding', reason: 'awaiting_document', knownFact: null }
+      if (document === undefined) {
+        return { status: 'outstanding', reason: 'awaiting_document', knownFact: null }
+      }
+
+      if (requirement.requiresVerification === true && !document.verified) {
+        // Received but unchecked. Told apart from "never arrived" because otherwise the
+        // customer uploads a payslip and is then told it did not come through.
+        return { status: 'outstanding', reason: 'awaiting_verification', knownFact: null }
+      }
+
+      return { status: 'satisfied', fact: null, reused: false }
     }
   }
 }

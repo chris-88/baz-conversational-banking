@@ -574,3 +574,23 @@ section.
   `requiresVerification` therefore stays outstanding after the upload, which is the truthful
   state: nothing has checked it. The mortgage payslip is the only one affected, and the bank
   verifying it wants to be an admin move — not yet built.
+- **2026-10-05** — A document that has arrived but not been checked is its own outstanding
+  reason, `awaiting_verification`, not `awaiting_document`. With one reason for both, uploading
+  the payslip left the case looking identical to never having sent it, so Baz read the case
+  correctly and told the customer it had not gone through — then invented a reason why ("that's
+  the same file as last time, so it hasn't been accepted"), which is a confident fabrication
+  about something it cannot see.
+- **2026-10-05** — Nothing inspects an uploaded file. The function checks its media type and
+  size and stores it; a photo of anything is accepted as a payslip. Content verification is
+  production infrastructure (§68) and the demo does not turn on it. "The bank checks the
+  documents" is an admin move, which is also the only thing that can clear
+  `awaiting_verification`.
+- **2026-10-05** — Baz never describes its own machinery. It told a customer it could not bring
+  up an upload card because the case "doesn't give me the IDs the card needs". That was a real
+  defect — requirement ids live in the journey files and never reach the model — but narrating
+  it is a separate failure, and the voice now forbids it.
+- **2026-10-05** — GAP: the Edge Function entry points are not typechecked. `tsconfig.app.json`
+  includes only `_shared/domain`, `_shared/contracts` and `_shared/tenants`, because the rest
+  uses Deno globals and bare specifiers the app's config cannot resolve. A call to a function
+  that does not exist deployed cleanly and was caught only by reading it. Worth a `deno check`
+  step in CI.

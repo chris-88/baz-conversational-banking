@@ -58,6 +58,9 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   /** §44 — clears the room's conversations. Never touches the presenter case. */
   z.object({ action: z.literal('purge_audience') }),
 
+  /** §41 — the bank checks what was sent in, so a document needing verification can pass. */
+  z.object({ action: z.literal('verify_documents'), caseId: z.uuid() }),
+
   /**
    * One-click demo moves (§41).
    *

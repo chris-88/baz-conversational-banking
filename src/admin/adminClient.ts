@@ -23,6 +23,8 @@ export const adminApi = {
     adminCaseSchema.parse(await call({ action: 'inspect_case', caseId })),
   resetCase: () => call({ action: 'reset_case' }),
   purgeAudience: () => call({ action: 'purge_audience' }),
+  verifyDocuments: (caseId: string) =>
+    call({ action: 'verify_documents', caseId }) as Promise<{ verified: number }>,
   demoAction: (caseId: string, move: Extract<AdminRequest, { action: 'demo_action' }>['move']) =>
     call({ action: 'demo_action', caseId, move }),
   setKillSwitch: (enabled: boolean) => call({ action: 'set_kill_switch', enabled }),

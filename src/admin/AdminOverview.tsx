@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
+import { FileCheckIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -149,6 +149,11 @@ function DemoActions({
     onSuccess: onChanged,
   })
 
+  const verify = useMutation({
+    mutationFn: () => adminApi.verifyDocuments(caseId ?? ''),
+    onSuccess: onChanged,
+  })
+
   const notify = useMutation({
     mutationFn: () => adminApi.notify(caseId ?? ''),
     onSuccess: (result) => {
@@ -187,6 +192,25 @@ function DemoActions({
             </span>
           </button>
         ))}
+
+        <button
+          type="button"
+          disabled={verify.isPending}
+          onClick={() => verify.mutate()}
+          className="bg-card hover:bg-muted/60 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors disabled:opacity-50 sm:col-span-2"
+        >
+          <IconTile tone="primary" size="sm">
+            <FileCheckIcon />
+          </IconTile>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">The bank checks the documents</span>
+            <span className="text-muted-foreground block text-2xs">
+              {verify.data
+                ? `${String(verify.data.verified)} marked as checked.`
+                : 'Marks what has been sent in as verified, so anything waiting on a check can pass. §41'}
+            </span>
+          </span>
+        </button>
 
         <button
           type="button"

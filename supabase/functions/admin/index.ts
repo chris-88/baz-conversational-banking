@@ -360,6 +360,35 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json(ok({ state: result.application.state }), 200)
     }
 
+    case 'verify_documents': {
+      const applications = await admin
+        .from('applications')
+        .select('id')
+        .eq('case_id', action.caseId)
+
+      const ids = ((applications.data ?? []) as { id: string }[]).map((row) => row.id)
+
+      const updated = await admin
+        .from('documents')
+        .update({ verified: true })
+        .eq('case_id', action.caseId)
+        .eq('verified', false)
+        .select('id')
+
+      const count = ((updated.data ?? []) as { id: string }[]).length
+
+      if (count > 0) {
+        await writeEvent(admin, {
+          caseId: action.caseId,
+          type: 'documents_verified',
+          actor: 'admin',
+          payload: { count, applications: ids.length },
+        })
+      }
+
+      return json(ok({ verified: count }), 200)
+    }
+
     case 'send_notification': {
       // §58 — the link carries an opaque single-use code, never anything about the case.
       const code = crypto.randomUUID().replaceAll('-', '')

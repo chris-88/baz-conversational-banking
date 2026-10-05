@@ -96,6 +96,8 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
           return `${item.requirement.label} — made on the review card`
         case 'awaiting_document':
           return `${item.requirement.label} — a document to upload`
+        case 'awaiting_verification':
+          return `${item.requirement.label} — already sent in, the team is checking it. Do NOT ask for it again or suggest it failed.`
         case 'awaiting_partner':
           return `${item.requirement.label} — waiting on the second applicant`
         case 'missing':
