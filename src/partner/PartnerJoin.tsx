@@ -47,8 +47,15 @@ export function PartnerJoin(): ReactNode {
       .then((result) => {
         if (!cancelled) setView(result)
       })
-      .catch((caught: unknown) => {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : 'That link did not work.')
+      .catch(() => {
+        // Whatever went wrong underneath — malformed, expired, already used — it is the same
+        // thing from here: this link will not get them in.
+        if (!cancelled) {
+          setError(
+            'That invitation link isn’t valid. It may have expired or already been used — ask ' +
+              'for a new one.',
+          )
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)

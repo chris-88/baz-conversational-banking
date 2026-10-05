@@ -1,5 +1,4 @@
-import { requireSupabase } from '@/lib/supabase'
-import { apiErrorSchema } from '@contracts/common.ts'
+import { callFunction } from '@/lib/callFunction'
 import {
   caseActionResponseSchema,
   type CaseActionRequest,
@@ -13,20 +12,5 @@ import {
  * re-validates access, state and rules on every one.
  */
 export async function runCaseAction(action: CaseActionRequest): Promise<CaseActionResponse> {
-  const supabase = requireSupabase()
-
-  const invoked = await supabase.functions.invoke<unknown>('case-action', { body: action })
-
-  if (invoked.error) {
-    const message = invoked.error instanceof Error ? invoked.error.message : 'That did not work.'
-    throw new Error(message)
-  }
-
-  const envelope = invoked.data as { ok?: boolean; data?: unknown; error?: unknown }
-  if (envelope.ok !== true) {
-    const parsed = apiErrorSchema.safeParse(envelope.error)
-    throw new Error(parsed.success ? parsed.data.message : 'That did not work.')
-  }
-
-  return caseActionResponseSchema.parse(envelope.data)
+  return caseActionResponseSchema.parse(await callFunction('case-action', action))
 }

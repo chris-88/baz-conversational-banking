@@ -11,7 +11,7 @@ const surfaces = [
   { route: '/#/', name: 'public site', expect: /For whatever life brings next/i },
   { route: '/#/app/login', name: 'simulated login', expect: /simulated sign-in for demonstration/i },
   // An invalid invite is refused rather than showing a page: the token is the whole gate.
-  { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation has expired/i },
+  { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation link isn.{0,3}t valid/i },
   { route: '/#/try', name: 'audience entry', expect: /Try Baz/i },
   { route: '/#/admin', name: 'presenter console', expect: /presenter console/i },
 ] as const
@@ -20,7 +20,11 @@ function collectErrors(page: Page): string[] {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`))
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text())
+    // A refused request logs a browser network error. That is the server doing its job, not
+    // the app failing, so only genuine script errors count.
+    if (message.type() === 'error' && !message.text().includes('Failed to load resource')) {
+      errors.push(message.text())
+    }
   })
   return errors
 }

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { requireSupabase } from '@/lib/supabase'
+import { callFunction } from '@/lib/callFunction'
 import { sessionResponseSchema, type SessionResponse } from '@contracts/session.ts'
-import { apiErrorSchema } from '@contracts/common.ts'
 
 /**
  * Every visitor gets an anonymous Supabase user, which `session` then maps to a participant
@@ -22,22 +22,8 @@ export async function ensureAnonymousUser(): Promise<string> {
 }
 
 async function invoke(body: Record<string, unknown>): Promise<unknown> {
-  const supabase = requireSupabase()
   await ensureAnonymousUser()
-
-  const invoked = await supabase.functions.invoke<unknown>('session', { body })
-
-  if (invoked.error) {
-    throw new Error(invoked.error instanceof Error ? invoked.error.message : 'Could not reach the server.')
-  }
-
-  const envelope = invoked.data as { ok?: boolean; data?: unknown; error?: unknown }
-  if (envelope.ok !== true) {
-    const parsed = apiErrorSchema.safeParse(envelope.error)
-    throw new Error(parsed.success ? parsed.data.message : 'Could not start a session.')
-  }
-
-  return envelope.data
+  return callFunction('session', body)
 }
 
 /** §29 — hands this conversation to the app. The code is opaque and single-use. */
