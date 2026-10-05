@@ -44,8 +44,16 @@ function ApplicationRow({ application }: { application: Application }): ReactNod
 
   const total = application.steps.length
   const done = application.steps.filter((step) => step.done).length
-  const shown = application.steps.slice(0, VISIBLE_STEPS)
-  const hidden = total - shown.length
+
+  /**
+   * What is left, not what is finished. A mortgage carries nearly forty requirements and the
+   * first several are always the identity the bank already holds, so listing them in order
+   * filled the card with ticks and told the customer nothing they could act on. The count of
+   * what is done is in the bar; the list is the answer to "what do you need from me".
+   */
+  const remaining = application.steps.filter((step) => !step.done)
+  const shown = remaining.slice(0, VISIBLE_STEPS)
+  const hidden = remaining.length - shown.length
 
   return (
     <div className="space-y-3 px-4 py-3.5">
@@ -64,19 +72,24 @@ function ApplicationRow({ application }: { application: Application }): ReactNod
         <ProgressBar value={done / total} label={`${String(done)} of ${String(total)} done`} />
       )}
 
+      {!settled && total > 0 && remaining.length === 0 && (
+        <p className="text-state-done flex items-center gap-2 text-sm">
+          <CheckIcon aria-hidden className="size-4" strokeWidth={3} />
+          Everything we need is in. Ready to review.
+        </p>
+      )}
+
       {!settled && shown.length > 0 && (
         <ul className="space-y-1.5">
           {shown.map((step) => (
             <li key={step.label} className="flex items-start gap-2.5 text-sm">
-              <StepMark done={step.done} waitingOnPartner={step.waitingOnPartner} />
-              <span className={step.done ? 'text-muted-foreground' : 'text-foreground'}>
-                {step.label}
-              </span>
+              <StepMark waitingOnPartner={step.waitingOnPartner} />
+              <span className="text-foreground">{step.label}</span>
             </li>
           ))}
           {hidden > 0 && (
             <li className="text-muted-foreground pl-[1.625rem] text-xs">
-              and {hidden} more {hidden === 1 ? 'step' : 'steps'}
+              and {hidden} more to come
             </li>
           )}
         </ul>
@@ -86,28 +99,10 @@ function ApplicationRow({ application }: { application: Application }): ReactNod
 }
 
 /**
- * The icon carries the meaning and the text beside it names the step, so a tick and a clock are
- * distinguishable without colour. `title` gives each one a name for the same reason.
+ * The icon carries the meaning and the text beside it names the step, so waiting on the
+ * customer and waiting on their partner are distinguishable without colour.
  */
-function StepMark({
-  done,
-  waitingOnPartner,
-}: {
-  done: boolean
-  waitingOnPartner: boolean
-}): ReactNode {
-  if (done) {
-    return (
-      <span
-        title="Done"
-        className="bg-state-done/15 text-state-done mt-0.5 grid size-4.5 shrink-0 place-items-center rounded-full"
-      >
-        <CheckIcon aria-hidden className="size-3" strokeWidth={3} />
-        <span className="sr-only">Done</span>
-      </span>
-    )
-  }
-
+function StepMark({ waitingOnPartner }: { waitingOnPartner: boolean }): ReactNode {
   if (waitingOnPartner) {
     return (
       <span
