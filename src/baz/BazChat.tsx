@@ -69,7 +69,12 @@ export function BazChat({
     setActionError(null)
     try {
       const result = await runCaseAction(action)
-      await send(`${result.summary} ${followUp}`)
+
+      // Report the outcome as soon as the server confirms it. Telling Baz is a full streamed
+      // turn, and awaiting that first left the card that committed the action sitting on
+      // "Submitting…" for the whole reply with the answer already in hand. Cards are disabled
+      // while a turn streams, so nothing else can be committed in the meantime.
+      void send(`${result.summary} ${followUp}`)
       return true
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : 'That did not work.')
@@ -162,7 +167,10 @@ export function BazChat({
       setActionError(null)
       try {
         const result = await runCaseAction({ action: 'invite_partner', caseId: caseId ?? '', name })
-        await send(`${result.summary} What happens on their side?`)
+
+        // The link exists the moment the server returns it, so it goes on screen now rather
+        // than ten seconds later when Baz has finished talking about it.
+        void send(`${result.summary} What happens on their side?`)
         return result.inviteUrl
       } catch (caught) {
         setActionError(caught instanceof Error ? caught.message : 'That did not work.')
