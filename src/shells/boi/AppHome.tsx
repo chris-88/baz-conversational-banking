@@ -1,12 +1,16 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRightIcon, BellIcon, HomeIcon, UsersIcon, WalletIcon } from 'lucide-react'
+import { ArrowRightIcon, BellIcon, WalletIcon } from 'lucide-react'
 import { canonicalCustomer } from '@domain/seed/canonical.ts'
 import { Card } from '@/components/ui/card'
 import { IconTile } from '@/components/IconTile'
 import { ListRow } from '@/components/ListRow'
 import { SetupNotice } from '@/components/SetupNotice'
 import { routes } from '@/app/routes'
+import { StatusDot } from '@/components/StatusDot'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useApplications } from '@/lib/useApplications'
+import { useCaseSession } from '@/lib/useCaseSession'
 
 function greeting(now = new Date()): string {
   const hour = now.getHours()
@@ -21,6 +25,9 @@ function greeting(now = new Date()): string {
  * by the model.
  */
 export function AppHome(): ReactNode {
+  const session = useCaseSession()
+  const applications = useApplications(session.data?.caseId ?? null)
+
   return (
     <div className="flex-1 space-y-6 px-4 pt-4 pb-28">
       <header className="flex items-center gap-3">
@@ -86,21 +93,46 @@ export function AppHome(): ReactNode {
 
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold">Your next steps</h2>
-          <span className="text-muted-foreground text-xs">M3</span>
+          <h2 className="text-sm font-semibold">Your applications</h2>
+          <Link to={routes.app.baz} className="text-primary text-xs font-medium">
+            Ask Baz
+          </Link>
         </div>
-        <Card className="gap-0 divide-y p-0">
-          <ListRow
-            leading={<IconTile tone="deep"><HomeIcon /></IconTile>}
-            title="Complete your mortgage application"
-            subtitle="Computed from outstanding requirements, not remembered"
-          />
-          <ListRow
-            leading={<IconTile tone="warning"><UsersIcon /></IconTile>}
-            title="Your joint account invitation"
-            subtitle={`Sent to ${'Emma'} · waiting for completion`}
-          />
-        </Card>
+
+        {applications.isPending && session.data ? (
+          <Card className="gap-0 divide-y p-0">
+            {[0, 1].map((row) => (
+              <div key={row} className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="size-2 rounded-full" />
+                <Skeleton className="h-4 flex-1" />
+              </div>
+            ))}
+          </Card>
+        ) : (applications.data?.length ?? 0) === 0 ? (
+          <Card className="p-4">
+            <p className="text-muted-foreground text-sm">
+              Nothing in progress yet. Tell Baz what you&rsquo;re trying to do and it will start
+              whatever you choose.
+            </p>
+          </Card>
+        ) : (
+          <Card className="gap-0 divide-y p-0">
+            {applications.data?.map((application) => (
+              <div key={application.id} className="flex items-center gap-3 px-4 py-3">
+                <StatusDot state={application.state} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {application.displayName}
+                  </span>
+                  {/* The label always accompanies the dot: colour is never the only signal. */}
+                  <span className="text-muted-foreground block text-xs">
+                    {application.stateLabel}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </Card>
+        )}
       </section>
     </div>
   )

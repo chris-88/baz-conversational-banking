@@ -325,3 +325,11 @@ section.
 - **2026-10-05** — Verified live: choosing two products created two applications, derived their
   state through the machine, and wrote 8 `context_reused` events — §53 measuring itself from
   the bank-held facts rather than being asserted.
+- **2026-10-05** — The app home reads applications directly under RLS rather than through an
+  Edge Function, because it is a read and RLS already restricts it to the primary customer. The
+  display name and state label come from the domain, so the screen and the model describe state
+  in identical words.
+- **2026-10-05** — Verified live, the §6 Stage 8 / §67 beat: asked for a loan while a mortgage
+  was open, Baz advised against it *before* offering it, offered it anyway when the customer
+  pressed, then offered the pause. Pausing wrote `state: paused, resume_to: waiting_customer` —
+  the machine recording where to return, not the model remembering.
