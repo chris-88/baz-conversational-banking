@@ -24,9 +24,8 @@ export function AppBaz(): ReactNode {
         openingMessage={searchParams.get('say')}
         greeting={
           <div className="space-y-2">
-            <p className="font-medium">Hi, I&rsquo;m Baz 👋</p>
-            <p>I&rsquo;m an AI assistant. I can help with your banking and get things done.</p>
-            <p>What are you looking to do today?</p>
+            <p>Hi again — Baz here. Still an AI, still better than a form.</p>
+            <p>What are you trying to get done?</p>
           </div>
         }
       />

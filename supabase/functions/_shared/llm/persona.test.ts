@@ -48,17 +48,15 @@ describe('composePersona()', () => {
     expect(composePersona(slidersFor('default'))).toMatchInlineSnapshot(`
       "## Style
 
-      This section controls how you write. It does not change what you are allowed to discuss,
-      what actions you can take, any application rule, or any customer protection.
+      How you write, dialled in. This changes nothing about what you may discuss, what you can
+      do, any application rule, or any customer protection.
 
-      - Keep answers short. A few sentences is usually right.
-      - A light touch of humour is welcome where it fits naturally. Never at the customer’s expense.
-      - No sarcasm.
-      - Speak plainly and professionally. Contractions are fine.
-      - A little personality is welcome.
-      - Use plain, direct language.
-
-      - Always be clear that you are an AI assistant if asked. Never claim to be a person."
+      - One to three sentences. If it is running longer, you are explaining something they did not ask about.
+      - Be dry. A wry aside where the moment genuinely offers one — never forced, never at their expense.
+      - No sarcasm at all.
+      - Talk like a good colleague. Contractions, plain words, no bank-speak.
+      - Let a bit of character through in how you phrase things.
+      - Plain words. No imagery."
     `)
   })
 
@@ -68,7 +66,7 @@ describe('composePersona()', () => {
 
     expect(quiet).not.toEqual(loud)
     expect(quiet).toContain('No jokes.')
-    expect(loud).toContain('genuinely funny')
+    expect(loud).toMatch(/Properly funny/)
   })
 
   it('clamps values outside 0 to 1 rather than throwing', () => {
@@ -81,14 +79,8 @@ describe('composePersona()', () => {
   it('always states the style block cannot change scope, rules or protections', () => {
     for (const preset of PRESET_NAMES) {
       const block = composePersona(slidersFor(preset))
-      expect(block, preset).toContain('does not change what you are allowed to discuss')
+      expect(block, preset).toMatch(/changes nothing about what you may discuss/i)
       expect(block, preset).toContain('customer protection')
-    }
-  })
-
-  it('always carries the AI disclosure, whatever the persona (§16)', () => {
-    for (const preset of PRESET_NAMES) {
-      expect(composePersona(slidersFor(preset)), preset).toContain('Never claim to be a person')
     }
   })
 
@@ -127,7 +119,7 @@ describe('applySensitivity() (§50, Invariant 5)', () => {
   it('silences even the most playful persona', () => {
     const block = composePersona(applySensitivity(at(1), true))
     expect(block).toContain('No jokes.')
-    expect(block).toContain('No sarcasm.')
+    expect(block).toContain('No sarcasm at all.')
   })
 })
 
@@ -153,20 +145,20 @@ describe('toneBucket()', () => {
 describe('the default persona matches §16', () => {
   const block = composePersona(slidersFor('default'))
 
-  it('allows light humour', () => {
-    expect(block).toContain('light touch of humour')
+  it('is dry rather than humourless', () => {
+    expect(block).toMatch(/Be dry/)
     expect(block).not.toContain('No jokes.')
   })
 
-  it('allows a little personality', () => {
-    expect(block).not.toContain('Be straightforward and literal.')
+  it('lets character through rather than being literal', () => {
+    expect(block).not.toContain('Be literal and direct.')
   })
 
-  it('keeps answers short', () => {
-    expect(block).toMatch(/few words|Keep answers short/)
+  it('keeps turns to a conversational length', () => {
+    expect(block).toMatch(/One to three sentences/)
   })
 
   it('does not make the default sarcastic', () => {
-    expect(block).toContain('No sarcasm.')
+    expect(block).toContain('No sarcasm at all.')
   })
 })

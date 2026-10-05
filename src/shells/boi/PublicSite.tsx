@@ -121,8 +121,8 @@ export function PublicSite(): ReactNode {
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-sm font-semibold">Baz</p>
                 <p className="text-muted-foreground text-sm">
-                  Tell me what you&rsquo;re trying to do and I&rsquo;ll work out what you need —
-                  no need to know which product to look for.
+                  Tell me what you&rsquo;re trying to do. You don&rsquo;t need to know which
+                  product it is — that&rsquo;s my job.
                 </p>
               </div>
             </div>

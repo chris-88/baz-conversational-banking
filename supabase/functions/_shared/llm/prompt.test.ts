@@ -267,3 +267,46 @@ describe('the fact reference', () => {
     expect(stablePrefix).toContain('# Facts you can record')
   })
 })
+
+/**
+ * The voice is what stops the prompt being 32 prohibitions and nothing else, which produced a
+ * model that sounded like a compliance document. §13, §16, §63 priority 2.
+ */
+describe('voice', () => {
+  const prompt = composeSystemPrompt(baseInput())
+
+  it('tells the model who it is, not only what it may not do', () => {
+    expect(prompt).toContain('# Who you are')
+    expect(prompt).toMatch(/good company|worth talking to/i)
+  })
+
+  it('demonstrates the voice rather than only describing it', () => {
+    // A model mirrors an example far better than it follows an adjective.
+    expect(prompt).toMatch(/Bad:/)
+    expect(prompt).toMatch(/Good:/)
+  })
+
+  it('bans the throat-clearing that makes a bot sound like a bot', () => {
+    for (const phrase of ['I can help you with that', 'Based on what you', 'Is there anything else']) {
+      expect(prompt).toContain(phrase)
+    }
+  })
+
+  it('asks for one question at a time rather than a list, since a list is a form', () => {
+    expect(prompt).toMatch(/One question at a time/i)
+  })
+
+  it('guarantees the AI disclosure from policy, where no persona can remove it (§16, §18)', () => {
+    for (const preset of ['default', 'dry_humour', 'poetic', 'formal'] as const) {
+      const composed = composeSystemPrompt({ ...baseInput(), sliders: slidersFor(preset) })
+      expect(composed, preset).toMatch(/never claim to be a human/i)
+    }
+  })
+
+  it('still suppresses the wit on a sensitive turn, warmth intact (§50)', () => {
+    const sensitive = composeSystemPrompt({ ...baseInput(), sensitive: true })
+    expect(sensitive).toContain('No jokes.')
+    expect(sensitive).toContain('No sarcasm at all.')
+    expect(sensitive).toMatch(/Be plain, warm and brief/)
+  })
+})

@@ -70,6 +70,16 @@ const turns = [
     message: 'What rate would I get on the mortgage?',
     looksFor: 'uses the illustrative catalogue figure and says it is illustrative; invents nothing',
   },
+  {
+    id: 'frustrated',
+    message: 'This is taking ages. Why is nothing happening with my mortgage?',
+    looksFor: 'reacts like a person, does not open with "I understand that you are frustrated"',
+  },
+  {
+    id: 'sensitive',
+    message: 'My husband died last month and I need to sort out the mortgage.',
+    looksFor: 'warmth stays, wit goes, no product pitch (§50)',
+  },
 ]
 
 const client = new Anthropic({ apiKey })

@@ -279,3 +279,25 @@ section.
   to a card it showed last time, while the screen started empty — it read as Baz apologising
   for something the customer never saw. Cards are not yet persisted, so they do not come back
   on reload; the text does.
+
+## 2026-10-05 — Giving Baz a voice
+
+- **2026-10-05** — **The prompt was 32 prohibitions and no character**, which produced exactly
+  the bot the vision document opens by mocking: correct, procedural, and indistinguishable from
+  a decision tree. §63 ranks natural conversation second only to persistent context, so this is
+  not polish. Added a `VOICE` section placed immediately after policy.
+- **2026-10-05** — The voice is taught with worked bad/good pairs rather than adjectives. A model
+  mirrors a demonstrated example far better than it follows a description, and "be warm and
+  concise" had already failed to produce either.
+- **2026-10-05** — The persona fragments granted permission rather than instructed — "a light
+  touch of humour is welcome where it fits naturally", "a little personality is welcome". A model
+  given permission to be dull will take it. They now instruct.
+- **2026-10-05** — `TOOL_GUIDANCE` ended with "keep your own words short", which was actively
+  suppressing character. It now says to give one line on why the card is there, since the card
+  carries the detail.
+- **2026-10-05** — The AI disclosure moved out of the persona block and is guaranteed by policy
+  and voice, where no slider can touch it. Asserting it in the persona test made it look like a
+  persona setting, which is precisely what §18 says it must not be.
+- **2026-10-05** — Measured: the discovery turn went from 107 words to 31, still calling both
+  tools. The comparison harness now includes a frustrated turn and a bereavement turn, so the
+  §50 suppression is checked every time the voice is touched.

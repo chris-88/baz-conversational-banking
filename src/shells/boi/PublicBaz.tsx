@@ -44,12 +44,14 @@ export function PublicBaz(): ReactNode {
         openingMessage={searchParams.get('say')}
         greeting={
           <div className="space-y-2">
-            <p className="font-medium">Hi, I&rsquo;m Baz 👋</p>
             <p>
-              I can help with your accounts, mortgage, loans, insurance and more. I&rsquo;m an AI
-              assistant.
+              Hi — I&rsquo;m Baz, Bank of Ireland&rsquo;s AI assistant.
             </p>
-            <p>You can ask me a question, or tell me what you&rsquo;re trying to do.</p>
+            <p>
+              Before you ask: no, I&rsquo;m not another bot whose greatest achievement is finding
+              the Contact Us page.
+            </p>
+            <p>Tell me what you&rsquo;re trying to do and I&rsquo;ll see if I can actually help.</p>
           </div>
         }
       />
