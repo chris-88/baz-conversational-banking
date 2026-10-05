@@ -27,6 +27,7 @@ import {
   writeEvent,
 } from '../_shared/db/case-repository.ts'
 import { buildCaseDigest } from '../_shared/db/digest.ts'
+import { needsFor } from '../_shared/db/needs.ts'
 import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case.ts'
 
 /**
@@ -53,39 +54,17 @@ const ENABLED_TOOLS: readonly ToolName[] = [
 const INVITE_CARD_WINDOW = 8
 
 /**
+ * A customer who will not answer questions must still be able to get somewhere, so the needs
+ * gate lifts once they have had their say regardless of what was established.
+ */
+const DISCOVERY_PATIENCE = 4
+
+/**
  * Status is worth refreshing as things change, so this window is short — it only stops the
  * same card appearing twice in a row, which is what happens when the model reaches for it as
  * something to say.
  */
 const STATUS_CARD_WINDOW = 2
-
-/**
- * §6 Stages 2–4 — needs conversation and context discovery come before product discovery.
- *
- * What the customer has told us about their situation, as opposed to who they are or what they
- * earn. Offering products before any of this is known makes the offer a guess dressed up as
- * advice, and it puts the customer back in the position of having to know which product they
- * need — which is the thing Baz exists to remove.
- */
-const DISCOVERY_KEYS: readonly string[] = [
-  'goals.primaryObjective',
-  'lifeEvent.recentlyMarried',
-  'lifeEvent.newChild',
-  'household.buyingWith',
-  'household.dependantCount',
-  'household.financesManagedJointly',
-  'housing.currentTenure',
-  'housing.firstTimeBuyer',
-]
-
-/** Enough of a picture to offer against. Below this, keep asking. */
-const DISCOVERY_MINIMUM = 3
-
-/**
- * A customer who will not answer questions must still be able to get somewhere, so the gate
- * lifts once they have had their say regardless of what was recorded.
- */
-const DISCOVERY_PATIENCE = 4
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -211,7 +190,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   // ---- Generate ---------------------------------------------------------
   const primary = participantFor(loaded, 'primary')
-  const digest = buildCaseDigest(loaded)
+  const digest = buildCaseDigest(loaded, { sensitiveDisclosure: gate.suppressHumour })
 
   const history = loaded.messages
     .filter((message) => message.role !== 'system')
@@ -244,8 +223,6 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(toSseFrame(event)))
 
       try {
-        const learnedThisTurn = new Set<string>()
-
         const events = runBazTurn({
           client: anthropic,
           model: env('BAZ_MODEL'),
@@ -271,7 +248,6 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 })
 
                 for (const key of outcome.accepted) {
-                  learnedThisTurn.add(String(key))
                   await writeEvent(admin, {
                     caseId: turn.caseId,
                     type: 'context_captured',
@@ -309,24 +285,27 @@ Deno.serve(async (request: Request): Promise<Response> => {
               case 'show_product_options': {
                 const { products } = input as { products: { product: any; reason: string }[] }
 
-                const learned = new Set(
-                  [
-                    ...loaded.facts
-                      .filter((fact) => fact.supersededBy === null)
-                      .map((fact) => String(fact.key)),
-                    // What this turn just recorded. `loaded` is the case as it was when the
-                    // turn began, so without this a customer who says everything in their
-                    // first message is told nothing has been learned about them yet.
-                    ...learnedThisTurn,
-                  ].filter((key) => DISCOVERY_KEYS.includes(key)),
+                /**
+                 * §5, §6 — the needs engine decides whether there is enough to go on.
+                 *
+                 * This was a count of discovery facts, which was a guess at the same thing.
+                 * The engine scores evidence properly, so the threshold it already applies is
+                 * the one that should hold here.
+                 */
+                const candidates = needsFor(loaded, {
+                  sensitiveDisclosure: gate.suppressHumour,
+                })
+                const established = candidates.some(
+                  (candidate) =>
+                    candidate.state === 'ready_to_surface' || candidate.state === 'clarify',
                 )
                 const customerTurns = loaded.messages.filter((m) => m.role === 'customer').length
 
-                if (learned.size < DISCOVERY_MINIMUM && customerTurns < DISCOVERY_PATIENCE) {
+                if (!established && customerTurns < DISCOVERY_PATIENCE) {
                   return {
                     result:
-                      'Too early. You know almost nothing about their situation yet, so any offer is a guess. ' +
-                      'Ask about what has changed for them, who else is involved, and what they are hoping to do — ' +
+                      'Too early. Nothing about their situation is established yet, so any offer is a guess. ' +
+                      'Ask what has changed for them, who else is involved and what they are hoping to do — ' +
                       'record what they tell you, then offer. Do not mention that you were stopped.',
                   }
                 }

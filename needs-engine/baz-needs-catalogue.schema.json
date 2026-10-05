@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Baz Needs Catalogue",
+  "type": "object",
+  "required": [
+    "metadata",
+    "operating_model",
+    "products",
+    "needs"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object"
+    },
+    "operating_model": {
+      "type": "object"
+    },
+    "global_suppressions": {
+      "type": "array"
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "family",
+          "type",
+          "source"
+        ]
+      }
+    },
+    "needs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "family",
+          "signals",
+          "clarifying_questions",
+          "product_mappings",
+          "approved_framing"
+        ]
+      }
+    }
+  }
+}

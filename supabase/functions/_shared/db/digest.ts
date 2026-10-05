@@ -3,7 +3,9 @@ import { journeyFor } from '../domain/journeys/index.ts'
 import { evaluateJourney, type OutstandingItem, type RequirementContext } from '../domain/requirements.ts'
 import { evaluateAdvisories } from '../domain/advisories.ts'
 import { stateLabel } from '../domain/state-machine.ts'
-import type { CaseDigest, DigestApplication, DigestFact } from '../llm/prompt.ts'
+import type { CaseDigest, DigestApplication, DigestFact, DigestNeeds } from '../llm/prompt.ts'
+import { needsFor } from './needs.ts'
+import { deferred, nextToClarify, readyToSurface } from '../domain/needs/engine.ts'
 import { participantFor, type LoadedCase } from './loaded-case.ts'
 
 /**
@@ -157,7 +159,13 @@ function describeEvent(event: { type: string; payload: Record<string, unknown> }
   }
 }
 
-export function buildCaseDigest(loaded: LoadedCase): CaseDigest {
+export function buildCaseDigest(
+  loaded: LoadedCase,
+  options: { readonly sensitiveDisclosure?: boolean } = {},
+): CaseDigest {
+  const needs = needsFor(loaded, {
+    sensitiveDisclosure: options.sensitiveDisclosure ?? false,
+  })
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
 
@@ -183,9 +191,27 @@ export function buildCaseDigest(loaded: LoadedCase): CaseDigest {
     ),
   ]
 
+  const ask = nextToClarify(needs)
+
+  const digestNeeds: DigestNeeds = {
+    surface: readyToSurface(needs).map((candidate) => ({
+      name: candidate.need.name,
+      framing: candidate.need.framing,
+    })),
+    ask:
+      ask === null || ask.nextQuestion === null
+        ? null
+        : { name: ask.need.name, question: ask.nextQuestion },
+    hold: deferred(needs).map((candidate) => ({
+      name: candidate.need.name,
+      reason: candidate.reason ?? 'the timing is wrong',
+    })),
+  }
+
   return {
     customerName: loaded.customerName,
     sensitiveHeld: sensitiveAreas,
+    needs: digestNeeds,
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

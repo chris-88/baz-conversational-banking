@@ -177,7 +177,13 @@ function findFact(
 // Branch evaluation
 // ---------------------------------------------------------------------------
 
-function createFactReader(context: RequirementContext): FactReader {
+/**
+ * Reads the case's facts by key and subject, newest first, ignoring superseded ones.
+ *
+ * Exported because the needs engine reads the same facts through the same rules — two readers
+ * disagreeing about what the case says would be worse than either being wrong.
+ */
+export function createFactReader(context: RequirementContext): FactReader {
   const read = (key: FactKey, subject: RequirementSubject = 'household'): Fact | null => {
     const factSubject = resolveFactSubject(subject, context.participants)
     if (factSubject === null) return null

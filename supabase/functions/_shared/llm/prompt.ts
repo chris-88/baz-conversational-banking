@@ -270,6 +270,15 @@ export type DigestPartner = {
   readonly outstanding: readonly string[]
 }
 
+export type DigestNeeds = {
+  /** Evidenced, appropriate now, best first. */
+  readonly surface: readonly { readonly name: string; readonly framing: string }[]
+  /** The one thing most worth asking about next. */
+  readonly ask: { readonly name: string; readonly question: string } | null
+  /** Real, but the wrong moment — with the reason, which the customer is owed. */
+  readonly hold: readonly { readonly name: string; readonly reason: string }[]
+}
+
 export type CaseDigest = {
   readonly customerName: string | null
   readonly authLevel: 'anonymous' | 'authenticated'
@@ -283,6 +292,11 @@ export type CaseDigest = {
    * (Invariant 6). Counts and labels only — never values.
    */
   readonly sensitiveHeld?: readonly string[]
+  /**
+   * What the needs engine makes of the customer's situation. Scored, suppressed and timed
+   * before you see it — these are conclusions, not suggestions to reconsider.
+   */
+  readonly needs?: DigestNeeds
   readonly partner: DigestPartner | null
   /** §36 — what changed while the customer was away. */
   readonly eventsSinceLastSeen: readonly string[]
@@ -386,6 +400,48 @@ function digestSection(digest: CaseDigest): string {
     ...digest.facts.map(factLine),
     '',
   )
+
+  /**
+   * §15, §19 — the engine has already decided what is relevant, what is worth asking about and
+   * what should wait. It is stated as conclusions because reasoning the model could relitigate
+   * is reasoning the bank cannot stand over.
+   */
+  const needs = digest.needs
+  if (needs !== undefined && (needs.surface.length > 0 || needs.ask !== null || needs.hold.length > 0)) {
+    lines.push('## What this customer appears to need')
+
+    if (needs.surface.length > 0) {
+      lines.push(
+        'Evidenced and appropriate to raise now. Use the wording as the claim and put it in',
+        'your own voice; do not invent benefits that are not here:',
+        ...needs.surface.map((item) => `- ${item.name}: ${item.framing}`),
+        '',
+      )
+    }
+
+    if (needs.ask !== null) {
+      lines.push(
+        `Worth asking about, not yet offering — ${needs.ask.name}:`,
+        `- ${needs.ask.question}`,
+        '',
+      )
+    }
+
+    if (needs.hold.length > 0) {
+      lines.push(
+        'Relevant, but not now. Say so plainly if it comes up, give the reason, and let them',
+        'decide — do not quietly drop it and do not push it:',
+        ...needs.hold.map((item) => `- ${item.name} — ${item.reason}`),
+        '',
+      )
+    }
+
+    lines.push(
+      'Anything not listed here is not established. Do not offer it, however reasonable it',
+      'sounds.',
+      '',
+    )
+  }
 
   lines.push('## Applications')
   if (digest.applications.length === 0) {

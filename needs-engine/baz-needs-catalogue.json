@@ -1,0 +1,2264 @@
+{
+  "metadata": {
+    "name": "Baz Needs Catalogue — Bank of Ireland Personal Banking",
+    "version": "0.1",
+    "as_of": "2026-10-05",
+    "scope": "BOI personal banking in the Republic of Ireland. Business, corporate, private banking and wealth management are excluded except where a personal journey overlaps.",
+    "purpose": "Turn conversational context into evidence-backed need candidates, then clarify, surface, defer or suppress BOI options.",
+    "source_policy": "Live product facts, eligibility, rates, offers and scheme availability must come from controlled BOI data; never from model memory.",
+    "sources": {
+      "current_accounts": "https://personalbanking.bankofireland.com/bank/current-accounts/",
+      "savings": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/",
+      "loans": "https://personalbanking.bankofireland.com/borrow/loans/",
+      "credit_cards": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/",
+      "mortgages": "https://personalbanking.bankofireland.com/borrow/mortgages/",
+      "home_insurance": "https://personalbanking.bankofireland.com/insure-and-protect/insurance/home-insurance/",
+      "travel_insurance": "https://personalbanking.bankofireland.com/insure-and-protect/insurance/travel-insurance/",
+      "life_insurance": "https://personalbanking.bankofireland.com/insure-and-protect/life-insurance/",
+      "pensions": "https://personalbanking.bankofireland.com/plan/pensions/",
+      "investments": "https://personalbanking.bankofireland.com/save-and-invest/investments/",
+      "international": "https://personalbanking.bankofireland.com/bank/international-payments/sending-money-abroad/"
+    }
+  },
+  "operating_model": {
+    "dimensions": [
+      "life_event",
+      "goal",
+      "financial_circumstance",
+      "existing_relationship"
+    ],
+    "signal_strengths": {
+      "explicit": {
+        "score": 1.0,
+        "description": "Customer directly states the need or product intent."
+      },
+      "strong_inferred": {
+        "score": 0.7,
+        "description": "Circumstances strongly suggest the need; normally clarify before surfacing."
+      },
+      "soft_inferred": {
+        "score": 0.35,
+        "description": "Supporting context only; insufficient on its own."
+      }
+    },
+    "recommended_states": [
+      "LATENT",
+      "CLARIFY",
+      "READY_TO_SURFACE",
+      "SURFACED",
+      "ACCEPTED",
+      "DECLINED",
+      "DEFERRED",
+      "SUPPRESSED"
+    ],
+    "recommended_thresholds": {
+      "clarify": 0.5,
+      "surface": 0.75
+    },
+    "principle": "Evidence can suggest a need; the customer decides whether to pursue a product."
+  },
+  "global_suppressions": [
+    {
+      "id": "financial_distress_credit_suppression",
+      "when": [
+        "persistent inability to meet normal living costs",
+        "arrears or repeated missed payments disclosed",
+        "cannot afford essentials"
+      ],
+      "suppress_families": [
+        "loans",
+        "credit_cards",
+        "borrowing"
+      ],
+      "route_to": "money-worries/support journey",
+      "reason": "Do not answer structural financial difficulty with opportunistic credit."
+    },
+    {
+      "id": "active_mortgage_unsecured_credit_defer",
+      "when": [
+        "active mortgage application",
+        "mortgage affordability/underwriting in progress"
+      ],
+      "deprioritise": [
+        "personal_loan",
+        "car_loan",
+        "green_car_loan",
+        "credit_cards",
+        "overdraft"
+      ],
+      "reason": "New commitments may affect mortgage assessment."
+    },
+    {
+      "id": "short_horizon_investment_suppression",
+      "when": [
+        "money required within roughly five years",
+        "customer requires capital certainty or near-term access"
+      ],
+      "suppress_families": [
+        "investments"
+      ],
+      "prefer_families": [
+        "savings"
+      ],
+      "reason": "Short-term saving and investment risk solve different problems."
+    },
+    {
+      "id": "sensitive_health_noncommercialisation",
+      "when": [
+        "customer discloses diagnosis/illness/treatment without asking about protection"
+      ],
+      "suppress": [
+        "income_protection",
+        "specified_illness_cover",
+        "family_life_cover"
+      ],
+      "reason": "Health disclosure is not a sales trigger."
+    },
+    {
+      "id": "declined_product_cooling",
+      "when": [
+        "customer explicitly declines a surfaced product"
+      ],
+      "action": "Do not resurface unless circumstances materially change or customer asks.",
+      "reason": "Respect customer agency."
+    },
+    {
+      "id": "competitor_scope",
+      "when": [
+        "customer asks for comparative claims about another bank"
+      ],
+      "action": "Explain BOI options only; do not provide competitor recommendation.",
+      "reason": "Keep Baz within approved BOI domain."
+    }
+  ],
+  "products": [
+    {
+      "id": "personal_current_account",
+      "name": "Personal Current Account",
+      "family": "everyday_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "joint_current_account",
+      "name": "Joint Current Account",
+      "family": "everyday_banking",
+      "type": "journey_configuration",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "basic_bank_account",
+      "name": "Basic Bank Account",
+      "family": "everyday_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "smart_start_account",
+      "name": "Smart Start Account",
+      "family": "youth_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "second_level_account",
+      "name": "Second Level Current Account",
+      "family": "youth_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "third_level_account",
+      "name": "Third Level Current Account",
+      "family": "student_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "graduate_current_account",
+      "name": "Graduate Current Account",
+      "family": "graduate_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "golden_years_account",
+      "name": "Golden Years Current Account",
+      "family": "retirement_banking",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "overdraft",
+      "name": "Current Account Overdraft",
+      "family": "borrowing",
+      "type": "product_service",
+      "source": "https://personalbanking.bankofireland.com/bank/current-accounts/"
+    },
+    {
+      "id": "supersaver",
+      "name": "SuperSaver Account",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "goalsaver",
+      "name": "GoalSaver Account",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "mortgagesaver",
+      "name": "MortgageSaver Account",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "notice_31_day",
+      "name": "365 31-Day Notice Account",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "advantage_fixed_term",
+      "name": "Advantage Fixed Term Deposit Account",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "instant_access_demand",
+      "name": "Instant Access Demand Account / Money Pot",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "smart_start_money_pot",
+      "name": "Smart Start Money Pot",
+      "family": "youth_savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "notice_deposit",
+      "name": "Notice Deposit Account",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "child_savings",
+      "name": "Save for Kids / Child Savings",
+      "family": "savings",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "currency_deposit",
+      "name": "Currency Deposit Account",
+      "family": "savings_fx",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/savings/online-deposits/"
+    },
+    {
+      "id": "personal_loan",
+      "name": "Personal Loan",
+      "family": "loans",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "graduate_loan",
+      "name": "Graduate Loan",
+      "family": "loans",
+      "type": "product_variant",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "car_loan",
+      "name": "Car Loan",
+      "family": "loans",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "green_car_loan",
+      "name": "Green Car Loan",
+      "family": "loans",
+      "type": "product_variant",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "home_improvement_loan",
+      "name": "Home Improvement Loan",
+      "family": "loans",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "green_home_improvement_loan",
+      "name": "Green Home Improvement Loan",
+      "family": "loans",
+      "type": "product_variant",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "home_energy_upgrade_loan",
+      "name": "Home Energy Upgrade Loan Scheme",
+      "family": "loans",
+      "type": "scheme_product",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "undergraduate_loan",
+      "name": "Undergraduate Student Loan",
+      "family": "loans",
+      "type": "product_variant",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "postgraduate_loan",
+      "name": "Postgraduate Loan",
+      "family": "loans",
+      "type": "product_variant",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "top_up_loan",
+      "name": "Top-Up Loan",
+      "family": "loans",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/loans/"
+    },
+    {
+      "id": "classic_credit_card",
+      "name": "Classic Credit Card",
+      "family": "credit_cards",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/"
+    },
+    {
+      "id": "platinum_credit_card",
+      "name": "Platinum Credit Card",
+      "family": "credit_cards",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/"
+    },
+    {
+      "id": "aer_credit_card",
+      "name": "Aer Credit Card",
+      "family": "credit_cards",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/"
+    },
+    {
+      "id": "affinity_credit_card",
+      "name": "Affinity Credit Card",
+      "family": "credit_cards",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/"
+    },
+    {
+      "id": "student_credit_card",
+      "name": "Student Credit Card",
+      "family": "credit_cards",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/"
+    },
+    {
+      "id": "credit_card_instalment_plan",
+      "name": "Credit Card Instalment Plan",
+      "family": "credit_cards",
+      "type": "existing_customer_feature",
+      "source": "https://personalbanking.bankofireland.com/borrow/credit-cards/compare-credit-cards/"
+    },
+    {
+      "id": "first_time_buyer_mortgage",
+      "name": "First-Time Buyer Mortgage",
+      "family": "mortgages",
+      "type": "journey",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "moving_home_mortgage",
+      "name": "Moving Home Mortgage",
+      "family": "mortgages",
+      "type": "journey",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "switching_mortgage",
+      "name": "Mortgage Switcher",
+      "family": "mortgages",
+      "type": "journey",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "buy_to_let_mortgage",
+      "name": "Buy-to-Let Mortgage",
+      "family": "mortgages",
+      "type": "journey",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "self_build_mortgage",
+      "name": "Self-Build Mortgage",
+      "family": "mortgages",
+      "type": "journey",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "equity_release",
+      "name": "Equity Release / Mortgage Top-Up",
+      "family": "mortgages",
+      "type": "journey",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "ecosaver_mortgage_rate",
+      "name": "EcoSaver Mortgage Rate",
+      "family": "mortgages",
+      "type": "pricing_overlay",
+      "source": "https://personalbanking.bankofireland.com/borrow/mortgages/"
+    },
+    {
+      "id": "home_insurance",
+      "name": "Home Insurance",
+      "family": "insurance",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/insure-and-protect/insurance/home-insurance/"
+    },
+    {
+      "id": "travel_insurance",
+      "name": "Travel Insurance",
+      "family": "insurance",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/insure-and-protect/insurance/travel-insurance/"
+    },
+    {
+      "id": "family_life_cover",
+      "name": "Family / Life Cover",
+      "family": "protection",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/insure-and-protect/life-insurance/"
+    },
+    {
+      "id": "mortgage_protection",
+      "name": "Mortgage Protection",
+      "family": "protection",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/insure-and-protect/life-insurance/"
+    },
+    {
+      "id": "income_protection",
+      "name": "Income Protection",
+      "family": "protection",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/insure-and-protect/life-insurance/"
+    },
+    {
+      "id": "specified_illness_cover",
+      "name": "Specified Illness Cover",
+      "family": "protection",
+      "type": "product",
+      "source": "https://personalbanking.bankofireland.com/insure-and-protect/life-insurance/"
+    },
+    {
+      "id": "pension_planning",
+      "name": "Pension Planning / Personal Pension / PRSA",
+      "family": "pensions",
+      "type": "advice_journey",
+      "source": "https://personalbanking.bankofireland.com/plan/pensions/"
+    },
+    {
+      "id": "retirement_options",
+      "name": "Retirement Options / ARF / Annuity",
+      "family": "pensions",
+      "type": "advice_journey",
+      "source": "https://personalbanking.bankofireland.com/plan/pensions/"
+    },
+    {
+      "id": "investment_journey",
+      "name": "Investment Journey",
+      "family": "investments",
+      "type": "advice_journey",
+      "source": "https://personalbanking.bankofireland.com/save-and-invest/investments/"
+    },
+    {
+      "id": "international_payments",
+      "name": "International Payments / Foreign Currency Transfers",
+      "family": "international",
+      "type": "service",
+      "source": "https://personalbanking.bankofireland.com/bank/international-payments/sending-money-abroad/"
+    }
+  ],
+  "needs": [
+    {
+      "id": "everyday_banking",
+      "name": "Everyday banking",
+      "family": "everyday_banking",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I need a bank account",
+          "strength": "explicit"
+        },
+        {
+          "text": "I need somewhere for my salary",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I need a debit card",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I want to switch bank",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Is this mainly for salary, bills and everyday spending?",
+        "Are you already living in Ireland, or moving here soon?"
+      ],
+      "product_mappings": [
+        "personal_current_account"
+      ],
+      "approved_framing": "A current account can give you a home for salary, bills, card spending and everyday payments.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "shared_household_finances",
+      "name": "Shared household finances",
+      "family": "everyday_banking",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "we just got married",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "we keep our money separate",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we want an account for bills",
+          "strength": "explicit"
+        },
+        {
+          "text": "shared household costs",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you want to combine everything, or just have somewhere for shared bills and spending?"
+      ],
+      "product_mappings": [
+        "joint_current_account"
+      ],
+      "approved_framing": "You can keep your individual accounts and add a joint account for shared household money.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "moving_to_ireland",
+      "name": "Moving to Ireland",
+      "family": "everyday_banking",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I'm moving to Ireland",
+          "strength": "explicit"
+        },
+        {
+          "text": "starting a job in Ireland",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "relocating to Dublin",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "When are you moving?",
+        "Do you already have an Irish payment account?"
+      ],
+      "product_mappings": [
+        "personal_current_account"
+      ],
+      "approved_framing": "BOI has a current-account journey for people moving to Ireland; we can check what you can set up before you arrive.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "child_money_skills",
+      "name": "Child money skills",
+      "family": "youth_banking",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "pocket money",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "first debit card for my child",
+          "strength": "explicit"
+        },
+        {
+          "text": "teach my child about money",
+          "strength": "explicit"
+        },
+        {
+          "text": "my child is 7 to 15",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How old are they?",
+        "How much control would you like to keep over spending?"
+      ],
+      "product_mappings": [
+        "smart_start_account",
+        "smart_start_money_pot"
+      ],
+      "approved_framing": "A child account can help them learn to spend and save while you keep appropriate oversight.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "teen_banking",
+      "name": "Teen banking",
+      "family": "youth_banking",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "my teenager needs an account",
+          "strength": "explicit"
+        },
+        {
+          "text": "secondary school account",
+          "strength": "explicit"
+        },
+        {
+          "text": "first independent account",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How old are they?",
+        "Are they in second-level education?"
+      ],
+      "product_mappings": [
+        "second_level_account"
+      ],
+      "approved_framing": "BOI has an account designed for second-level students.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "student_banking",
+      "name": "Third-level student banking",
+      "family": "student_banking",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "starting college",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "university student",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "third level account",
+          "strength": "explicit"
+        },
+        {
+          "text": "postgraduate student",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Are you in full-time third-level education?",
+        "Are you undergraduate or postgraduate?"
+      ],
+      "product_mappings": [
+        "third_level_account",
+        "undergraduate_loan",
+        "postgraduate_loan",
+        "student_credit_card"
+      ],
+      "approved_framing": "We can look at day-to-day student banking first, then any borrowing or credit needs separately.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "graduate_transition",
+      "name": "Graduate banking",
+      "family": "graduate_banking",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "just graduated",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "first job after college",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "graduate account",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "When did you graduate?",
+        "Are you already employed or do you have an offer?"
+      ],
+      "product_mappings": [
+        "graduate_current_account",
+        "graduate_loan"
+      ],
+      "approved_framing": "BOI has banking and borrowing options specifically for recent graduates.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "retirement_everyday_banking",
+      "name": "Retirement everyday banking",
+      "family": "retirement_banking",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I'm retiring",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I'm 66",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "my pension is replacing my salary",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Are you looking mainly for everyday banking, or do you also want to review retirement income?"
+      ],
+      "product_mappings": [
+        "golden_years_account",
+        "retirement_options"
+      ],
+      "approved_framing": "We can separate everyday banking from the bigger retirement-planning conversation.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "basic_payment_account",
+      "name": "Basic payment account",
+      "family": "everyday_banking",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I just need a basic account",
+          "strength": "explicit"
+        },
+        {
+          "text": "I don't have any payment account in Ireland",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you currently hold another payment account in the Republic of Ireland?"
+      ],
+      "product_mappings": [
+        "basic_bank_account"
+      ],
+      "approved_framing": "BOI has a basic payment account for eligible customers who need core everyday banking.",
+      "suppressions": [
+        "Do not position as merely a cheaper current account; eligibility matters."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "emergency_fund",
+      "name": "Emergency / rainy-day cash",
+      "family": "savings",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "emergency fund",
+          "strength": "explicit"
+        },
+        {
+          "text": "rainy day",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I need instant access",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "ring-fence some money",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Would you need to get at this money immediately?",
+        "How much would you like to keep accessible?"
+      ],
+      "product_mappings": [
+        "instant_access_demand"
+      ],
+      "approved_framing": "You can separate emergency cash from everyday spending while keeping it available on demand.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "regular_saving",
+      "name": "Build a regular saving habit",
+      "family": "savings",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "save every month",
+          "strength": "explicit"
+        },
+        {
+          "text": "start saving from payday",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "want to become a better saver",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "What are you saving for?",
+        "When do you expect to need the money?"
+      ],
+      "product_mappings": [
+        "supersaver",
+        "goalsaver"
+      ],
+      "approved_framing": "A regular-savings account can automate the habit; the right one depends on your goal and access needs.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "specific_goal_saving",
+      "name": "Save for a defined goal",
+      "family": "savings",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "saving for a holiday",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "saving for a wedding",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "saving for a car",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I have a savings goal",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "How much do you want to build up?",
+        "When will you need it?",
+        "Do you need instant access?"
+      ],
+      "product_mappings": [
+        "goalsaver"
+      ],
+      "approved_framing": "We can put the goal on a regular saving path and keep it separate from day-to-day money.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "first_home_deposit",
+      "name": "Save a first-home deposit",
+      "family": "savings",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "saving for a deposit",
+          "strength": "explicit"
+        },
+        {
+          "text": "first home in a few years",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "renting and building savings",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Are you both first-time buyers?",
+        "Roughly when would you like to buy?"
+      ],
+      "product_mappings": [
+        "mortgagesaver",
+        "first_time_buyer_mortgage"
+      ],
+      "approved_framing": "You can build the deposit first and, when you're ready, carry the context into the mortgage journey.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "lump_sum_with_notice",
+      "name": "Lump sum with limited access",
+      "family": "savings",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I have a lump sum",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I can give notice before taking it out",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I won't need all of this immediately",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How quickly might you need access?",
+        "Is the amount at least €5,000?"
+      ],
+      "product_mappings": [
+        "notice_31_day",
+        "notice_deposit"
+      ],
+      "approved_framing": "If you can give notice before withdrawing, a notice account may suit the access pattern better than instant-access cash.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "lump_sum_fixed_term",
+      "name": "Lump sum not needed for a fixed period",
+      "family": "savings",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I won't need the money for 6 to 18 months",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "cash sitting idle",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "fixed term savings",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Are you comfortable locking the money away for a fixed period?",
+        "What is the earliest date you may need it?"
+      ],
+      "product_mappings": [
+        "advantage_fixed_term"
+      ],
+      "approved_framing": "If you do not need near-term access, a fixed-term deposit can give the money a defined home for that period.",
+      "suppressions": [
+        "Do not surface if the customer indicates likely short-notice access needs."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "save_for_child",
+      "name": "Save for a child",
+      "family": "savings",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "save for my baby",
+          "strength": "explicit"
+        },
+        {
+          "text": "save for college",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "child's future",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How old is the child?",
+        "Is this for the next few years or a longer-term goal like college?"
+      ],
+      "product_mappings": [
+        "child_savings",
+        "goalsaver",
+        "investment_journey"
+      ],
+      "approved_framing": "The key question is time horizon: shorter-term child savings and long-term investing solve different problems.",
+      "suppressions": [
+        "Do not move directly into investments without horizon, affordability and risk discussion."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "foreign_currency_holding",
+      "name": "Hold foreign currency",
+      "family": "savings_fx",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "paid in dollars",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "want to keep pounds",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "don't want to convert yet",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Which currency?",
+        "Do you need to hold it, or simply transfer it?"
+      ],
+      "product_mappings": [
+        "currency_deposit",
+        "international_payments"
+      ],
+      "approved_framing": "We should first distinguish between holding foreign currency and simply sending or receiving it.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "short_term_cashflow_gap",
+      "name": "Occasional short-term cashflow gap",
+      "family": "borrowing",
+      "default_priority": "LOW",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "short until payday",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "need a small buffer",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "temporary shortfall",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "overdraft",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Is this a one-off shortfall or something that happens regularly?"
+      ],
+      "product_mappings": [
+        "overdraft"
+      ],
+      "approved_framing": "An overdraft can provide short-term flexibility on a current account.",
+      "suppressions": [
+        "Suppress borrowing cross-sell if the customer describes persistent inability to meet normal living costs.",
+        "Do not use overdraft as a solution to structural financial difficulty."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "general_personal_borrowing",
+      "name": "One-off personal borrowing",
+      "family": "loans",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "need money for a wedding",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "big purchase",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "once-in-a-lifetime holiday",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "personal loan",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "How much do you need?",
+        "What is it for?",
+        "Over what period would you prefer to repay it?"
+      ],
+      "product_mappings": [
+        "personal_loan"
+      ],
+      "approved_framing": "A personal loan gives you a fixed lump sum and a defined repayment term.",
+      "suppressions": [
+        "If a mortgage application is active, assess whether new borrowing should be deferred before surfacing."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "car_purchase",
+      "name": "Finance a car",
+      "family": "loans",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "buying a car",
+          "strength": "explicit"
+        },
+        {
+          "text": "changing my car",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "dealer quote",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How much are you looking to borrow?",
+        "Is the car electric, plug-in hybrid or conventional?"
+      ],
+      "product_mappings": [
+        "car_loan",
+        "green_car_loan"
+      ],
+      "approved_framing": "BOI has car borrowing options; vehicle type may affect which route is relevant.",
+      "suppressions": [],
+      "conflicts": [
+        "active_mortgage_application"
+      ],
+      "notes": []
+    },
+    {
+      "id": "home_improvement",
+      "name": "Fund home improvements",
+      "family": "loans",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "new kitchen",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "extension",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "renovating",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "home improvement loan",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Roughly how much will the work cost?",
+        "Are any of the works improving energy efficiency?"
+      ],
+      "product_mappings": [
+        "home_improvement_loan",
+        "green_home_improvement_loan",
+        "home_energy_upgrade_loan",
+        "equity_release"
+      ],
+      "approved_framing": "There are unsecured and mortgage-backed routes; the size and nature of the work determine what is worth exploring.",
+      "suppressions": [],
+      "conflicts": [
+        "active_mortgage_application"
+      ],
+      "notes": []
+    },
+    {
+      "id": "energy_upgrade",
+      "name": "Improve home energy efficiency",
+      "family": "loans",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "heat pump",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "solar panels",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "insulation",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "deep retrofit",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "BER upgrade",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "What work are you planning?",
+        "Do you have a quote?",
+        "Is an SEAI-supported upgrade involved?"
+      ],
+      "product_mappings": [
+        "green_home_improvement_loan",
+        "home_energy_upgrade_loan",
+        "home_insurance"
+      ],
+      "approved_framing": "Energy-efficiency works may qualify for dedicated borrowing routes; home cover may also need reviewing after major upgrades.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": [
+        "Validate live availability of scheme-backed products before presentation."
+      ]
+    },
+    {
+      "id": "top_up_existing_loan",
+      "name": "Additional borrowing on an existing BOI loan",
+      "family": "loans",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "top up my loan",
+          "strength": "explicit"
+        },
+        {
+          "text": "I already have a BOI loan and need more",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How long have you been repaying the existing loan?",
+        "Are all repayments up to date?"
+      ],
+      "product_mappings": [
+        "top_up_loan"
+      ],
+      "approved_framing": "A top-up can combine the existing balance and new borrowing into one replacement loan.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "education_finance",
+      "name": "Finance third-level education",
+      "family": "loans",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "college fees",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "masters fees",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "student loan",
+          "strength": "explicit"
+        },
+        {
+          "text": "postgraduate course",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Is the course undergraduate or postgraduate?",
+        "Is it full-time and in Ireland?"
+      ],
+      "product_mappings": [
+        "undergraduate_loan",
+        "postgraduate_loan"
+      ],
+      "approved_framing": "BOI has student borrowing options with eligibility tied to the course and student account relationship.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "revolving_credit",
+      "name": "Flexible card-based credit",
+      "family": "credit_cards",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "need a credit card",
+          "strength": "explicit"
+        },
+        {
+          "text": "want flexibility for purchases",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "want a card for emergencies",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you expect to clear the balance in full each month, or sometimes carry it?",
+        "What will you mainly use the card for?"
+      ],
+      "product_mappings": [
+        "classic_credit_card",
+        "platinum_credit_card"
+      ],
+      "approved_framing": "A credit card is revolving credit, so it is a different tool from a structured personal loan.",
+      "suppressions": [
+        "Do not present as an emergency-fund substitute if the customer is in persistent financial difficulty."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "travel_rewards_card",
+      "name": "Travel-reward credit card",
+      "family": "credit_cards",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "fly Aer Lingus often",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "travel rewards",
+          "strength": "explicit"
+        },
+        {
+          "text": "Aer Credit Card",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "How often do you fly with Aer Lingus?",
+        "Would you use the card enough for the travel benefits to matter?"
+      ],
+      "product_mappings": [
+        "aer_credit_card"
+      ],
+      "approved_framing": "If Aer Lingus travel is already part of your normal spending pattern, the travel-reward card may be worth comparing with the standard cards.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "low_rate_card_priority",
+      "name": "Lower-rate credit card priority",
+      "family": "credit_cards",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "want the lowest card rate",
+          "strength": "explicit"
+        },
+        {
+          "text": "I sometimes carry a card balance",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "How often do you expect to carry a balance?",
+        "Are you comfortable with an annual fee if the overall product suits you?"
+      ],
+      "product_mappings": [
+        "platinum_credit_card",
+        "classic_credit_card"
+      ],
+      "approved_framing": "The relevant comparison is total card cost and usage, not simply rewards.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "college_affinity_card",
+      "name": "College affinity card",
+      "family": "credit_cards",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "affinity card",
+          "strength": "explicit"
+        },
+        {
+          "text": "support my college through card spend",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Which participating college are you interested in?"
+      ],
+      "product_mappings": [
+        "affinity_credit_card"
+      ],
+      "approved_framing": "An affinity card links everyday card use with support for a participating college.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "student_credit",
+      "name": "Student credit card",
+      "family": "credit_cards",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "student credit card",
+          "strength": "explicit"
+        },
+        {
+          "text": "need a small card while at college",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you hold a BOI third-level current account?",
+        "Are you currently a full-time student or eligible recent graduate?"
+      ],
+      "product_mappings": [
+        "student_credit_card"
+      ],
+      "approved_framing": "There is a student-oriented credit-card route subject to account and eligibility requirements.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "spread_existing_card_purchase",
+      "name": "Spread a large existing card purchase",
+      "family": "credit_cards",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "spread this card purchase",
+          "strength": "explicit"
+        },
+        {
+          "text": "large purchase on my BOI card",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Was the purchase at least €250?",
+        "Is it on an eligible personal BOI credit card?"
+      ],
+      "product_mappings": [
+        "credit_card_instalment_plan"
+      ],
+      "approved_framing": "If the purchase is already on an eligible BOI card, an instalment plan may be more relevant than taking a separate loan.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "first_home",
+      "name": "Buy first home",
+      "family": "mortgages",
+      "default_priority": "VERY_HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "buy my first house",
+          "strength": "explicit"
+        },
+        {
+          "text": "first-time buyer",
+          "strength": "explicit"
+        },
+        {
+          "text": "renting and viewing homes",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Are you buying alone or with someone?",
+        "Is it the first home for every applicant?",
+        "Have you found a property or are you working out affordability?"
+      ],
+      "product_mappings": [
+        "first_time_buyer_mortgage",
+        "mortgagesaver",
+        "mortgage_protection",
+        "home_insurance"
+      ],
+      "approved_framing": "We can start with affordability and the mortgage, then bring in deposit saving, protection and home insurance at the right stage.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "moving_home",
+      "name": "Move to another home",
+      "family": "mortgages",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "selling and buying another house",
+          "strength": "explicit"
+        },
+        {
+          "text": "upsizing",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "downsizing",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "need more space for family",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you currently have a mortgage?",
+        "Is your existing mortgage with BOI?",
+        "Are you selling your current home?"
+      ],
+      "product_mappings": [
+        "moving_home_mortgage",
+        "home_insurance",
+        "mortgage_protection"
+      ],
+      "approved_framing": "This is a moving-home journey rather than a first-time buyer journey; existing mortgage context matters.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "switch_mortgage",
+      "name": "Switch existing mortgage",
+      "family": "mortgages",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "switch mortgage",
+          "strength": "explicit"
+        },
+        {
+          "text": "mortgage rate is ending",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "move my mortgage to BOI",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Who is your current lender?",
+        "What is your approximate balance, property value and remaining term?"
+      ],
+      "product_mappings": [
+        "switching_mortgage",
+        "mortgage_protection",
+        "home_insurance"
+      ],
+      "approved_framing": "We can explore whether moving your existing mortgage to BOI is relevant before discussing rates or application steps.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "self_build",
+      "name": "Build or substantially renovate a home",
+      "family": "mortgages",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "building my own house",
+          "strength": "explicit"
+        },
+        {
+          "text": "bought a site",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "planning permission",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "self build",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you already own the site?",
+        "Do you have planning permission?",
+        "What stage is the build at?"
+      ],
+      "product_mappings": [
+        "self_build_mortgage",
+        "mortgage_protection",
+        "home_insurance"
+      ],
+      "approved_framing": "A self-build mortgage releases funds in stages, so it is a different journey from buying a completed home.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "buy_to_let",
+      "name": "Buy an investment property",
+      "family": "mortgages",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "buy-to-let",
+          "strength": "explicit"
+        },
+        {
+          "text": "rental property",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "investment property",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Will this property be rented out rather than used as your main home?"
+      ],
+      "product_mappings": [
+        "buy_to_let_mortgage",
+        "home_insurance"
+      ],
+      "approved_framing": "Investment-property borrowing is a separate mortgage need and should be treated distinctly from buying a home to live in.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "release_home_equity",
+      "name": "Borrow against existing home equity",
+      "family": "mortgages",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "release equity",
+          "strength": "explicit"
+        },
+        {
+          "text": "top up my mortgage",
+          "strength": "explicit"
+        },
+        {
+          "text": "borrow against my house",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "large renovation and I have equity",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "What is your approximate property value and mortgage balance?",
+        "What do you want the additional borrowing for?"
+      ],
+      "product_mappings": [
+        "equity_release",
+        "home_improvement_loan"
+      ],
+      "approved_framing": "For larger needs, borrowing against available home equity may be worth comparing with unsecured borrowing.",
+      "suppressions": [
+        "Do not present without acknowledging that the borrowing is secured on the home."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "energy_efficient_mortgage",
+      "name": "Energy-efficient home / mortgage pricing",
+      "family": "mortgages",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "BER A",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "BER B",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "energy efficient home",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "EcoSaver",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you know the property's BER?"
+      ],
+      "product_mappings": [
+        "ecosaver_mortgage_rate"
+      ],
+      "approved_framing": "The home's BER may affect which BOI mortgage pricing options are available.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": [
+        "Treat as pricing overlay, not a standalone customer goal."
+      ]
+    },
+    {
+      "id": "home_protection",
+      "name": "Protect home and contents",
+      "family": "insurance",
+      "default_priority": "MEDIUM",
+      "default_timing": "LATER_IN_HOME_JOURNEY",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "buying a house",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "moving home",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "renting and need contents cover",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "home insurance",
+          "strength": "explicit"
+        },
+        {
+          "text": "renovating",
+          "strength": "soft_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you need buildings cover, contents cover, or both?",
+        "Are you buying, renting, or a landlord?"
+      ],
+      "product_mappings": [
+        "home_insurance"
+      ],
+      "approved_framing": "Home insurance can protect the building, belongings, or both depending on your situation.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "travel_protection",
+      "name": "Protect upcoming travel",
+      "family": "insurance",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "booked a holiday",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "travelling abroad",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "ski trip",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "travel insurance",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Is this one trip or do you travel several times a year?",
+        "Where are you going and what activities are planned?"
+      ],
+      "product_mappings": [
+        "travel_insurance"
+      ],
+      "approved_framing": "Single-trip and annual cover solve different travel patterns; destination and activities can also matter.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "family_protection",
+      "name": "Protect dependants financially",
+      "family": "protection",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": true,
+      "signals": [
+        {
+          "text": "just had a baby",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "new dependant",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "sole earner",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "my family relies on my income",
+          "strength": "explicit"
+        },
+        {
+          "text": "life cover",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "Who depends financially on your income?",
+        "Do you already have any personal or employer-provided cover?"
+      ],
+      "product_mappings": [
+        "family_life_cover",
+        "income_protection",
+        "specified_illness_cover"
+      ],
+      "approved_framing": "If other people rely on your income, we can explore ways of protecting the household if something happens to you.",
+      "suppressions": [
+        "Do not infer a protection sale directly from a health diagnosis or bereavement disclosure.",
+        "Do not use fear-based language."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "mortgage_protection_need",
+      "name": "Protect a main-home mortgage",
+      "family": "protection",
+      "default_priority": "HIGH",
+      "default_timing": "MORTGAGE_MILESTONE",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "mortgage application progressing",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "mortgage protection",
+          "strength": "explicit"
+        },
+        {
+          "text": "getting ready to draw down",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you already have suitable mortgage protection in place?"
+      ],
+      "product_mappings": [
+        "mortgage_protection"
+      ],
+      "approved_framing": "Mortgage protection is normally part of getting a main-home mortgage ready for drawdown.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "income_resilience",
+      "name": "Protect income if unable to work",
+      "family": "protection",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": true,
+      "signals": [
+        {
+          "text": "what if I couldn't work",
+          "strength": "explicit"
+        },
+        {
+          "text": "sole earner",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "high fixed household costs",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "income protection",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "What sick pay or income protection do you already have through work?",
+        "How long could your household manage without your income?"
+      ],
+      "product_mappings": [
+        "income_protection"
+      ],
+      "approved_framing": "Income protection is designed to replace part of your income if illness or injury prevents you working.",
+      "suppressions": [
+        "Do not infer from a disclosed illness; only surface from expressed resilience/protection need."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "serious_illness_resilience",
+      "name": "Financial resilience to specified serious illness",
+      "family": "protection",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": true,
+      "signals": [
+        {
+          "text": "specified illness cover",
+          "strength": "explicit"
+        },
+        {
+          "text": "critical illness cover",
+          "strength": "explicit"
+        },
+        {
+          "text": "how would we cope financially if I became seriously ill",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you already have this cover through work or another policy?",
+        "What financial commitments would be hardest to meet?"
+      ],
+      "product_mappings": [
+        "specified_illness_cover"
+      ],
+      "approved_framing": "Specified illness cover can provide a lump sum if a covered condition is diagnosed.",
+      "suppressions": [
+        "Never treat a customer's actual diagnosis as a sales trigger."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "start_pension",
+      "name": "Start retirement saving",
+      "family": "pensions",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I don't have a pension",
+          "strength": "explicit"
+        },
+        {
+          "text": "need to start saving for retirement",
+          "strength": "explicit"
+        },
+        {
+          "text": "self-employed and no pension",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Do you have any workplace pension already?",
+        "Roughly when would you like to retire?"
+      ],
+      "product_mappings": [
+        "pension_planning"
+      ],
+      "approved_framing": "We can start by understanding what retirement you want and what provision you already have, then look at the appropriate pension route.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "review_pension",
+      "name": "Review existing retirement provision",
+      "family": "pensions",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "I have a pension but don't know if it's enough",
+          "strength": "explicit"
+        },
+        {
+          "text": "old pensions from previous jobs",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "am I on track for retirement",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "What pension arrangements do you already have?",
+        "What retirement income would you ideally want?"
+      ],
+      "product_mappings": [
+        "pension_planning"
+      ],
+      "approved_framing": "A pension review is about whether your existing provision is on track before deciding whether anything should change.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "retirement_income_choices",
+      "name": "Turn pension savings into retirement income",
+      "family": "pensions",
+      "default_priority": "HIGH",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "retiring soon",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "what do I do with my pension at retirement",
+          "strength": "explicit"
+        },
+        {
+          "text": "ARF",
+          "strength": "explicit"
+        },
+        {
+          "text": "annuity",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "When are you retiring?",
+        "Is secure regular income or flexibility more important to you?"
+      ],
+      "product_mappings": [
+        "retirement_options"
+      ],
+      "approved_framing": "At retirement, income security, flexibility and access become the key trade-offs; this should move into an advice-led retirement conversation.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "long_term_investment",
+      "name": "Invest long-term surplus cash",
+      "family": "investments",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "money I won't need for 5+ years",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "want long-term growth",
+          "strength": "explicit"
+        },
+        {
+          "text": "want to invest a lump sum",
+          "strength": "explicit"
+        }
+      ],
+      "clarifying_questions": [
+        "When might you need this money?",
+        "Do you have accessible emergency savings already?",
+        "How would you feel if the value fell for a period?"
+      ],
+      "product_mappings": [
+        "investment_journey"
+      ],
+      "approved_framing": "If the money is genuinely long-term and you can accept investment risk, we can start the investment suitability journey.",
+      "suppressions": [
+        "Suppress if the money is needed in the short/medium term.",
+        "Suppress if the customer has no reasonable accessible emergency reserve.",
+        "Do not recommend a specific investment before the suitability/advice process."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "regular_long_term_investment",
+      "name": "Invest regularly for a long-term goal",
+      "family": "investments",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "invest every month",
+          "strength": "explicit"
+        },
+        {
+          "text": "long-term savings over 10 years",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "college fund in 15 years",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "What is the goal and time horizon?",
+        "How much can you commit regularly without needing access?",
+        "How comfortable are you with market fluctuations?"
+      ],
+      "product_mappings": [
+        "investment_journey"
+      ],
+      "approved_framing": "For long horizons, investing may be worth exploring alongside or instead of cash saving, subject to affordability and risk.",
+      "suppressions": [
+        "Do not present as guaranteed growth.",
+        "Do not bypass suitability/advice."
+      ],
+      "conflicts": [],
+      "notes": []
+    },
+    {
+      "id": "international_money_movement",
+      "name": "Send or receive money internationally",
+      "family": "international",
+      "default_priority": "MEDIUM",
+      "default_timing": "WHEN_RELEVANT",
+      "sensitive": false,
+      "signals": [
+        {
+          "text": "send money abroad",
+          "strength": "explicit"
+        },
+        {
+          "text": "pay overseas tuition",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "buy property abroad",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "paid in another currency",
+          "strength": "strong_inferred"
+        }
+      ],
+      "clarifying_questions": [
+        "Which country and currency?",
+        "How much are you sending or receiving?",
+        "Is this one-off or regular?"
+      ],
+      "product_mappings": [
+        "international_payments",
+        "currency_deposit"
+      ],
+      "approved_framing": "BOI can support international and foreign-currency payments; whether you also need to hold the currency is a separate question.",
+      "suppressions": [],
+      "conflicts": [],
+      "notes": []
+    }
+  ]
+}
