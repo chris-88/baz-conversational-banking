@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -28,18 +29,38 @@ export function useRealtimeInvalidation(
     const client = supabase
     if (client === null) return
 
-    const channel = client.channel(`watch:${key}`)
+    let channel: RealtimeChannel | null = null
+    let cancelled = false
 
-    for (const table of key.split(',')) {
-      channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-        invalidate()
-      })
-    }
+    void (async () => {
+      /**
+       * Realtime filters every change through RLS using the socket's own token, and the
+       * socket is opened with the anon key when the client is constructed — before anyone has
+       * signed in. Left alone the admin subscribes successfully and then receives nothing,
+       * because `is_admin()` is false for an anonymous socket. The channel has to be told who
+       * is connected before it is opened.
+       */
+      const session = await client.auth.getSession()
+      if (cancelled) return
 
-    void channel.subscribe()
+      const token = session.data.session?.access_token
+      if (token !== undefined) await client.realtime.setAuth(token)
+      if (cancelled) return
+
+      channel = client.channel(`watch:${key}`)
+
+      for (const table of key.split(',')) {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+          invalidate()
+        })
+      }
+
+      channel.subscribe()
+    })()
 
     return () => {
-      void client.removeChannel(channel)
+      cancelled = true
+      if (channel !== null) void client.removeChannel(channel)
     }
     // `client` is stable; `invalidate` is the caller's concern to keep stable.
   }, [key, enabled, invalidate, queries])
