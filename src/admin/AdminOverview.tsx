@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLinkIcon, FileCheckIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconTile } from '@/components/IconTile'
 import { queryKeys } from '@/lib/queryKeys'
+import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { adminApi } from '@/admin/adminClient'
 import { routes } from '@/app/routes'
 import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
@@ -23,7 +24,20 @@ type Pane = Section | 'overview'
 export function AdminOverview({ section }: { section?: Section }): ReactNode {
   const queryClient = useQueryClient()
   const overview = useQuery({ queryKey: queryKeys.admin.cases(), queryFn: adminApi.overview })
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: queryKeys.admin.cases() })
+  const refresh = useCallback(
+    () => void queryClient.invalidateQueries({ queryKey: queryKeys.admin.cases() }),
+    [queryClient],
+  )
+
+  /**
+   * §40 — the console follows the conversation as it happens. A presenter watching someone
+   * talk to Baz should see the facts land and the applications appear, rather than reloading
+   * to find out whether anything did.
+   */
+  useRealtimeInvalidation(
+    ['messages', 'facts', 'applications', 'events', 'product_interests'],
+    refresh,
+  )
 
   if (overview.isPending) return <Skeleton className="h-40 w-full" />
   if (overview.isError) {

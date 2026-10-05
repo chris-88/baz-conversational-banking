@@ -233,9 +233,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       // Two queries, not two per case. This is a console someone drives live, and the N+1
       // version took long enough to look broken.
-      const [allApps, allMessages] = await Promise.all([
+      const [allApps, allMessages, allNames] = await Promise.all([
         admin.from('applications').select('case_id').in('case_id', caseIds),
         admin.from('messages').select('case_id').in('case_id', caseIds),
+        // Whoever the case is actually about. One query for every case, same as the others.
+        admin
+          .from('facts')
+          .select('case_id, value, captured_at')
+          .eq('key', 'identity.fullName')
+          .is('superseded_by', null)
+          .in('case_id', caseIds)
+          .order('captured_at', { ascending: true }),
       ])
 
       const tally = (rows: unknown): Map<string, number> => {
@@ -249,10 +257,26 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const appCounts = tally(allApps.data)
       const messageCounts = tally(allMessages.data)
 
+      /**
+       * A list of eleven rows all called "Audience case" is unusable the moment more than one
+       * person is talking. The primary applicant's name is the only thing that tells them
+       * apart, so it is the label when it is known; until someone says who they are, a short
+       * id at least stays stable while the presenter watches it.
+       */
+      const names = new Map<string, string>()
+      for (const row of (allNames.data ?? []) as { case_id: string; value: unknown }[]) {
+        if (typeof row.value === 'string' && row.value.trim().length > 0 && !names.has(row.case_id)) {
+          names.set(row.case_id, row.value.trim())
+        }
+      }
+
       const summaries = caseRows.map((row) => ({
         id: row.id,
         kind: row.kind as 'presenter' | 'audience',
-        label: row.label,
+        label:
+          row.kind === 'presenter'
+            ? row.label
+            : (names.get(row.id) ?? `Unnamed · ${row.id.slice(0, 8)}`),
         applications: appCounts.get(row.id) ?? 0,
         messages: messageCounts.get(row.id) ?? 0,
         updatedAt: row.updated_at,
