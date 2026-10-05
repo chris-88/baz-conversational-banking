@@ -11,6 +11,9 @@ import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { loadCase, writeEvent, type Insert } from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor } from '../_shared/db/needs.ts'
+import { loadPlans, reconcilePlans } from '../_shared/db/plans.ts'
+import { canTransition } from '../_shared/domain/plans/engine.ts'
+import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { evaluateNeeds } from '../_shared/domain/needs/engine.ts'
 import { buildPlan } from '../_shared/domain/needs/plan.ts'
 
@@ -454,6 +457,139 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json(ok({ reached: true, target: watch.target }), 200)
     }
 
+    /**
+     * §38 — one number that moves everything.
+     *
+     * Supersedes the balance rather than adding to it, so the case holds one figure. Every
+     * milestone, projection and waiting check-in is computed from it, which is what makes
+     * this the lever worth having in front of an audience.
+     */
+    case 'set_savings_balance': {
+      const participants = await admin
+        .from('participants')
+        .select('id')
+        .eq('case_id', action.caseId)
+        .eq('role', 'primary')
+        .limit(1)
+
+      const primary = ((participants.data ?? []) as { id: string }[])[0]
+
+      const live = await admin
+        .from('facts')
+        .select('id')
+        .eq('case_id', action.caseId)
+        .eq('key', 'assets.savingsBalance')
+        .is('superseded_by', null)
+
+      const written = await admin
+        .from('facts')
+        .insert({
+          case_id: action.caseId,
+          key: 'assets.savingsBalance',
+          participant_id: primary?.id ?? null,
+          subject_kind: 'household',
+          value: action.amount as unknown as Json,
+          source: 'bank_held',
+          verified: true,
+        })
+        .select('id')
+        .single()
+
+      const newId = (written.data as { id?: string } | null)?.id
+      const previous = ((live.data ?? []) as { id: string }[]).map((row) => row.id)
+      if (newId !== undefined && previous.length > 0) {
+        await admin.from('facts').update({ superseded_by: newId }).in('id', previous)
+      }
+
+      const loadedCase = await loadCase(admin, action.caseId)
+      const reached = loadedCase === null ? [] : await reconcilePlans(admin, action.caseId, loadedCase)
+
+      for (const { milestone } of reached) {
+        await writeEvent(admin, {
+          caseId: action.caseId,
+          type: 'plan_milestone_reached',
+          actor: 'system',
+          payload: { label: milestone.label },
+        })
+      }
+
+      await writeEvent(admin, {
+        caseId: action.caseId,
+        type: 'savings_balance_set',
+        actor: 'admin',
+        payload: { amount: action.amount, milestones: reached.length },
+      })
+
+      return json(ok({ amount: action.amount, milestonesReached: reached.length }), 200)
+    }
+
+    case 'plan_move': {
+      const row = await admin
+        .from('plans')
+        .select('id, status, title')
+        .eq('id', action.planId)
+        .eq('case_id', action.caseId)
+        .maybeSingle()
+
+      const plan = row.data as { id: string; status: PlanStatus; title: string } | null
+      if (!plan) return errorResponse('not_found', 'There is no such plan.')
+
+      // Bringing a check-in due is not a status change, so it is handled apart.
+      if (action.move === 'trigger_checkin') {
+        const checkins = await admin
+          .from('plan_checkins')
+          .select('id, purpose')
+          .eq('plan_id', plan.id)
+          .in('state', ['scheduled', 'due'])
+          .limit(1)
+
+        const checkin = ((checkins.data ?? []) as { id: string; purpose: string }[])[0]
+        if (!checkin) return errorResponse('conflict', 'Nothing is scheduled on that plan.')
+
+        await admin.from('plan_checkins').update({ state: 'due' }).eq('id', checkin.id)
+        await writeEvent(admin, {
+          caseId: action.caseId,
+          type: 'checkin_due',
+          actor: 'admin',
+          payload: { planId: plan.id, purpose: checkin.purpose },
+        })
+
+        return json(ok({ status: plan.status, checkin: checkin.purpose }), 200)
+      }
+
+      const target: PlanStatus =
+        action.move === 'pause'
+          ? 'paused'
+          : action.move === 'resume'
+            ? 'active'
+            : action.move === 'complete'
+              ? 'completed'
+              : 'abandoned'
+
+      if (!canTransition(plan.status, target)) {
+        return errorResponse('conflict', `That plan cannot move from ${plan.status}.`)
+      }
+
+      const now = new Date().toISOString()
+      await admin
+        .from('plans')
+        .update({
+          status: target,
+          ...(target === 'paused' ? { paused_at: now } : {}),
+          ...(target === 'completed' ? { completed_at: now } : {}),
+        })
+        .eq('id', plan.id)
+
+      await writeEvent(admin, {
+        caseId: action.caseId,
+        type: target === 'completed' ? 'plan_completed' : `plan_${target}`,
+        actor: 'admin',
+        payload: { planId: plan.id, title: plan.title },
+      })
+
+      return json(ok({ status: target }), 200)
+    }
+
     case 'verify_documents': {
       const applications = await admin
         .from('applications')
@@ -617,6 +753,34 @@ Deno.serve(async (request: Request): Promise<Response> => {
             reason: candidate.reason,
           })),
         planSteps: (plan?.steps ?? []).map((step) => `${step.title} — ${step.because}`),
+        // Every figure here is computed by the plan engine, so the console and the customer
+        // are looking at the same arithmetic (§40).
+        plans: (await loadPlans(admin, action.caseId, loaded)).map(({ plan: p, progress }) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          targetAmount: p.targetAmount,
+          currentAmount: progress.current,
+          projectedDate: progress.projectedDate,
+          monthsRemaining: progress.monthsRemaining,
+          onTrack: progress.onTrack,
+          milestones: p.milestones.map((milestone) => ({
+            id: milestone.id,
+            label: milestone.label,
+            state: milestone.state,
+            achievedAt: milestone.achievedAt,
+          })),
+          checkins: p.checkins.map((checkin) => ({
+            id: checkin.id,
+            purpose: checkin.purpose,
+            state: checkin.state,
+            when:
+              checkin.dueAt === null
+                ? `when ${checkin.triggerEvent ?? 'something changes'}`
+                : checkin.dueAt.slice(0, 10),
+            agenda: [...checkin.agenda],
+          })),
+        })),
         watches: (
           (watchRows.data ?? []) as { describe: string; met_at: string | null; created_at: string }[]
         ).map((row) => ({

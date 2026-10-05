@@ -15,6 +15,8 @@ import { NotificationCard } from '@/components/NotificationCard'
 import { useApplications } from '@/lib/useApplications'
 import { useCaseProgress } from '@/lib/useCaseProgress'
 import { useCaseSession } from '@/lib/useCaseSession'
+import { usePlans } from '@/lib/usePlans'
+import { PlanSummary } from '@/shells/boi/PlanSummary'
 
 function greeting(now = new Date()): string {
   const hour = now.getHours()
@@ -32,6 +34,7 @@ export function AppHome(): ReactNode {
   const navigate = useNavigate()
   const session = useCaseSession()
   const applications = useApplications(session.data?.caseId ?? null)
+  const plans = usePlans(session.data?.caseId ?? null)
   const progress = useCaseProgress({
     caseId: session.data?.caseId ?? null,
     applications: applications.data ?? [],
@@ -102,6 +105,8 @@ export function AppHome(): ReactNode {
           <ArrowRightIcon className="size-4" />
         </span>
       </Link>
+
+      <PlanSummary plans={plans.data ?? []} />
 
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">

@@ -19,6 +19,9 @@ export const queryKeys = {
     metrics: (caseId: string) => ['case', caseId, 'metrics'] as const,
   },
 
+  plans: {
+    forCase: (caseId: string) => ['case', caseId, 'plans'] as const,
+  },
   applications: {
     forCase: (caseId: string) => ['case', caseId, 'applications'] as const,
     progress: (caseId: string, applicationIds: string) =>

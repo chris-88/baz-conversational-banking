@@ -65,6 +65,25 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('reach_savings_target'), caseId: z.uuid() }),
 
   /**
+   * §38 — the single most useful lever in the console: move the balance and watch the plan
+   * react. Milestones, progress, projections and any waiting check-in all recompute from it,
+   * so one number demonstrates the whole machine.
+   */
+  z.object({
+    action: z.literal('set_savings_balance'),
+    caseId: z.uuid(),
+    amount: z.number().int().nonnegative().max(10_000_000),
+  }),
+
+  /** §38 — drive a plan directly: pause it, pick it up, finish it, or bring a check-in due. */
+  z.object({
+    action: z.literal('plan_move'),
+    caseId: z.uuid(),
+    planId: z.uuid(),
+    move: z.enum(['pause', 'resume', 'complete', 'abandon', 'trigger_checkin']),
+  }),
+
+  /**
    * One-click demo moves (§41).
    *
    * Named for what the presenter wants to happen — "credit card approved" — rather than for
@@ -167,6 +186,31 @@ export const adminCaseSchema = z.object({
     }),
   ),
   planSteps: z.array(z.string()),
+  /** §38 — every plan on the case, as the engine currently computes it. */
+  plans: z.array(
+    z.object({
+      id: z.uuid(),
+      title: z.string(),
+      status: z.string(),
+      targetAmount: z.number().nullable(),
+      currentAmount: z.number().nullable(),
+      projectedDate: z.string().nullable(),
+      monthsRemaining: z.number().int().nullable(),
+      onTrack: z.boolean().nullable(),
+      milestones: z.array(
+        z.object({ id: z.uuid(), label: z.string(), state: z.string(), achievedAt: z.string().nullable() }),
+      ),
+      checkins: z.array(
+        z.object({
+          id: z.uuid(),
+          purpose: z.string(),
+          state: z.string(),
+          when: z.string(),
+          agenda: z.array(z.string()),
+        }),
+      ),
+    }),
+  ),
   watches: z.array(
     z.object({ describe: z.string(), met: z.boolean(), createdAt: z.string() }),
   ),

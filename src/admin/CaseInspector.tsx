@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatusDot } from '@/components/StatusDot'
 import { queryKeys } from '@/lib/queryKeys'
 import { adminApi } from '@/admin/adminClient'
+import { PlanControls } from '@/admin/PlanControls'
 import type { ApplicationState } from '@domain/state-machine.ts'
 
 const EVENT_LABELS: Record<string, string> = {
@@ -150,6 +151,8 @@ export function CaseInspector({ caseId }: { caseId: string }): ReactNode {
           )}
         </Card>
       </section>
+
+      <PlanControls caseId={caseId} plans={data.plans} onChanged={refresh} />
 
       {(data.needs.length > 0 || data.watches.length > 0) && (
         <section className="space-y-2">
