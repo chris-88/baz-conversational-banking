@@ -685,3 +685,33 @@ section.
   bank-held data at sign-in, so nothing pressed for it in conversation. Worth having well
   beyond the label: being told a name and carrying on regardless is the plainest way to look
   like you are not listening.
+
+## 2026-10-05 — The Needs Engine
+
+- **2026-10-05** — Confidence combines by noisy-or: each signal independently fails to
+  establish the need, and the need holds if any succeeds. Weak evidence accumulates without any
+  one piece being decisive and nothing exceeds certainty. A maximum ignores corroboration —
+  marriage plus separate finances plus shared costs would score exactly what marriage alone
+  scores. A sum passes 1.0 on three soft signals. The design left this unspecified; its §14
+  worked example says about 0.85 and noisy-or gives 0.87, which is the only calibration point
+  available.
+- **2026-10-05** — Signals are predicates over recorded facts, never phrases to match. The
+  supplied catalogue writes them as things a customer might say; matching those strings would
+  make this the keyword engine §1 of the design explicitly rules out. Extraction turns language
+  into facts, and the engine turns facts into needs — which is also what lets the bank answer
+  "why did this need appear" with evidence rather than a guess.
+- **2026-10-05** — The health non-commercialisation rule reads the gate's per-turn `sensitive`
+  flag, not a fact. It cannot be fact-driven: a health disclosure is the one thing the
+  catalogue refuses to record (Invariant 6), so nothing in the case can evidence it. The gate
+  sees the message, the engine sees only the flag.
+- **2026-10-05** — Eight needs are implemented, not the catalogue's 49. They are the ones §67
+  exercises; the rest are data in `needs-engine/`, so adding one is a catalogue entry rather
+  than code. A need is not an application: most map to no journey at all and are explained
+  only, which is what keeps this clear of the five-product union the state machine runs on.
+- **2026-10-05** — "Two or three exchanges, not one" is gone from the voice. It was a heuristic
+  standing in for what the engine now measures, and with both present they disagreed — live,
+  an explicit mortgage request sat at 1.00 and ready to surface while Baz kept asking
+  questions. The case now tells Baz when it knows enough.
+- **2026-10-05** — `show_product_options` refuses to re-render while the same offer is still on
+  screen, matching the invite and status guards. Live, the mortgage card was offered on two
+  consecutive turns, which reads as the conversation going in circles.

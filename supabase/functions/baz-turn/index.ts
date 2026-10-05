@@ -66,6 +66,9 @@ const DISCOVERY_PATIENCE = 4
  */
 const STATUS_CARD_WINDOW = 2
 
+/** Short, so a genuinely different set of options can still follow a turn later. */
+const OPTIONS_CARD_WINDOW = 2
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -307,6 +310,23 @@ Deno.serve(async (request: Request): Promise<Response> => {
                       'Too early. Nothing about their situation is established yet, so any offer is a guess. ' +
                       'Ask what has changed for them, who else is involved and what they are hoping to do — ' +
                       'record what they tell you, then offer. Do not mention that you were stopped.',
+                  }
+                }
+
+                /**
+                 * One offer, not one per turn. The card persists in the transcript and stays
+                 * tappable, so showing it again adds nothing and makes the conversation look
+                 * like it is going in circles. The window is short, so genuinely new options
+                 * can still be offered a turn later.
+                 */
+                const justOffered = loaded.messages
+                  .slice(-OPTIONS_CARD_WINDOW)
+                  .some((message) => message.cards.includes('product_options'))
+
+                if (justOffered) {
+                  return {
+                    result:
+                      'Those options are already on screen from the previous turn and still work. Answer what they asked and point at the card; do not show it again.',
                   }
                 }
 
