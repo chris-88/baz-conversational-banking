@@ -346,3 +346,25 @@ section.
 - **2026-10-05** — Verified live end to end: discovery, selection, one fact gathered in
   conversation, seven values reused from bank-held facts and confirmed, one declaration made,
   then submitted. `state: submitted`, `submitted_at` set, 8 confirmations recorded.
+
+## 2026-10-05 — Protection, consent and the health form
+
+- **2026-10-05** — Added a `show_form` tool, an eighth beyond CLAUDE.md's seven. §7.5 requires
+  health data to be collected through a consented form, so there has to be a way to surface
+  one. It still only *shows*: the model names the application and nothing else, and the server
+  decides which form is due — so the health questions are unreachable until consent is recorded.
+- **2026-10-05** — `submit_health_form` refuses unless the consent is already recorded for that
+  application, and refuses any key the catalogue does not mark `special`. It is the only door
+  special-category data can come through, so both checks live at it (Invariant 6).
+- **2026-10-05** — The `health_form_completed` event carries a count, never values. Nothing
+  sensitive goes in an event payload.
+- **2026-10-05** — **Invariant 6 has two halves, and I only built one.** The model must never
+  see special-category values — and it must know they exist, or it reports answered health
+  questions as outstanding, which is exactly what happened. The digest now names the area and
+  says "answered and recorded", with no values.
+- **2026-10-05** — Outstanding items now carry *why* they are outstanding. Without it the model
+  could not tell "never been told this" from "we have it, the customer confirms it at review",
+  so it asked again for things the customer had already given.
+- **2026-10-05** — Naming a product in conversation does not start an application, and the
+  model assumed it did. The prompt now says so explicitly: `show_product_options` is the only
+  route in, even when the customer names the product themselves.

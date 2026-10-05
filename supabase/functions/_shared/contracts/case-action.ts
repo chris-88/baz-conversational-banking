@@ -58,6 +58,28 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
     action: z.literal('resume_application'),
     applicationId,
   }),
+
+  /** §7.5 — explicit consent, recorded, before any sensitive question is asked. */
+  z.object({
+    action: z.literal('grant_consent'),
+    applicationId,
+    requirementId: z.string().min(1).max(80),
+  }),
+
+  /**
+   * The structured health form (§7.5, Invariant 6).
+   *
+   * This is the only path by which special-category data enters the case, and the server
+   * refuses it unless the matching consent is already recorded.
+   */
+  z.object({
+    action: z.literal('submit_health_form'),
+    applicationId,
+    values: z
+      .array(z.object({ key: z.string().min(1), value: z.unknown() }))
+      .min(1)
+      .max(20),
+  }),
 ])
 
 export type CaseActionRequest = z.infer<typeof caseActionRequestSchema>

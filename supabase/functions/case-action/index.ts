@@ -6,6 +6,7 @@ import {
   type CaseActionResponse,
 } from '../_shared/contracts/case-action.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
+import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { transition } from '../_shared/domain/state-machine.ts'
 import { loadCase, writeEvent } from '../_shared/db/case-repository.ts'
 import {
@@ -217,6 +218,122 @@ Deno.serve(async (request: Request): Promise<Response> => {
       })
 
       summary = `${journeyFor(application.product).displayName} submitted.`
+      break
+    }
+
+    case 'grant_consent': {
+      const application = findApplication(loaded, action.applicationId)
+      if (!application) return errorResponse('not_found', 'That application does not exist.')
+
+      const journey = journeyFor(application.product)
+      const requirement = [
+        ...journey.requirements,
+        ...journey.branches.flatMap((branch) => branch.requirements),
+      ].find((candidate) => candidate.id === action.requirementId)
+
+      // Consent is only meaningful for something this journey actually asks consent for.
+      if (!requirement || requirement.kind !== 'confirmation') {
+        return errorResponse('bad_request', 'That is not something to consent to here.')
+      }
+
+      await admin.from('application_confirmations').upsert(
+        {
+          application_id: action.applicationId,
+          requirement_id: action.requirementId,
+          participant_id: session.participant_id,
+          kind: 'consent',
+        },
+        { onConflict: 'application_id,requirement_id' },
+      )
+
+      // Recorded as a consent in its own right, not only as a satisfied requirement (§9).
+      await admin.from('consents').upsert(
+        {
+          case_id: caseId,
+          participant_id: session.participant_id,
+          kind: 'health_questions',
+          granted: true,
+        },
+        { onConflict: 'participant_id,kind' },
+      )
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'consent_granted',
+        actor: 'customer',
+        applicationId: action.applicationId,
+        payload: { requirementId: action.requirementId, kind: 'health_questions' },
+      })
+
+      summary = 'Thanks — noted.'
+      break
+    }
+
+    case 'submit_health_form': {
+      const application = findApplication(loaded, action.applicationId)
+      if (!application) return errorResponse('not_found', 'That application does not exist.')
+
+      // Invariant 6, enforced at the only door special-category data can come through: the
+      // consent must already be recorded for THIS application. Without it, nothing is written.
+      const consented = loaded.confirmations.some(
+        (confirmation) =>
+          String(confirmation.applicationId) === action.applicationId &&
+          confirmation.requirementId.includes('health-consent'),
+      )
+
+      if (!consented) {
+        return errorResponse('forbidden', 'Health questions cannot be answered before consent.')
+      }
+
+      const rows: Record<string, unknown>[] = []
+      const problems: string[] = []
+
+      for (const entry of action.values) {
+        if (!isFactKey(entry.key)) {
+          problems.push(`${entry.key} is not something we collect.`)
+          continue
+        }
+
+        // This form exists for special-category data. Anything else belongs elsewhere, and
+        // accepting it here would route ordinary facts around the normal checks.
+        if (factCatalogue[entry.key].sensitivity !== 'special') {
+          problems.push(`${entry.key} does not belong on this form.`)
+          continue
+        }
+
+        const parsed = parseFactValue(entry.key, entry.value)
+        if (!parsed.ok) {
+          problems.push(`${factCatalogue[entry.key].label}: ${parsed.issues.join('; ')}`)
+          continue
+        }
+
+        rows.push({
+          case_id: caseId,
+          key: entry.key,
+          participant_id: session.participant_id,
+          subject_kind: 'participant',
+          value: parsed.value,
+          source: 'customer_stated',
+          verified: false,
+          captured_for: action.applicationId,
+        })
+      }
+
+      if (problems.length > 0) {
+        return errorResponse('bad_request', problems.join(' '))
+      }
+
+      await admin.from('facts').insert(rows)
+      await writeEvent(admin, {
+        caseId,
+        type: 'health_form_completed',
+        actor: 'customer',
+        applicationId: action.applicationId,
+        // The keys answered, never the values: nothing sensitive goes in an event payload.
+        payload: { answered: rows.length },
+      })
+
+      summary = 'Thanks, that is everything I needed from you on the health side.'
       break
     }
 

@@ -1,6 +1,6 @@
 import { factCatalogue, type Fact } from '../domain/facts.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
-import { evaluateJourney, type RequirementContext } from '../domain/requirements.ts'
+import { evaluateJourney, type OutstandingItem, type RequirementContext } from '../domain/requirements.ts'
 import { evaluateAdvisories } from '../domain/advisories.ts'
 import { stateLabel } from '../domain/state-machine.ts'
 import type { CaseDigest, DigestApplication, DigestFact } from '../llm/prompt.ts'
@@ -81,18 +81,36 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
     // are split by each requirement's own `waitingOn` rather than the application's.
     const blocking = evaluation.outstanding.filter((item) => item.blocking)
 
+    /**
+     * Says WHY, not just what. Without the reason the model cannot tell "we have never been
+     * told this" from "we have it and the customer confirms it at review", so it reports
+     * values the customer has already given as though they were missing.
+     */
+    const describe = (item: OutstandingItem): string => {
+      switch (item.reason) {
+        case 'needs_confirmation':
+          return `${item.requirement.label} — already known, confirmed on the review card`
+        case 'needs_fresh':
+          return `${item.requirement.label} — must be given again for this application`
+        case 'awaiting_declaration':
+          return `${item.requirement.label} — made on the review card`
+        case 'awaiting_document':
+          return `${item.requirement.label} — a document to upload`
+        case 'awaiting_partner':
+          return `${item.requirement.label} — waiting on the second applicant`
+        case 'missing':
+          return `${item.requirement.label} — not yet known, ask for it`
+      }
+    }
+
     return {
       id: application.id,
       product: application.product,
       displayName: journey.displayName,
       state: application.state,
       stateLabel: stateLabel(application.state),
-      outstanding: blocking
-        .filter((item) => item.waitingOn === 'primary')
-        .map((item) => item.requirement.label),
-      outstandingForPartner: blocking
-        .filter((item) => item.waitingOn === 'partner')
-        .map((item) => item.requirement.label),
+      outstanding: blocking.filter((item) => item.waitingOn === 'primary').map(describe),
+      outstandingForPartner: blocking.filter((item) => item.waitingOn === 'partner').map(describe),
       waitingOn: evaluation.waitingOn,
     }
   })
@@ -136,8 +154,27 @@ export function buildCaseDigest(loaded: LoadedCase): CaseDigest {
     ...new Set(applications.flatMap((application) => application.outstandingForPartner ?? [])),
   ]
 
+  // Invariant 6: the model is told that special-category data exists so it can report status
+  // honestly, but never what it says. Without this it reported answered health questions as
+  // outstanding, because it genuinely could not see them.
+  const sensitiveAreas = [
+    ...new Set(
+      loaded.facts
+        .filter((fact) => fact.supersededBy === null)
+        .filter((fact) => factCatalogue[fact.key].sensitivity === 'special')
+        .map((fact) => {
+          const application = loaded.applications.find(
+            (candidate) => candidate.id === fact.capturedFor,
+          )
+          const where = application ? journeyFor(application.product).displayName : 'the case'
+          return `Health information for ${where} — answered and recorded.`
+        }),
+    ),
+  ]
+
   return {
     customerName: loaded.customerName,
+    sensitiveHeld: sensitiveAreas,
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

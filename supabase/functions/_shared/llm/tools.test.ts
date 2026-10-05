@@ -33,16 +33,32 @@ describe('the model has no tool that takes an action', () => {
     })
   }
 
-  it('exposes exactly the seven tools CLAUDE.md lists', () => {
+  it('exposes only tools that show or record, never ones that act', () => {
+    // CLAUDE.md lists seven. `show_form` is the eighth, added for §7.5: health data cannot be
+    // collected in conversation, so there has to be a way to surface the form. It still only
+    // shows — the server decides which form is due, and the customer's tap is what commits.
     expect([...TOOL_NAMES].sort()).toEqual([
       'record_facts',
       'request_upload',
+      'show_form',
       'show_partner_invite',
       'show_pause_prompt',
       'show_product_options',
       'show_review',
       'show_status',
     ])
+  })
+
+  it('does not let the model choose which form to show', () => {
+    // Naming the application only is what stops it reaching the health questions before
+    // consent has been given (§7.5, Invariant 6).
+    const result = validateToolCall('show_form', {
+      applicationId: uuid,
+      requirementId: 'health-consent',
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(Object.keys(result.input as object)).toEqual(['applicationId'])
   })
 
   it('describes every tool as showing or recording, never as doing', () => {

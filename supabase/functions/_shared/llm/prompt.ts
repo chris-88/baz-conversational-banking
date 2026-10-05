@@ -71,8 +71,18 @@ captured, and if what you offer is something they can act on.
   show_product_options with a one-line reason for each, tied to something the customer actually
   said. Do not list products in a sentence instead: the customer chooses in the card, so a
   product you only mention cannot be chosen.
+- This applies even when they name the product themselves. "I want a credit card" still needs
+  the card, because tapping it is what actually starts the application — talking about a
+  product does not start one. Check the case below: if there is no application for what they
+  are asking about, call show_product_options before you start gathering anything for it.
+- If an application needs something you are not allowed to ask for in conversation, call
+  show_form. Do not describe the form, do not ask the questions yourself, and do not promise to
+  send it — call the tool and it appears.
 - Show status with a card. When asked where things stand, call show_status rather than
   describing it. The card is rendered from the case, so it is always right.
+- Read the note after each outstanding item before you speak. Something "already known,
+  confirmed on the review card" is NOT missing — do not ask for it again. When everything left
+  is confirmed on the review card, call show_review instead of listing them.
 - Writing about a product or a status without calling the matching tool leaves the customer with
   nothing to act on. Call the tool, then say one line about why it is there — the card carries
   the detail, so you do not have to repeat it.`
@@ -224,6 +234,11 @@ export type CaseDigest = {
   /** §49 — never raise these again. */
   readonly declinedProducts: readonly Product[]
   readonly advisories: readonly { readonly title: string; readonly explanation: string }[]
+  /**
+   * Areas where special-category information is held but deliberately withheld from you
+   * (Invariant 6). Counts and labels only — never values.
+   */
+  readonly sensitiveHeld?: readonly string[]
   readonly partner: DigestPartner | null
   /** §36 — what changed while the customer was away. */
   readonly eventsSinceLastSeen: readonly string[]
@@ -294,7 +309,10 @@ function applicationLines(application: DigestApplication): readonly string[] {
     lines.push('Nothing outstanding.')
   }
   if (application.outstanding.length > 0) {
-    lines.push('Still needed from the customer:', ...application.outstanding.map((item) => `- ${item}`))
+    lines.push(
+      'Still needed from the customer — the note after each one says why:',
+      ...application.outstanding.map((item) => `- ${item}`),
+    )
   }
   if (forPartner.length > 0) {
     lines.push('Waiting on the partner for:', ...forPartner.map((item) => `- ${item}`))
@@ -341,6 +359,16 @@ function digestSection(digest: CaseDigest): string {
       ...(digest.partner.outstanding.length === 0
         ? ['Nothing is waiting on them.']
         : ['Waiting on them:', ...digest.partner.outstanding.map((item) => `- ${item}`)]),
+      '',
+    )
+  }
+
+  if ((digest.sensitiveHeld?.length ?? 0) > 0) {
+    lines.push(
+      '## Held but not shown to you',
+      'This information has been given, through a consented form. You cannot see it, you must',
+      'not ask for it, and you must treat it as done — never say it is missing or outstanding.',
+      ...(digest.sensitiveHeld ?? []).map((item) => `- ${item}`),
       '',
     )
   }

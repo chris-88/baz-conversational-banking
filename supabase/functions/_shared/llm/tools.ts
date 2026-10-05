@@ -66,6 +66,16 @@ export const showPartnerInviteInput = z.object({
   applicationIds: z.array(applicationId).min(1).max(5),
 })
 
+/**
+ * Surfaces whatever structured form that application needs next — a consent, or the health
+ * questions once consent is given.
+ *
+ * The model names only the application. The server decides which form is due, so the model
+ * cannot invent a form, reorder them, or reach the health questions before consent (§7.5,
+ * Invariant 6).
+ */
+export const showFormInput = z.object({ applicationId })
+
 export const TOOL_INPUTS = {
   record_facts: recordFactsInput,
   show_product_options: showProductOptionsInput,
@@ -74,6 +84,7 @@ export const TOOL_INPUTS = {
   request_upload: requestUploadInput,
   show_partner_invite: showPartnerInviteInput,
   show_status: showStatusInput,
+  show_form: showFormInput,
 } as const
 
 export type ToolName = keyof typeof TOOL_INPUTS
@@ -128,6 +139,14 @@ export const TOOLS: readonly ToolDefinition[] = [
       'Offer to invite the second applicant to the applications they are needed for. The ' +
       'invitation is only sent when the customer taps.',
     schema: showPartnerInviteInput,
+  },
+  {
+    name: 'show_form',
+    description:
+      'Show the next form this application needs — a consent, or health questions once consent ' +
+      'is given. You name the application only; which form is due is decided for you. Use this ' +
+      'whenever an application needs something you are not allowed to ask for in conversation.',
+    schema: showFormInput,
   },
   {
     name: 'show_status',

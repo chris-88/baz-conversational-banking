@@ -239,3 +239,64 @@ describe('the partner', () => {
     expect(buildCaseDigest(loaded()).partner).toBeNull()
   })
 })
+
+/**
+ * Invariant 6 has two halves. The model must never see special-category values — and it must
+ * know they exist, or it reports answered health questions as outstanding, which is what
+ * happened the first time this ran.
+ */
+describe('special-category data is held, not hidden', () => {
+  const withHealth = () =>
+    loaded({
+      applications: [application('protection', 'in_progress')],
+      facts: [
+        fact('protection.health.smoker', PRIMARY, false, {
+          capturedFor: asApplicationId('33333333-3333-4333-8333-000000000000'),
+        }),
+      ],
+    })
+
+  it('still shows no value anywhere in the digest', () => {
+    const digest = buildCaseDigest(withHealth())
+    expect(JSON.stringify(digest)).not.toContain('smoker')
+    expect(digest.facts).toEqual([])
+  })
+
+  it('tells the model the information is held, so it does not report it as missing', () => {
+    const digest = buildCaseDigest(withHealth())
+    expect(digest.sensitiveHeld?.length).toBe(1)
+    expect(digest.sensitiveHeld?.[0]).toMatch(/answered and recorded/i)
+  })
+
+  it('says nothing at all when no sensitive data has been given', () => {
+    expect(buildCaseDigest(loaded()).sensitiveHeld).toEqual([])
+  })
+})
+
+/**
+ * The model could not tell "never been told this" from "we have it, confirm it at review", so
+ * it asked again for values the customer had already given.
+ */
+describe('outstanding items say why they are outstanding', () => {
+  it('marks a known value as confirmed at review rather than missing', () => {
+    const digest = buildCaseDigest(
+      loaded({
+        applications: [application('credit_card', 'in_progress')],
+        facts: [fact('identity.address', PRIMARY, '14 Sample Terrace', { capturedFor: null })],
+      }),
+    )
+
+    const address = digest.applications[0]?.outstanding.find((item) => item.startsWith('Your home address'))
+    expect(address).toMatch(/already known, confirmed on the review card/)
+  })
+
+  it('marks something genuinely unknown as worth asking for', () => {
+    const digest = buildCaseDigest(
+      loaded({ applications: [application('credit_card', 'in_progress')] }),
+    )
+
+    expect(digest.applications[0]?.outstanding.some((item) => item.includes('not yet known'))).toBe(
+      true,
+    )
+  })
+})

@@ -122,6 +122,16 @@ export function BazChat({
         { action: 'submit_application', applicationId, confirmations: [...confirmations] },
         'What happens next?',
       ),
+    onConsent: (applicationId, requirementId) =>
+      commit(
+        { action: 'grant_consent', applicationId, requirementId },
+        'What do you need from me now?',
+      ),
+    onHealthForm: (applicationId, values) =>
+      commit(
+        { action: 'submit_health_form', applicationId, values: [...values] },
+        'Where does that leave the application?',
+      ),
     onPauseDecision: (applicationId, decision) =>
       decision === 'pause'
         ? commit({ action: 'pause_application', applicationId }, 'I have put that on hold.')

@@ -4,6 +4,8 @@ import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
 import { ReviewCard } from '@/baz/cards/ReviewCard'
 import { PausePromptCard } from '@/baz/cards/PausePromptCard'
+import { ConsentCard } from '@/baz/cards/ConsentCard'
+import { HealthFormCard } from '@/baz/cards/HealthFormCard'
 
 /**
  * The card registry.
@@ -21,6 +23,11 @@ export type CardActions = {
   readonly onPauseDecision?: (
     applicationId: string,
     decision: 'pause' | 'continue',
+  ) => Promise<void> | void
+  readonly onConsent?: (applicationId: string, requirementId: string) => Promise<void> | void
+  readonly onHealthForm?: (
+    applicationId: string,
+    values: readonly { key: string; value: unknown }[],
   ) => Promise<void> | void
 }
 
@@ -61,6 +68,24 @@ export function CardRenderer({
         <PausePromptCard
           card={card}
           {...(actions.onPauseDecision ? { onDecide: actions.onPauseDecision } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'consent':
+      return (
+        <ConsentCard
+          card={card}
+          {...(actions.onConsent ? { onConsent: actions.onConsent } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'health_form':
+      return (
+        <HealthFormCard
+          card={card}
+          {...(actions.onHealthForm ? { onSubmit: actions.onHealthForm } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )

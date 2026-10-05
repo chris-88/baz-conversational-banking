@@ -91,7 +91,45 @@ export const uploadRequestCardSchema = z.object({
   documentType: z.string(),
 })
 
+/**
+ * §7.5, Invariant 6 — the gate in front of anything sensitive.
+ *
+ * Health information is never inferred from adjacent financial data and never collected in
+ * conversation. The customer is told exactly what will be asked and why, and nothing is asked
+ * until they agree.
+ */
+export const consentCardSchema = z.object({
+  type: z.literal('consent'),
+  applicationId,
+  requirementId: z.string(),
+  title: z.string(),
+  explanation: z.string(),
+  /** Plain descriptions of what the questions cover, before any are asked. */
+  covers: z.array(z.string()),
+  confirmLabel: z.string(),
+})
+
+/**
+ * The structured form itself — the ONLY route by which special-category data enters the case.
+ * `record_facts` refuses every key here, so the model cannot write one however it is asked.
+ */
+export const healthFormCardSchema = z.object({
+  type: z.literal('health_form'),
+  applicationId,
+  title: z.string(),
+  fields: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      kind: z.enum(['boolean', 'number', 'text_list']),
+      unit: z.string().nullable(),
+    }),
+  ),
+})
+
 export const cardSchema = z.discriminatedUnion('type', [
+  consentCardSchema,
+  healthFormCardSchema,
   productOptionCardSchema,
   statusCardSchema,
   reviewCardSchema,
@@ -110,4 +148,6 @@ export const CARD_TYPES = [
   'pause_prompt',
   'partner_invite',
   'upload_request',
+  'consent',
+  'health_form',
 ] as const satisfies readonly CardType[]
