@@ -189,6 +189,31 @@ export async function reconcilePlans(
   return achieved
 }
 
+/**
+ * Bring any check-in whose moment has arrived into `due`.
+ *
+ * Separate from noticing it is due, because becoming due is a thing that happened and wants
+ * recording, whereas being due is a state anything can evaluate. Returns what changed so the
+ * caller can write the event that brings the customer back.
+ */
+export async function raiseDueCheckins(
+  client: Db,
+  caseId: string,
+  loaded: LoadedCase,
+  firedEvents: readonly string[] = [],
+): Promise<readonly { plan: Plan; checkin: Checkin }[]> {
+  const plans = await loadPlans(client, caseId, loaded)
+  const due = dueCheckins(plans, loaded, firedEvents).filter(
+    ({ checkin }) => checkin.state === 'scheduled',
+  )
+
+  for (const { checkin } of due) {
+    await client.from('plan_checkins').update({ state: 'due' }).eq('id', checkin.id)
+  }
+
+  return due
+}
+
 /** Check-ins whose moment has arrived, so Baz has a reason to speak rather than an excuse. */
 export function dueCheckins(
   plans: readonly LoadedPlan[],

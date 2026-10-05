@@ -150,6 +150,8 @@ export const NARRATABLE_EVENTS = [
   'application_completed',
   'partner_completed',
   'savings_target_reached',
+  'plan_milestone_reached',
+  'checkin_due',
 ] as const
 
 export type NarratableEvent = (typeof NARRATABLE_EVENTS)[number]
@@ -172,6 +174,14 @@ function describeEvent(event: { type: string; payload: Record<string, unknown> }
       return `${name} was not approved.`
     case 'application_completed':
       return `${name} is complete.`
+    case 'plan_milestone_reached':
+      return typeof event.payload.label === 'string'
+        ? `You reached a step on your plan: ${event.payload.label}.`
+        : 'You reached a step on your plan.'
+    case 'checkin_due':
+      return typeof event.payload.purpose === 'string'
+        ? `It is time for the ${String(event.payload.purpose).toLowerCase()} you asked me to come back for.`
+        : 'It is time for the review you asked me to come back for.'
     case 'savings_target_reached':
       return typeof event.payload.target === 'number'
         ? `Your savings reached €${event.payload.target.toLocaleString('en-IE')} — the amount you were building towards.`
@@ -196,6 +206,8 @@ export function buildCaseDigest(
     /** Plans already loaded, described by the plan engine. Kept out of here so the digest
      *  stays synchronous and the database round trip happens once, in the caller. */
     readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
+    readonly checkin?: CaseDigest['checkin']
+    readonly revived?: CaseDigest['revived']
   } = {},
 ): CaseDigest {
   const needContext = needContextFor(loaded, {
@@ -264,6 +276,8 @@ export function buildCaseDigest(
     needs: digestNeeds,
     plan: digestPlan,
     ...(options.plans === undefined ? {} : { plans: options.plans }),
+    ...(options.checkin === undefined ? {} : { checkin: options.checkin }),
+    ...(options.revived === undefined ? {} : { revived: options.revived }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

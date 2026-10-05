@@ -11,6 +11,7 @@ import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/fact
 import { transition } from '../_shared/domain/state-machine.ts'
 import { loadCase, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
+import { deferNeed } from '../_shared/db/needs.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import {
   createApplications,
@@ -464,6 +465,22 @@ Deno.serve(async (request: Request): Promise<Response> => {
         .from('applications')
         .update({ state: result.application.state, resume_to: result.application.resumeTo })
         .eq('id', action.applicationId)
+
+      /**
+       * §27 — "leave it for now" is only kind if something remembers.
+       *
+       * Pausing a loan while a mortgage is in flight parks the need with the condition that
+       * brings it back, so the customer does not have to raise it again themselves months
+       * later. Recorded against the need, not the application, because the need is what they
+       * actually wanted.
+       */
+      if (pausing && application.product === 'personal_loan') {
+        await deferNeed(admin, caseId, {
+          needId: 'home_improvement_borrowing',
+          revisitWhen: 'mortgage_completed',
+          reason: 'you asked me to leave it until the mortgage was sorted',
+        })
+      }
 
       await writeEvent(admin, {
         caseId,

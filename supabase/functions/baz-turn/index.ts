@@ -27,8 +27,17 @@ import {
   writeEvent,
 } from '../_shared/db/case-repository.ts'
 import { buildCaseDigest } from '../_shared/db/digest.ts'
-import { needContextFor, needsFor } from '../_shared/db/needs.ts'
-import { describePlan, loadPlans, planContextFor, proposePlan, reconcilePlans } from '../_shared/db/plans.ts'
+import { needContextFor, needsFor, revivableNeeds } from '../_shared/db/needs.ts'
+import { needCatalogue } from '../_shared/domain/needs/catalogue.ts'
+import {
+  describePlan,
+  dueCheckins,
+  loadPlans,
+  planContextFor,
+  proposePlan,
+  raiseDueCheckins,
+  reconcilePlans,
+} from '../_shared/db/plans.ts'
 import { depositGap } from '../_shared/domain/needs/catalogue.ts'
 import type { PlanGoal } from '../_shared/domain/plans/types.ts'
 import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case.ts'
@@ -208,14 +217,55 @@ Deno.serve(async (request: Request): Promise<Response> => {
     })
   }
 
+  /**
+   * A check-in waiting on an event becomes due when the event has actually happened. The
+   * milestones just reconciled above are what makes that evaluable here rather than on a
+   * schedule nothing is watching.
+   */
+  const firedEvents = [
+    ...loaded.eventsSinceLastSeen.map((event) => event.type),
+    ...(achievedMilestones.length > 0 ? ['savings_target_reached'] : []),
+  ]
+
+  const raised = await raiseDueCheckins(admin, turn.caseId, loaded, firedEvents)
+  for (const { checkin } of raised) {
+    await writeEvent(admin, {
+      caseId: turn.caseId,
+      type: 'checkin_due',
+      actor: 'system',
+      payload: { purpose: checkin.purpose },
+    })
+  }
+
   const loadedPlans = await loadPlans(admin, turn.caseId, loaded)
   const keptPlans = loadedPlans
     .filter((entry) => entry.plan.status === 'active')
     .map((entry) => ({ title: entry.plan.title, lines: [...describePlan(entry)] }))
 
+  const revivable = await revivableNeeds(admin, turn.caseId, loaded)
+  const revived = revivable
+    .map((item) => {
+      const need = needCatalogue.find((candidate) => candidate.id === item.needId)
+      return need === undefined ? null : { name: need.name, reason: item.reason }
+    })
+    .filter((item): item is { name: string; reason: string } => item !== null)
+
+  // Whichever check-in is due now, with the agenda written when it was agreed.
+  const dueNow = dueCheckins(loadedPlans, loaded, firedEvents)[0] ?? null
+
   const digest = buildCaseDigest(loaded, {
     sensitiveDisclosure: gate.suppressHumour,
     plans: keptPlans,
+    ...(revived.length === 0 ? {} : { revived }),
+    ...(dueNow === null
+      ? {}
+      : {
+          checkin: {
+            purpose: dueNow.checkin.purpose,
+            plan: dueNow.plan.title,
+            agenda: [...dueNow.checkin.agenda],
+          },
+        }),
   })
   const needContext = needContextFor(loaded, { sensitiveDisclosure: gate.suppressHumour })
 

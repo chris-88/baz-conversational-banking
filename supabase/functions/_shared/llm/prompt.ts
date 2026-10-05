@@ -321,6 +321,17 @@ export type CaseDigest = {
    * Lines are ready to say; none of the arithmetic is yours to redo.
    */
   readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
+  /**
+   * §18–§20 — a planned reason to speak, with the agenda agreed when it was set. Present only
+   * when one is actually due.
+   */
+  readonly checkin?: {
+    readonly purpose: string
+    readonly plan: string
+    readonly agenda: readonly string[]
+  } | null
+  /** §27 — parked earlier, and the thing they were waiting for has happened. */
+  readonly revived?: readonly { readonly name: string; readonly reason: string }[]
   readonly partner: DigestPartner | null
   /** §36 — what changed while the customer was away. */
   readonly eventsSinceLastSeen: readonly string[]
@@ -463,6 +474,33 @@ function digestSection(digest: CaseDigest): string {
     lines.push(
       'Anything not listed here is not established. Do not offer it, however reasonable it',
       'sounds.',
+      '',
+    )
+  }
+
+  const revived = digest.revived ?? []
+  if (revived.length > 0) {
+    lines.push(
+      '## Something you parked is worth raising again',
+      'They asked you to come back to these, and the thing they were waiting for has now',
+      'happened. Raise it as picking up where you left off, in their words, and let them',
+      'decide — they may well still not want it:',
+      ...revived.map((item) => `- ${item.name} — ${item.reason}`),
+      '',
+    )
+  }
+
+  const due = digest.checkin
+  if (due !== undefined && due !== null) {
+    lines.push(
+      '## The check-in they asked for is due',
+      `${due.purpose}, on "${due.plan}". They agreed to this; you are not interrupting them.`,
+      'Open with it, work through what is worth covering, and say plainly if something on the',
+      'list turns out not to need anything — "you are still on track and I need nothing from',
+      'you" is a complete and useful answer (§20). Do not pad it out to seem busy.',
+      '',
+      'What this check-in is for:',
+      ...due.agenda.map((item) => `- ${item}`),
       '',
     )
   }

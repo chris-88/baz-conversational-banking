@@ -3,6 +3,7 @@ import { asApplicationId, asParticipantId } from '../domain/facts.ts'
 import { evaluateNeeds } from '../domain/needs/engine.ts'
 import type { NeedCandidate, NeedContext, RecordedNeedState } from '../domain/needs/types.ts'
 import type { LoadedCase } from './loaded-case.ts'
+import type { Db } from './case-repository.ts'
 
 /**
  * The case as the needs engine sees it.
@@ -48,6 +49,96 @@ export function needContextFor(
     })),
     decisions: decisionsFrom(loaded),
   }
+}
+
+/**
+ * §27 — park a need, with the thing that would make it worth raising again.
+ *
+ * "Leave it for now" is only kind if something remembers. The condition is stored in a form
+ * the engine can evaluate, so coming back is a fact about the case rather than a note in a
+ * transcript nobody rereads.
+ */
+export async function deferNeed(
+  client: Db,
+  caseId: string,
+  input: {
+    readonly needId: string
+    readonly revisitWhen: 'mortgage_completed' | 'plan_completed' | 'savings_target_reached' | 'date'
+    readonly revisitOn?: string
+    readonly reason: string
+  },
+): Promise<void> {
+  // One current decision per need; superseded ones keep their history.
+  await client
+    .from('need_decisions')
+    .update({ revisited_at: new Date().toISOString() })
+    .eq('case_id', caseId)
+    .eq('need_id', input.needId)
+    .is('revisited_at', null)
+
+  const written = await client.from('need_decisions').insert({
+    case_id: caseId,
+    need_id: input.needId,
+    state: 'deferred',
+    revisit_when: input.revisitWhen,
+    revisit_on: input.revisitOn ?? null,
+    reason: input.reason,
+  })
+
+  if (written.error) throw new Error(`need_decisions: ${written.error.message}`)
+}
+
+/**
+ * Needs whose moment has come back round.
+ *
+ * Evaluated from the case, so "when the mortgage is done" means the mortgage is actually done
+ * — not that enough time has passed for it to be a reasonable guess.
+ */
+export async function revivableNeeds(
+  client: Db,
+  caseId: string,
+  loaded: LoadedCase,
+): Promise<readonly { needId: string; reason: string }[]> {
+  const rows = await client
+    .from('need_decisions')
+    .select('need_id, revisit_when, revisit_on, reason')
+    .eq('case_id', caseId)
+    .eq('state', 'deferred')
+    .is('revisited_at', null)
+
+  if (rows.error) throw new Error(`need_decisions: ${rows.error.message}`)
+
+  const today = new Date().toISOString().slice(0, 10)
+  const mortgageDone = loaded.applications.some(
+    (application) =>
+      application.product === 'mortgage' &&
+      (application.state === 'completed' || application.state === 'approved'),
+  )
+
+  return ((rows.data ?? []) as {
+    need_id: string
+    revisit_when: string | null
+    revisit_on: string | null
+    reason: string | null
+  }[])
+    .filter((row) => {
+      switch (row.revisit_when) {
+        case 'mortgage_completed':
+          return mortgageDone
+        case 'date':
+          return row.revisit_on !== null && row.revisit_on <= today
+        // Handled by the plan and savings paths, which write their own events.
+        case 'plan_completed':
+        case 'savings_target_reached':
+          return false
+        // A deferral with no condition never comes back by itself, which is the honest
+        // outcome: nothing was agreed about when to raise it again.
+        case null:
+        default:
+          return false
+      }
+    })
+    .map((row) => ({ needId: row.need_id, reason: row.reason ?? 'you asked me to come back to it' }))
 }
 
 /**
