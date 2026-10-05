@@ -457,3 +457,44 @@ section.
   which does read history, would refer to a card no longer on screen. A card that no longer
   parses is dropped rather than breaking the whole transcript.
 - **2026-10-05** — Purging clears audience cases only, and says so on screen (§44).
+
+## 2026-10-05 — The asset pack, and the UI built to it
+
+- **2026-10-05** — The visual language is now the supplied pack's, not one invented to fill a
+  gap. Tokens are the pack's slate scale, BOI blue and navy, a colour per application state and
+  an accent per product. Colour never carries meaning alone: `StatusBadge` pairs each state
+  colour with the state machine's own label, `ProgressBar` announces its percentage, and the
+  status card's marks carry a name as well as a tint.
+- **2026-10-05** — The tab bar's centre action was a generic speech bubble and is now Baz's
+  face. Baz sitting in the middle of the navigation is the whole proposition in one piece of
+  UI; a speech bubble says "help widget".
+- **2026-10-05** — The status card now carries the journey's requirements rather than a count,
+  built from the requirement engine server-side so the card still cannot agree with model text
+  that is wrong (Invariant 2, §59).
+- **2026-10-05** — That card lists what is **outstanding**, not what is done. Built first in
+  journey order, it showed five green ticks and "and 34 more steps": a mortgage carries nearly
+  forty requirements and the first several are always the identity the bank already holds, so
+  the card filled with things the customer could do nothing about. The done count lives in the
+  progress bar; the list answers "what do you need from me".
+- **2026-10-05** — The confirmation card is rendered by the component that completed the
+  action, not asked for by the model. `commit` now reports whether the server accepted the
+  action, so the tick can only appear because `case-action` returned — the model's reply
+  arrives separately and is not evidence.
+- **2026-10-05** — Baz's text is broken into paragraphs across tool rounds. Each round is its
+  own stream and the deltas went straight through, so live transcripts read "They're here
+  now.Mortgage first is usually the sensible order." A round emitting only whitespace does not
+  count as having spoken, so a tool-only first round does not open the message with a blank
+  line.
+- **2026-10-05** — `ListRow` gained `wrap`. Truncating is right for a one-line row and wrong
+  once the same row is stacked into a card, where it was cutting product descriptions mid-word.
+- **2026-10-05** — The public header's ghost "Chat to Baz" and search are desktop-only. With
+  the wordmark and Log in they overflowed 390px, and both are redundant on a phone where the
+  hero carries a composer and a Chat to Baz pill.
+- **2026-10-05** — Not built, deliberately: the board's four-tab app home (Your accounts / Your
+  applications / Insights / Documents). Two of the four have no content, and the mobile journey
+  board — which is the actual screen design — does not use tabs. Two dead tabs are worse than
+  the current layout.
+- **2026-10-05** — Not built: the upload card. `upload_request` is in the card contract and
+  `request_upload` is in the tool list, but `baz-turn` does not offer the tool and `case-action`
+  has no upload action, so the card is unreachable. The UI is the last piece of that feature,
+  not the first — storage, RLS and the action come before it.
