@@ -127,6 +127,23 @@ export const adminOverviewSchema = z.object({
       updatedAt: z.string(),
     }),
   ),
+  /**
+   * §38 — what has just happened, across every case, in plain words.
+   *
+   * The console follows a conversation live, so this is where the plan machinery becomes
+   * visible as it runs rather than something a presenter has to drill in and infer.
+   */
+  activity: z
+    .array(
+      z.object({
+        at: z.string(),
+        actor: z.string(),
+        describe: z.string(),
+        signal: z.boolean(),
+        caseLabel: z.string(),
+      }),
+    )
+    .default([]),
   metrics: z.object({
     /** §53 — the headline measure. */
     questionsAvoided: z.number().int(),
@@ -170,7 +187,27 @@ export const adminCaseSchema = z.object({
       canSimulate: z.array(z.string()),
     }),
   ),
-  events: z.array(z.object({ type: z.string(), actor: z.string(), at: z.string() })),
+  events: z.array(
+    z.object({
+      type: z.string(),
+      actor: z.string(),
+      at: z.string(),
+      /** Plain words for the presenter. Built server-side so one describer serves everyone. */
+      describe: z.string(),
+      /** True for the things worth watching happen: plans, milestones, check-ins, notices. */
+      signal: z.boolean(),
+    }),
+  ),
+  /** §27 — needs the customer parked, and what would bring each one back. */
+  parked: z.array(
+    z.object({
+      needId: z.string(),
+      name: z.string(),
+      reason: z.string(),
+      revisitWhen: z.string().nullable(),
+      ready: z.boolean(),
+    }),
+  ),
   /**
    * What the needs engine makes of this case, and what the bank has committed to watching
    * for. The presenter can answer "why did Baz offer that" without reading the prompt.

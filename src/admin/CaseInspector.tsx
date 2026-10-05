@@ -154,6 +154,29 @@ export function CaseInspector({ caseId }: { caseId: string }): ReactNode {
 
       <PlanControls caseId={caseId} plans={data.plans} onChanged={refresh} />
 
+      {/* §27 — a parked need is otherwise invisible: it looks exactly like one never raised. */}
+      {data.parked.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Parked, and what brings it back</h2>
+          <Card className="gap-0 divide-y p-0">
+            {data.parked.map((item) => (
+              <div key={item.needId} className="flex items-baseline gap-3 px-4 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{item.name}</span>
+                  <span className="text-muted-foreground block text-2xs">
+                    {item.reason}
+                    {item.revisitWhen !== null && ` · returns when ${item.revisitWhen.replaceAll('_', ' ')}`}
+                  </span>
+                </span>
+                <Badge variant={item.ready ? 'default' : 'secondary'} className="text-2xs">
+                  {item.ready ? 'ready to raise' : 'waiting'}
+                </Badge>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
       {(data.needs.length > 0 || data.watches.length > 0) && (
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">What Baz makes of this, and why</h2>
@@ -248,8 +271,14 @@ export function CaseInspector({ caseId }: { caseId: string }): ReactNode {
         <h2 className="text-sm font-semibold">Event log</h2>
         <Card className="gap-0 divide-y p-0">
           {data.events.map((event, index) => (
-            <div key={`${event.at}-${String(index)}`} className="flex items-center gap-3 px-4 py-2">
-              <span className="min-w-0 flex-1 truncate text-xs">{event.type}</span>
+            <div
+              key={`${event.at}-${String(index)}`}
+              className={`flex items-center gap-3 px-4 py-2${event.signal ? ' bg-primary/[0.03]' : ''}`}
+            >
+              {/* Plain words, with the raw type kept on hover for when it is the type you want. */}
+              <span className="min-w-0 flex-1 truncate text-xs" title={event.type}>
+                {event.describe}
+              </span>
               <Badge variant="secondary" className="text-2xs">
                 {event.actor}
               </Badge>

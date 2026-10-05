@@ -10,7 +10,9 @@ import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { loadCase, recordFacts, type Insert, writeEvent } from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
-import { needContextFor } from '../_shared/db/needs.ts'
+import { needContextFor, revivableNeeds } from '../_shared/db/needs.ts'
+import { describeAdminEvent } from '../_shared/db/admin-events.ts'
+import { needCatalogue } from '../_shared/domain/needs/catalogue.ts'
 import { loadPlans, planContextFor, reconcilePlans } from '../_shared/db/plans.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
@@ -324,7 +326,32 @@ Deno.serve(async (request: Request): Promise<Response> => {
         }
       })
 
+      const recent = await admin
+        .from('events')
+        .select('type, actor, created_at, payload, case_id')
+        .in('case_id', caseIds)
+        .order('created_at', { ascending: false })
+        .limit(30)
+
+      const labelFor = new Map(summaries.map((row) => [row.id, row.label ?? 'Case']))
+
+      const activity = (
+        (recent.data ?? []) as {
+          type: string
+          actor: string
+          created_at: string
+          payload: Record<string, unknown> | null
+          case_id: string
+        }[]
+      ).map((row) => ({
+        at: row.created_at,
+        actor: row.actor,
+        caseLabel: labelFor.get(row.case_id) ?? 'Case',
+        ...describeAdminEvent(row.type, row.payload ?? {}),
+      }))
+
       const overview: AdminOverview = {
+        activity,
         killSwitch: (config.data as { kill_switch?: boolean } | null)?.kill_switch ?? false,
         demoActions,
         presenterCaseId: presenter?.id ?? null,
@@ -720,10 +747,41 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       const events = await admin
         .from('events')
-        .select('type, actor, created_at')
+        .select('type, actor, created_at, payload')
         .eq('case_id', action.caseId)
         .order('created_at', { ascending: false })
         .limit(40)
+
+      /**
+       * §27 — what the customer parked and what would bring it back.
+       *
+       * Shown because a deferred need is otherwise invisible: it looks identical to a need
+       * that was never raised, which is precisely the thing a parked need is not.
+       */
+      const parkedRows = await admin
+        .from('need_decisions')
+        .select('need_id, reason, revisit_when, revisit_on')
+        .eq('case_id', action.caseId)
+        .eq('state', 'deferred')
+        .is('revisited_at', null)
+
+      const ready = new Set(
+        (await revivableNeeds(admin, action.caseId, loaded)).map((item) => item.needId),
+      )
+
+      const parked = (
+        (parkedRows.data ?? []) as {
+          need_id: string
+          reason: string | null
+          revisit_when: string | null
+        }[]
+      ).map((row) => ({
+        needId: row.need_id,
+        name: needCatalogue.find((need) => need.id === row.need_id)?.name ?? row.need_id,
+        reason: row.reason ?? 'parked',
+        revisitWhen: row.revisit_when,
+        ready: ready.has(row.need_id),
+      }))
 
       const needContext = needContextFor(loaded, { sensitiveDisclosure: false })
       const candidates = needContext === null ? [] : evaluateNeeds(needContext)
@@ -815,9 +873,20 @@ Deno.serve(async (request: Request): Promise<Response> => {
             ] as const
           ).filter((event) => transition(application, { type: event } as TransitionEvent).ok),
         })),
-        events: ((events.data ?? []) as { type: string; actor: string; created_at: string }[]).map(
-          (row) => ({ type: row.type, actor: row.actor, at: row.created_at }),
-        ),
+        events: (
+          (events.data ?? []) as {
+            type: string
+            actor: string
+            created_at: string
+            payload: Record<string, unknown> | null
+          }[]
+        ).map((row) => ({
+          type: row.type,
+          actor: row.actor,
+          at: row.created_at,
+          ...describeAdminEvent(row.type, row.payload ?? {}),
+        })),
+        parked,
       }
 
       return json(ok(inspected), 200)

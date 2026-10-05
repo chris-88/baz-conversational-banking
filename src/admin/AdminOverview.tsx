@@ -15,6 +15,7 @@ import { queryKeys } from '@/lib/queryKeys'
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { adminApi } from '@/admin/adminClient'
 import { routes } from '@/app/routes'
+import { ActivityFeed, ActivityPlaceholder } from '@/admin/ActivityFeed'
 import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
 import { CaseInspector } from '@/admin/CaseInspector'
 
@@ -92,6 +93,12 @@ function Overview({
   return (
     <div className="space-y-6">
       <Metrics metrics={data.metrics} />
+
+      {data.activity.length > 0 ? (
+        <ActivityFeed activity={data.activity} />
+      ) : (
+        <ActivityPlaceholder />
+      )}
 
       <DemoActions data={data} onChanged={onChanged} />
 
