@@ -100,8 +100,15 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
           return `${item.requirement.label} — already sent in, the team is checking it. Do NOT ask for it again or suggest it failed.`
         case 'awaiting_partner':
           return `${item.requirement.label} — waiting on the second applicant`
-        case 'missing':
-          return `${item.requirement.label} — not yet known, ask for it`
+        case 'missing': {
+          // A fact the catalogue will not accept from conversation must not be asked for,
+          // however plainly it is missing — otherwise the customer answers and is refused.
+          const formOnly =
+            item.requirement.kind === 'fact' && !factCatalogue[item.requirement.fact].extractable
+          return formOnly
+            ? `${item.requirement.label} — must come from the form, never ask for it in chat`
+            : `${item.requirement.label} — not yet known, ask for it`
+        }
       }
     }
 

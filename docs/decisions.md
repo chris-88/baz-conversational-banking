@@ -594,3 +594,14 @@ section.
   uses Deno globals and bare specifiers the app's config cannot resolve. A call to a function
   that does not exist deployed cleanly and was caught only by reading it. Worth a `deno check`
   step in CI.
+- **2026-10-05** — PPS number is collected in conversation like any other banking detail; the
+  DPA covers it. It was `extractable: false`, which produced a dead end rather than a
+  protection: the case said "not yet known, ask for it", nothing told Baz it could not record
+  it, so Baz asked, the customer sent it, `record_facts` refused, and Baz retracted in front of
+  them. Special-category health data stays `extractable: false` — that is Invariant 6 and the
+  consent-plus-form flow is a demonstrated feature, not an obstacle.
+- **2026-10-05** — The prompt now lists what cannot be taken in conversation, by label and
+  never by key. Listing only what *can* be recorded left the model unable to tell "not in the
+  catalogue" from "not allowed", which is how the dead end happened. The key stays hidden
+  because the key is the one string a write would need (Invariant 6). The digest marks the same
+  requirements as form-only rather than telling Baz to ask.

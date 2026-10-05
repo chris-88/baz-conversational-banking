@@ -172,12 +172,18 @@ export const factCatalogue = {
   },
   // Never reusable across journeys without a fresh ask: a national identifier is
   // re-keyed per application in the recorded journeys.
+  //
+  // Takeable in conversation (2026-10-05). It was not, which produced a dead end: the case
+  // listed it as outstanding, nothing told Baz it could not be recorded, so Baz asked, the
+  // customer answered, record_facts refused it and Baz had to retract. Ordinary banking data
+  // is collected in the conversation and covered by the DPA; special-category health data is
+  // not, and stays `extractable: false` below (§7.5, Invariant 6).
   'identity.ppsn': {
     schema: z.string().regex(/^\d{7}[A-Za-z]{1,2}$/, 'expected a PPS number'),
     subject: 'person',
     reuse: 'confirm',
     sensitivity: 'standard',
-    extractable: false,
+    extractable: true,
     label: 'PPS number',
   },
 

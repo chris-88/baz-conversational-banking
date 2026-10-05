@@ -138,6 +138,20 @@ export function factReference(): string {
     'applicant, and leave subject out otherwise. Everything else is household-level.',
     '',
     ...lines,
+    '',
+    /**
+     * Listing what cannot be taken, not just what can. Left off, the model saw a key missing
+     * from the list above, read "not yet known, ask for it" in the case, asked the customer
+     * for it, and had the answer refused — then had to retract in front of them.
+     */
+    'These cannot be taken in the conversation at all. Never ask for one, and if the customer',
+    'offers one anyway, do not repeat it back. The form is the only route — call show_form.',
+    '',
+    // By label only. The key is what record_facts needs, so naming it here would hand the
+    // model the one string it would need to attempt a write it must never make (Invariant 6).
+    ...FACT_KEYS.filter((key) => !factCatalogue[key].extractable).map(
+      (key) => `- ${factCatalogue[key].label}`,
+    ),
   ].join('\n')
 }
 
