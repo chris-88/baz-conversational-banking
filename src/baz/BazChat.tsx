@@ -45,7 +45,7 @@ export function BazChat({
   const [caseId, setCaseId] = useState<string | null>(null)
   const [joining, setJoining] = useState(isBackendConfigured)
   const [joinError, setJoinError] = useState<string | null>(null)
-  const { entries, streaming, error, send, loadFrom } = useConversation(caseId)
+  const { entries, streaming, error, send, loadFrom, reset } = useConversation(caseId)
   const [loadingHistory, setLoadingHistory] = useState(isBackendConfigured)
 
   const bottom = useRef<HTMLDivElement>(null)
@@ -82,6 +82,31 @@ export function BazChat({
       return false
     }
   }
+
+  /**
+   * The presenter resets the case from the console and every open screen is suddenly attached
+   * to a participant that no longer exists, so the next turn fails with "This is not your
+   * case." and the phone is dead until someone clears its storage. That will happen on the
+   * day, so it recovers itself: a fresh session on the rebuilt case, and a clean transcript.
+   */
+  useEffect(() => {
+    if (error === null || !/not your case|no such case/i.test(error)) return
+
+    let cancelled = false
+    startSession(mode)
+      .then((session) => {
+        if (cancelled) return
+        reset()
+        setCaseId(session.caseId)
+      })
+      .catch(() => {
+        // Leave the original error on screen; a second failure is not more informative.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [error, mode, reset])
 
   useEffect(() => {
     if (!isBackendConfigured) return

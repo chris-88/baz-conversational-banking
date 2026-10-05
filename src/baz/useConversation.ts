@@ -86,10 +86,16 @@ export function useConversation(caseId: string | null) {
     [caseId, streaming],
   )
 
+  /** Clears the transcript, for when the case it belonged to no longer exists. */
+  const reset = useCallback(() => {
+    setEntries([])
+    setError(null)
+  }, [])
+
   /** Replaces the transcript with what is persisted, before any new turn is taken. */
   const loadFrom = useCallback((persisted: readonly TurnEntry[]) => {
     setEntries(persisted)
   }, [])
 
-  return { entries, streaming, error, send, loadFrom }
+  return { entries, streaming, error, send, loadFrom, reset }
 }
