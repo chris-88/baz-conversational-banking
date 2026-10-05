@@ -309,7 +309,13 @@ export async function recordFacts(
     caseId: string
     facts: readonly FactWrite[]
     participants: Readonly<Record<'primary' | 'partner', string | null>>
-    source: 'customer_stated' | 'partner_stated'
+    /**
+     * Widened from the two conversational sources so the console can write a bank-held
+     * figure through the same door. Hand-rolled inserts got the household/participant pairing
+     * wrong and were rejected by the schema silently; one writer that reads the catalogue is
+     * the fix.
+     */
+    source: FactSource
     capturedFor?: string | null
   },
 ): Promise<FactWriteOutcome> {

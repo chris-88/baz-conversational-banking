@@ -8,7 +8,7 @@ import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { stateLabel, transition, type TransitionEvent } from '../_shared/domain/state-machine.ts'
 import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
-import { loadCase, writeEvent, type Insert } from '../_shared/db/case-repository.ts'
+import { loadCase, recordFacts, type Insert, writeEvent } from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor } from '../_shared/db/needs.ts'
 import { loadPlans, planContextFor, reconcilePlans } from '../_shared/db/plans.ts'
@@ -423,24 +423,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       const primary = ((participants.data ?? []) as { id: string }[])[0]
 
-      // Supersede rather than add, so the case holds one balance and not a history of guesses.
-      await admin
-        .from('facts')
-        .update({ superseded_by: null })
-        .eq('case_id', action.caseId)
-        .eq('key', 'assets.savingsBalance')
-        .is('superseded_by', null)
-        .select('id')
-
-      await admin.from('facts').insert({
-        case_id: action.caseId,
-        key: 'assets.savingsBalance',
-        participant_id: primary?.id ?? null,
-        subject_kind: 'household',
-        value: watch.target as unknown as Json,
+      const written = await recordFacts(admin, {
+        caseId: action.caseId,
+        facts: [{ key: 'assets.savingsBalance', value: watch.target }],
+        participants: { primary: null, partner: null },
         source: 'bank_held',
-        verified: true,
       })
+
+      if (written.accepted.length === 0) {
+        return errorResponse('internal', 'That balance could not be written.')
+      }
 
       await admin
         .from('plan_watches')
@@ -465,47 +457,22 @@ Deno.serve(async (request: Request): Promise<Response> => {
      * this the lever worth having in front of an audience.
      */
     case 'set_savings_balance': {
-      const participants = await admin
-        .from('participants')
-        .select('id')
-        .eq('case_id', action.caseId)
-        .eq('role', 'primary')
-        .limit(1)
+      /**
+       * Written through `recordFacts`, which reads the catalogue to decide whether a key is a
+       * household or a person fact. Hand-rolling the insert paired `subject_kind: household`
+       * with a participant id, which the schema rejects — correctly — and the rejection went
+       * unread, so the console reported setting a balance that was never written.
+       */
+      const outcome = await recordFacts(admin, {
+        caseId: action.caseId,
+        facts: [{ key: 'assets.savingsBalance', value: action.amount }],
+        participants: { primary: null, partner: null },
+        source: 'bank_held',
+      })
 
-      const primary = ((participants.data ?? []) as { id: string }[])[0]
-
-      const live = await admin
-        .from('facts')
-        .select('id')
-        .eq('case_id', action.caseId)
-        .eq('key', 'assets.savingsBalance')
-        .is('superseded_by', null)
-
-      const written = await admin
-        .from('facts')
-        .insert({
-          case_id: action.caseId,
-          key: 'assets.savingsBalance',
-          participant_id: primary?.id ?? null,
-          subject_kind: 'household',
-          value: action.amount as unknown as Json,
-          source: 'bank_held',
-          verified: true,
-        })
-        .select('id')
-        .single()
-
-      const newId = (written.data as { id?: string } | null)?.id
-      const previous = ((live.data ?? []) as { id: string }[]).map((row) => row.id)
-      if (newId !== undefined && previous.length > 0) {
-        const superseded = await admin
-          .from('facts')
-          .update({ superseded_by: newId })
-          .in('id', previous)
-
-        if (superseded.error) {
-          return errorResponse('internal', `Could not replace the old balance: ${superseded.error.message}`)
-        }
+      if (outcome.accepted.length === 0) {
+        const why = outcome.rejected.map((item: { reason: string }) => item.reason).join('; ')
+        return errorResponse('internal', `That balance was not written: ${why || 'unknown'}`)
       }
 
       const loadedCase = await loadCase(admin, action.caseId)
@@ -531,9 +498,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       /**
        * Report what was evaluated, not just what changed.
        *
-       * "No milestone reached" is ambiguous — it means the same whether nothing qualified,
-       * nothing was looked at, or the read came back stale. The counts make the difference
-       * visible, which is the whole point of a presenter console.
+       * "No milestone reached" means the same thing whether nothing qualified, nothing was
+       * looked at, or the read came back stale. The counts make the difference visible.
        */
       const after = loadedCase === null ? [] : await loadPlans(admin, action.caseId, loadedCase)
       const considered = after
