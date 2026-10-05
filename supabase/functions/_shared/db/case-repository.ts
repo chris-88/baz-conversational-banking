@@ -1,4 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, Json } from './database.types.ts'
+
+/**
+ * The service-role client these helpers take, typed against the real schema.
+ *
+ * Generated from the linked project with `npm run db:types`. Untyped, every insert resolved
+ * to `never` and every column name was a guess — which is how a call to a function that does
+ * not exist, and a write naming a column that does not exist, both deployed cleanly. Nobody
+ * saw either because the Edge Functions were never typechecked at all.
+ */
+export type Db = SupabaseClient<Database>
+
+/** A row as the database wants it written, so a column typo is a compile error. */
+export type Insert<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Insert']
+
 import {
   asApplicationId,
   asFactId,
@@ -32,7 +48,7 @@ function unwrap(result: Query, what: string): unknown {
   return result.data
 }
 
-export async function loadCase(client: SupabaseClient, caseId: string): Promise<LoadedCase | null> {
+export async function loadCase(client: Db, caseId: string): Promise<LoadedCase | null> {
   const caseResult = (await client
     .from('cases')
     .select('id, kind, auth_level, last_seen_at, customer_id')
@@ -171,7 +187,7 @@ export async function loadCase(client: SupabaseClient, caseId: string): Promise<
   }
 }
 
-async function loadCustomerName(client: SupabaseClient, customerId: string | null): Promise<string | null> {
+async function loadCustomerName(client: Db, customerId: string | null): Promise<string | null> {
   if (customerId === null) return null
   const result = (await client
     .from('customers')
@@ -184,7 +200,7 @@ async function loadCustomerName(client: SupabaseClient, customerId: string | nul
 }
 
 async function loadEventsSince(
-  client: SupabaseClient,
+  client: Db,
   caseId: string,
   since: string | null,
 ): Promise<LoadedCase['eventsSinceLastSeen']> {
@@ -215,7 +231,7 @@ function parsePersona(data: unknown): PersonaSliders {
 // ---------------------------------------------------------------------------
 
 export async function saveMessage(
-  client: SupabaseClient,
+  client: Db,
   message: {
     caseId: string
     participantId: string | null
@@ -234,7 +250,7 @@ export async function saveMessage(
       role: message.role,
       content: message.content,
       gate_category: message.gateCategory ?? null,
-      cards: message.cards ?? [],
+      cards: (message.cards ?? []) as Json,
     })
     .select('id')
     .single()) as Query
@@ -244,7 +260,7 @@ export async function saveMessage(
 }
 
 export async function writeEvent(
-  client: SupabaseClient,
+  client: Db,
   event: {
     caseId: string
     type: string
@@ -258,7 +274,7 @@ export async function writeEvent(
     type: event.type,
     actor: event.actor,
     application_id: event.applicationId ?? null,
-    payload: event.payload ?? {},
+    payload: (event.payload ?? {}) as Json,
   })) as Query
   unwrap(result, 'the event')
 }
@@ -288,7 +304,7 @@ export type FactWriteOutcome = {
  * and the write would be refused for a reason the customer never caused.
  */
 export async function recordFacts(
-  client: SupabaseClient,
+  client: Db,
   input: {
     caseId: string
     facts: readonly FactWrite[]
@@ -299,7 +315,7 @@ export async function recordFacts(
 ): Promise<FactWriteOutcome> {
   const accepted: FactKey[] = []
   const rejected: { key: string; reason: string }[] = []
-  const inserts: Record<string, unknown>[] = []
+  const inserts: Insert<'facts'>[] = []
 
   for (const fact of input.facts) {
     const definition = factCatalogue[fact.key]
@@ -333,7 +349,7 @@ export async function recordFacts(
       key: fact.key,
       participant_id: participantId,
       subject_kind: household ? 'household' : 'participant',
-      value: parsed.value,
+      value: parsed.value as Json,
       source: input.source,
       verified: false,
       captured_for: input.capturedFor ?? null,
@@ -353,7 +369,7 @@ export async function recordFacts(
    * An identical value is not written at all: re-stating something is not a correction, and
    * recording it again inflates the captured-facts count and clutters the inspector.
    */
-  const keys = [...new Set(inserts.map((row) => row['key'] as string))]
+  const keys = [...new Set(inserts.map((row) => row.key))]
   const current = (await client
     .from('facts')
     .select('id, key, participant_id, value')
@@ -369,13 +385,13 @@ export async function recordFacts(
   }[])
 
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
-  const matching = (row: Record<string, unknown>) =>
+  const matching = (row: Insert<'facts'>) =>
     live.filter(
       (existing) =>
-        existing.key === row['key'] && existing.participant_id === row['participant_id'],
+        existing.key === row.key && existing.participant_id === (row.participant_id ?? null),
     )
 
-  const changed = inserts.filter((row) => !matching(row).some((e) => same(e.value, row['value'])))
+  const changed = inserts.filter((row) => !matching(row).some((e) => same(e.value, row.value)))
   if (changed.length === 0) return { accepted, rejected }
 
   const written = (await client
@@ -402,7 +418,7 @@ export async function recordFacts(
   return { accepted, rejected }
 }
 
-export async function touchLastSeen(client: SupabaseClient, caseId: string): Promise<void> {
+export async function touchLastSeen(client: Db, caseId: string): Promise<void> {
   const result = (await client
     .from('cases')
     .update({ last_seen_at: new Date().toISOString() })

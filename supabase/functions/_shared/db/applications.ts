@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Db } from './case-repository.ts'
 import { asApplicationId, type ApplicationId } from '../domain/facts.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
 import type { Journey, Product } from '../domain/journey.ts'
@@ -67,7 +67,7 @@ export function summarise(
  * The resulting state is derived, never chosen (Invariant 3).
  */
 export async function recomputeApplications(
-  client: SupabaseClient,
+  client: Db,
   loaded: LoadedCase,
   options: { readonly activeApplicationId?: ApplicationId | undefined } = {},
 ): Promise<readonly ApplicationSummary[]> {
@@ -118,7 +118,7 @@ export async function recomputeApplications(
 
 /** §6 Stage 6 — the customer's choice creates several applications at once. */
 export async function createApplications(
-  client: SupabaseClient,
+  client: Db,
   loaded: LoadedCase,
   products: readonly Product[],
 ): Promise<readonly Product[]> {
@@ -157,7 +157,7 @@ export async function createApplications(
  * metric is derived from events rather than recomputed later.
  */
 export async function recordReuse(
-  client: SupabaseClient,
+  client: Db,
   loaded: LoadedCase,
   application: Application,
   evaluation: JourneyEvaluation,

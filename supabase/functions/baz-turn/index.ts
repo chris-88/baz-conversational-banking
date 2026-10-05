@@ -1,6 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../_shared/db/database.types.ts'
 import { bazTurnRequestSchema } from '../_shared/contracts/baz-turn.ts'
 import { fail, statusFor } from '../_shared/contracts/common.ts'
 import { toSseFrame, type StreamEvent } from '../_shared/contracts/stream.ts'
@@ -120,7 +121,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
   const turn = parsed.data
 
-  const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  const admin = createClient<Database>(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   })
 
@@ -564,7 +565,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
                   type: 'partner_invite',
                   applicationIds,
                   applicationNames: names,
-                  partnerName: partner?.displayName ?? null,
+                  // Always null by this point: a joined partner returned above, and a
+                  // participant row does not exist before they join.
+                  partnerName: null,
                 }
 
                 return {

@@ -620,3 +620,17 @@ section.
 - **2026-10-05** — The fact reference now warns whose answer is being recorded: a number the
   customer quotes about their partner is still the partner's. Guessing wrong is worse than
   asking, because the wrong subject silently replaces a correct answer.
+
+## 2026-10-05 — The Edge Functions were never typechecked
+
+- **2026-10-05** — `npm run typecheck:functions` runs `deno check` over every function entry
+  point, and CI runs it. `tsconfig.app.json` covers only `_shared/domain`, `contracts` and
+  `tenants`, because the rest uses Deno globals and bare specifiers it cannot resolve — so
+  `baz-turn`, `session`, `case-action`, `admin`, `partner` and `upload` were checked by nobody.
+  A call to a function that does not exist deployed cleanly today and was found by reading the
+  file. The first run found seven errors, including a property read on a value the compiler
+  knew was always `undefined`.
+- **2026-10-05** — The service-role client is typed against the real schema, generated from the
+  linked project by `npm run db:types`. Untyped it resolved every insert payload to `never` and
+  every column name was unchecked, so a misspelt column was a runtime error on the day. The
+  generated file is excluded from lint.

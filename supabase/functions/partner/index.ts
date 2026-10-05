@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   partnerRequestSchema,
@@ -9,7 +10,7 @@ import {
 import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
-import { loadCase, writeEvent } from '../_shared/db/case-repository.ts'
+import { loadCase, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
 import { evaluateFor, recomputeApplications } from '../_shared/db/applications.ts'
 import type { LoadedCase } from '../_shared/db/loaded-case.ts'
 
@@ -158,7 +159,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const parsed = partnerRequestSchema.safeParse(body)
   if (!parsed.success) return errorResponse('bad_request', 'Unrecognised request.')
 
-  const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  const admin = createClient<Database>(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   })
 
@@ -253,7 +254,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     if (problems.length > 0) return errorResponse('bad_request', problems.join(' '))
-    if (rows.length > 0) await admin.from('facts').insert(rows)
+    if (rows.length > 0) await admin.from('facts').insert(rows as Insert<'facts'>[])
 
     await writeEvent(admin, {
       caseId,
@@ -284,7 +285,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         stateLabel: stateLabel(application.state),
         waitingOnYou: evaluateFor(loaded as LoadedCase, application).waitingOn === 'partner',
       })),
-    tasks: buildTasks(loaded, partnerId),
+    tasks: [...buildTasks(loaded, partnerId)],
   }
 
   return json(ok(view), 200)

@@ -36,6 +36,8 @@ export default tseslint.config(
       'test-results/**',
       'src/components/ui/**', // shadcn-generated
       ...DENO_ENTRYPOINTS,
+      // Generated from the linked project by `npm run db:types`.
+      'supabase/functions/_shared/db/database.types.ts',
     ],
   },
 

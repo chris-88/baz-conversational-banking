@@ -1,5 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
+import type { Database, Json } from '../_shared/db/database.types.ts'
+import type { Db } from '../_shared/db/case-repository.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { sessionRequestSchema, type SessionResponse } from '../_shared/contracts/session.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
@@ -65,7 +67,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const parsed = sessionRequestSchema.safeParse(body)
   if (!parsed.success) return errorResponse('bad_request', 'Unrecognised request.')
 
-  const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  const admin = createClient<Database>(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   })
 
@@ -190,7 +192,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           key: fact.key,
           participant_id: fact.subject === 'household' ? null : token.participant_id,
           subject_kind: fact.subject === 'household' ? 'household' : 'participant',
-          value: fact.value,
+          value: fact.value as Json,
           source: fact.source,
           verified: fact.verified,
         })),
@@ -239,7 +241,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         caseId: found.participants.case_id,
         participantId: found.participants.id,
         role: found.participants.role,
-        authLevel: theCase.data?.auth_level ?? 'anonymous',
+        authLevel: theCase.data?.auth_level === 'authenticated' ? 'authenticated' : 'anonymous',
         customerFirstName: theCase.data?.customer_id ? canonicalCase.customer.firstName : null,
         created: false,
         hasUpdates: await updatesSince(found.participants.case_id),
@@ -341,7 +343,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         key: fact.key,
         participant_id: fact.subject === 'household' ? null : participant.data.id,
         subject_kind: fact.subject === 'household' ? 'household' : 'participant',
-        value: fact.value,
+        value: fact.value as Json,
         source: fact.source,
         verified: fact.verified,
       })),
@@ -375,10 +377,12 @@ async function sha256(value: string): Promise<string> {
 }
 
 async function writeEventRow(
-  admin: ReturnType<typeof createClient>,
+  admin: Db,
   caseId: string,
   type: string,
   payload: Record<string, unknown> = {},
 ): Promise<void> {
-  await admin.from('events').insert({ case_id: caseId, type, actor: 'customer', payload })
+  await admin
+    .from('events')
+    .insert({ case_id: caseId, type, actor: 'customer', payload: payload as Json })
 }

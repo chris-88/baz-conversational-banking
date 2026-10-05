@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { writeEvent } from '../_shared/db/case-repository.ts'
 
@@ -46,7 +47,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const authorization = request.headers.get('Authorization')
   if (!authorization) return errorResponse('unauthorised', 'Sign in first.')
 
-  const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  const admin = createClient<Database>(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   })
 

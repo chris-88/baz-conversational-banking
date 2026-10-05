@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { recordFacts } from './case-repository.ts'
+import { recordFacts, type Db } from './case-repository.ts'
 
 /**
  * Captures what would have been written, so the rules can be tested without a database.
@@ -11,7 +10,7 @@ import { recordFacts } from './case-repository.ts'
 type LiveFact = { id: string; key: string; participant_id: string | null; value: unknown }
 
 function stubClient(existing: readonly LiveFact[] = []): {
-  client: SupabaseClient
+  client: Db
   inserted: Record<string, unknown>[]
   superseded: string[]
 } {
@@ -55,7 +54,7 @@ function stubClient(existing: readonly LiveFact[] = []): {
     return chain
   }
 
-  return { client: { from } as unknown as SupabaseClient, inserted, superseded }
+  return { client: { from } as unknown as Db, inserted, superseded }
 }
 
 const participants = { primary: 'p-primary', partner: 'p-partner' }

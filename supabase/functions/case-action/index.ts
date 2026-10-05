@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   caseActionRequestSchema,
@@ -8,7 +9,7 @@ import {
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { transition } from '../_shared/domain/state-machine.ts'
-import { loadCase, writeEvent } from '../_shared/db/case-repository.ts'
+import { loadCase, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
 import {
   createApplications,
   evaluateFor,
@@ -63,7 +64,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
   const action = parsed.data
 
-  const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  const admin = createClient<Database>(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   })
 
@@ -368,7 +369,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return errorResponse('bad_request', problems.join(' '))
       }
 
-      await admin.from('facts').insert(rows)
+      await admin.from('facts').insert(rows as Insert<'facts'>[])
       await writeEvent(admin, {
         caseId,
         type: 'health_form_completed',
@@ -414,13 +415,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const applications = await recomputeApplications(admin, loaded)
 
   return json(
-    ok({ applications, summary, ...(inviteUrl === undefined ? {} : { inviteUrl }) } satisfies CaseActionResponse),
+    ok({
+      applications: [...applications],
+      summary,
+      ...(inviteUrl === undefined ? {} : { inviteUrl }),
+    } satisfies CaseActionResponse),
     200,
   )
 })
 
 async function caseIdForApplication(
-  admin: ReturnType<typeof createClient>,
+  admin: Db,
   applicationId: string,
 ): Promise<string | null> {
   const result = await admin

@@ -28,6 +28,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The Edge Functions are Deno, so `tsc` cannot see them. Without this a call to a
+      # function that does not exist typechecks clean and deploys.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck the Edge Functions
+        run: npm run typecheck:functions
+
       - name: Generated seed is up to date
         run: npm run seed:check
 

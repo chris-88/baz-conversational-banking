@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
+import type { Database, Json } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { adminRequestSchema, type AdminCase, type AdminOverview } from '../_shared/contracts/admin.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
@@ -7,7 +8,7 @@ import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { stateLabel, transition, type TransitionEvent } from '../_shared/domain/state-machine.ts'
 import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
-import { loadCase, writeEvent } from '../_shared/db/case-repository.ts'
+import { loadCase, writeEvent, type Insert } from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
 
 /**
@@ -94,7 +95,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const parsed = adminRequestSchema.safeParse(body)
   if (!parsed.success) return errorResponse('bad_request', 'Unrecognised request.')
 
-  const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  const admin = createClient<Database>(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   })
 
@@ -134,7 +135,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
       if (Object.keys(update).length === 0) return errorResponse('bad_request', 'Nothing to set.')
 
-      await admin.from('persona_config').update(update).eq('scope', 'global')
+      await admin
+        .from('persona_config')
+        .update(update as Insert<'persona_config'>)
+        .eq('scope', 'global')
       return json(ok(update), 200)
     }
 
@@ -188,7 +192,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           key: fact.key,
           participant_id: fact.subject === 'household' ? null : participantId,
           subject_kind: fact.subject === 'household' ? 'household' : 'participant',
-          value: fact.value,
+          value: fact.value as Json,
           source: fact.source,
           verified: fact.verified,
         })),
