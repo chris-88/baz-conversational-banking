@@ -85,7 +85,17 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
   const tools = toolDefinitions(options.enabledTools)
   const cards: Card[] = []
 
+  /**
+   * The model usually speaks, calls a tool, then speaks again about what came back. Each round
+   * is its own stream, so without a separator the last sentence of one round and the first of
+   * the next arrive joined: "They're here now.Mortgage first is usually the sensible order."
+   * They are separate thoughts either side of a tool call, so they get a paragraph break.
+   */
+  let spoken = false
+
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+    let spokenThisRound = false
+
     const stream = options.client.messages.stream({
       model: options.model,
       max_tokens: options.maxTokens ?? BAZ_MAX_TOKENS,
@@ -98,7 +108,21 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
     // than waiting for the whole turn to finish.
     for await (const chunk of stream) {
       if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-        yield { type: 'text_delta', text: chunk.delta.text }
+        if (spokenThisRound) {
+          yield { type: 'text_delta', text: chunk.delta.text }
+          continue
+        }
+
+        // Nothing said yet this round. Whitespace before the first word is dropped rather
+        // than opening the message with a blank line, and a round that only ever emits
+        // whitespace does not count as the model having spoken.
+        const opening = chunk.delta.text.replace(/^\s+/, '')
+        if (opening === '') continue
+
+        if (spoken) yield { type: 'text_delta', text: '\n\n' }
+        spokenThisRound = true
+        spoken = true
+        yield { type: 'text_delta', text: opening }
       }
     }
 
