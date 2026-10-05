@@ -9,7 +9,7 @@ import {
 } from '../domain/facts.ts'
 import type { Application } from '../domain/state-machine.ts'
 import { slidersFor } from '../llm/persona.ts'
-import { buildCaseDigest } from './digest.ts'
+import { buildCaseDigest, NARRATABLE_EVENTS } from './digest.ts'
 import type { LoadedCase } from './loaded-case.ts'
 
 const PRIMARY = asParticipantId('11111111-1111-4111-8111-111111111111')
@@ -307,15 +307,14 @@ describe('outstanding items say why they are outstanding', () => {
  * something had changed and then could not say what.
  */
 describe('every event worth returning for can be described', () => {
-  const NARRATABLE = [
-    'application_received',
-    'information_requested',
-    'document_received',
-    'application_approved',
-    'application_declined',
-    'application_completed',
-    'partner_completed',
-  ]
+  const NARRATABLE = NARRATABLE_EVENTS
+
+  it('is the same list that decides whether to bring the customer back', () => {
+    // Three copies of this list drifted once already. The notifier, the narrator and this
+    // test now read the same one, so an event cannot be worth returning for and wordless.
+    expect(NARRATABLE_EVENTS).toContain('savings_target_reached')
+    expect(new Set(NARRATABLE_EVENTS).size).toBe(NARRATABLE_EVENTS.length)
+  })
 
   it('produces a sentence for each one', () => {
     for (const type of NARRATABLE) {

@@ -5,6 +5,7 @@ import type { Db } from '../_shared/db/case-repository.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { sessionRequestSchema, type SessionResponse } from '../_shared/contracts/session.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
+import { NARRATABLE_EVENTS } from '../_shared/db/digest.ts'
 
 /**
  * Attaches an anonymous visitor to a case (§12, §28).
@@ -37,18 +38,9 @@ function env(name: string): string {
 /**
  * §36 — did anything happen that is worth leading with?
  *
- * Only changes the customer would recognise. Sending the notification is not itself news, and
- * a return summary that opens with "we sent you a message" is worse than not opening at all.
+ * Imported rather than restated: see NARRATABLE_EVENTS.
  */
-const NARRATABLE = [
-  'application_received',
-  'information_requested',
-  'document_received',
-  'application_approved',
-  'application_declined',
-  'application_completed',
-  'partner_completed',
-] as const
+const NARRATABLE = NARRATABLE_EVENTS
 
 Deno.serve(async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })

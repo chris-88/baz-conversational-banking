@@ -130,6 +130,30 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
 }
 
 /** §36 — what changed while they were away, in the customer's language. */
+/**
+ * Events a customer would recognise as news, and the only ones that bring them back (§36).
+ *
+ * One list, because there were three: one deciding whether to notify, one deciding what could
+ * be narrated, and one in a test. Adding `savings_target_reached` to the narrator alone meant
+ * the bank hit the milestone it had promised to watch for and said nothing, because the other
+ * list had never heard of it.
+ *
+ * Sending the notification is not itself news: a return summary opening with "we sent you a
+ * message" is worse than not opening at all.
+ */
+export const NARRATABLE_EVENTS = [
+  'application_received',
+  'information_requested',
+  'document_received',
+  'application_approved',
+  'application_declined',
+  'application_completed',
+  'partner_completed',
+  'savings_target_reached',
+] as const
+
+export type NarratableEvent = (typeof NARRATABLE_EVENTS)[number]
+
 function describeEvent(event: { type: string; payload: Record<string, unknown> }): string | null {
   const name = typeof event.payload.applicationName === 'string' ? event.payload.applicationName : 'An application'
 
