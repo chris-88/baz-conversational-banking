@@ -7,6 +7,7 @@ import { PausePromptCard } from '@/baz/cards/PausePromptCard'
 import { ConsentCard } from '@/baz/cards/ConsentCard'
 import { HealthFormCard } from '@/baz/cards/HealthFormCard'
 import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
+import { UploadRequestCard } from '@/baz/cards/UploadRequestCard'
 
 /**
  * The card registry.
@@ -32,6 +33,7 @@ export type CardActions = {
     values: readonly { key: string; value: unknown }[],
   ) => Promise<void> | void
   readonly onInvitePartner?: (name: string) => Promise<string | undefined> | string | undefined
+  readonly onUpload?: (requestId: string, file: File, documentType: string) => Promise<void>
 }
 
 export function CardRenderer({
@@ -102,8 +104,13 @@ export function CardRenderer({
         />
       )
 
-    // Documents arrive with the upload flow.
     case 'upload_request':
-      return null
+      return (
+        <UploadRequestCard
+          card={card}
+          {...(actions.onUpload ? { onUpload: actions.onUpload } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
   }
 }

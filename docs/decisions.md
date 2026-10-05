@@ -557,3 +557,20 @@ section.
   and put 50,000 in. The defect was asking for them in two separate turns as though unrelated,
   which reads as not listening. The voice now says to ask whether all of it is going in rather
   than asking for the second number cold.
+
+## 2026-10-05 — Document upload
+
+- **2026-10-05** — `request_upload` now takes an application and a requirement id rather than a
+  pre-existing request row. The old shape could only reference an `application_requests` row
+  that something else had created, and nothing created one for a journey's own document
+  requirements — so the mortgage's five documents were unreachable and the conversation simply
+  stopped there. The server checks the requirement exists, is a document, and is outstanding,
+  then creates the request itself: the model still cannot invent a document to ask for.
+- **2026-10-05** — Uploads go through their own Edge Function as multipart rather than base64
+  through `case-action`. The bucket is private with no `anon` policies, so bytes only ever come
+  out through a function. The open request row is the authorisation — a document can only be
+  sent against one the bank has asked for, on a case the caller is a participant in.
+- **2026-10-05** — An uploaded document is `verified: false`. A requirement marked
+  `requiresVerification` therefore stays outstanding after the upload, which is the truthful
+  state: nothing has checked it. The mortgage payslip is the only one affected, and the bank
+  verifying it wants to be an admin move — not yet built.

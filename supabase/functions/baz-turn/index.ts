@@ -45,10 +45,39 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'show_pause_prompt',
   'show_form',
   'show_partner_invite',
+  'request_upload',
 ]
 
 /** How far back a card still counts as "on screen" rather than scrolled into history. */
 const INVITE_CARD_WINDOW = 8
+
+/**
+ * §6 Stages 2–4 — needs conversation and context discovery come before product discovery.
+ *
+ * What the customer has told us about their situation, as opposed to who they are or what they
+ * earn. Offering products before any of this is known makes the offer a guess dressed up as
+ * advice, and it puts the customer back in the position of having to know which product they
+ * need — which is the thing Baz exists to remove.
+ */
+const DISCOVERY_KEYS: readonly string[] = [
+  'goals.primaryObjective',
+  'lifeEvent.recentlyMarried',
+  'lifeEvent.newChild',
+  'household.buyingWith',
+  'household.dependantCount',
+  'household.financesManagedJointly',
+  'housing.currentTenure',
+  'housing.firstTimeBuyer',
+]
+
+/** Enough of a picture to offer against. Below this, keep asking. */
+const DISCOVERY_MINIMUM = 3
+
+/**
+ * A customer who will not answer questions must still be able to get somewhere, so the gate
+ * lifts once they have had their say regardless of what was recorded.
+ */
+const DISCOVERY_PATIENCE = 4
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -268,6 +297,24 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
               case 'show_product_options': {
                 const { products } = input as { products: { product: any; reason: string }[] }
+
+                const learned = new Set(
+                  loaded.facts
+                    .filter((fact) => fact.supersededBy === null)
+                    .map((fact) => String(fact.key))
+                    .filter((key) => DISCOVERY_KEYS.includes(key)),
+                )
+                const customerTurns = loaded.messages.filter((m) => m.role === 'customer').length
+
+                if (learned.size < DISCOVERY_MINIMUM && customerTurns < DISCOVERY_PATIENCE) {
+                  return {
+                    result:
+                      'Too early. You know almost nothing about their situation yet, so any offer is a guess. ' +
+                      'Ask about what has changed for them, who else is involved, and what they are hoping to do — ' +
+                      'record what they tell you, then offer. Do not mention that you were stopped.',
+                  }
+                }
+
                 const declined = new Set(
                   loaded.productInterests.filter((i) => i.status === 'declined').map((i) => i.product),
                 )
@@ -522,6 +569,72 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
                 return {
                   result: 'Invite offered. Nothing is sent until the customer taps and shares it.',
+                  card,
+                }
+              }
+
+              case 'request_upload': {
+                const { applicationId, requirementId } = input as {
+                  applicationId: string
+                  requirementId: string
+                }
+                const application = findApplication(loaded, applicationId)
+                if (!application) return { result: 'There is no such application.' }
+
+                // The journey decides what can be asked for, not the model (Invariant 3).
+                const evaluation = evaluateFor(loaded, application)
+                const outstanding = evaluation.outstanding.find(
+                  (item) =>
+                    item.requirement.id === requirementId &&
+                    item.requirement.kind === 'document',
+                )
+
+                if (!outstanding || outstanding.requirement.kind !== 'document') {
+                  return {
+                    result:
+                      'That is not an outstanding document on this application. Check the case for what is actually still needed.',
+                  }
+                }
+
+                const journey = journeyFor(application.product)
+
+                // One open request per requirement, so asking twice does not pile up rows.
+                const existing = loaded.requests.find(
+                  (request) =>
+                    request.applicationId === application.id &&
+                    request.requirementId === requirementId &&
+                    request.status === 'open',
+                )
+
+                let requestId = existing?.id ?? null
+                if (requestId === null) {
+                  const created = await admin
+                    .from('application_requests')
+                    .insert({
+                      application_id: application.id,
+                      requirement_id: requirementId,
+                      kind: 'document',
+                      status: 'open',
+                      detail: outstanding.requirement.label,
+                    })
+                    .select('id')
+                    .single()
+
+                  if (created.error) return { result: 'That could not be requested just now.' }
+                  requestId = (created.data as { id: string }).id
+                }
+
+                const card: Card = {
+                  type: 'upload_request',
+                  requestId,
+                  applicationId: String(application.id),
+                  label: outstanding.requirement.label,
+                  documentType: outstanding.requirement.documentType,
+                  applicationName: journey.displayName,
+                }
+
+                return {
+                  result: `Upload card shown for ${outstanding.requirement.label}. Nothing arrives until they pick a file.`,
                   card,
                 }
               }

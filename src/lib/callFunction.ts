@@ -26,6 +26,25 @@ export async function callFunction(name: string, body: Record<string, unknown>):
   return envelope.data
 }
 
+/**
+ * The same thing for a file. `invoke` passes a FormData body straight through without setting
+ * a JSON content type, which is what the upload function reads.
+ */
+export async function callFunctionWithFile(name: string, body: FormData): Promise<unknown> {
+  const supabase = requireSupabase()
+  const invoked = await supabase.functions.invoke<unknown>(name, { body })
+
+  if (invoked.error) throw new Error(await messageFrom(invoked.error))
+
+  const envelope = invoked.data as { ok?: boolean; data?: unknown; error?: unknown }
+  if (envelope.ok !== true) {
+    const parsed = apiErrorSchema.safeParse(envelope.error)
+    throw new Error(parsed.success ? parsed.data.message : 'That did not work.')
+  }
+
+  return envelope.data
+}
+
 async function messageFrom(error: unknown): Promise<string> {
   const context = (error as { context?: unknown }).context
 

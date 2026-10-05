@@ -98,8 +98,17 @@ export const uploadRequestCardSchema = z.object({
   type: z.literal('upload_request'),
   requestId: z.uuid(),
   applicationId,
+  /** The journey's own words for this document, never the model's. */
   label: z.string(),
-  documentType: z.string(),
+  documentType: z.enum([
+    'payslip',
+    'bank_statement',
+    'photo_id',
+    'proof_of_address',
+    'salary_certificate',
+  ]),
+  /** Which application it is for, so a card in a long transcript still makes sense. */
+  applicationName: z.string(),
 })
 
 /**

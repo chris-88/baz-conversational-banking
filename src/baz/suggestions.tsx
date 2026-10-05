@@ -1,16 +1,18 @@
-import { CreditCardIcon, HomeIcon, MessageCircleIcon, ShieldIcon, UsersIcon } from 'lucide-react'
+import { BabyIcon, HomeIcon, MessageCircleIcon, UsersIcon, WalletIcon } from 'lucide-react'
 import type { Suggestion } from '@/baz/SuggestionList'
 
 /**
  * The openers Baz offers before the customer has typed anything.
  *
- * Written as the customer would say it, not as the bank would label it: tapping one is exactly
- * the same as typing it, so it has to read like something a person would actually send.
+ * Situations, not products. A menu of five products is the thing this is meant to replace —
+ * it makes the customer choose the answer before anyone has worked out the question, and it
+ * contradicts the promise that knowing which product you need is Baz's job, not theirs. Each
+ * of these is somewhere a conversation can start and several products might come out of it.
  */
 export const OPENING_SUGGESTIONS: readonly Suggestion[] = [
-  { id: 'buy-home', label: 'I want to buy my first home', icon: <HomeIcon /> },
-  { id: 'joint-account', label: 'Open a joint account with my partner', icon: <UsersIcon /> },
-  { id: 'credit-card', label: 'Get a credit card', icon: <CreditCardIcon /> },
-  { id: 'loan', label: 'Explore a personal loan', icon: <MessageCircleIcon /> },
-  { id: 'protection', label: 'Look at life insurance', icon: <ShieldIcon /> },
+  { id: 'buying', label: 'We’re hoping to buy a place', icon: <HomeIcon /> },
+  { id: 'baby', label: 'We’ve just had a baby', icon: <BabyIcon /> },
+  { id: 'together', label: 'We’re moving in together', icon: <UsersIcon /> },
+  { id: 'spending', label: 'I’ve got something big coming up', icon: <WalletIcon /> },
+  { id: 'unsure', label: 'I’m not sure — can we talk it through?', icon: <MessageCircleIcon /> },
 ]

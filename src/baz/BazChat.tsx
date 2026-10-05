@@ -9,6 +9,7 @@ import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
 import { loadHistory } from '@/baz/history'
 import { runCaseAction } from '@/lib/caseActions'
+import { callFunctionWithFile } from '@/lib/callFunction'
 import type { CardActions } from '@/baz/cards/CardRenderer'
 import type { Product } from '@domain/journey.ts'
 import { isBackendConfigured } from '@/lib/env'
@@ -188,6 +189,18 @@ export function BazChat({
         { action: 'submit_health_form', applicationId, values: [...values] },
         'Where does that leave the application?',
       )
+    },
+    onUpload: async (requestId, file, documentType) => {
+      setActionError(null)
+      const form = new FormData()
+      form.append('requestId', requestId)
+      form.append('documentType', documentType)
+      form.append('file', file)
+
+      // Throws on failure so the card can say so where the customer is looking, rather than
+      // the error appearing somewhere else on screen.
+      await callFunctionWithFile('upload', form)
+      void send(`I have uploaded ${file.name}. What is next?`)
     },
     onPauseDecision: async (applicationId, decision) => {
       if (decision === 'pause') {

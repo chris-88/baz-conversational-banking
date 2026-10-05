@@ -58,8 +58,12 @@ export const showStatusInput = z.object({
 })
 
 export const requestUploadInput = z.object({
-  /** Must match an application_request row that is already open. */
-  requestId: z.uuid(),
+  applicationId,
+  /**
+   * A document requirement of that application's journey. The server checks it exists, is a
+   * document, and is still outstanding — the model cannot invent a document to ask for.
+   */
+  requirementId: z.string().min(1).max(64),
 })
 
 export const showPartnerInviteInput = z.object({
@@ -129,8 +133,9 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     name: 'request_upload',
     description:
-      'Ask for a document that the case already lists as outstanding. You cannot invent a ' +
-      'request; pass the id of one that is already open.',
+      'Ask for one document the case lists as outstanding, by its requirement id. The card is ' +
+      'how a document actually arrives — describing it or promising to send a link does ' +
+      'nothing. Ask for one at a time, and only when it is the sensible next thing.',
     schema: requestUploadInput,
   },
   {
