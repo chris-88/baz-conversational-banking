@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => {
         cn: resolve('./src/lib/utils.ts'),
         '@domain': resolve('./supabase/functions/_shared/domain'),
         '@contracts': resolve('./supabase/functions/_shared/contracts'),
+        '@db': resolve('./supabase/functions/_shared/db'),
         '@llm': resolve('./supabase/functions/_shared/llm'),
         '@tenants': resolve('./supabase/functions/_shared/tenants'),
       },

@@ -21,6 +21,8 @@ export const queryKeys = {
 
   applications: {
     forCase: (caseId: string) => ['case', caseId, 'applications'] as const,
+    progress: (caseId: string, applicationIds: string) =>
+      ['case', caseId, 'applications', 'progress', applicationIds] as const,
     detail: (applicationId: string) => ['application', applicationId] as const,
     outstanding: (applicationId: string) =>
       ['application', applicationId, 'outstanding'] as const,

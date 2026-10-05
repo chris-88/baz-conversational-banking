@@ -1,16 +1,19 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRightIcon, BellIcon, WalletIcon } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRightIcon, BellIcon, MoreHorizontalIcon, WalletIcon } from 'lucide-react'
 import { canonicalCustomer } from '@domain/seed/canonical.ts'
 import { Card } from '@/components/ui/card'
 import { IconTile } from '@/components/IconTile'
-import { ListRow } from '@/components/ListRow'
 import { SetupNotice } from '@/components/SetupNotice'
 import { routes } from '@/app/routes'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ProductIcon } from '@/components/ProductIcon'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { ProgressBar } from '@/components/ProgressBar'
+import { NotificationCard } from '@/components/NotificationCard'
 import { useApplications } from '@/lib/useApplications'
+import { useCaseProgress } from '@/lib/useCaseProgress'
 import { useCaseSession } from '@/lib/useCaseSession'
 
 function greeting(now = new Date()): string {
@@ -26,8 +29,13 @@ function greeting(now = new Date()): string {
  * by the model.
  */
 export function AppHome(): ReactNode {
+  const navigate = useNavigate()
   const session = useCaseSession()
   const applications = useApplications(session.data?.caseId ?? null)
+  const progress = useCaseProgress({
+    caseId: session.data?.caseId ?? null,
+    applications: applications.data ?? [],
+  })
 
   return (
     <div className="flex-1 space-y-6 px-4 pt-4 pb-28">
@@ -42,17 +50,38 @@ export function AppHome(): ReactNode {
           <p className="truncate text-sm font-semibold">Hi {canonicalCustomer.firstName}</p>
           <p className="text-muted-foreground text-xs">{greeting()}</p>
         </div>
-        <button
-          type="button"
-          disabled
-          aria-label="Notifications (not available in this prototype)"
-          className="text-muted-foreground grid size-9 place-items-center rounded-full opacity-50"
+        <Link
+          to={routes.app.baz}
+          aria-label={
+            session.data?.hasUpdates === true
+              ? 'Notifications — something changed while you were away'
+              : 'Notifications'
+          }
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring relative grid size-9 place-items-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
         >
           <BellIcon aria-hidden className="size-5" />
-        </button>
+          {session.data?.hasUpdates === true && (
+            <span
+              aria-hidden
+              className="bg-state-progress ring-background absolute top-1.5 right-1.5 size-2 rounded-full ring-2"
+            />
+          )}
+        </Link>
       </header>
 
       <SetupNotice />
+
+      {session.data?.hasUpdates === true && (
+        <NotificationCard
+          title="New message from Baz"
+          when="Since you were last here"
+          preview="Something moved on your applications. Open the conversation and I'll talk you through what changed."
+          actionLabel="View message"
+          onAction={() => {
+            void navigate(routes.app.baz)
+          }}
+        />
+      )}
 
       <Link
         to={routes.app.baz}
@@ -79,13 +108,36 @@ export function AppHome(): ReactNode {
           <h2 className="text-sm font-semibold">Your accounts</h2>
           <span className="text-muted-foreground text-2xs">Synthetic</span>
         </div>
-        <Card className="gap-0 p-0">
-          <ListRow
-            leading={<IconTile tone="primary"><WalletIcon /></IconTile>}
-            title="Current Account"
-            subtitle="•••• 1234"
-            trailing={<span className="tabular text-sm font-semibold">€3,482.50</span>}
-          />
+        <Card className="gap-0 p-4">
+          <div className="flex items-start gap-3">
+            <IconTile tone="primary"><WalletIcon /></IconTile>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Current Account</span>
+              <span className="text-muted-foreground block text-xs">•••• 1234</span>
+            </span>
+          </div>
+
+          <p className="tabular mt-3 text-h3 font-semibold">€3,482.50</p>
+
+          <div className="mt-3 flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Link to={routes.app.baz}>View details</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              aria-label="More account actions (not part of this prototype)"
+              className="px-3"
+            >
+              <MoreHorizontalIcon aria-hidden />
+            </Button>
+          </div>
         </Card>
         <p className="text-muted-foreground text-2xs">
           Synthetic balance. No real account is connected.
@@ -118,16 +170,43 @@ export function AppHome(): ReactNode {
           </Card>
         ) : (
           <Card className="gap-0 divide-y p-0">
-            {applications.data?.map((application) => (
-              <div key={application.id} className="flex items-center gap-3 px-4 py-3">
-                <ProductIcon product={application.product} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {application.displayName}
-                </span>
-                {/* The badge carries the state's own words, so colour is never the only signal. */}
-                <StatusBadge state={application.state} />
-              </div>
-            ))}
+            {applications.data?.map((application) => {
+              const steps = progress.data?.get(application.id)
+              const next = steps?.outstanding[0]
+
+              return (
+                <Link
+                  key={application.id}
+                  to={routes.app.baz}
+                  className="hover:bg-muted/50 focus-visible:ring-ring block space-y-2.5 px-4 py-3.5 transition-colors first:rounded-t-xl last:rounded-b-xl focus-visible:ring-2 focus-visible:outline-none focus-visible:-outline-offset-2"
+                >
+                  <span className="flex items-center gap-3">
+                    <ProductIcon product={application.product} size="sm" />
+                    <span className="min-w-0 flex-1 text-sm font-medium text-pretty">
+                      {application.displayName}
+                    </span>
+                    {/* The badge carries the state's own words, so colour is never the only signal. */}
+                    <StatusBadge state={application.state} />
+                  </span>
+
+                  {steps && steps.total > 0 && (
+                    <ProgressBar
+                      value={steps.done / steps.total}
+                      label={`${String(steps.done)} of ${String(steps.total)} done`}
+                    />
+                  )}
+
+                  {next && (
+                    <span className="text-muted-foreground block text-xs">
+                      {next.waitingOnPartner ? 'With your partner: ' : 'Next: '}
+                      <span className="text-foreground">{next.label}</span>
+                      {steps && steps.outstanding.length > 1 &&
+                        ` and ${String(steps.outstanding.length - 1)} more`}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
           </Card>
         )}
       </section>

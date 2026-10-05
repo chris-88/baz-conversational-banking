@@ -498,3 +498,12 @@ section.
   `request_upload` is in the tool list, but `baz-turn` does not offer the tool and `case-action`
   has no upload action, so the card is unreachable. The UI is the last piece of that feature,
   not the first — storage, RLS and the action come before it.
+- **2026-10-05** — The home screen computes its own progress. It reads facts, participants,
+  confirmations and documents under RLS and evaluates each journey with the same requirement
+  engine the Edge Functions use (`@db` alias added so the row schemas are reused rather than
+  duplicated). The alternative was another Edge Function call for a read, which CLAUDE.md
+  reserves for writes. Invariant 3 holds either way: the domain decides what is outstanding,
+  never the model.
+- **2026-10-05** — The bell was disabled and said nothing. It now carries a dot when
+  `hasUpdates` and leads to the conversation, which is the only place what changed is actually
+  explained (§36). The notification card beside it says nothing about the application itself.
