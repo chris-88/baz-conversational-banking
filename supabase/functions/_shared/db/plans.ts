@@ -29,11 +29,23 @@ import type {
 export type LoadedPlan = { readonly plan: Plan; readonly progress: PlanProgress }
 
 export function planContextFor(loaded: LoadedCase, today = new Date()): PlanContext {
+  /**
+   * The newest value, not the first one in the array.
+   *
+   * `find` returns whatever Postgres happened to return first, which is usually the oldest
+   * row — so a corrected balance was ignored in favour of the figure it replaced, and the
+   * console reported reading back €46,000 immediately after setting €60,000. Superseding
+   * should make this moot, but a reader that depends on another write having gone through is
+   * a reader that is wrong whenever it has not. The requirement engine has always picked the
+   * newest; this now does the same.
+   */
   const read = (key: string): number | null => {
-    const fact = loaded.facts.find(
-      (candidate) => String(candidate.key) === key && candidate.supersededBy === null,
-    )
-    return typeof fact?.value === 'number' ? fact.value : null
+    const matching = loaded.facts
+      .filter((candidate) => String(candidate.key) === key && candidate.supersededBy === null)
+      .sort((a, b) => b.capturedAt.localeCompare(a.capturedAt))
+
+    const value = matching[0]?.value
+    return typeof value === 'number' ? value : null
   }
 
   return {

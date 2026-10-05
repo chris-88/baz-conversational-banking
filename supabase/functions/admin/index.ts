@@ -498,7 +498,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const newId = (written.data as { id?: string } | null)?.id
       const previous = ((live.data ?? []) as { id: string }[]).map((row) => row.id)
       if (newId !== undefined && previous.length > 0) {
-        await admin.from('facts').update({ superseded_by: newId }).in('id', previous)
+        const superseded = await admin
+          .from('facts')
+          .update({ superseded_by: newId })
+          .in('id', previous)
+
+        if (superseded.error) {
+          return errorResponse('internal', `Could not replace the old balance: ${superseded.error.message}`)
+        }
       }
 
       const loadedCase = await loadCase(admin, action.caseId)
