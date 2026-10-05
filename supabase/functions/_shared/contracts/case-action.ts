@@ -35,10 +35,17 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
     requirementId: z.string().min(1).max(80),
   }),
 
-  /** §48 — the only route out of `ready`, and only from the review card. */
+  /**
+   * §48 — the only route out of `ready`, and only from the review card.
+   *
+   * The confirmations the customer ticked travel with it, so an application cannot end up
+   * half-confirmed if the tap fails partway: either everything is agreed and it submits, or
+   * nothing changes.
+   */
   z.object({
     action: z.literal('submit_application'),
     applicationId,
+    confirmations: z.array(z.string().min(1).max(80)).max(40).default([]),
   }),
 
   /** §6 Stage 8 — the customer decides to hold an application. */

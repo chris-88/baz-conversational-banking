@@ -10,7 +10,13 @@ import {
   type FactSubject,
 } from './facts.ts'
 import { defineJourney, type Requirement } from './journey.ts'
-import { evaluateJourney, outstanding, type RequirementContext } from './requirements.ts'
+import {
+  confirmationsForReview,
+  evaluateJourney,
+  outstanding,
+  readyForReview,
+  type RequirementContext,
+} from './requirements.ts'
 
 const PRIMARY = asParticipantId('participant-primary')
 const PARTNER = asParticipantId('participant-partner')
@@ -430,5 +436,62 @@ describe('evaluateJourney()', () => {
 
     expect(evaluation.complete).toBe(true)
     expect(evaluation.waitingOn).toBeNull()
+  })
+})
+
+/**
+ * §48 — the review card is where declarations are made, so an application must be able to
+ * reach it while they are still outstanding. Otherwise the card could never be shown.
+ */
+describe('readyForReview()', () => {
+  const journey = journeyWith(
+    incomeOf('primary'),
+    { kind: 'declaration', id: 'declaration', subject: 'primary', label: 'Declaration', fresh: true },
+  )
+
+  it('is false while real information is still missing', () => {
+    expect(readyForReview(evaluateJourney(journey, context()))).toBe(false)
+  })
+
+  it('is true when only the end-of-journey confirmations remain', () => {
+    const evaluation = evaluateJourney(
+      journey,
+      context({ facts: [fact('income.annualBasic', PRIMARY, 92_000)] }),
+    )
+
+    expect(evaluation.complete).toBe(false)
+    expect(readyForReview(evaluation)).toBe(true)
+    expect(confirmationsForReview(evaluation).map((i) => i.requirement.id)).toEqual(['declaration'])
+  })
+
+  it('counts a value awaiting reuse confirmation as an end-of-journey confirmation (§11)', () => {
+    const confirmJourney = journeyWith({
+      kind: 'fact',
+      id: 'address',
+      fact: 'identity.address',
+      subject: 'primary',
+      label: 'Home address',
+    })
+    const evaluation = evaluateJourney(
+      confirmJourney,
+      context({
+        facts: [fact('identity.address', PRIMARY, '12 Sample Street', { capturedFor: OTHER_APP })],
+      }),
+    )
+
+    expect(readyForReview(evaluation)).toBe(true)
+    expect(confirmationsForReview(evaluation)[0]?.knownFact?.value).toBe('12 Sample Street')
+  })
+
+  it('is still false when a document is outstanding, since that is not a confirmation', () => {
+    const docJourney = journeyWith({
+      kind: 'document',
+      id: 'payslip',
+      subject: 'primary',
+      label: 'Payslip',
+      documentType: 'payslip',
+    })
+
+    expect(readyForReview(evaluateJourney(docJourney, context()))).toBe(false)
   })
 })

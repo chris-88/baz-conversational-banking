@@ -8,6 +8,7 @@ import type { Card } from '../_shared/contracts/cards.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { evaluateAdvisories } from '../_shared/domain/advisories.ts'
 import { evaluateFor, findApplication, recomputeApplications } from '../_shared/db/applications.ts'
+import { confirmationsForReview, readyForReview } from '../_shared/domain/requirements.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
@@ -298,8 +299,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 if (!application) return { result: 'There is no such application.' }
 
                 const evaluation = evaluateFor(loaded, application)
-                if (!evaluation.complete) {
-                  // §48 — a review card is a promise that submission is one tap away.
+                if (!readyForReview(evaluation)) {
+                  // §48 — a review card is a promise that submission is one tap away, so it is
+                  // refused while real information is still missing.
                   const remaining = evaluation.outstanding
                     .filter((item) => item.blocking)
                     .map((item) => item.requirement.label)
@@ -322,9 +324,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
                       label: item.requirement.label,
                       value: String(item.fact?.value ?? ''),
                     })),
-                  declarations: evaluation.satisfied
-                    .filter((item) => item.requirement.kind === 'declaration')
-                    .map((item) => item.requirement.label),
+                  confirmations: confirmationsForReview(evaluation).map((item) => ({
+                    requirementId: item.requirement.id,
+                    label: item.requirement.label,
+                    kind:
+                      item.requirement.kind === 'declaration'
+                        ? ('declaration' as const)
+                        : item.requirement.kind === 'confirmation'
+                          ? ('confirmation' as const)
+                          : ('reuse' as const),
+                    knownValue: item.knownFact === null ? null : String(item.knownFact.value),
+                  })),
                   confirmLabel: `Submit ${journey.displayName.toLowerCase()}`,
                 }
 

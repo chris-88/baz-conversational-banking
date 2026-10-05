@@ -333,3 +333,16 @@ section.
   was open, Baz advised against it *before* offering it, offered it anyway when the customer
   pressed, then offered the pause. Pausing wrote `state: paused, resume_to: waiting_customer` —
   the machine recording where to return, not the model remembering.
+- **2026-10-05** — Added `readyForReview()`. Declarations, consents and reuse confirmations are
+  blocking requirements, so an application could never be `complete` while they were
+  outstanding — which meant the review card could never be shown, and §48 says the review card
+  is exactly where those are made. `readyForReview` is "everything except what the customer
+  agrees to at the end".
+- **2026-10-05** — The confirmations the customer ticks travel with `submit_application` rather
+  than being separate calls, so an application cannot end up half-confirmed if the tap fails
+  partway: either everything is agreed and it submits, or nothing changes.
+- **2026-10-05** — Nothing is pre-ticked on the review card and submit stays disabled until
+  every box is checked by hand. A declaration nobody actually read is worth nothing (§48).
+- **2026-10-05** — Verified live end to end: discovery, selection, one fact gathered in
+  conversation, seven values reused from bank-held facts and confirmed, one declaration made,
+  then submitted. `state: submitted`, `submitted_at` set, 8 confirmations recorded.

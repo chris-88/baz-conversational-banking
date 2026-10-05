@@ -51,7 +51,19 @@ export const reviewCardSchema = z.object({
   displayName: z.string(),
   /** Built from the case, not written by the model. */
   summary: z.array(z.object({ label: z.string(), value: z.string() })),
-  declarations: z.array(z.string()),
+  /**
+   * What the customer must agree to before this can be submitted: declarations, consents, and
+   * values we already hold that they are asked to confirm are still right (§11, §48).
+   */
+  confirmations: z.array(
+    z.object({
+      requirementId: z.string(),
+      label: z.string(),
+      kind: z.enum(['declaration', 'confirmation', 'reuse']),
+      /** For a reuse confirmation, the value being offered. */
+      knownValue: z.string().nullable(),
+    }),
+  ),
   /** The tap that calls case-action. Until then nothing is submitted (§48). */
   confirmLabel: z.string(),
 })

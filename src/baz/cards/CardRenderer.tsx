@@ -14,7 +14,10 @@ import { PausePromptCard } from '@/baz/cards/PausePromptCard'
 export type CardActions = {
   readonly onSelectProducts?: (products: readonly string[]) => Promise<void> | void
   readonly onDeclineProducts?: (products: readonly string[]) => Promise<void> | void
-  readonly onSubmit?: (applicationId: string) => Promise<void> | void
+  readonly onSubmit?: (
+    applicationId: string,
+    confirmations: readonly string[],
+  ) => Promise<void> | void
   readonly onPauseDecision?: (
     applicationId: string,
     decision: 'pause' | 'continue',

@@ -160,14 +160,46 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const application = findApplication(loaded, action.applicationId)
       if (!application) return errorResponse('not_found', 'That application does not exist.')
 
+      // The ticked confirmations land first, so the application can actually reach `ready`.
+      // Each is checked against the journey, as `confirm_requirement` does.
+      if (action.confirmations.length > 0) {
+        const journey = journeyFor(application.product)
+        const known = new Set(
+          [
+            ...journey.requirements,
+            ...journey.branches.flatMap((branch) => branch.requirements),
+          ].map((requirement) => requirement.id),
+        )
+
+        const unknown = action.confirmations.filter((id) => !known.has(id))
+        if (unknown.length > 0) {
+          return errorResponse('bad_request', 'Those are not part of this application.')
+        }
+
+        await admin.from('application_confirmations').upsert(
+          action.confirmations.map((requirementId) => ({
+            application_id: action.applicationId,
+            requirement_id: requirementId,
+            participant_id: session.participant_id,
+            kind: 'confirmation',
+          })),
+          { onConflict: 'application_id,requirement_id' },
+        )
+
+        // Recompute so the application reaches `ready` before submission is attempted.
+        loaded = (await loadCase(admin, caseId))!
+        await recomputeApplications(admin, loaded)
+        loaded = (await loadCase(admin, caseId))!
+      }
+
+      const current = findApplication(loaded, action.applicationId) ?? application
+
       // §48 — the state machine is the rule, not a condition written here.
-      const result = transition(application, { type: 'submission_confirmed' })
+      const result = transition(current, { type: 'submission_confirmed' })
       if (!result.ok) {
         return errorResponse(
           'illegal_transition',
-          application.state === 'ready'
-            ? result.error.message
-            : 'That is not ready to submit yet.',
+          current.state === 'ready' ? result.error.message : 'That is not ready to submit yet.',
         )
       }
 

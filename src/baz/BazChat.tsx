@@ -117,8 +117,11 @@ export function BazChat({
         { action: 'decline_product', caseId: caseId ?? '', product: products[0] as Product },
         'I will leave those for now.',
       ),
-    onSubmit: (applicationId) =>
-      commit({ action: 'submit_application', applicationId }, 'What happens next?'),
+    onSubmit: (applicationId, confirmations) =>
+      commit(
+        { action: 'submit_application', applicationId, confirmations: [...confirmations] },
+        'What happens next?',
+      ),
     onPauseDecision: (applicationId, decision) =>
       decision === 'pause'
         ? commit({ action: 'pause_application', applicationId }, 'I have put that on hold.')

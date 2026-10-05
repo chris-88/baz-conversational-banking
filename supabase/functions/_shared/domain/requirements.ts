@@ -353,3 +353,31 @@ export function outstanding(
 ): readonly OutstandingItem[] {
   return evaluateJourney(journey, context).outstanding
 }
+
+/**
+ * Whether an application has everything except the things the customer confirms at the end.
+ *
+ * Declarations, consents and reuse confirmations are blocking requirements, so an application
+ * can never be `complete` while they are outstanding — which would mean the review card could
+ * never be shown, and §48 says the review card is exactly where those are made. This is the
+ * state that means "ready to put in front of the customer".
+ */
+export function readyForReview(evaluation: JourneyEvaluation): boolean {
+  return evaluation.outstanding
+    .filter((item) => item.blocking)
+    .every((item) => isCustomerConfirmation(item))
+}
+
+/** The items a review card asks the customer to agree to before anything is submitted. */
+export function confirmationsForReview(
+  evaluation: JourneyEvaluation,
+): readonly OutstandingItem[] {
+  return evaluation.outstanding.filter((item) => item.blocking && isCustomerConfirmation(item))
+}
+
+function isCustomerConfirmation(item: OutstandingItem): boolean {
+  if (item.requirement.kind === 'declaration') return true
+  if (item.requirement.kind === 'confirmation') return true
+  // A value we already hold, which the customer is asked to confirm is still right (§11).
+  return item.reason === 'needs_confirmation'
+}
