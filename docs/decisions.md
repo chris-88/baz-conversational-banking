@@ -715,3 +715,34 @@ section.
 - **2026-10-05** — `show_product_options` refuses to re-render while the same offer is still on
   screen, matching the invite and status guards. Live, the mortgage card was offered on two
   consecutive turns, which reads as the conversation going in circles.
+
+## 2026-10-05 — Savings, plans, and keeping a promise
+
+- **2026-10-05** — Savings is a product with its own short journey. A customer six months from
+  a deposit asked which savings account suited them and was told Baz could not help; that was
+  true, because the catalogue held five products and none of them was a place to put money.
+  The journey is short deliberately — there is no affordability to assess — but it does ask for
+  the target and the monthly amount, because those are what make a plan possible.
+- **2026-10-05** — The deposit gap is computed, not asked for. A first-time buyer typically
+  needs a tenth of the price, so a price is enough; a target the customer states outright beats
+  it. Requiring both meant someone who said "we're aiming for 60k" got no plan at all.
+- **2026-10-05** — A plan exists only where there is genuinely a sequence. Someone who already
+  has the deposit does not need a plan, they need an application. Steps are derived like
+  everything else (Invariant 3), and the plan says nothing about timing it cannot know: no
+  monthly amount means "depends on what you can put away", never a guess.
+- **2026-10-05** — The watch is recorded when the customer opens the savings account, not when
+  Baz describes the plan. A promise attaches to something the customer chose to do, not to Baz
+  having mentioned it (Invariant 1). Someone who hears the plan and does nothing gets no
+  follow-up, which is the right default.
+- **2026-10-05** — A watch is a condition the system can actually check — a number to reach or
+  a date to pass. "We'll be in touch" is not a plan, and a promise nothing evaluates is worse
+  than no promise (§35).
+- **2026-10-05** — Three copies of "what a customer would come back for" had drifted: the
+  notifier, the narrator and a test. `savings_target_reached` was added to the narrator alone,
+  so the bank reached the milestone it had promised to watch for and said nothing. One
+  exported list now, with a test. The log already records this drift happening once in the
+  other direction.
+- **2026-10-05** — The case inspector shows the engine's reasoning: every need with its
+  confidence, the evidence in the customer's own words, the plan, and what the bank is
+  watching for. That is §15's audit view, and without it the needs engine was unobservable —
+  which is how a missing watch went unnoticed.
