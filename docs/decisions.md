@@ -301,3 +301,27 @@ section.
 - **2026-10-05** — Measured: the discovery turn went from 107 words to 31, still calling both
   tools. The comparison harness now includes a frustrated turn and a bereavement turn, so the
   §50 suppression is checked every time the voice is touched.
+
+## 2026-10-05 — M3 applications
+
+- **2026-10-05** — `case-action` is the only route to a state change, and every action
+  re-reads the case, checks the caller owns it, and puts the change through `transition`. An
+  illegal move is refused rather than written (Invariant 1, Invariant 2, §27, §48).
+- **2026-10-05** — `confirm_requirement` checks the requirement actually belongs to that
+  journey. A confirmation for something the journey never asks would satisfy nothing and must
+  not be stored.
+- **2026-10-05** — `show_review` refuses to render unless the application is genuinely
+  complete. A review card is a promise that submission is one tap away, so offering one that
+  cannot be submitted would be a lie (§48).
+- **2026-10-05** — `show_pause_prompt` refuses unless a deterministic advisory applies to that
+  application. The model may explain an advisory, never invent one (§6 Stage 8).
+- **2026-10-05** — `record_facts` now recomputes afterwards, because a fact can complete an
+  application and the model must not be the thing that notices (Invariant 3).
+- **2026-10-05** — Nothing is pre-selected in the product card and "Not right now" is offered
+  beside it, because §49 is explicit that discovery must not become cross-selling.
+- **2026-10-05** — A tap tells Baz what happened, phrased as the customer, because from the
+  model's point of view the customer did it — which is true. That keeps the conversation in
+  step with the case without the model inventing the outcome.
+- **2026-10-05** — Verified live: choosing two products created two applications, derived their
+  state through the machine, and wrote 8 `context_reused` events — §53 measuring itself from
+  the bank-held facts rather than being asserted.

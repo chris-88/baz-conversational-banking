@@ -8,6 +8,9 @@ import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
 import { loadHistory } from '@/baz/history'
+import { runCaseAction } from '@/lib/caseActions'
+import type { CardActions } from '@/baz/cards/CardRenderer'
+import type { Product } from '@domain/journey.ts'
 import { isBackendConfigured } from '@/lib/env'
 
 /**
@@ -36,6 +39,21 @@ export function BazChat({
 
   const bottom = useRef<HTMLDivElement>(null)
   const openingSent = useRef(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  /**
+   * Runs an action, then tells Baz what happened so it can react. The follow-up is phrased as
+   * the customer, because from the model's point of view the customer did it — which is true.
+   */
+  const commit = async (action: Parameters<typeof runCaseAction>[0], followUp: string) => {
+    setActionError(null)
+    try {
+      const result = await runCaseAction(action)
+      await send(`${result.summary} ${followUp}`)
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : 'That did not work.')
+    }
+  }
 
   useEffect(() => {
     if (!isBackendConfigured) return
@@ -81,7 +99,31 @@ export function BazChat({
   }, [entries, streaming])
 
   const ready = caseId !== null && !joining && !loadingHistory
-  const problem = joinError ?? error
+  const problem = joinError ?? error ?? actionError
+
+  /**
+   * The customer's taps. Each one goes to `case-action`, which re-validates everything, and
+   * the outcome is told back to Baz so the conversation stays in step with the case
+   * (Invariant 1, Invariant 2).
+   */
+  const actions: CardActions = {
+    onSelectProducts: (products) =>
+      commit(
+        { action: 'select_products', caseId: caseId ?? '', products: products as Product[] },
+        'What did that start, and what do you need from me first?',
+      ),
+    onDeclineProducts: (products) =>
+      commit(
+        { action: 'decline_product', caseId: caseId ?? '', product: products[0] as Product },
+        'I will leave those for now.',
+      ),
+    onSubmit: (applicationId) =>
+      commit({ action: 'submit_application', applicationId }, 'What happens next?'),
+    onPauseDecision: (applicationId, decision) =>
+      decision === 'pause'
+        ? commit({ action: 'pause_application', applicationId }, 'I have put that on hold.')
+        : Promise.resolve(),
+  }
 
   return (
     <div className={className}>
@@ -92,7 +134,7 @@ export function BazChat({
           if (entry.kind === 'card') {
             return (
               <div key={entry.id} className="pl-10">
-                <CardRenderer card={entry.card} disabled />
+                <CardRenderer card={entry.card} actions={actions} disabled={streaming} />
               </div>
             )
           }

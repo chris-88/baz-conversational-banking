@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import type { Card } from '@contracts/cards.ts'
 import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
+import { ReviewCard } from '@/baz/cards/ReviewCard'
+import { PausePromptCard } from '@/baz/cards/PausePromptCard'
 
 /**
  * The card registry.
@@ -9,13 +11,23 @@ import { StatusCard } from '@/baz/cards/StatusCard'
  * An exhaustive switch, so adding a card type to the contract without building its component
  * fails the typecheck rather than rendering nothing at the customer.
  */
+export type CardActions = {
+  readonly onSelectProducts?: (products: readonly string[]) => Promise<void> | void
+  readonly onDeclineProducts?: (products: readonly string[]) => Promise<void> | void
+  readonly onSubmit?: (applicationId: string) => Promise<void> | void
+  readonly onPauseDecision?: (
+    applicationId: string,
+    decision: 'pause' | 'continue',
+  ) => Promise<void> | void
+}
+
 export function CardRenderer({
   card,
-  onSelectProducts,
+  actions = {},
   disabled,
 }: {
   card: Card
-  onSelectProducts?: (products: readonly string[]) => void
+  actions?: CardActions
   disabled?: boolean
 }): ReactNode {
   switch (card.type) {
@@ -23,7 +35,8 @@ export function CardRenderer({
       return (
         <ProductOptionsCard
           card={card}
-          {...(onSelectProducts ? { onSelect: onSelectProducts } : {})}
+          {...(actions.onSelectProducts ? { onSelect: actions.onSelectProducts } : {})}
+          {...(actions.onDeclineProducts ? { onDecline: actions.onDeclineProducts } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )
@@ -31,9 +44,25 @@ export function CardRenderer({
     case 'status':
       return <StatusCard card={card} />
 
-    // Built in M3, when the actions behind them exist.
     case 'review':
+      return (
+        <ReviewCard
+          card={card}
+          {...(actions.onSubmit ? { onSubmit: actions.onSubmit } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
     case 'pause_prompt':
+      return (
+        <PausePromptCard
+          card={card}
+          {...(actions.onPauseDecision ? { onDecide: actions.onPauseDecision } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    // Built in M5, alongside the partner experience.
     case 'partner_invite':
     case 'upload_request':
       return null

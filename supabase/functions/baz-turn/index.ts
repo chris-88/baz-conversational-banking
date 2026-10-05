@@ -6,6 +6,8 @@ import { fail, statusFor } from '../_shared/contracts/common.ts'
 import { toSseFrame, type StreamEvent } from '../_shared/contracts/stream.ts'
 import type { Card } from '../_shared/contracts/cards.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
+import { evaluateAdvisories } from '../_shared/domain/advisories.ts'
+import { evaluateFor, findApplication, recomputeApplications } from '../_shared/db/applications.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
@@ -31,8 +33,14 @@ import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case
  * next turn reads is what actually happened.
  */
 
-/** M2 exposes only the tools whose cards exist. The rest arrive with M3. */
-const ENABLED_TOOLS: readonly ToolName[] = ['record_facts', 'show_product_options', 'show_status']
+/** The partner and upload tools arrive with M5, so they are not offered yet. */
+const ENABLED_TOOLS: readonly ToolName[] = [
+  'record_facts',
+  'show_product_options',
+  'show_status',
+  'show_review',
+  'show_pause_prompt',
+]
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -214,10 +222,25 @@ Deno.serve(async (request: Request): Promise<Response> => {
                   .map((item) => `${item.key}: ${item.reason}`)
                   .join('; ')
 
+                // A fact can complete an application. What is outstanding is recomputed here,
+                // not remembered by the model (Invariant 3).
+                let progressed = ''
+                if (outcome.accepted.length > 0) {
+                  const reloaded = await loadCase(admin, turn.caseId)
+                  if (reloaded) {
+                    const summaries = await recomputeApplications(admin, reloaded)
+                    const ready = summaries.filter((a) => a.state === 'ready')
+                    if (ready.length > 0) {
+                      progressed = ` Ready to review: ${ready.map((a) => a.displayName).join(', ')}.`
+                    }
+                  }
+                }
+
                 return {
                   result:
                     `Recorded ${outcome.accepted.length}.` +
-                    (rejected ? ` Not recorded — ${rejected}` : ''),
+                    (rejected ? ` Not recorded — ${rejected}` : '') +
+                    progressed,
                 }
               }
 
@@ -267,6 +290,69 @@ Deno.serve(async (request: Request): Promise<Response> => {
                   }),
                 }
                 return { result: 'Status card shown, rendered from the case.', card }
+              }
+
+              case 'show_review': {
+                const { applicationId } = input as { applicationId: string }
+                const application = findApplication(loaded, applicationId)
+                if (!application) return { result: 'There is no such application.' }
+
+                const evaluation = evaluateFor(loaded, application)
+                if (!evaluation.complete) {
+                  // §48 — a review card is a promise that submission is one tap away.
+                  const remaining = evaluation.outstanding
+                    .filter((item) => item.blocking)
+                    .map((item) => item.requirement.label)
+                  return {
+                    result: `Not ready to review. Still needed: ${remaining.join(', ')}.`,
+                  }
+                }
+
+                const journey = journeyFor(application.product)
+
+                // Built from the case, not from the model's words (Invariant 2).
+                const card: Card = {
+                  type: 'review',
+                  applicationId,
+                  displayName: journey.displayName,
+                  summary: evaluation.satisfied
+                    .filter((item) => item.fact !== null)
+                    .slice(0, 12)
+                    .map((item) => ({
+                      label: item.requirement.label,
+                      value: String(item.fact?.value ?? ''),
+                    })),
+                  declarations: evaluation.satisfied
+                    .filter((item) => item.requirement.kind === 'declaration')
+                    .map((item) => item.requirement.label),
+                  confirmLabel: `Submit ${journey.displayName.toLowerCase()}`,
+                }
+
+                return { result: 'Review shown. Nothing is submitted until the customer taps.', card }
+              }
+
+              case 'show_pause_prompt': {
+                const { applicationId } = input as { applicationId: string }
+                const application = findApplication(loaded, applicationId)
+                if (!application) return { result: 'There is no such application.' }
+
+                // The advisory is deterministic; the model may only explain one that applies.
+                const advisory = evaluateAdvisories(loaded.applications).find(
+                  (candidate) => String(candidate.appliesTo) === applicationId,
+                )
+                if (!advisory) {
+                  return { result: 'There is no advisory for that application, so do not offer to pause it.' }
+                }
+
+                const card: Card = {
+                  type: 'pause_prompt',
+                  applicationId,
+                  displayName: journeyFor(application.product).displayName,
+                  advisoryTitle: advisory.title,
+                  advisoryExplanation: advisory.explanation,
+                }
+
+                return { result: 'Pause offered. The customer decides in the card.', card }
               }
 
               default:
