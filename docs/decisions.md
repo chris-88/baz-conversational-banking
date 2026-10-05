@@ -534,3 +534,26 @@ section.
   partner reuse shown as "Used for Mortgage and Life assurance", the loan advisory with its
   Keep going / Hold it for now card, the notification's opaque sign-in-gated link, and the
   return summary.
+
+## 2026-10-05 — What hands-on use exposed that scripted runs did not
+
+- **2026-10-05** — "One question at a time" is gone from the voice. It was written so Baz would
+  not feel like a form, and against a 43-requirement mortgage it produced the opposite: 23
+  fact-capture turns over seven minutes, each one a 15–20 second wait. Baz now asks for related
+  things together in one natural sentence, capped at about three, and still never as a bulleted
+  list. Measured on the same opening: 40 facts over ~23 turns became 51 facts over 4.
+- **2026-10-05** — Signing in loads the canonical customer's facts only when the conversation
+  has not already established somebody else. A live session as "Chris Quinn" was silently given
+  Aoife's email, mobile and PPS number under a `bank_held` label, because the loader skipped
+  only keys already present and the customer had not mentioned those three. The bank knows one
+  synthetic customer; about a stranger it holds nothing.
+- **2026-10-05** — `show_partner_invite` refuses to render a second card while one is already
+  in the last few turns, and refuses outright once the partner has joined. Asked only through
+  the prompt, the model re-offered it on nearly every turn — four stacked in one transcript —
+  and the customer tapped each new one, creating the same invite three times. Enforcement, not
+  instruction (Invariant 1). Message rows now carry their card types so the server can see what
+  is already on screen.
+- **2026-10-05** — Savings and deposit are NOT a duplicate requirement: someone can hold 60,000
+  and put 50,000 in. The defect was asking for them in two separate turns as though unrelated,
+  which reads as not listening. The voice now says to ask whether all of it is going in rather
+  than asking for the second number cold.

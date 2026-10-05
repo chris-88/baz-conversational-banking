@@ -157,10 +157,32 @@ Deno.serve(async (request: Request): Promise<Response> => {
       .update({ auth_level: 'authenticated', customer_id: customerId })
       .eq('id', token.case_id)
 
-    const existing = await admin.from('facts').select('key').eq('case_id', token.case_id)
-    const known = new Set(((existing.data ?? []) as { key: string }[]).map((f) => f.key))
+    const existing = await admin
+      .from('facts')
+      .select('key, value, source')
+      .eq('case_id', token.case_id)
+    const rows = (existing.data ?? []) as { key: string; value: unknown; source: string }[]
+    const known = new Set(rows.map((f) => f.key))
 
-    const toLoad = canonicalCase.bankHeldFacts.filter((fact) => !known.has(fact.key))
+    /**
+     * The bank only knows one synthetic customer. If the conversation has already established
+     * that this is somebody else, loading her details would hand them her PPS number, her
+     * email and her mobile under a "bank held" label — which is how a show-and-tell case
+     * leaked into a live one. The bank simply holds nothing about a stranger.
+     */
+    const statedName = rows.find(
+      (row) => row.key === 'identity.fullName' && row.source === 'customer_stated',
+    )
+    const normalise = (value: unknown) =>
+      typeof value === 'string' ? value.trim().toLowerCase() : null
+    const isSomeoneElse =
+      statedName !== undefined &&
+      normalise(statedName.value) !== null &&
+      normalise(statedName.value) !== canonicalCase.customer.fullName.trim().toLowerCase()
+
+    const toLoad = isSomeoneElse
+      ? []
+      : canonicalCase.bankHeldFacts.filter((fact) => !known.has(fact.key))
     if (toLoad.length > 0) {
       await admin.from('facts').insert(
         toLoad.map((fact) => ({
@@ -175,7 +197,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
       )
     }
 
-    await writeEventRow(admin, token.case_id, 'customer_authenticated', { loaded: toLoad.length })
+    await writeEventRow(admin, token.case_id, 'customer_authenticated', {
+      loaded: toLoad.length,
+      ...(isSomeoneElse ? { skipped: 'case belongs to a different person' } : {}),
+    })
 
     return json(
       ok({

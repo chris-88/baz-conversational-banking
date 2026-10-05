@@ -292,8 +292,15 @@ describe('voice', () => {
     }
   })
 
-  it('asks for one question at a time rather than a list, since a list is a form', () => {
-    expect(prompt).toMatch(/One question at a time/i)
+  it('groups related questions but still refuses to become a form', () => {
+    // "One question at a time" read well and played badly: a mortgage has dozens of
+    // requirements, so it turned the conversation into forty timed turns.
+    expect(prompt).toMatch(/related things together/i)
+    expect(prompt).toMatch(/never a bulleted list/i)
+  })
+
+  it('refuses to ask twice for the same number in different words', () => {
+    expect(prompt).toMatch(/never ask twice for the same number/i)
   })
 
   it('guarantees the AI disclosure from policy, where no persona can remove it (§16, §18)', () => {

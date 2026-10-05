@@ -67,7 +67,7 @@ export async function loadCase(client: SupabaseClient, caseId: string): Promise<
     client.from('product_interests').select('product, status, reason').eq('case_id', caseId),
     client
       .from('messages')
-      .select('role, content')
+      .select('role, content, cards')
       .eq('case_id', caseId)
       .order('created_at', { ascending: false })
       .limit(MESSAGE_WINDOW),

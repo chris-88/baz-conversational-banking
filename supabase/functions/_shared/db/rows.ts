@@ -73,6 +73,14 @@ export const productInterestRow = z.object({
 export const messageRow = z.object({
   role: z.enum(['customer', 'baz', 'system']),
   content: z.string(),
+  /**
+   * The cards rendered with this turn. Only their types are needed here — enough to know a
+   * card is already on screen without carrying its whole payload through the loader.
+   */
+  cards: z
+    .array(z.object({ type: z.string() }).loose())
+    .default([])
+    .transform((cards) => cards.map((card) => card.type)),
 })
 
 export const eventRow = z.object({

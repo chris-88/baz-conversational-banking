@@ -45,6 +45,8 @@ export type LoadedProductInterest = {
 export type LoadedMessage = {
   readonly role: 'customer' | 'baz' | 'system'
   readonly content: string
+  /** Types of the cards rendered with this turn, oldest first. */
+  readonly cards: readonly string[]
 }
 
 export type LoadedEvent = {

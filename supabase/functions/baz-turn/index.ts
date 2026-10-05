@@ -47,6 +47,9 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'show_partner_invite',
 ]
 
+/** How far back a card still counts as "on screen" rather than scrolled into history. */
+const INVITE_CARD_WINDOW = 8
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -487,6 +490,28 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 if (names.length === 0) return { result: 'There is no such application.' }
 
                 const partner = loaded.participants.find((p) => p.role === 'partner')
+                if (partner) {
+                  return {
+                    result: `${partner.displayName ?? 'The second applicant'} has already joined. There is nothing left to invite.`,
+                  }
+                }
+
+                /**
+                 * One invite card, not one per turn. Asked nicely, the model re-offered it on
+                 * almost every turn — four stacked in one transcript — and the customer kept
+                 * tapping each new one, so the same invite was created three times. The card
+                 * persists in the transcript, so the one already there is still live.
+                 */
+                const alreadyOnScreen = loaded.messages
+                  .slice(-INVITE_CARD_WINDOW)
+                  .some((message) => message.cards.includes('partner_invite'))
+
+                if (alreadyOnScreen) {
+                  return {
+                    result:
+                      'The invite card is already on screen from an earlier turn and still works. Point at it in your own words; do not make another.',
+                  }
+                }
 
                 const card: Card = {
                   type: 'partner_invite',
