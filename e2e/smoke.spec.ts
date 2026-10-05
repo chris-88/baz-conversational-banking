@@ -10,7 +10,8 @@ import { expect, test, type Page } from '@playwright/test'
 const surfaces = [
   { route: '/#/', name: 'public site', expect: /For whatever life brings next/i },
   { route: '/#/app/login', name: 'simulated login', expect: /simulated sign-in for demonstration/i },
-  { route: '/#/join/opaque-token', name: 'partner join', expect: /You.{0,3}ve been invited/i },
+  // An invalid invite is refused rather than showing a page: the token is the whole gate.
+  { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation has expired/i },
   { route: '/#/try', name: 'audience entry', expect: /Try Baz/i },
   { route: '/#/admin', name: 'presenter console', expect: /presenter console/i },
 ] as const
