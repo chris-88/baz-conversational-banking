@@ -244,6 +244,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(toSseFrame(event)))
 
       try {
+        const learnedThisTurn = new Set<string>()
+
         const events = runBazTurn({
           client: anthropic,
           model: env('BAZ_MODEL'),
@@ -269,6 +271,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 })
 
                 for (const key of outcome.accepted) {
+                  learnedThisTurn.add(String(key))
                   await writeEvent(admin, {
                     caseId: turn.caseId,
                     type: 'context_captured',
@@ -307,10 +310,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 const { products } = input as { products: { product: any; reason: string }[] }
 
                 const learned = new Set(
-                  loaded.facts
-                    .filter((fact) => fact.supersededBy === null)
-                    .map((fact) => String(fact.key))
-                    .filter((key) => DISCOVERY_KEYS.includes(key)),
+                  [
+                    ...loaded.facts
+                      .filter((fact) => fact.supersededBy === null)
+                      .map((fact) => String(fact.key)),
+                    // What this turn just recorded. `loaded` is the case as it was when the
+                    // turn began, so without this a customer who says everything in their
+                    // first message is told nothing has been learned about them yet.
+                    ...learnedThisTurn,
+                  ].filter((key) => DISCOVERY_KEYS.includes(key)),
                 )
                 const customerTurns = loaded.messages.filter((m) => m.role === 'customer').length
 

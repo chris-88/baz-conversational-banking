@@ -116,14 +116,15 @@ describe('the case digest (§14, Invariant 2)', () => {
     expect(prompt).toContain('personal_loan')
   })
 
-  it('says plainly when there are no applications yet', () => {
+  it('tells Baz not to speak as though an application exists when none does', () => {
     const input = baseInput()
     const prompt = composeSystemPrompt({
       ...input,
       digest: { ...input.digest, applications: [] },
     })
 
-    expect(prompt).toMatch(/no applications/i)
+    expect(prompt).toMatch(/Nothing has been started/i)
+    expect(prompt).toMatch(/Do not speak as though there is/i)
   })
 
   it('carries what changed since the customer was last here (§36)', () => {

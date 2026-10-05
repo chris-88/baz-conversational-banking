@@ -644,3 +644,16 @@ section.
   sitting behind a real sign-in, an invalid invite refusing rather than rendering a page.
 - **2026-10-05** — Guardrail eval re-run after the voice and tool changes: 100% on both sets
   (27 must-block, 20 must-allow). CLAUDE.md requires that before any presentation.
+- **2026-10-05** — The discovery gate counts what the current turn has just learned, not only
+  what the case held when the turn began. `loaded` is a snapshot from the start of the turn,
+  and the model records facts in one tool round and asks to offer in the next — so a customer
+  who said everything in one message was measured against a case that knew nothing about them.
+  The better the opening message, the more likely it was to stall.
+- **2026-10-05** — The digest states the absence of applications as an instruction rather than
+  a fact. "There are no applications yet" was already there and was ignored: a transcript ran
+  four turns with Baz asking for documents and describing progress on a mortgage that had
+  never been started.
+- **2026-10-05** — Product selection verified end to end after the discovery change: the card
+  arrives on the third exchange, the checkbox ticks, the button becomes "Start 1 application"
+  and the application is created. Two earlier runs that looked like a selection bug were the
+  test harness checking once after a single message and never looking again.

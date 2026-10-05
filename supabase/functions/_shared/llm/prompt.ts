@@ -385,7 +385,17 @@ function digestSection(digest: CaseDigest): string {
 
   lines.push('## Applications')
   if (digest.applications.length === 0) {
-    lines.push('There are no applications yet.', '')
+    /**
+     * Stated as an instruction, not a fact. As a fact it was ignored: a transcript ran for
+     * four turns with Baz asking for documents and describing progress on a mortgage that had
+     * never been started, and it only noticed at the end.
+     */
+    lines.push(
+      'Nothing has been started. There is no application, so there is nothing in progress,',
+      'nothing outstanding and no documents to ask for. Do not speak as though there is. The',
+      'only way one begins is the options card and the customer tapping it.',
+      '',
+    )
   } else {
     for (const application of digest.applications) lines.push(...applicationLines(application), '')
   }
