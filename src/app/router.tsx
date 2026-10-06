@@ -1,33 +1,16 @@
 import { createHashRouter, Navigate, type RouteObject } from 'react-router-dom'
-import { PublicSite } from '@/shells/boi/PublicSite'
-import { PublicBaz } from '@/shells/boi/PublicBaz'
-import { AppShell } from '@/shells/boi/AppShell'
-import { AppLogin } from '@/shells/boi/AppLogin'
-import { AppHome } from '@/shells/boi/AppHome'
-import { AppBaz } from '@/shells/boi/AppBaz'
+import { Landing } from '@/surfaces/Landing'
+import { BazScreen } from '@/surfaces/BazScreen'
 import { PartnerJoin } from '@/partner/PartnerJoin'
-import { AudienceEntry } from '@/audience/AudienceEntry'
 import { AdminConsole } from '@/admin/AdminConsole'
 import { AdminOverview } from '@/admin/AdminOverview'
 import { NotFound } from '@/components/NotFound'
 
 const routeObjects: RouteObject[] = [
-  { path: '/', element: <PublicSite /> },
-  { path: '/baz', element: <PublicBaz /> },
-
-  {
-    path: '/app',
-    element: <AppShell />,
-    children: [
-      { index: true, element: <AppHome /> },
-      { path: 'login', element: <AppLogin /> },
-      { path: 'baz', element: <AppBaz /> },
-    ],
-  },
+  { path: '/', element: <Landing /> },
+  { path: '/baz', element: <BazScreen /> },
 
   { path: '/join/:token', element: <PartnerJoin /> },
-
-  { path: '/try', element: <AudienceEntry /> },
 
   {
     path: '/admin',
@@ -40,6 +23,15 @@ const routeObjects: RouteObject[] = [
       { path: 'engine', element: <AdminOverview section="engine" /> },
     ],
   },
+
+  /**
+   * The authenticated app and the audience entry used to live here.
+   *
+   * Anyone with the old links — an installed PWA pinned to `/app`, a QR printed on a slide —
+   * lands on Baz rather than a dead end.
+   */
+  { path: '/app/*', element: <Navigate to="/baz" replace /> },
+  { path: '/try', element: <Navigate to="/baz" replace /> },
 
   { path: '/index.html', element: <Navigate to="/" replace /> },
   { path: '*', element: <NotFound /> },

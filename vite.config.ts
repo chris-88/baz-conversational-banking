@@ -35,10 +35,18 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         // `start_url`/`scope` follow base so the installed PWA works under /<repo>/.
         manifest: {
-          name: 'Bank of Ireland',
-          short_name: 'BOI',
-          description: 'Bank of Ireland mobile banking',
-          start_url: base,
+          name: 'Baz',
+          short_name: 'Baz',
+          description: 'A personal banker for everyone.',
+          /**
+           * Installed, it opens straight into the conversation.
+           *
+           * The landing page exists to explain Baz and offer the two ways in; somebody who has
+           * already installed it has done both, and making them tap through a pitch every time
+           * is the kind of thing that gets an app deleted. `scope` stays at the base so the
+           * service worker still covers the landing page and the console.
+           */
+          start_url: `${base}#/baz`,
           scope: base,
           display: 'standalone',
           background_color: '#ffffff',

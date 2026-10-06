@@ -12,8 +12,6 @@ export const sessionRequestSchema = z.discriminatedUnion('action', [
     mode: z.enum(['new', 'known']).default('new'),
   }),
   /** §29 — hands the case to the app. The code is opaque and single-use. */
-  z.object({ action: z.literal('create_handoff') }),
-  z.object({ action: z.literal('redeem_handoff'), code: z.string().min(16).max(64) }),
 ])
 
 export type SessionRequest = z.infer<typeof sessionRequestSchema>

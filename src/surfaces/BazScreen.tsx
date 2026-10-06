@@ -1,20 +1,20 @@
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeftIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { BazChat } from '@/baz/BazChat'
 import { OPENING_SUGGESTIONS } from '@/baz/suggestions'
-import { ContinueInApp } from '@/shells/boi/ContinueInApp'
 import { routes } from '@/app/routes'
 
 /**
- * §6 Stage 1 — the conversation on the public website, before anyone signs in.
+ * Baz, and nothing else.
  *
- * The same `BazChat` the app renders; only the chrome differs (§32).
+ * The same screen in a browser tab and in the installed app, which is the point: there is no
+ * signed-in version with more in it. Every visitor gets a case of their own and tells Baz what
+ * it needs to know, the way they would tell a person.
  */
-export function PublicBaz(): ReactNode {
+export function BazScreen(): ReactNode {
   const [searchParams] = useSearchParams()
 
   return (
@@ -22,19 +22,17 @@ export function PublicBaz(): ReactNode {
       <PrototypeBanner />
 
       <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-30 border-b backdrop-blur">
-        <div className="mx-auto flex w-full max-w-md items-center gap-3 px-2 py-2.5">
-          <Button asChild variant="ghost" size="icon" aria-label="Back">
-            <Link to={routes.public}>
-              <ArrowLeftIcon />
+        <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">
+          <Button asChild variant="ghost" className="-ml-2 h-auto gap-2.5 px-2 py-1.5">
+            <Link to={routes.landing}>
+              <BazAvatar />
+              <span className="text-left leading-tight">
+                <span className="block text-sm font-semibold">Baz</span>
+                <span className="text-muted-foreground block text-2xs font-normal">
+                  AI assistant
+                </span>
+              </span>
             </Link>
-          </Button>
-          <BazAvatar />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Baz</p>
-            <p className="text-muted-foreground text-2xs">Bank of Ireland · AI assistant</p>
-          </div>
-          <Button asChild size="sm" variant="outline" className="rounded-full">
-            <Link to={routes.app.login}>Log in</Link>
           </Button>
         </div>
       </header>
@@ -43,15 +41,10 @@ export function PublicBaz(): ReactNode {
         className="mx-auto flex w-full max-w-md flex-1 flex-col"
         suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
-        // Every visitor gets a case of their own; the bank learns who they are when they
-        // sign in, which is what a real customer experiences too.
         mode="new"
-        footer={() => <ContinueInApp />}
         greeting={
           <div className="space-y-2">
-            <p>
-              Hi — I&rsquo;m Baz, Bank of Ireland&rsquo;s AI assistant.
-            </p>
+            <p>Hi — I&rsquo;m Baz.</p>
             <p>
               Before you ask: no, I&rsquo;m not another bot whose greatest achievement is finding
               the Contact Us page.

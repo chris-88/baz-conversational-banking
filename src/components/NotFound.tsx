@@ -19,7 +19,7 @@ export function NotFound(): ReactNode {
           <p className="text-muted-foreground text-sm">That page does not exist.</p>
         </div>
         <Button asChild>
-          <Link to={routes.public}>Back to the start</Link>
+          <Link to={routes.landing}>Back to the start</Link>
         </Button>
       </div>
     </div>

@@ -880,3 +880,15 @@ section.
   never settles is the worst way for a turn to fail — the connection stays open, no bytes arrive,
   and the customer has no way out. Measured between chunks rather than across the turn, because a
   turn that is working sends text the whole way through and a stalled one sends nothing at all.
+- **2026-10-06** — Three customer surfaces: a landing page, Baz, and the partner link. The replica
+  Bank of Ireland website and the app behind a simulated login are gone, along with the handoff
+  code that joined them. They were scaffolding around the only part worth showing, and a
+  signed-in version that knows more about you is a claim this prototype no longer makes — every
+  visitor is anonymous and tells Baz what it needs to know, the way they would tell a person.
+  `/app/*` and `/try` redirect to Baz so old links and installed PWAs still land somewhere.
+- **2026-10-06** — The installed PWA opens straight into the conversation. The landing page exists
+  to explain Baz and offer the two ways in; somebody who has installed it has done both. `scope`
+  stays at the base so the service worker still covers the landing page and the console.
+- **2026-10-06** — The landing page offers the address and a copy button where the design has a QR
+  code. Rendering a QR needs an encoder and CLAUDE.md says not to add a dependency without
+  asking; the copy button is the part that has to work either way.

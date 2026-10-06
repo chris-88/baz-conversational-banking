@@ -728,8 +728,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
           // Fixed copy, saying nothing about the application itself (§35).
           message:
             'Bank of Ireland: Baz has an update about something you’re working on with us. ' +
-            'Open the app to continue securely.',
-          url: `${base}/#/app/login?n=${code}`,
+            'Open Baz to pick it up.',
+          // The link used to go through a simulated login, which no longer exists. The token
+          // still travels, still opaque and still single-use (§29, §58).
+          url: `${base}/#/baz?n=${code}`,
         }),
         200,
       )

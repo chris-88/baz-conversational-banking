@@ -82,135 +82,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return (since.count ?? 0) > 0
   }
 
-  // ---- Handoff (§29, §58) --------------------------------------------------
-  if (parsed.data.action === 'create_handoff') {
-    const attached = await admin
-      .from('participant_sessions')
-      .select('participant_id, participants!inner(case_id)')
-      .eq('auth_user_id', authUserId)
-      .limit(1)
+  /**
+   * The handoff used to live here: a single-use code that carried a public conversation into the
+   * app behind a simulated login. There is no app behind a login any more — Baz is the same
+   * screen in a browser tab and on a home screen — so the code, its token row and the
+   * authenticated case it produced have all gone with it.
+   */
 
-    const row = (attached.data ?? [])[0] as any
-    if (!row) return errorResponse('not_found', 'There is no conversation to carry over.')
-
-    // 128 bits of randomness, stored only as a hash, valid for ten minutes, single use.
-    const code = crypto.randomUUID().replaceAll('-', '')
-    const hash = await sha256(code)
-
-    await admin.from('tokens').insert({
-      case_id: row.participants.case_id,
-      kind: 'handoff',
-      token_hash: hash,
-      participant_id: row.participant_id,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-    })
-
-    await writeEventRow(admin, row.participants.case_id, 'handoff_created')
-    return json(ok({ code }), 200)
-  }
-
-  if (parsed.data.action === 'redeem_handoff') {
-    const hash = await sha256(parsed.data.code)
-    const found = await admin
-      .from('tokens')
-      .select('id, case_id, participant_id, expires_at, consumed_at')
-      .eq('token_hash', hash)
-      .eq('kind', 'handoff')
-      .maybeSingle()
-
-    const token = found.data as any
-    // One check per failure mode, and the same answer for all of them: a caller learns
-    // nothing about which part was wrong.
-    if (!token || token.consumed_at || new Date(token.expires_at) < new Date()) {
-      return errorResponse('not_found', 'That link has expired. Start again from the website.')
-    }
-
-    await admin.from('tokens').update({ consumed_at: new Date().toISOString() }).eq('id', token.id)
-
-    // The new session joins the SAME participant, which is what makes the conversation
-    // continue rather than restart (§12, §29).
-    await admin
-      .from('participant_sessions')
-      .upsert(
-        { participant_id: token.participant_id, auth_user_id: authUserId },
-        { onConflict: 'participant_id,auth_user_id' },
-      )
-
-    // §6 Stage 5 — signing in is what links the case to the customer the bank already knows,
-    // and loads what it holds.
-    const customer = await admin
-      .from('customers')
-      .select('id')
-      .eq('bank_reference', canonicalCase.customer.bankReference)
-      .maybeSingle()
-
-    const customerId = (customer.data as { id?: string } | null)?.id ?? null
-
-    await admin
-      .from('cases')
-      .update({ auth_level: 'authenticated', customer_id: customerId })
-      .eq('id', token.case_id)
-
-    const existing = await admin
-      .from('facts')
-      .select('key, value, source')
-      .eq('case_id', token.case_id)
-    const rows = (existing.data ?? []) as { key: string; value: unknown; source: string }[]
-    const known = new Set(rows.map((f) => f.key))
-
-    /**
-     * The bank only knows one synthetic customer. If the conversation has already established
-     * that this is somebody else, loading her details would hand them her PPS number, her
-     * email and her mobile under a "bank held" label — which is how a show-and-tell case
-     * leaked into a live one. The bank simply holds nothing about a stranger.
-     */
-    const statedName = rows.find(
-      (row) => row.key === 'identity.fullName' && row.source === 'customer_stated',
-    )
-    const normalise = (value: unknown) =>
-      typeof value === 'string' ? value.trim().toLowerCase() : null
-    const isSomeoneElse =
-      statedName !== undefined &&
-      normalise(statedName.value) !== null &&
-      normalise(statedName.value) !== canonicalCase.customer.fullName.trim().toLowerCase()
-
-    const toLoad = isSomeoneElse
-      ? []
-      : canonicalCase.bankHeldFacts.filter((fact) => !known.has(fact.key))
-    if (toLoad.length > 0) {
-      await admin.from('facts').insert(
-        toLoad.map((fact) => ({
-          case_id: token.case_id,
-          key: fact.key,
-          participant_id: fact.subject === 'household' ? null : token.participant_id,
-          subject_kind: fact.subject === 'household' ? 'household' : 'participant',
-          value: fact.value as Json,
-          source: fact.source,
-          verified: fact.verified,
-        })),
-      )
-    }
-
-    await writeEventRow(admin, token.case_id, 'customer_authenticated', {
-      loaded: toLoad.length,
-      ...(isSomeoneElse ? { skipped: 'case belongs to a different person' } : {}),
-    })
-
-    return json(
-      ok({
-        caseId: token.case_id,
-        participantId: token.participant_id,
-        role: 'primary',
-        authLevel: 'authenticated',
-        customerFirstName: canonicalCase.customer.firstName,
-        created: false,
-        hasUpdates: await updatesSince(token.case_id),
-      } satisfies SessionResponse),
-      200,
-    )
-  }
-
-  const startMode = parsed.data.action === 'start' ? parsed.data.mode : 'new'
+  const startMode = parsed.data.mode
 
   // Already attached? Return the same case — this is what makes a PWA and a browser tab land
   // on the same conversation rather than starting two.
