@@ -1,5 +1,4 @@
-import { createFactReader } from '../domain/requirements.ts'
-import { asApplicationId, asParticipantId } from '../domain/facts.ts'
+import { caseFactReader } from './fact-reader.ts'
 import { evaluateNeeds } from '../domain/needs/engine.ts'
 import type { NeedCandidate, NeedContext, RecordedNeedState } from '../domain/needs/types.ts'
 import type { LoadedCase } from './loaded-case.ts'
@@ -25,20 +24,8 @@ export function needContextFor(
   loaded: LoadedCase,
   options: { readonly sensitiveDisclosure: boolean },
 ): NeedContext | null {
-  const primary = loaded.participants.find((participant) => participant.role === 'primary')
-  const partner = loaded.participants.find((participant) => participant.role === 'partner')
-  if (!primary) return null
-
-  const facts = createFactReader({
-    applicationId: asApplicationId('00000000-0000-4000-8000-000000000000'),
-    participants: {
-      primary: asParticipantId(String(primary.id)),
-      partner: partner ? asParticipantId(String(partner.id)) : null,
-    },
-    facts: loaded.facts,
-    confirmations: [],
-    documents: [],
-  })
+  const facts = caseFactReader(loaded)
+  if (facts === null) return null
 
   return {
     facts,

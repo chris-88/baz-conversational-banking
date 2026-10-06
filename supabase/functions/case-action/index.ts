@@ -9,7 +9,7 @@ import {
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { transition } from '../_shared/domain/state-machine.ts'
-import { loadCase, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
+import { loadCase, recordFacts, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import { deferNeed } from '../_shared/db/needs.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
@@ -236,12 +236,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
     case 'decide_plan': {
       const row = await admin
         .from('plans')
-        .select('id, status, title')
+        .select('id, status, title, target_amount')
         .eq('id', action.planId)
         .eq('case_id', caseId)
         .maybeSingle()
 
-      const current = row.data as { id: string; status: PlanStatus; title: string } | null
+      const current = row.data as
+        | { id: string; status: PlanStatus; title: string; target_amount: number | string | null }
+        | null
       if (!current) return errorResponse('not_found', 'There is no such plan.')
 
       const target: PlanStatus =
@@ -266,6 +268,32 @@ Deno.serve(async (request: Request): Promise<Response> => {
           ...(target === 'paused' ? { paused_at: now } : {}),
         })
         .eq('id', current.id)
+
+      /**
+       * Keeping a plan is agreeing its target, so the target becomes a fact about them.
+       *
+       * Baz usually works the figure out — a tenth of the purchase price — and until the customer
+       * said yes that was an estimate. Once they have agreed it, it is something they told the
+       * bank: the deposit engine stops re-deriving it, and the plan's own "target defined"
+       * milestone can be evidenced by the case rather than ticked by hand.
+       */
+      if (action.decision === 'keep' && current.target_amount !== null) {
+        const amount = Number(current.target_amount)
+
+        if (Number.isFinite(amount) && amount > 0) {
+          // `goals.savingsTarget` is a household key, so the catalogue decides its subject —
+          // which is the whole reason facts go through one writer rather than an insert here.
+          await recordFacts(admin, {
+            caseId,
+            facts: [{ key: 'goals.savingsTarget', value: Math.round(amount) }],
+            participants: {
+              primary: loaded.participants.find((p) => p.role === 'primary')?.id ?? null,
+              partner: loaded.participants.find((p) => p.role === 'partner')?.id ?? null,
+            },
+            source: 'customer_stated',
+          })
+        }
+      }
 
       await writeEvent(admin, {
         caseId,

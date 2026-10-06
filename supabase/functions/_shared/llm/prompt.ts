@@ -336,6 +336,12 @@ export type CaseDigest = {
   } | null
   /** §27 — parked earlier, and the thing they were waiting for has happened. */
   readonly revived?: readonly { readonly name: string; readonly reason: string }[]
+  /**
+   * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
+   * already reasoned about — what is primary, what is worth mentioning once, what is being held
+   * and why, and anything two goals are both laying claim to.
+   */
+  readonly goals?: readonly string[]
   readonly partner: DigestPartner | null
   /** §36 — what changed while the customer was away. */
   readonly eventsSinceLastSeen: readonly string[]
@@ -485,6 +491,19 @@ function digestSection(digest: CaseDigest): string {
     lines.push(
       'Anything not listed here is not established. Do not offer it, however reasonable it',
       'sounds.',
+      '',
+    )
+  }
+
+  const goals = digest.goals ?? []
+  if (goals.length > 0) {
+    lines.push(
+      '## Where they are trying to get to',
+      'Worked out from what they have told you, not guessed. One life event usually creates',
+      'several reasonable goals at once; naming them all is how a concierge turns back into a',
+      'product menu. Lead with what they came in about, and let the rest wait until it helps',
+      'them:',
+      ...goals.map((line) => `- ${line}`),
       '',
     )
   }

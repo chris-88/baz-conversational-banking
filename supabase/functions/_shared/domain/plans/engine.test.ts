@@ -8,6 +8,7 @@ import {
   reached,
 } from './engine.ts'
 import type { Checkin, Milestone, Plan, PlanContext } from './types.ts'
+import type { FactReader } from '../journey.ts'
 
 const milestone = (over: Partial<Milestone> = {}): Milestone => ({
   id: 'm1',
@@ -18,6 +19,7 @@ const milestone = (over: Partial<Milestone> = {}): Milestone => ({
   targetDate: null,
   targetProduct: null,
   targetState: null,
+  targetFacts: null,
   state: 'not_started',
   achievedAt: null,
   ...over,
@@ -48,9 +50,18 @@ const plan = (over: Partial<Plan> = {}): Plan => ({
   ...over,
 })
 
+/** A reader over a plain object, so a `facts` milestone can be tested from one literal. */
+const reader = (held: Record<string, unknown> = {}): FactReader => ({
+  has: (key) => held[key] !== undefined,
+  get: (key) => held[key],
+  number: (key) => (typeof held[key] === 'number' ? held[key] : null),
+  boolean: (key) => (typeof held[key] === 'boolean' ? held[key] : null),
+})
+
 const context = (over: Partial<PlanContext> = {}): PlanContext => ({
   savingsBalance: 46_000,
   monthlySaving: 2_500,
+  facts: reader(),
   today: '2026-10-05',
   ...over,
 })
@@ -202,5 +213,55 @@ describe('putting a projection into words', () => {
   it('says plainly when they have arrived', () => {
     const words = describeProjection(planProgress(plan(), context({ savingsBalance: 60_000 })))
     expect(words).toMatch(/reached/i)
+  })
+})
+
+
+/**
+ * A milestone that is reached by the case being able to answer something.
+ *
+ * Most of the goal catalogue's milestones are this shape — "affordability understood", "debts
+ * understood" — and before this existed they were all unevaluable, so plan progress sat still
+ * while the conversation collected exactly the information the milestone was about.
+ */
+describe('milestones bound to what the case knows', () => {
+  const understood = milestone({
+    kind: 'facts',
+    label: 'Affordability understood',
+    targetAmount: null,
+    targetFacts: ['income.annualBasic', 'housing.purchasePrice'],
+  })
+
+  it('is reached once every fact is held', () => {
+    const facts = reader({ 'income.annualBasic': 92_000, 'housing.purchasePrice': 600_000 })
+    expect(reached(understood, context({ facts }))).toBe(true)
+  })
+
+  it('is not reached while one is still missing', () => {
+    const facts = reader({ 'income.annualBasic': 92_000 })
+    expect(reached(understood, context({ facts }))).toBe(false)
+  })
+
+  it('counts a household fact and a person fact alike', () => {
+    // "Do we know their income" has one answer whether it was recorded against the household or
+    // against them, and a milestone that cared would be asking a different question.
+    const personal: FactReader = {
+      has: (key, subject) => key === 'income.annualBasic' && subject === 'primary',
+      get: () => undefined,
+      number: () => null,
+      boolean: () => null,
+    }
+    expect(
+      reached(
+        milestone({ kind: 'facts', targetAmount: null, targetFacts: ['income.annualBasic'] }),
+        context({ facts: personal }),
+      ),
+    ).toBe(true)
+  })
+
+  /** Vacuous truth is the wrong default: a binding to nothing is a mistake, not an achievement. */
+  it('is never reached when it is bound to nothing', () => {
+    expect(reached(milestone({ kind: 'facts', targetAmount: null, targetFacts: [] }), context())).toBe(false)
+    expect(reached(milestone({ kind: 'facts', targetAmount: null, targetFacts: null }), context())).toBe(false)
   })
 })

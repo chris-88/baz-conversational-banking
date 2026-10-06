@@ -433,6 +433,63 @@ export const factCatalogue = {
     label: 'New child',
   },
 
+  /**
+   * The remaining life events the goal catalogue's clusters are built on (§11).
+   *
+   * Each one is a circumstance that opens several possible goals at once rather than pointing
+   * at a product: a lump sum is not an investment sale, and reduced hours is not a loan
+   * opportunity. They are recorded as facts so goal discovery stays a condition over the case
+   * rather than a phrase match on the conversation.
+   */
+  'lifeEvent.incomeChange': {
+    schema: z.enum(['increase', 'decrease']),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Income has changed',
+  },
+  'lifeEvent.lumpSumAmount': {
+    schema: positiveEuro,
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Lump sum received',
+  },
+  'lifeEvent.separating': {
+    schema: z.boolean(),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Separating or divorcing',
+  },
+  'lifeEvent.startingWork': {
+    schema: z.boolean(),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Starting work or just graduated',
+  },
+  'lifeEvent.retiringWithinYears': {
+    schema: z.number().int().nonnegative().max(50),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Years until they expect to retire',
+  },
+  'lifeEvent.movingToIreland': {
+    schema: z.boolean(),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Moving to Ireland',
+  },
+
   // ---- Borrowing intent ----
   'borrowing.requestedAmount': {
     schema: positiveEuro,

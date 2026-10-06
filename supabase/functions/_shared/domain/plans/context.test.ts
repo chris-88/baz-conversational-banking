@@ -25,8 +25,9 @@ describe('reading the balance', () => {
   }
 
   it('measures against the newest balance, whatever order the rows arrive in', () => {
-    const stale: PlanContext = { savingsBalance: 46_000, monthlySaving: null, today: '2026-10-05' }
-    const fresh: PlanContext = { savingsBalance: 60_000, monthlySaving: null, today: '2026-10-05' }
+    const nothing: PlanContext['facts'] = { has: () => false, get: () => undefined, number: () => null, boolean: () => null }
+    const stale: PlanContext = { savingsBalance: 46_000, monthlySaving: null, facts: nothing, today: '2026-10-05' }
+    const fresh: PlanContext = { savingsBalance: 60_000, monthlySaving: null, facts: nothing, today: '2026-10-05' }
 
     expect(planProgress(plan, stale).short).toBe(14_000)
     expect(planProgress(plan, fresh).short).toBe(0)

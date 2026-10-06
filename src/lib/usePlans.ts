@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { requireSupabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
 import { planProgress } from '@domain/plans/engine.ts'
-import { PLAN_GOALS, PLAN_STATUSES, type Plan, type PlanProgress } from '@domain/plans/types.ts'
+import { PLAN_GOALS, PLAN_STATUSES, type Plan, type PlanContext, type PlanProgress } from '@domain/plans/types.ts'
+import { isFactKey } from '@domain/facts.ts'
 import { MILESTONE_KINDS, MILESTONE_STATES, CHECKIN_STATES } from '@domain/plans/types.ts'
 import { PRODUCTS } from '@domain/journey.ts'
 import { APPLICATION_STATES } from '@domain/state-machine.ts'
@@ -35,6 +36,8 @@ const milestoneRow = z.object({
   target_date: z.string().nullable(),
   target_product: z.enum(PRODUCTS).nullable(),
   target_state: z.enum(APPLICATION_STATES).nullable(),
+  /** `catch` rather than strict: a milestone is still showable if its binding is unreadable. */
+  target_facts: z.array(z.string()).nullable().catch(null),
   state: z.enum(MILESTONE_STATES),
   achieved_at: z.string().nullable(),
 })
@@ -74,7 +77,7 @@ export function usePlans(caseId: string | null) {
         supabase
           .from('plan_milestones')
           .select(
-            'id, plan_id, kind, label, sort, target_amount, target_date, target_product, target_state, state, achieved_at',
+            'id, plan_id, kind, label, sort, target_amount, target_date, target_product, target_state, target_facts, state, achieved_at',
           )
           .order('sort', { ascending: true }),
         supabase
@@ -101,9 +104,27 @@ export function usePlans(caseId: string | null) {
         return typeof value === 'number' ? value : null
       }
 
-      const context = {
+      /**
+       * Subject is not read here, deliberately.
+       *
+       * A `facts` milestone asks whether the case can answer something at all — "do we know
+       * their income" — and for that purpose the primary's income and a household figure are
+       * the same answer. The server makes the same call in `missing`.
+       */
+      const held = new Set(allFacts.map((fact) => fact.key))
+
+      const context: PlanContext = {
         savingsBalance: read('assets.savingsBalance') ?? read('assets.depositAmount'),
         monthlySaving: read('goals.monthlySaving'),
+        facts: {
+          has: (key) => held.has(key),
+          get: (key) => allFacts.find((fact) => fact.key === key)?.value,
+          number: (key) => read(key),
+          boolean: (key) => {
+            const value = allFacts.find((fact) => fact.key === key)?.value
+            return typeof value === 'boolean' ? value : null
+          },
+        },
         today: new Date().toISOString().slice(0, 10),
       }
 
@@ -139,6 +160,10 @@ export function usePlans(caseId: string | null) {
                 targetDate: milestone.target_date,
                 targetProduct: milestone.target_product,
                 targetState: milestone.target_state,
+                targetFacts:
+                  milestone.target_facts === null
+                    ? null
+                    : milestone.target_facts.filter(isFactKey),
                 state: milestone.state,
                 achievedAt: milestone.achieved_at,
               })),

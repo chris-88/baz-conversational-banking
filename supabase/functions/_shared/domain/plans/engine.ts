@@ -106,6 +106,20 @@ export function reached(
           application.product === milestone.targetProduct &&
           application.state === milestone.targetState,
       )
+    /**
+     * Reached once the case can answer every one of them.
+     *
+     * An empty list would be vacuously true, so it counts as not reached — a milestone bound to
+     * nothing has not been evidenced, it has been mis-defined.
+     */
+    case 'facts':
+      return (
+        milestone.targetFacts !== null &&
+        milestone.targetFacts.length > 0 &&
+        milestone.targetFacts.every(
+          (key) => context.facts.has(key, 'household') || context.facts.has(key, 'primary'),
+        )
+      )
     // Nothing in the case evidences these; they are marked by hand.
     case 'customer':
     case 'external':

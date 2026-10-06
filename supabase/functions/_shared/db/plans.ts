@@ -14,9 +14,12 @@ import type {
   Milestone,
   Plan,
   PlanContext,
+  PlanDraft,
   PlanGoal,
   PlanProgress,
 } from '../domain/plans/types.ts'
+import type { FactKey } from '../domain/facts.ts'
+import { caseFactReader, emptyFactReader } from './fact-reader.ts'
 
 /**
  * Reading and writing plans.
@@ -51,6 +54,9 @@ export function planContextFor(loaded: LoadedCase, today = new Date()): PlanCont
   return {
     savingsBalance: read('assets.savingsBalance') ?? read('assets.depositAmount'),
     monthlySaving: read('goals.monthlySaving'),
+    // `facts` milestones ask whether the case can answer something, so they read through the
+    // same reader the requirement and needs engines use rather than a second way of reading.
+    facts: caseFactReader(loaded) ?? emptyFactReader,
     today: today.toISOString().slice(0, 10),
   }
 }
@@ -88,7 +94,7 @@ export async function loadPlans(
     client
       .from('plan_milestones')
       .select(
-        'id, plan_id, kind, label, sort, target_amount, target_date, target_product, target_state, state, achieved_at',
+        'id, plan_id, kind, label, sort, target_amount, target_date, target_product, target_state, target_facts, state, achieved_at',
       )
       .in('plan_id', ids)
       .order('sort', { ascending: true }),
@@ -117,6 +123,7 @@ export async function loadPlans(
         targetDate: (milestone['target_date'] as string | null) ?? null,
         targetProduct: (milestone['target_product'] as Product | null) ?? null,
         targetState: (milestone['target_state'] as ApplicationState | null) ?? null,
+        targetFacts: (milestone['target_facts'] as readonly FactKey[] | null) ?? null,
         state: milestone['state'] as Milestone['state'],
         achievedAt: (milestone['achieved_at'] as string | null) ?? null,
       }))
@@ -232,28 +239,6 @@ export function dueCheckins(
     )
 }
 
-export type PlanDraft = {
-  readonly goal: PlanGoal
-  readonly title: string
-  readonly targetAmount: number | null
-  readonly targetDate: string | null
-  readonly milestones: readonly {
-    readonly kind: Milestone['kind']
-    readonly label: string
-    readonly targetAmount: number | null
-    readonly targetDate: string | null
-    readonly targetProduct: Product | null
-    readonly targetState: ApplicationState | null
-  }[]
-  readonly checkin: {
-    readonly purpose: string
-    readonly agenda: readonly string[]
-    readonly triggerKind: 'date' | 'event'
-    readonly dueAt: string | null
-    readonly triggerEvent: string | null
-  } | null
-}
-
 /**
  * Writes a proposal. `draft` until the customer says yes — §10 is explicit that Baz must not
  * silently create a persistent plan, so proposing and accepting are separate events.
@@ -280,7 +265,7 @@ export async function proposePlan(
   if (planId === undefined) return null
 
   if (draft.milestones.length > 0) {
-    await client.from('plan_milestones').insert(
+    const written = await client.from('plan_milestones').insert(
       draft.milestones.map((milestone, index) => ({
         plan_id: planId,
         kind: milestone.kind,
@@ -290,19 +275,28 @@ export async function proposePlan(
         target_date: milestone.targetDate,
         target_product: milestone.targetProduct,
         target_state: milestone.targetState,
+        target_facts: (milestone.targetFacts ?? null) as unknown as Json,
       })),
     )
+
+    // A plan whose milestones failed to write is a plan with no route at all, and an unread
+    // `.error` here is exactly how a no-op once reported success. Fail the proposal instead.
+    if (written.error) throw new Error(`plan_milestones: ${written.error.message}`)
   }
 
-  if (draft.checkin !== null) {
-    await client.from('plan_checkins').insert({
-      plan_id: planId,
-      purpose: draft.checkin.purpose,
-      agenda: draft.checkin.agenda as unknown as Json,
-      trigger_kind: draft.checkin.triggerKind,
-      due_at: draft.checkin.dueAt,
-      trigger_event: draft.checkin.triggerEvent,
-    })
+  if (draft.checkins.length > 0) {
+    const written = await client.from('plan_checkins').insert(
+      draft.checkins.map((checkin) => ({
+        plan_id: planId,
+        purpose: checkin.purpose,
+        agenda: checkin.agenda as unknown as Json,
+        trigger_kind: checkin.triggerKind,
+        due_at: checkin.dueAt,
+        trigger_event: checkin.triggerEvent,
+      })),
+    )
+
+    if (written.error) throw new Error(`plan_checkins: ${written.error.message}`)
   }
 
   return planId

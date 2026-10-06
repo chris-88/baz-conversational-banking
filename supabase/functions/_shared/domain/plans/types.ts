@@ -1,4 +1,6 @@
-import type { Product } from '../journey.ts'
+import type { FactKey } from '../facts.ts'
+import { GOAL_IDS, type GoalId } from '../goals/types.ts'
+import type { FactReader, Product } from '../journey.ts'
 import type { ApplicationState } from '../state-machine.ts'
 
 /**
@@ -16,19 +18,15 @@ import type { ApplicationState } from '../state-machine.ts'
  * do that (Invariant 2, Invariant 3).
  */
 
-export const PLAN_GOALS = [
-  'buy_first_home',
-  'move_home',
-  'emergency_fund',
-  'save_for_child',
-  'buy_car',
-  'renovate',
-  'retire',
-  'become_debt_free',
-  'other',
-] as const
-
-export type PlanGoal = (typeof PLAN_GOALS)[number]
+/**
+ * A plan's goal is a goal-catalogue blueprint id.
+ *
+ * These were nine values invented alongside plans, which could not express four of the seven
+ * goals the catalogue marks as the demonstration priorities (§20). One list now, in the goals
+ * domain, so a plan can only ever name a goal that has a blueprint behind it.
+ */
+export const PLAN_GOALS = GOAL_IDS
+export type PlanGoal = GoalId
 
 /**
  * `draft` is a plan Baz has proposed and the customer has not agreed to. It is deliberately a
@@ -46,7 +44,22 @@ export const PLAN_STATUSES = [
 
 export type PlanStatus = (typeof PLAN_STATUSES)[number]
 
-export const MILESTONE_KINDS = ['numeric', 'date', 'application', 'customer', 'external'] as const
+/**
+ * How the engine can tell a milestone has been reached.
+ *
+ * `facts` exists because most milestones worth having are of the form "affordability
+ * understood" or "debts understood", which is not a tick box — it is whether the case can
+ * answer the question. Binding those to fact keys keeps plan progress computed from what has
+ * actually been collected rather than remembered separately (Invariant 3).
+ */
+export const MILESTONE_KINDS = [
+  'numeric',
+  'date',
+  'application',
+  'facts',
+  'customer',
+  'external',
+] as const
 export type MilestoneKind = (typeof MILESTONE_KINDS)[number]
 
 export const MILESTONE_STATES = [
@@ -68,6 +81,8 @@ export type Milestone = {
   readonly targetDate: string | null
   readonly targetProduct: Product | null
   readonly targetState: ApplicationState | null
+  /** For `facts` milestones: every key the case must be able to answer. */
+  readonly targetFacts: readonly FactKey[] | null
   readonly state: MilestoneState
   readonly achievedAt: string | null
 }
@@ -140,5 +155,40 @@ export type PlanProgress = {
 export type PlanContext = {
   readonly savingsBalance: number | null
   readonly monthlySaving: number | null
+  readonly facts: FactReader
   readonly today: string
+}
+
+/**
+ * A plan as proposed, before anything exists in the database.
+ *
+ * Defined here rather than next to the write that persists it, because this is what a goal
+ * blueprint produces: the milestones and check-ins a goal carries, with the customer's agreed
+ * target filled in. One definition, so the catalogue and the writer cannot disagree about shape.
+ */
+export type MilestoneDraft = {
+  readonly kind: MilestoneKind
+  readonly label: string
+  readonly targetAmount: number | null
+  readonly targetDate: string | null
+  readonly targetProduct: Product | null
+  readonly targetState: ApplicationState | null
+  readonly targetFacts: readonly FactKey[] | null
+}
+
+export type CheckinDraft = {
+  readonly purpose: string
+  readonly agenda: readonly string[]
+  readonly triggerKind: 'date' | 'event'
+  readonly dueAt: string | null
+  readonly triggerEvent: string | null
+}
+
+export type PlanDraft = {
+  readonly goal: PlanGoal
+  readonly title: string
+  readonly targetAmount: number | null
+  readonly targetDate: string | null
+  readonly milestones: readonly MilestoneDraft[]
+  readonly checkins: readonly CheckinDraft[]
 }

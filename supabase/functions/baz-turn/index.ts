@@ -38,6 +38,10 @@ import {
   raiseDueCheckins,
   reconcilePlans,
 } from '../_shared/db/plans.ts'
+import { blueprintFor } from '../_shared/domain/goals/catalogue.ts'
+import { planDraftFor } from '../_shared/domain/goals/plan.ts'
+import { wouldContend } from '../_shared/domain/goals/engine.ts'
+import { describeGoals, goalContextFor } from '../_shared/db/goals.ts'
 import { depositGap } from '../_shared/domain/needs/catalogue.ts'
 import type { PlanGoal } from '../_shared/domain/plans/types.ts'
 import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case.ts'
@@ -276,9 +280,21 @@ async function handleTurn(request: Request): Promise<Response> {
   // Whichever check-in is due now, with the agenda written when it was agreed.
   const dueNow = dueCheckins(loadedPlans, loaded, firedEvents)[0] ?? null
 
+  /**
+   * Where the customer is trying to get to, which is not the same as what they are applying for.
+   *
+   * Built after the plans load, because a goal that already has a plan is settled rather than a
+   * candidate to raise again.
+   */
+  const goalContext = goalContextFor(loaded, loadedPlans, {
+    sensitiveDisclosure: gate.suppressHumour,
+  })
+  const goals = describeGoals(goalContext)
+
   const digest = buildCaseDigest(loaded, {
     sensitiveDisclosure: gate.suppressHumour,
     plans: keptPlans,
+    ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
     ...(revived.length === 0 ? {} : { revived }),
     ...(dueNow === null
       ? {}
@@ -742,9 +758,21 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 const context = planContextFor(loaded)
                 const gap = needContext === null ? null : depositGap(needContext)
-                const target = input_.targetAmount ?? gap?.target ?? null
 
-                if (target === null) {
+                /**
+                 * A goal does not have to be about money.
+                 *
+                 * This used to refuse any plan without a target, which meant "get ready for the
+                 * baby" or "organise the bills" could not be planned at all — both of which are
+                 * exactly what a concierge is for. A goal whose blueprint has money milestones
+                 * still needs a figure; one whose milestones are facts and applications does not.
+                 */
+                const target = input_.targetAmount ?? gap?.target ?? null
+                const blueprint = blueprintFor(input_.goal)
+                const needsFigure =
+                  blueprint?.milestones.some((candidate) => candidate.binding?.kind === 'numeric') ?? false
+
+                if (target === null && needsFigure) {
                   return {
                     result:
                       'There is nothing measurable to plan towards yet. Find out what they are aiming for first.',
@@ -753,105 +781,82 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 const existing = await admin
                   .from('plans')
-                  .select('id')
+                  .select('id, goal')
                   .eq('case_id', turn.caseId)
                   .in('status', ['draft', 'active'])
-                  .limit(1)
 
-                if (((existing.data ?? []) as unknown[]).length > 0) {
+                if (existing.error) throw new Error(`plans: ${existing.error.message}`)
+                const open = (existing.data ?? []) as { id: string; goal: string }[]
+
+                if (open.some((plan) => plan.goal === input_.goal)) {
                   return {
                     result:
-                      'They already have a plan open. Talk about that one rather than starting another.',
+                      'They already have a plan for this goal. Talk about that one rather than starting another.',
                   }
                 }
 
-                const targetDate = input_.targetDate ?? null
-                const milestones = [
-                  {
-                    kind: 'numeric' as const,
-                    label: `Deposit reaches €${Math.round(target / 2).toLocaleString('en-IE')}`,
-                    targetAmount: Math.round(target / 2),
-                    targetDate: null,
-                    targetProduct: null,
-                    targetState: null,
-                  },
-                  {
-                    kind: 'numeric' as const,
-                    label: `Deposit reaches €${target.toLocaleString('en-IE')}`,
-                    targetAmount: target,
-                    targetDate: null,
-                    targetProduct: null,
-                    targetState: null,
-                  },
-                  {
-                    kind: 'application' as const,
-                    label: 'Mortgage application submitted',
-                    targetAmount: null,
-                    targetDate: null,
-                    targetProduct: 'mortgage' as const,
-                    targetState: 'submitted' as const,
-                  },
-                  {
-                    kind: 'application' as const,
-                    label: 'Mortgage approved',
-                    targetAmount: null,
-                    targetDate: null,
-                    targetProduct: 'mortgage' as const,
-                    targetState: 'approved' as const,
-                  },
-                ]
+                /**
+                 * §10 — the same money cannot be promised twice.
+                 *
+                 * Asked before the plan is written, so the clash is not announced in the same
+                 * breath as confirming the plan that caused it. The engine raises it; what the
+                 * customer's savings are actually for is their call, not the bank's.
+                 */
+                if (goalContext !== null && wouldContend(goalContext, input_.goal, target)) {
+                  return {
+                    result:
+                      'That would have two plans counting on the same savings. Say so plainly, ' +
+                      'and ask which one the money is for before proposing anything.',
+                  }
+                }
 
-                const planId = await proposePlan(admin, turn.caseId, {
+                const rawDate = input_.targetDate ?? null
+                const draft = planDraftFor({
                   goal: input_.goal,
                   title: input_.title,
                   targetAmount: target,
-                  targetDate: targetDate === null || targetDate.length === 7 ? null : targetDate,
-                  milestones,
-                  checkin: {
-                    purpose: 'Mortgage readiness review',
-                    agenda: [
-                      'Check how the deposit is going',
-                      'Confirm income and outgoings have not changed',
-                      'Decide whether to start the mortgage application',
-                      'Revisit anything we parked',
-                    ],
-                    triggerKind: 'event',
-                    dueAt: null,
-                    triggerEvent: 'savings_target_reached',
-                  },
+                  // A month without a day is not a date the engine can measure against.
+                  targetDate: rawDate === null || rawDate.length === 7 ? null : rawDate,
+                  today: context.today,
                 })
 
+                if (draft === null) return { result: 'That is not a goal I can plan for.' }
+
+                const planId = await proposePlan(admin, turn.caseId, draft)
                 if (planId === null) return { result: 'That plan could not be saved just now.' }
 
                 const months =
-                  context.monthlySaving !== null && context.monthlySaving > 0
+                  target !== null && context.monthlySaving !== null && context.monthlySaving > 0
                     ? Math.ceil(
-                        Math.max(0, target - (context.savingsBalance ?? 0)) /
-                          context.monthlySaving,
+                        Math.max(0, target - (context.savingsBalance ?? 0)) / context.monthlySaving,
                       )
                     : null
+
+                const first = draft.checkins[0] ?? null
 
                 const card: Card = {
                   type: 'plan_proposal',
                   planId,
-                  title: input_.title,
+                  title: draft.title,
                   targetAmount: target,
                   currentAmount: context.savingsBalance,
                   projectedDate: null,
                   monthsRemaining: months,
-                  milestones: milestones.map((milestone) => ({
+                  milestones: draft.milestones.map((milestone) => ({
                     label: milestone.label,
                     achieved: false,
                   })),
-                  checkin: {
-                    purpose: 'Mortgage readiness review',
-                    when: 'when you reach the target',
-                    agenda: [
-                      'Check how the deposit is going',
-                      'Confirm income and outgoings have not changed',
-                      'Decide whether to start the mortgage application',
-                    ],
-                  },
+                  checkin:
+                    first === null
+                      ? null
+                      : {
+                          purpose: first.purpose,
+                          when:
+                            first.triggerKind === 'event'
+                              ? 'when you reach the target'
+                              : (first.dueAt ?? 'later'),
+                          agenda: [...first.agenda],
+                        },
                   confirmLabel: 'Keep this plan',
                 }
 

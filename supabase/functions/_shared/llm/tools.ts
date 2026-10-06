@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { GOAL_IDS } from '../domain/goals/types.ts'
 import { FACT_KEYS, type FactKey } from '../domain/facts.ts'
 import { PRODUCTS } from '../domain/journey.ts'
 
@@ -77,17 +78,8 @@ export const requestUploadInput = z.object({
  * theirs when they tap, which is the same rule every other commitment follows (Invariant 1).
  */
 export const proposePlanInput = z.object({
-  goal: z.enum([
-    'buy_first_home',
-    'move_home',
-    'emergency_fund',
-    'save_for_child',
-    'buy_car',
-    'renovate',
-    'retire',
-    'become_debt_free',
-    'other',
-  ]),
+  /** A goal-catalogue blueprint id, which decides the plan's milestones and check-ins. */
+  goal: z.enum(GOAL_IDS),
   /** In the customer's words: "Buy our first home", not "First-Time Buyer Journey". */
   title: z.string().min(4).max(80),
   /** What they are aiming at. The server checks it against what the case can support. */

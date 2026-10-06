@@ -757,6 +757,7 @@ export type Database = {
           state: string
           target_amount: number | null
           target_date: string | null
+          target_facts: Json | null
           target_product: string | null
           target_state: string | null
         }
@@ -770,6 +771,7 @@ export type Database = {
           state?: string
           target_amount?: number | null
           target_date?: string | null
+          target_facts?: Json | null
           target_product?: string | null
           target_state?: string | null
         }
@@ -783,6 +785,7 @@ export type Database = {
           state?: string
           target_amount?: number | null
           target_date?: string | null
+          target_facts?: Json | null
           target_product?: string | null
           target_state?: string | null
         }
