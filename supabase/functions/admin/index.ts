@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { adminRequestSchema, type AdminCase, type AdminOverview } from '../_shared/contracts/admin.ts'
-import { isPurgeable, type CaseKind } from '../_shared/domain/case.ts'
+import type { CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import type { Product } from '../_shared/domain/journey.ts'
@@ -343,7 +343,6 @@ Deno.serve(async (request: Request): Promise<Response> => {
           row.kind === 'presenter'
             ? row.label
             : (names.get(row.id) ?? `Unnamed · ${row.id.slice(0, 8)}`),
-        named: typeof row.label === 'string' && row.label.length > 0,
         applications: appCounts.get(row.id) ?? 0,
         messages: messageCounts.get(row.id) ?? 0,
         updatedAt: row.updated_at,
@@ -789,33 +788,29 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
     case 'purge_cases': {
       /**
-       * Everything except the case on screen and anything marked `presenter`.
+       * Every case, with no exceptions.
        *
-       * This used to delete `kind = 'audience'`, which was right until every visitor started
-       * getting an ordinary `customer` case — after which it matched nothing and the button sat
-       * there reporting "Purge 0" while test conversations piled up. The help text beside it
-       * already said "clears every conversation except the one on screen"; this is the server
-       * finally doing that.
+       * It used to spare the one on screen, anything marked `presenter` and anything named,
+       * which meant a button saying "purge" left cases behind and nobody could tell which or
+       * why. The sample customer is one click to rebuild, so sparing it bought nothing and cost
+       * the button its meaning.
        *
-       * `presenter` is protected because that is the seeded case a reset rebuilds, and losing it
-       * mid-demonstration is a different kind of bad day. Deletes cascade: participants, facts,
-       * applications, messages, plans and events all go with the case.
+       * Deletes cascade: participants, facts, applications, messages, plans and events all go
+       * with the case.
        */
-      const rows = await admin.from('cases').select('id, kind, label')
+      const rows = await admin.from('cases').select('id')
       if (rows.error) return errorResponse('conflict', 'Could not read the cases.')
 
-      const doomed = ((rows.data ?? []) as { id: string; kind: string; label: string | null }[])
-        .map((row) => ({ ...row, named: typeof row.label === 'string' && row.label.length > 0 }))
-        .filter((row) => isPurgeable(row, action.keepCaseId ?? null))
+      const ids = ((rows.data ?? []) as { id: string }[]).map((row) => row.id)
 
-      for (const row of doomed) {
-        const deleted = await admin.from('cases').delete().eq('id', row.id)
-        // Reported rather than swallowed: "purged 9" when three failed is a lie the console
-        // has no way to notice.
-        if (deleted.error) return errorResponse('conflict', `Could not delete ${row.id}.`)
+      for (const id of ids) {
+        const deleted = await admin.from('cases').delete().eq('id', id)
+        // Reported rather than swallowed: "purged 18" when three failed is a lie the console has
+        // no way to notice.
+        if (deleted.error) return errorResponse('conflict', `Could not delete ${id}.`)
       }
 
-      return json(ok({ purged: doomed.length }), 200)
+      return json(ok({ purged: ids.length }), 200)
     }
 
     case 'inspect_case': {

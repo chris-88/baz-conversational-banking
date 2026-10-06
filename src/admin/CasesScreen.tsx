@@ -1,156 +1,269 @@
-import type { ReactNode } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { ChevronRightIcon, PowerIcon, RotateCcwIcon } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
-import { IconTile } from '@/components/IconTile'
-import { routes } from '@/app/routes'
-import { adminApi } from '@/admin/adminClient'
-import { ActivityFeed, ActivityPlaceholder } from '@/admin/ActivityFeed'
-import { isPurgeable } from '@domain/case.ts'
-import type { AdminOverview } from '@contracts/admin.ts'
+import type { ReactNode } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { ChevronRightIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { routes } from "@/app/routes";
+import { adminApi } from "@/admin/adminClient";
+import { ActivityFeed, ActivityPlaceholder } from "@/admin/ActivityFeed";
+import type { AdminOverview } from "@contracts/admin.ts";
 
 /**
- * The console's home: every live conversation, and what is happening in them.
+ * Every live conversation, and what is happening in them.
  *
- * This replaces three screens that were all lists of the same cases under different headings.
- * A case here is a link, because everything worth knowing about one belongs on its own page
- * rather than squeezed beside the others.
+ * A case is a row in a table rather than a hand-built flex row, which is the whole of the
+ * difference between this and what it replaced: the components already exist and already agree
+ * with each other, so using them is both less code and more consistent than not.
  */
 export function CasesScreen({
   data,
   onChanged,
 }: {
-  readonly data: AdminOverview
-  readonly onChanged: () => void
+  readonly data: AdminOverview;
+  readonly onChanged: () => void;
 }): ReactNode {
-  const doomed = data.cases.filter((item) => isPurgeable(item, data.focusCaseId))
-
   const purge = useMutation({
-    mutationFn: () => adminApi.purgeCases(data.focusCaseId ?? undefined),
+    mutationFn: adminApi.purgeCases,
     onSuccess: onChanged,
-  })
-  const reset = useMutation({ mutationFn: adminApi.resetCase, onSuccess: onChanged })
-  const kill = useMutation({ mutationFn: adminApi.setKillSwitch, onSuccess: onChanged })
+  });
+  const reset = useMutation({
+    mutationFn: adminApi.resetCase,
+    onSuccess: onChanged,
+  });
+  const kill = useMutation({
+    mutationFn: adminApi.setKillSwitch,
+    onSuccess: onChanged,
+  });
 
   return (
     <div className="space-y-6">
       <Metrics metrics={data.metrics} />
 
-      <section className="space-y-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-semibold">Live conversations</h2>
-          <span className="text-muted-foreground tabular text-2xs">{data.cases.length}</span>
-        </div>
-
-        <Card className="gap-0 divide-y p-0">
-          {data.cases.length === 0 && (
-            <p className="text-muted-foreground p-4 text-sm">Nobody has started one yet.</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Conversations</CardTitle>
+          <CardDescription>
+            {data.cases.length === 0
+              ? "Nobody has started one yet."
+              : `${String(data.cases.length)} on this project.`}
+          </CardDescription>
+          {data.cases.length > 0 && (
+            <CardAction>
+              <PurgeButton
+                count={data.cases.length}
+                pending={purge.isPending}
+                onConfirm={() => purge.mutate()}
+              />
+            </CardAction>
           )}
-          {data.cases.map((item) => (
-            <Link
-              key={item.id}
-              to={routes.admin.case(item.id)}
-              className="hover:bg-muted/50 flex items-center gap-3 p-4 transition-colors"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {item.label ?? item.id.slice(0, 8)}
-                </span>
-                <span className="text-muted-foreground tabular block text-xs">
-                  {item.applications} applications · {item.messages} messages · updated{' '}
-                  {item.updatedAt.slice(11, 16)}
-                </span>
-              </span>
-              {!isPurgeable(item, data.focusCaseId) && (
-                <Badge variant="secondary" className="text-2xs shrink-0">
-                  kept
-                </Badge>
-              )}
-              <ChevronRightIcon className="text-muted-foreground size-4 shrink-0" />
-            </Link>
-          ))}
-        </Card>
+        </CardHeader>
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-2xs">
-            Purging deletes every conversation except the one on screen and any that were named,
-            along with their facts, applications and plans. It cannot be undone.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            disabled={purge.isPending || doomed.length === 0}
-            onClick={() => purge.mutate()}
-          >
-            {purge.isPending ? 'Clearing…' : `Purge ${String(doomed.length)}`}
-          </Button>
-        </div>
-      </section>
+        {data.cases.length > 0 && (
+          <CardContent className="px-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead className="text-right">Applications</TableHead>
+                  <TableHead className="text-right">Messages</TableHead>
+                  <TableHead className="text-right">Updated</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.cases.map((item) => (
+                  <TableRow key={item.id} className="cursor-pointer">
+                    <TableCell className="font-medium">
+                      {/* The link covers the cell rather than the row, so the whole row stays
+                          keyboard-reachable as one target. */}
+                      <Link to={routes.admin.case(item.id)} className="block">
+                        {item.label ?? item.id.slice(0, 8)}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular text-right">
+                      {item.applications}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular text-right">
+                      {item.messages}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular text-right">
+                      {item.updatedAt.slice(11, 16)}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to={routes.admin.case(item.id)}
+                        aria-label="Open case"
+                      >
+                        <ChevronRightIcon className="text-muted-foreground size-4" />
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        )}
+      </Card>
 
-      {data.activity.length > 0 ? <ActivityFeed activity={data.activity} /> : <ActivityPlaceholder />}
+      {data.activity.length > 0 ? (
+        <ActivityFeed activity={data.activity} />
+      ) : (
+        <ActivityPlaceholder />
+      )}
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Controls</h2>
-        <Card className="gap-0 divide-y p-0">
-          <div className="flex items-center gap-3 p-4">
-            <IconTile tone="neutral" size="sm">
-              <RotateCcwIcon />
-            </IconTile>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Rebuild the sample customer</p>
-              <p className="text-muted-foreground text-xs">
-                Signed in, with the details the bank holds and nothing else. Other conversations
-                are untouched.
+      <Card>
+        <CardHeader>
+          <CardTitle>Controls</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="rebuild">Rebuild the sample customer</Label>
+              <p className="text-muted-foreground text-sm">
+                Signed in, with the details the bank holds and nothing else.
               </p>
             </div>
-            <Button size="sm" variant="outline" disabled={reset.isPending} onClick={() => reset.mutate()}>
-              {reset.isPending ? 'Rebuilding…' : 'Rebuild'}
+            <Button
+              id="rebuild"
+              variant="outline"
+              disabled={reset.isPending}
+              onClick={() => reset.mutate()}
+            >
+              <RotateCcwIcon />
+              {reset.isPending ? "Rebuilding…" : "Rebuild"}
             </Button>
           </div>
 
-          <div className="flex items-center gap-3 p-4">
-            <IconTile tone={data.killSwitch ? 'warning' : 'neutral'} size="sm">
-              <PowerIcon />
-            </IconTile>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Pause Baz</p>
-              <p className="text-muted-foreground text-xs">
-                Every request is turned away at the gate, without calling a model. §43
+          <Separator />
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="pause">Pause Baz</Label>
+              <p className="text-muted-foreground text-sm">
+                Every request is turned away at the gate, without calling a
+                model. §43
               </p>
             </div>
             <Switch
+              id="pause"
               checked={data.killSwitch}
               onCheckedChange={(enabled) => kill.mutate(enabled)}
-              aria-label="Pause Baz"
             />
           </div>
-        </Card>
-      </section>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }
 
-function Metrics({ metrics }: { readonly metrics: AdminOverview['metrics'] }): ReactNode {
+/**
+ * Deleting every conversation is irreversible, so it asks once.
+ *
+ * `AlertDialog` rather than `Dialog`: this interrupts to confirm a destructive thing, which is
+ * exactly the distinction between the two.
+ */
+function PurgeButton({
+  count,
+  pending,
+  onConfirm,
+}: {
+  readonly count: number;
+  readonly pending: boolean;
+  readonly onConfirm: () => void;
+}): ReactNode {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={pending}>
+          <Trash2Icon />
+          {pending ? "Clearing…" : `Purge all ${String(count)}`}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete every conversation?</AlertDialogTitle>
+          <AlertDialogDescription>
+            All {count} go, along with their facts, applications, plans and
+            events. The sample customer can be rebuilt afterwards from Controls.
+            This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep them</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>
+            Delete all {count}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function Metrics({
+  metrics,
+}: {
+  readonly metrics: AdminOverview["metrics"];
+}): ReactNode {
   const tiles = [
-    { label: 'Questions avoided §53', value: metrics.questionsAvoided },
-    { label: 'Facts captured', value: metrics.factsCaptured },
-    { label: 'Applications started', value: metrics.applicationsStarted },
-    { label: 'Requests blocked §25', value: metrics.requestsBlocked },
-  ]
+    {
+      label: "Questions avoided",
+      value: metrics.questionsAvoided,
+      note: "§53",
+    },
+    { label: "Facts captured", value: metrics.factsCaptured, note: null },
+    {
+      label: "Applications started",
+      value: metrics.applicationsStarted,
+      note: null,
+    },
+    { label: "Requests blocked", value: metrics.requestsBlocked, note: "§25" },
+  ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {tiles.map((tile) => (
-        <Card key={tile.label} className="gap-0 p-4">
-          <p className="tabular text-2xl font-semibold">{tile.value}</p>
-          <p className="text-muted-foreground text-xs">{tile.label}</p>
+        <Card key={tile.label}>
+          <CardHeader>
+            <CardDescription>
+              {tile.label}
+              {tile.note !== null && (
+                <span className="ml-1 opacity-60">{tile.note}</span>
+              )}
+            </CardDescription>
+            <CardTitle className="tabular text-3xl">{tile.value}</CardTitle>
+          </CardHeader>
         </Card>
       ))}
     </div>
-  )
+  );
 }

@@ -1,19 +1,19 @@
-import type { ReactNode } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import type { ReactNode } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboardIcon,
   MessagesSquareIcon,
   ShieldAlertIcon,
   SlidersHorizontalIcon,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { AdminLogin } from '@/admin/AdminLogin'
-import { useAdminAuth } from '@/admin/useAdminAuth'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
-import { BazAvatar } from '@/baz/BazAvatar'
-import { routes } from '@/app/routes'
-import { cn } from '@/lib/utils'
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AdminLogin } from "@/admin/AdminLogin";
+import { useAdminAuth } from "@/admin/useAdminAuth";
+import { PrototypeBanner } from "@/components/PrototypeBanner";
+import { BazAvatar } from "@/baz/BazAvatar";
+import { routes } from "@/app/routes";
+import { cn } from "@/lib/utils";
 
 /**
  * Four screens: the conversations, and the three things that shape them.
@@ -22,11 +22,31 @@ import { cn } from '@/lib/utils'
  * only the person who built it could hold — all three were lists of the same conversations.
  */
 const sections = [
-  { to: routes.admin.root, label: 'Cases', icon: <MessagesSquareIcon />, end: false },
-  { to: routes.admin.guardrails, label: 'Guardrails', icon: <ShieldAlertIcon />, end: false },
-  { to: routes.admin.persona, label: 'Persona', icon: <SlidersHorizontalIcon />, end: false },
-  { to: routes.admin.engine, label: 'Goals & needs', icon: <LayoutDashboardIcon />, end: false },
-] as const
+  {
+    to: routes.admin.root,
+    label: "Cases",
+    icon: <MessagesSquareIcon />,
+    end: false,
+  },
+  {
+    to: routes.admin.guardrails,
+    label: "Guardrails",
+    icon: <ShieldAlertIcon />,
+    end: false,
+  },
+  {
+    to: routes.admin.persona,
+    label: "Persona",
+    icon: <SlidersHorizontalIcon />,
+    end: false,
+  },
+  {
+    to: routes.admin.engine,
+    label: "Goals & needs",
+    icon: <LayoutDashboardIcon />,
+    end: false,
+  },
+] as const;
 
 /**
  * §37 to §44 — the presenter console.
@@ -35,8 +55,8 @@ const sections = [
  * server checks admin status on every call, which is what actually protects it.
  */
 export function AdminConsole(): ReactNode {
-  const auth = useAdminAuth()
-  const { pathname } = useLocation()
+  const auth = useAdminAuth();
+  const { pathname } = useLocation();
 
   return (
     <div className="bg-background min-h-dvh">
@@ -45,11 +65,18 @@ export function AdminConsole(): ReactNode {
       <div className="mx-auto flex w-full max-w-6xl gap-0 lg:gap-6 lg:px-6 lg:py-6">
         <aside className="hidden w-56 shrink-0 lg:block">
           <div className="sticky top-6 space-y-6">
-            <Link to={routes.admin.root} className="flex items-center gap-2.5 px-2">
+            <Link
+              to={routes.admin.root}
+              className="flex items-center gap-2.5 px-2"
+            >
               <BazAvatar size="sm" />
               <span className="leading-tight">
-                <span className="block text-sm font-bold tracking-tight">Baz</span>
-                <span className="text-muted-foreground block text-2xs">Admin console</span>
+                <span className="block text-sm font-bold tracking-tight">
+                  Baz
+                </span>
+                <span className="text-muted-foreground block text-2xs">
+                  Admin console
+                </span>
               </span>
             </Link>
 
@@ -62,10 +89,10 @@ export function AdminConsole(): ReactNode {
                     end={section.end}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors [&>svg]:size-4',
+                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors [&>svg]:size-4",
                         isActive
-                          ? 'bg-accent text-accent-foreground font-medium'
-                          : 'text-muted-foreground hover:bg-muted',
+                          ? "bg-accent text-accent-foreground font-medium"
+                          : "text-muted-foreground hover:bg-muted",
                       )
                     }
                   >
@@ -83,13 +110,19 @@ export function AdminConsole(): ReactNode {
             <div className="flex items-center gap-3 px-4 py-3 lg:px-0">
               <BazAvatar size="sm" className="lg:hidden" />
               <div className="min-w-0 flex-1">
-                <h1 className="text-h3 truncate font-semibold">Presenter console</h1>
+                <h1 className="text-h3 truncate font-semibold">
+                  Presenter console
+                </h1>
                 <p className="text-muted-foreground truncate text-xs">
-                  {auth.email ?? 'Run the demonstration from here.'}
+                  {auth.email ?? "Run the demonstration from here."}
                 </p>
               </div>
               {auth.email !== null && (
-                <Button size="sm" variant="ghost" onClick={() => void auth.signOut()}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void auth.signOut()}
+                >
                   Sign out
                 </Button>
               )}
@@ -104,10 +137,10 @@ export function AdminConsole(): ReactNode {
                     end={section.end}
                     className={({ isActive }) =>
                       cn(
-                        'rounded-lg px-3 py-1.5 text-xs whitespace-nowrap',
+                        "rounded-lg px-3 py-1.5 text-xs whitespace-nowrap",
                         isActive
-                          ? 'bg-accent text-accent-foreground font-medium'
-                          : 'text-muted-foreground',
+                          ? "bg-accent text-accent-foreground font-medium"
+                          : "text-muted-foreground",
                       )
                     }
                   >
@@ -130,5 +163,5 @@ export function AdminConsole(): ReactNode {
         </div>
       </div>
     </div>
-  )
+  );
 }

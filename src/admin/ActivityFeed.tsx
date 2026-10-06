@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react'
-import { ActivityIcon } from 'lucide-react'
-import type { AdminOverview } from '@contracts/admin.ts'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import type { ReactNode } from "react";
+import { ActivityIcon } from "lucide-react";
+import type { AdminOverview } from "@contracts/admin.ts";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /**
  * §38 — what is happening, as it happens.
@@ -13,8 +13,12 @@ import { cn } from '@/lib/utils'
  * rather than being told it happened. Signals are the things worth watching; the bookkeeping
  * between them stays quiet so the moments that matter are legible.
  */
-export function ActivityFeed({ activity }: { activity: AdminOverview['activity'] }): ReactNode {
-  if (activity.length === 0) return null
+export function ActivityFeed({
+  activity,
+}: {
+  activity: AdminOverview["activity"];
+}): ReactNode {
+  if (activity.length === 0) return null;
 
   return (
     <section className="space-y-2">
@@ -30,22 +34,22 @@ export function ActivityFeed({ activity }: { activity: AdminOverview['activity']
           <div
             key={`${item.at}-${String(index)}`}
             className={cn(
-              'flex items-baseline gap-3 px-4 py-2',
-              item.signal && 'bg-primary/[0.03]',
+              "flex items-baseline gap-3 px-4 py-2",
+              item.signal && "bg-primary/[0.03]",
             )}
           >
             <span
               aria-hidden
               className={cn(
-                'mt-1.5 size-1.5 shrink-0 rounded-full',
-                item.signal ? 'bg-primary' : 'bg-muted-foreground/30',
+                "mt-1.5 size-1.5 shrink-0 rounded-full",
+                item.signal ? "bg-primary" : "bg-muted-foreground/30",
               )}
             />
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'block text-xs',
-                  item.signal ? 'font-medium' : 'text-muted-foreground',
+                  "block text-xs",
+                  item.signal ? "font-medium" : "text-muted-foreground",
                 )}
               >
                 {item.describe}
@@ -61,7 +65,7 @@ export function ActivityFeed({ activity }: { activity: AdminOverview['activity']
         ))}
       </Card>
     </section>
-  )
+  );
 }
 
 /** The empty state is worth its own component: a feed with nothing in it looks broken. */
@@ -70,8 +74,9 @@ export function ActivityPlaceholder(): ReactNode {
     <Card className="gap-0 p-4">
       <p className="text-muted-foreground flex items-center gap-2 text-xs">
         <ActivityIcon aria-hidden className="size-4" />
-        Nothing has happened on these cases yet. Start a conversation and it will appear here.
+        Nothing has happened on these cases yet. Start a conversation and it
+        will appear here.
       </p>
     </Card>
-  )
+  );
 }

@@ -61,14 +61,8 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('send_notification'), caseId: z.uuid() }),
 
   /** §44 — clears the room's conversations. Never touches the presenter case. */
-  /**
-   * §47 — clear out the conversations that have piled up from testing.
-   *
-   * `keepCaseId` is the one on screen. The console sends it rather than the server working out
-   * which case is "current", because the two can disagree and the wrong answer deletes the
-   * thing being looked at.
-   */
-  z.object({ action: z.literal('purge_cases'), keepCaseId: z.uuid().optional() }),
+  /** §47 — delete every conversation. No exceptions; the sample customer is one click to rebuild. */
+  z.object({ action: z.literal('purge_cases') }),
 
   /** §41 — the bank checks what was sent in, so a document needing verification can pass. */
   z.object({ action: z.literal('verify_documents'), caseId: z.uuid() }),
@@ -136,8 +130,6 @@ export const adminOverviewSchema = z.object({
       kind: z.enum(CASE_KINDS),
       /** For display: the customer's name, or "Unnamed · 1a2b3c4d" when there is none. */
       label: z.string().nullable(),
-      /** Whether the case itself was given a name, which is what protects it from a purge. */
-      named: z.boolean().default(false),
       applications: z.number().int(),
       messages: z.number().int(),
       updatedAt: z.string(),

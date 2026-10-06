@@ -855,3 +855,15 @@ section.
   it was 4,600px; the engines' reasoning is the most interesting part of the build and the least
   useful part of a phone call. Same for the catalogue: 26 goals open at once was 11,800px, which
   is a reference manual rather than a console.
+- **2026-10-06** — Purge deletes every case, with no exceptions. It used to spare the one on
+  screen, anything marked `presenter` and anything named, which meant a button saying "purge"
+  left cases behind and nobody could tell which or why. The sample customer is one click to
+  rebuild, so sparing it bought nothing and cost the button its meaning. It asks once, through
+  an `AlertDialog`, because it cannot be undone.
+- **2026-10-06** — The console is built from shadcn primitives rather than around them. It had
+  drifted into hand-rolled layouts — `Card` with `divide-y p-0` standing in for a table, a raw
+  `<button>` with a hand-placed chevron standing in for an accordion, a row of buttons standing
+  in for tabs — and the result looked like what it was. `Table`, `Accordion`, `Tabs`,
+  `AlertDialog`, `Tooltip`, `ScrollArea`, `Separator` and the `Card` sub-components were all
+  already installed. CLAUDE.md says never hand-roll something shadcn provides; this is what
+  ignoring that looks like after a few screens.

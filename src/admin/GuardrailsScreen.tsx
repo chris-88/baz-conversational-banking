@@ -1,14 +1,30 @@
-import type { ReactNode } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { ShieldAlertIcon } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { adminApi } from '@/admin/adminClient'
-import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
-import { refusalFor } from '@llm/refusals.ts'
-import type { AdminOverview } from '@contracts/admin.ts'
+import type { ReactNode } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { ShieldAlertIcon } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { adminApi } from "@/admin/adminClient";
+import { boiDomainConfig } from "@tenants/boi/domain-config.ts";
+import { refusalFor } from "@llm/refusals.ts";
+import type { AdminOverview } from "@contracts/admin.ts";
 
 /**
  * What Baz will and will not do, and what happens when somebody tries.
@@ -23,116 +39,159 @@ export function GuardrailsScreen({
   killSwitch,
   onChanged,
 }: {
-  readonly blocked: AdminOverview['blocked']
-  readonly killSwitch: boolean
-  readonly onChanged: () => void
+  readonly blocked: AdminOverview["blocked"];
+  readonly killSwitch: boolean;
+  readonly onChanged: () => void;
 }): ReactNode {
-  const kill = useMutation({ mutationFn: adminApi.setKillSwitch, onSuccess: onChanged })
+  const kill = useMutation({
+    mutationFn: adminApi.setKillSwitch,
+    onSuccess: onChanged,
+  });
 
   return (
     <div className="space-y-6">
       <Alert>
         <ShieldAlertIcon />
         <AlertDescription>
-          A classifier plus deterministic checks run in front of the model. A blocked request
-          never reaches Baz at all, and the refusal never contains the answer. §25, §26
+          A classifier plus deterministic checks run in front of the model. A
+          blocked request never reaches Baz at all, and the refusal never
+          contains the answer. §25, §26
         </AlertDescription>
       </Alert>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">What gets through</h2>
-        <Card className="gap-0 divide-y p-0">
-          {boiDomainConfig.categories.map((category) => (
-            <div key={category.id} className="space-y-1.5 p-4">
-              <div className="flex items-start gap-3">
+      <Card>
+        <CardHeader>
+          <CardTitle>What gets through</CardTitle>
+          <CardDescription>
+            Every message is classified before Baz sees it. These are the
+            categories and what each one gets back.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {boiDomainConfig.categories.map((category, index) => (
+            <div key={category.id} className="space-y-1.5">
+              {index > 0 && <Separator className="mb-5" />}
+              <div className="flex items-center gap-2">
+                <h3 className="flex-1 text-sm font-medium">{category.label}</h3>
                 <Badge
-                  variant={category.reachesModel ? 'default' : 'secondary'}
-                  className="text-2xs mt-0.5 shrink-0"
+                  variant={category.reachesModel ? "default" : "secondary"}
                 >
-                  {category.reachesModel ? 'reaches Baz' : 'blocked'}
+                  {category.reachesModel ? "reaches Baz" : "blocked"}
                 </Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{category.label}</p>
-                  <p className="text-muted-foreground text-xs">{category.description}</p>
-                </div>
               </div>
+              <p className="text-muted-foreground text-sm">
+                {category.description}
+              </p>
 
               {category.examples.length > 0 && (
-                <p className="text-muted-foreground pl-[5.5rem] text-2xs">
-                  e.g. {category.examples.map((example) => `"${example}"`).join(', ')}
+                <p className="text-muted-foreground text-sm">
+                  For example:{" "}
+                  {category.examples
+                    .map((example) => `“${example}”`)
+                    .join(", ")}
                 </p>
               )}
 
               {/* The actual words somebody gets back, so nobody has to guess at the tone. */}
               {!category.reachesModel && (
-                <p className="text-foreground/75 pl-[5.5rem] text-2xs italic">
-                  Replies: “{refusalFor(category.id, 'neutral')}”
-                </p>
+                <blockquote className="border-l-2 pl-3 text-sm italic">
+                  {refusalFor(category.id, "neutral")}
+                </blockquote>
               )}
             </div>
           ))}
-        </Card>
-      </section>
+        </CardContent>
+      </Card>
 
-      <section className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Scope title="In scope" items={boiDomainConfig.inScope} />
         <Scope title="Out of scope" items={boiDomainConfig.outOfScope} />
-      </section>
+      </div>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Recently blocked</h2>
-        <Card className="gap-0 divide-y p-0">
-          {blocked.length === 0 && (
-            <p className="text-muted-foreground p-4 text-sm">Nothing blocked yet.</p>
-          )}
-          {blocked.map((item, index) => (
-            <div key={`${item.at}-${String(index)}`} className="flex items-center gap-3 p-4">
-              <Badge variant="secondary" className="text-2xs">
-                {item.category}
-              </Badge>
-              <span className="text-muted-foreground tabular text-xs">
-                {new Date(item.at).toLocaleTimeString()}
-              </span>
-            </div>
-          ))}
-        </Card>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recently blocked</CardTitle>
+          <CardDescription>
+            {blocked.length === 0
+              ? "Nothing blocked yet."
+              : "Most recent first."}
+          </CardDescription>
+        </CardHeader>
+        {blocked.length > 0 && (
+          <CardContent className="px-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">When</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {blocked.map((item, index) => (
+                  <TableRow key={`${item.at}-${String(index)}`}>
+                    <TableCell>
+                      <Badge variant="secondary">{item.category}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular text-right">
+                      {new Date(item.at).toLocaleTimeString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        )}
+      </Card>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Controls</h2>
-        <Card className="flex-row items-center gap-3 p-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Pause Baz</p>
-            <p className="text-muted-foreground text-xs">
-              Every request is turned away at the gate, without calling a model. §43
+      <Card>
+        <CardHeader>
+          <CardTitle>Controls</CardTitle>
+          <CardDescription>
+            Scope and categories are tenant configuration, read by the gate on
+            every turn. Changing them is a config edit, not a prompt change.
+            §20, §32
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="pause">Pause Baz</Label>
+            <p className="text-muted-foreground text-sm">
+              Every request is turned away at the gate, without calling a model.
+              §43
             </p>
           </div>
           <Switch
+            id="pause"
             checked={killSwitch}
             onCheckedChange={(enabled) => kill.mutate(enabled)}
-            aria-label="Pause Baz"
           />
-        </Card>
-        <p className="text-muted-foreground text-2xs">
-          The scope and categories above are tenant configuration, read by the gate on every
-          turn. Changing them is a config edit, not a prompt change. §20, §32
-        </p>
-      </section>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }
 
-function Scope({ title, items }: { readonly title: string; readonly items: readonly string[] }): ReactNode {
+function Scope({
+  title,
+  items,
+}: {
+  readonly title: string;
+  readonly items: readonly string[];
+}): ReactNode {
   return (
-    <Card className="gap-0 p-0">
-      <p className="border-b px-4 py-2.5 text-xs font-semibold">{title}</p>
-      <ul className="space-y-1 p-4">
-        {items.map((item) => (
-          <li key={item} className="text-muted-foreground text-xs">
-            {item}
-          </li>
-        ))}
-      </ul>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="list-disc space-y-1 pl-4">
+          {items.map((item) => (
+            <li key={item} className="text-muted-foreground text-sm">
+              {item}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
     </Card>
-  )
+  );
 }

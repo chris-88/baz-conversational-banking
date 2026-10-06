@@ -1,7 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellIcon, CopyIcon, EyeOffIcon } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -86,9 +92,11 @@ export function CaseInspector({
     <div className="space-y-6">
       {show !== "reasoning" && (
         <>
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold">Applications and events</h2>
-            <Card className="gap-0 divide-y p-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Applications and events</CardTitle>
+            </CardHeader>
+            <CardContent className="divide-y px-0 [&>*]:px-6">
               {data.applications.length === 0 && (
                 <p className="text-muted-foreground p-4 text-sm">
                   No applications on this case.
@@ -142,17 +150,19 @@ export function CaseInspector({
                   )}
                 </div>
               ))}
-            </Card>
-          </section>
+            </CardContent>
+          </Card>
 
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold">Notify</h2>
-            <Card className="space-y-3 p-4">
-              <p className="text-muted-foreground text-xs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notify</CardTitle>
+              <CardDescription>
                 A separate, deliberate action. The message says nothing about
                 the application, and the link needs a sign-in before anything is
                 shown. §35, §42
-              </p>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <Button
                 size="sm"
                 variant="outline"
@@ -182,8 +192,8 @@ export function CaseInspector({
                   </div>
                 </div>
               )}
-            </Card>
-          </section>
+            </CardContent>
+          </Card>
 
           <PlanControls
             caseId={caseId}
@@ -203,11 +213,11 @@ export function CaseInspector({
 
           {/* §27 — a parked need is otherwise invisible: it looks exactly like one never raised. */}
           {data.parked.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold">
-                Parked, and what brings it back
-              </h2>
-              <Card className="gap-0 divide-y p-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Parked, and what brings it back</CardTitle>
+              </CardHeader>
+              <CardContent className="divide-y px-0 [&>*]:px-6">
                 {data.parked.map((item) => (
                   <div
                     key={item.needId}
@@ -231,8 +241,8 @@ export function CaseInspector({
                     </Badge>
                   </div>
                 ))}
-              </Card>
-            </section>
+              </CardContent>
+            </Card>
           )}
 
           {(data.needs.length > 0 || data.watches.length > 0) && (
@@ -306,9 +316,11 @@ export function CaseInspector({
             </section>
           )}
 
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold">Context, with provenance</h2>
-            <Card className="gap-0 divide-y p-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Context, with provenance</CardTitle>
+            </CardHeader>
+            <CardContent className="divide-y px-0 [&>*]:px-6">
               {data.facts.map((fact, index) => (
                 <div
                   key={`${fact.key}-${String(index)}`}
@@ -337,12 +349,14 @@ export function CaseInspector({
                   )}
                 </div>
               ))}
-            </Card>
-          </section>
+            </CardContent>
+          </Card>
 
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold">Event log</h2>
-            <Card className="gap-0 divide-y p-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Event log</CardTitle>
+            </CardHeader>
+            <CardContent className="divide-y px-0 [&>*]:px-6">
               {data.events.map((event, index) => (
                 <div
                   key={`${event.at}-${String(index)}`}
@@ -363,8 +377,8 @@ export function CaseInspector({
                   </span>
                 </div>
               ))}
-            </Card>
-          </section>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

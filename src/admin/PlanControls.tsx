@@ -1,17 +1,23 @@
-import { useState, type ReactNode } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { CalendarClockIcon, CheckIcon, FlagIcon, PauseIcon, PlayIcon } from 'lucide-react'
-import type { AdminCase } from '@contracts/admin.ts'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ProgressBar } from '@/components/ProgressBar'
-import { IconTile } from '@/components/IconTile'
-import { adminApi } from '@/admin/adminClient'
+import { useState, type ReactNode } from "react";
+import { useMutation } from "@tanstack/react-query";
+import {
+  CalendarClockIcon,
+  CheckIcon,
+  FlagIcon,
+  PauseIcon,
+  PlayIcon,
+} from "lucide-react";
+import type { AdminCase } from "@contracts/admin.ts";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ProgressBar } from "@/components/ProgressBar";
+import { IconTile } from "@/components/IconTile";
+import { adminApi } from "@/admin/adminClient";
 
-const euro = (amount: number): string => `€${amount.toLocaleString('en-IE')}`
+const euro = (amount: number): string => `€${amount.toLocaleString("en-IE")}`;
 
 /**
  * §38 — driving a plan from the console.
@@ -26,24 +32,26 @@ export function PlanControls({
   plans,
   onChanged,
 }: {
-  caseId: string
-  plans: AdminCase['plans']
-  onChanged: () => void
+  caseId: string;
+  plans: AdminCase["plans"];
+  onChanged: () => void;
 }): ReactNode {
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState("");
 
   const setBalance = useMutation({
     mutationFn: (value: number) => adminApi.setSavingsBalance(caseId, value),
     onSuccess: onChanged,
-  })
+  });
 
   const move = useMutation({
-    mutationFn: (input: { planId: string; move: Parameters<typeof adminApi.planMove>[2] }) =>
-      adminApi.planMove(caseId, input.planId, input.move),
+    mutationFn: (input: {
+      planId: string;
+      move: Parameters<typeof adminApi.planMove>[2];
+    }) => adminApi.planMove(caseId, input.planId, input.move),
     onSuccess: onChanged,
-  })
+  });
 
-  if (plans.length === 0) return null
+  if (plans.length === 0) return null;
 
   return (
     <section className="space-y-2">
@@ -56,9 +64,11 @@ export function PlanControls({
 
       {plans.map((plan) => {
         const fraction =
-          plan.targetAmount !== null && plan.targetAmount > 0 && plan.currentAmount !== null
+          plan.targetAmount !== null &&
+          plan.targetAmount > 0 &&
+          plan.currentAmount !== null
             ? plan.currentAmount / plan.targetAmount
-            : null
+            : null;
 
         return (
           <Card key={plan.id} className="gap-0 p-0">
@@ -71,13 +81,16 @@ export function PlanControls({
                 <span className="text-muted-foreground block text-2xs">
                   {plan.currentAmount !== null && plan.targetAmount !== null
                     ? `${euro(plan.currentAmount)} of ${euro(plan.targetAmount)}`
-                    : 'No target set'}
+                    : "No target set"}
                   {plan.monthsRemaining !== null &&
-                    ` · about ${String(plan.monthsRemaining)} month${plan.monthsRemaining === 1 ? '' : 's'} to go`}
-                  {plan.onTrack === false && ' · later than their date'}
+                    ` · about ${String(plan.monthsRemaining)} month${plan.monthsRemaining === 1 ? "" : "s"} to go`}
+                  {plan.onTrack === false && " · later than their date"}
                 </span>
               </span>
-              <Badge variant={plan.status === 'active' ? 'default' : 'secondary'} className="text-2xs">
+              <Badge
+                variant={plan.status === "active" ? "default" : "secondary"}
+                className="text-2xs"
+              >
                 {plan.status}
               </Badge>
             </div>
@@ -86,7 +99,11 @@ export function PlanControls({
               <div className="px-4 pb-3">
                 <ProgressBar
                   value={fraction}
-                  label={plan.projectedDate === null ? 'towards target' : `on course for ${plan.projectedDate}`}
+                  label={
+                    plan.projectedDate === null
+                      ? "towards target"
+                      : `on course for ${plan.projectedDate}`
+                  }
                 />
               </div>
             )}
@@ -94,18 +111,29 @@ export function PlanControls({
             {plan.milestones.length > 0 && (
               <ul className="space-y-1 border-t px-4 py-3">
                 {plan.milestones.map((milestone) => (
-                  <li key={milestone.id} className="flex items-center gap-2 text-xs">
+                  <li
+                    key={milestone.id}
+                    className="flex items-center gap-2 text-xs"
+                  >
                     <span
                       aria-hidden
                       className={
-                        milestone.state === 'achieved'
-                          ? 'bg-state-done/15 text-state-done grid size-4 place-items-center rounded-full'
-                          : 'border-input size-4 rounded-full border'
+                        milestone.state === "achieved"
+                          ? "bg-state-done/15 text-state-done grid size-4 place-items-center rounded-full"
+                          : "border-input size-4 rounded-full border"
                       }
                     >
-                      {milestone.state === 'achieved' && <CheckIcon className="size-2.5" strokeWidth={3} />}
+                      {milestone.state === "achieved" && (
+                        <CheckIcon className="size-2.5" strokeWidth={3} />
+                      )}
                     </span>
-                    <span className={milestone.state === 'achieved' ? 'text-muted-foreground' : ''}>
+                    <span
+                      className={
+                        milestone.state === "achieved"
+                          ? "text-muted-foreground"
+                          : ""
+                      }
+                    >
                       {milestone.label}
                     </span>
                   </li>
@@ -114,20 +142,30 @@ export function PlanControls({
             )}
 
             {plan.checkins.map((checkin) => (
-              <div key={checkin.id} className="flex items-start gap-2 border-t px-4 py-3">
-                <CalendarClockIcon aria-hidden className="text-muted-foreground mt-0.5 size-4" />
+              <div
+                key={checkin.id}
+                className="flex items-start gap-2 border-t px-4 py-3"
+              >
+                <CalendarClockIcon
+                  aria-hidden
+                  className="text-muted-foreground mt-0.5 size-4"
+                />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium">{checkin.purpose}</span>
+                  <span className="block text-xs font-medium">
+                    {checkin.purpose}
+                  </span>
                   <span className="text-muted-foreground block text-2xs">
                     {checkin.when} · {checkin.state}
                   </span>
                 </span>
-                {(checkin.state === 'scheduled' || checkin.state === 'due') && (
+                {(checkin.state === "scheduled" || checkin.state === "due") && (
                   <Button
                     size="sm"
                     variant="outline"
                     disabled={move.isPending}
-                    onClick={() => move.mutate({ planId: plan.id, move: 'trigger_checkin' })}
+                    onClick={() =>
+                      move.mutate({ planId: plan.id, move: "trigger_checkin" })
+                    }
                   >
                     Bring it due
                   </Button>
@@ -136,41 +174,47 @@ export function PlanControls({
             ))}
 
             <div className="flex flex-wrap gap-2 border-t p-4">
-              {plan.status === 'active' && (
+              {plan.status === "active" && (
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={move.isPending}
-                  onClick={() => move.mutate({ planId: plan.id, move: 'pause' })}
+                  onClick={() =>
+                    move.mutate({ planId: plan.id, move: "pause" })
+                  }
                 >
                   <PauseIcon />
                   Pause
                 </Button>
               )}
-              {plan.status === 'paused' && (
+              {plan.status === "paused" && (
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={move.isPending}
-                  onClick={() => move.mutate({ planId: plan.id, move: 'resume' })}
+                  onClick={() =>
+                    move.mutate({ planId: plan.id, move: "resume" })
+                  }
                 >
                   <PlayIcon />
                   Resume
                 </Button>
               )}
-              {plan.status === 'active' && (
+              {plan.status === "active" && (
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={move.isPending}
-                  onClick={() => move.mutate({ planId: plan.id, move: 'complete' })}
+                  onClick={() =>
+                    move.mutate({ planId: plan.id, move: "complete" })
+                  }
                 >
                   Complete
                 </Button>
               )}
             </div>
           </Card>
-        )
+        );
       })}
 
       <Card className="gap-0 p-4">
@@ -178,8 +222,8 @@ export function PlanControls({
           Move their savings balance
         </Label>
         <p className="text-muted-foreground mt-0.5 text-2xs">
-          Nothing about progress is stored, so changing this recalculates every plan, milestone
-          and projection on the case.
+          Nothing about progress is stored, so changing this recalculates every
+          plan, milestone and projection on the case.
         </p>
         <div className="mt-2 flex gap-2">
           <Input
@@ -187,7 +231,9 @@ export function PlanControls({
             inputMode="numeric"
             placeholder="60000"
             value={amount}
-            onChange={(event) => setAmount(event.target.value.replace(/[^\d]/g, ''))}
+            onChange={(event) =>
+              setAmount(event.target.value.replace(/[^\d]/g, ""))
+            }
           />
           <Button
             size="sm"
@@ -199,15 +245,18 @@ export function PlanControls({
         </div>
         {setBalance.data && (
           <p className="text-muted-foreground mt-2 text-2xs">
-            Engine read back {setBalance.data.seen === null ? 'nothing' : euro(setBalance.data.seen)} ·{' '}
-            {String(setBalance.data.plansActive)} active plan
-            {setBalance.data.plansActive === 1 ? '' : 's'} ·{' '}
+            Engine read back{" "}
+            {setBalance.data.seen === null
+              ? "nothing"
+              : euro(setBalance.data.seen)}{" "}
+            · {String(setBalance.data.plansActive)} active plan
+            {setBalance.data.plansActive === 1 ? "" : "s"} ·{" "}
             {String(setBalance.data.milestonesConsidered)} milestone
-            {setBalance.data.milestonesConsidered === 1 ? '' : 's'} checked ·{' '}
+            {setBalance.data.milestonesConsidered === 1 ? "" : "s"} checked ·{" "}
             {String(setBalance.data.milestonesReached)} reached
           </p>
         )}
       </Card>
     </section>
-  )
+  );
 }
