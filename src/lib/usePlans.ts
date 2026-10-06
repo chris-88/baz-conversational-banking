@@ -3,7 +3,13 @@ import { z } from 'zod'
 import { requireSupabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
 import { planProgress } from '@domain/plans/engine.ts'
-import { PLAN_GOALS, PLAN_STATUSES, type Plan, type PlanContext, type PlanProgress } from '@domain/plans/types.ts'
+import {
+  PLAN_GOALS,
+  PLAN_STATUSES,
+  type Plan,
+  type PlanContext,
+  type PlanProgress,
+} from '@domain/plans/types.ts'
 import { isFactKey } from '@domain/facts.ts'
 import { MILESTONE_KINDS, MILESTONE_STATES, CHECKIN_STATES } from '@domain/plans/types.ts'
 import { PRODUCTS } from '@domain/journey.ts'
@@ -161,9 +167,7 @@ export function usePlans(caseId: string | null) {
                 targetProduct: milestone.target_product,
                 targetState: milestone.target_state,
                 targetFacts:
-                  milestone.target_facts === null
-                    ? null
-                    : milestone.target_facts.filter(isFactKey),
+                  milestone.target_facts === null ? null : milestone.target_facts.filter(isFactKey),
                 state: milestone.state,
                 achievedAt: milestone.achieved_at,
               })),

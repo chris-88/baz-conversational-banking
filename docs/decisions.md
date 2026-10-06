@@ -920,3 +920,16 @@ section.
   permanently. The home-indicator inset is zeroed while the keyboard is up, because the keyboard
   covers the indicator and reserving space for it is a gap and nothing else. Connecting now shows
   in the composer's placeholder, which is where somebody waiting to type is looking.
+- **2026-10-06** — The console is code-split out of the customer bundle. It is the larger half of
+  the application — a charting library, a command palette, a data grid — and none of it is
+  reachable without typing `/admin`, so bundling it together was a cost paid by the people the
+  product is for. Recharts lands in the console's chunk rather than on every phone that opens Baz.
+- **2026-10-06** — `.prettierrc.json` matches the house style: no semicolons, single quotes, 100
+  columns. There was no config, so every `npx prettier --write` silently reformatted files to
+  prettier's defaults and away from the rest of the repo. A formatter with no configuration is a
+  second opinion about style, not a settled one.
+- **2026-10-06** — A metric card takes the previous window's count, not a computed percentage, so
+  it can tell apart "nothing to compare against", "the previous window was zero" and an ordinary
+  change. A prototype a day old is in the middle case for every metric, and "0%" would claim
+  nothing had happened. The arrow is never coloured: blocked requests falling is good and
+  conversations falling is not, and the card cannot know which it is holding.

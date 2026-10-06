@@ -27,8 +27,7 @@ export const queryKeys = {
     progress: (caseId: string, applicationIds: string) =>
       ['case', caseId, 'applications', 'progress', applicationIds] as const,
     detail: (applicationId: string) => ['application', applicationId] as const,
-    outstanding: (applicationId: string) =>
-      ['application', applicationId, 'outstanding'] as const,
+    outstanding: (applicationId: string) => ['application', applicationId, 'outstanding'] as const,
     requests: (applicationId: string) => ['application', applicationId, 'requests'] as const,
   },
 
@@ -38,7 +37,7 @@ export const queryKeys = {
   },
 
   admin: {
-    cases: () => ['admin', 'cases'] as const,
+    cases: (period: string = 'all') => ['admin', 'cases', period] as const,
     caseInspection: (caseId: string) => ['admin', 'case', caseId] as const,
     persona: () => ['admin', 'persona'] as const,
     domainConfig: () => ['admin', 'domain-config'] as const,

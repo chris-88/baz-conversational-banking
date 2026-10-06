@@ -25,7 +25,6 @@ import { routes } from '@/app/routes'
 export function Landing(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
-
       <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-6">
         <BazAvatar />
         <span className="text-xl font-bold tracking-tight">Baz</span>

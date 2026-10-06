@@ -182,16 +182,21 @@ the thing the list sorts and filters by.
 
 ---
 
-## 4. Decisions I need from you
+## 4. Decisions — settled 2026-10-06
 
-1. **Recharts.** shadcn `Chart` wraps it; there is no charting without it (~100 KB gzipped).
-   CLAUDE.md says ask before adding a dependency. **Yes/no?** No Recharts means no sparklines and
-   no Analytics as specified.
-2. **Goal editing: A, B or C** (§3.2). I recommend B.
-3. **Analytics honesty.** Drop channel mix and new-vs-returning, or add the tracking to make them
-   real? Dropping is one line; making them real means identity across sessions.
-4. **CRM link and Export.** Stub them for the screenshot, or leave them out? There is no CRM.
-5. **Profile.** Cut, or build it knowing most of it is decorative?
+1. **Recharts: yes.** Added as a dependency. Analytics and the KPI sparklines are on.
+2. **Goal editing: option B.** Prose, labels, agendas, priority and enable/disable move to a
+   database overlay. Conditions stay in code and are shown read-only.
+3. **Analytics: drop** channel mix and new vs returning. Nothing behind them, and the spec
+   forbids inventing it.
+4. **CRM link and Export: dropped.** There is no CRM, and nothing to export that the console does
+   not already show.
+5. **Profile: build it, decorative.** Back in scope as Chunk 10.
+
+   One condition on that, which I will hold to unless told otherwise: decorative must not mean
+   *untrue*. A "Two-factor authentication — Enabled" badge on an account with no second factor is
+   a false claim about security, not a placeholder. Controls that do nothing will be visibly
+   inert — disabled, or labelled as not wired up — rather than showing a state that is wrong.
 
 ---
 
@@ -232,20 +237,24 @@ Overlay table, `Sheet` editor, enable/disable, lifecycle metadata.
 `metrics_by_day`, period comparison, the `goal_identified` event, outcome classification.
 *Nothing visible. Everything in Chunk 9 depends on it.*
 
-### Chunk 9 — Analytics · ~2 days *(needs Recharts)*
+### Chunk 9 — Analytics · ~2 days
 KPI sparklines, volume chart, funnel, top goals, guardrail triggers, insights panel.
-*Built only from panels with real data behind them.*
+*Seven panels, not nine: channel mix and new-vs-returning are dropped (decision 3).*
 
-**Roughly 11 days of focused work** for everything except Settings and Profile. Chunks 1–5 are
+### Chunk 10 — Profile · ~0.5 day
+Header card, personal details, role and permissions, security, sessions, preferences.
+*Decorative, and honestly so: the email and the role are real, the rest is visibly inert.*
+
+**Roughly 11.5 days of focused work** for everything except Settings. Chunks 1–5 are
 about half of it and cover Phase 1 and Phase 2 of the spec — which is the part that makes the
 console better to use and better to show.
 
 ---
 
-## 6. What I would cut
+## 6. Cut
 
-- **Profile** (§11) — one real field.
 - **View in CRM** — there is no CRM.
+- **Export** — nothing to export that the console does not already show.
 - **Channel mix** and **new vs returning** — no data, and the spec forbids fabricating it.
 - **Admin typing into a customer conversation** — plausible-looking but it means posting as the
   customer, and that transcript is the record a human reads before phoning them. We have just

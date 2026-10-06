@@ -1,5 +1,17 @@
 import { z } from 'zod'
 import { CASE_KINDS } from '../domain/case.ts'
+
+/** The windows the console can look at. */
+export const PERIODS = ['7d', '30d', '90d', 'all'] as const
+export type Period = (typeof PERIODS)[number]
+
+/** How many days each window covers. `all` has no start, so it has nothing to compare against. */
+export const PERIOD_DAYS: Readonly<Record<Period, number | null>> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+  all: null,
+}
 import { PRESET_NAMES, SLIDER_NAMES } from '../llm/persona.ts'
 
 /**
@@ -22,7 +34,19 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
    * `caseId` is the conversation the presenter is driving. Omitted, the console focuses the
    * most recently active one, which is almost always the one on screen.
    */
-  z.object({ action: z.literal('overview'), caseId: z.uuid().optional() }),
+    /**
+   * §5, §9 — the console's headline numbers, over a window.
+   *
+   * `all` is the default because a prototype with a day of traffic in it should not open on an
+   * empty chart. Every window is compared against the one immediately before it, which is what
+   * makes a delta mean anything.
+   */
+  z.object({
+    action: z.literal('overview'),
+    period: z.enum(PERIODS).default('all'),
+    /** Which case the console is pointed at, for the hand-moves and the inspector. */
+    caseId: z.uuid().optional(),
+  }),
   /** §43 — restores the canonical presenter case. Audience cases are untouched. */
   z.object({ action: z.literal('reset_case'), caseId: z.uuid().optional() }),
   /** §43 — the gate returns "demo paused" to everything. */
@@ -160,6 +184,23 @@ export const adminOverviewSchema = z.object({
     applicationsStarted: z.number().int(),
     requestsBlocked: z.number().int(),
   }),
+  /**
+   * The same counts for the window before this one, and the window asked for.
+   *
+   * Null when the period is `all`: there is no earlier window, and showing a delta of zero would
+   * claim nothing changed rather than that nothing was compared.
+   */
+  period: z.enum(PERIODS).default('all'),
+  previous: z
+    .object({
+      questionsAvoided: z.number().int(),
+      factsCaptured: z.number().int(),
+      productsOffered: z.number().int(),
+      applicationsStarted: z.number().int(),
+      requestsBlocked: z.number().int(),
+    })
+    .nullable()
+    .default(null),
   /** §39 — enforcement made observable. */
   blocked: z.array(z.object({ category: z.string(), at: z.string() })),
 })

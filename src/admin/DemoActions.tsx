@@ -1,21 +1,11 @@
-import type { ReactNode } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { FileCheckIcon, PiggyBankIcon, ZapIcon } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { adminApi } from "@/admin/adminClient";
-import type { AdminCase } from "@contracts/admin.ts";
+import type { ReactNode } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { FileCheckIcon, PiggyBankIcon, ZapIcon } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { adminApi } from '@/admin/adminClient'
+import type { AdminCase } from '@contracts/admin.ts'
 
 /**
  * Moving a case on by hand.
@@ -29,30 +19,29 @@ export function DemoActions({
   moves,
   onChanged,
 }: {
-  readonly caseId: string;
-  readonly moves: AdminCase["demoActions"];
-  readonly onChanged: () => void;
+  readonly caseId: string
+  readonly moves: AdminCase['demoActions']
+  readonly onChanged: () => void
 }): ReactNode {
   const run = useMutation({
     mutationFn: (move: Parameters<typeof adminApi.demoAction>[1]) =>
       adminApi.demoAction(caseId, move),
     onSuccess: onChanged,
-  });
+  })
   const savings = useMutation({
     mutationFn: () => adminApi.reachSavingsTarget(caseId),
     onSuccess: onChanged,
-  });
+  })
   const verify = useMutation({
     mutationFn: () => adminApi.verifyDocuments(caseId),
     onSuccess: onChanged,
-  });
+  })
   return (
     <Card>
       <CardHeader>
         <CardTitle>Act as the bank</CardTitle>
         <CardDescription>
-          What a person can do on this case by hand. Each one is a real
-          state-machine transition.
+          What a person can do on this case by hand. Each one is a real state-machine transition.
         </CardDescription>
       </CardHeader>
 
@@ -65,9 +54,7 @@ export function DemoActions({
               label={move.label}
               note={move.note}
               disabled={!move.available || run.isPending}
-              onClick={() =>
-                run.mutate(move.id as Parameters<typeof adminApi.demoAction>[1])
-              }
+              onClick={() => run.mutate(move.id as Parameters<typeof adminApi.demoAction>[1])}
             />
           ))}
         </div>
@@ -78,8 +65,8 @@ export function DemoActions({
             label="Their savings reach the target"
             note={
               savings.data?.reached === true
-                ? `Reached €${savings.data.target?.toLocaleString("en-IE") ?? ""}. They have something to come back for.`
-                : "Months pass and the money is there — the thing the bank said it would watch for. §41"
+                ? `Reached €${savings.data.target?.toLocaleString('en-IE') ?? ''}. They have something to come back for.`
+                : 'Months pass and the money is there — the thing the bank said it would watch for. §41'
             }
             disabled={savings.isPending}
             onClick={() => savings.mutate()}
@@ -90,7 +77,7 @@ export function DemoActions({
             note={
               verify.data
                 ? `${String(verify.data.verified)} marked as checked.`
-                : "Marks what has been sent in as verified, so anything waiting on a check can pass. §41"
+                : 'Marks what has been sent in as verified, so anything waiting on a check can pass. §41'
             }
             disabled={verify.isPending}
             onClick={() => verify.mutate()}
@@ -98,7 +85,7 @@ export function DemoActions({
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 /**
@@ -116,11 +103,11 @@ function Move({
   disabled,
   onClick,
 }: {
-  readonly icon: ReactNode;
-  readonly label: string;
-  readonly note: string;
-  readonly disabled: boolean;
-  readonly onClick: () => void;
+  readonly icon: ReactNode
+  readonly label: string
+  readonly note: string
+  readonly disabled: boolean
+  readonly onClick: () => void
 }): ReactNode {
   const button = (
     <Button
@@ -132,7 +119,7 @@ function Move({
       {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>
     </Button>
-  );
+  )
 
   return (
     <Tooltip>
@@ -144,5 +131,5 @@ function Move({
         {note}
       </TooltipContent>
     </Tooltip>
-  );
+  )
 }

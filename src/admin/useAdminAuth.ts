@@ -32,7 +32,10 @@ export function useAdminAuth() {
 
   const signIn = useCallback(async (address: string, password: string) => {
     const supabase = requireSupabase()
-    const { data, error } = await supabase.auth.signInWithPassword({ email: address, password })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: address,
+      password,
+    })
     if (error) throw new Error(error.message)
     setEmail(data.user.email ?? address)
   }, [])

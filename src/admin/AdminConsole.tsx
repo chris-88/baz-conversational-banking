@@ -116,9 +116,7 @@ export function AdminConsole(): ReactNode {
                     <BazAvatar size="sm" />
                     <span className="grid flex-1 text-left leading-tight">
                       <span className="truncate font-semibold">Baz</span>
-                      <span className="text-muted-foreground truncate text-xs">
-                        Admin console
-                      </span>
+                      <span className="text-muted-foreground truncate text-xs">Admin console</span>
                     </span>
                   </Link>
                 </SidebarMenuButton>

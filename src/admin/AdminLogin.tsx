@@ -1,33 +1,33 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { LockIcon } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { IconTile } from "@/components/IconTile";
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { LockIcon } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { IconTile } from '@/components/IconTile'
 
 /** §28 — real email auth, separate from the anonymous sessions customers get. */
 export function AdminLogin({
   onSignIn,
 }: {
-  onSignIn: (email: string, password: string) => Promise<void>;
+  onSignIn: (email: string, password: string) => Promise<void>
 }): ReactNode {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   async function submit(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
+    event.preventDefault()
+    setBusy(true)
+    setError(null)
     try {
-      await onSignIn(email, password);
+      await onSignIn(email, password)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not sign in.");
+      setError(caught instanceof Error ? caught.message : 'Could not sign in.')
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
@@ -74,9 +74,9 @@ export function AdminLogin({
         )}
 
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
     </Card>
-  );
+  )
 }

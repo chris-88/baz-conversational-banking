@@ -30,7 +30,9 @@ export function CaseDetail(): ReactNode {
   const queryClient = useQueryClient()
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.admin.caseInspection(caseId ?? '') })
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.admin.caseInspection(caseId ?? ''),
+    })
     void queryClient.invalidateQueries({ queryKey: queryKeys.admin.cases() })
   }
 
@@ -85,7 +87,8 @@ export function CaseDetail(): ReactNode {
           <h1 className="text-2xl font-semibold tracking-tight">{data.handoff.who}</h1>
           <p className="text-muted-foreground text-sm">
             {data.handoff.turns} {data.handoff.turns === 1 ? 'message' : 'messages'}
-            {data.handoff.lastSeen !== null && ` · last spoke ${data.handoff.lastSeen.slice(0, 10)}`}
+            {data.handoff.lastSeen !== null &&
+              ` · last spoke ${data.handoff.lastSeen.slice(0, 10)}`}
           </p>
         </div>
 
@@ -176,11 +179,7 @@ function Conversation({
  * Reading a transcript as a flat list of labelled paragraphs is much harder than it needs to
  * be; who said what should be apparent before the words are.
  */
-function Turn({
-  message,
-}: {
-  readonly message: AdminCase['conversation'][number]
-}): ReactNode {
+function Turn({ message }: { readonly message: AdminCase['conversation'][number] }): ReactNode {
   const customer = message.role === 'customer'
 
   return (

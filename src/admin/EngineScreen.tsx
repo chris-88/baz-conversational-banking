@@ -1,20 +1,20 @@
-import { useState, type ReactNode } from "react";
-import { Card } from "@/components/ui/card";
+import { useState, type ReactNode } from 'react'
+import { Card } from '@/components/ui/card'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { goalCatalogue } from "@domain/goals/catalogue.ts";
-import { lifeEventClusters } from "@domain/goals/clusters.ts";
-import { GOAL_THRESHOLDS } from "@domain/goals/types.ts";
-import { needCatalogue } from "@domain/needs/catalogue.ts";
-import { NEED_THRESHOLDS, SIGNAL_STRENGTHS } from "@domain/needs/types.ts";
+} from '@/components/ui/accordion'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { goalCatalogue } from '@domain/goals/catalogue.ts'
+import { lifeEventClusters } from '@domain/goals/clusters.ts'
+import { GOAL_THRESHOLDS } from '@domain/goals/types.ts'
+import { needCatalogue } from '@domain/needs/catalogue.ts'
+import { NEED_THRESHOLDS, SIGNAL_STRENGTHS } from '@domain/needs/types.ts'
 
 /**
  * What Baz knows how to recognise, and what it does about it.
@@ -25,10 +25,9 @@ import { NEED_THRESHOLDS, SIGNAL_STRENGTHS } from "@domain/needs/types.ts";
  * None of it is prompt text.
  */
 export function EngineScreen(): ReactNode {
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState('')
 
-  const match = (text: string) =>
-    text.toLowerCase().includes(filter.trim().toLowerCase());
+  const match = (text: string) => text.toLowerCase().includes(filter.trim().toLowerCase())
 
   return (
     <Tabs defaultValue="goals" className="space-y-6">
@@ -36,15 +35,9 @@ export function EngineScreen(): ReactNode {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TabsList>
-          <TabsTrigger value="goals">
-            Goals ({goalCatalogue.length})
-          </TabsTrigger>
-          <TabsTrigger value="needs">
-            Needs ({needCatalogue.length})
-          </TabsTrigger>
-          <TabsTrigger value="events">
-            Life events ({lifeEventClusters.length})
-          </TabsTrigger>
+          <TabsTrigger value="goals">Goals ({goalCatalogue.length})</TabsTrigger>
+          <TabsTrigger value="needs">Needs ({needCatalogue.length})</TabsTrigger>
+          <TabsTrigger value="events">Life events ({lifeEventClusters.length})</TabsTrigger>
         </TabsList>
         <Input
           value={filter}
@@ -58,25 +51,22 @@ export function EngineScreen(): ReactNode {
         <Card className="py-0">
           <Accordion type="single" collapsible className="w-full">
             {goalCatalogue
-              .filter(
-                (goal) =>
-                  match(goal.name) || match(goal.id) || match(goal.description),
-              )
+              .filter((goal) => match(goal.name) || match(goal.id) || match(goal.description))
               .map((goal) => (
                 <Entry
                   key={goal.id}
                   value={goal.id}
                   title={goal.name}
                   summary={goal.description}
-                  badges={[{ text: goal.category.replaceAll("_", " ") }]}
+                  badges={[{ text: goal.category.replaceAll('_', ' ') }]}
                 >
                   <Rows
                     label="Raised when"
                     items={goal.signals.map(
                       (signal) =>
-                        `${signal.describe} — ${signal.strength.replaceAll("_", " ")} (${String(
+                        `${signal.describe} — ${signal.strength.replaceAll('_', ' ')} (${String(
                           SIGNAL_STRENGTHS[signal.strength],
-                        )})${signal.declaration === true ? ", counts as them naming it" : ""}`,
+                        )})${signal.declaration === true ? ', counts as them naming it' : ''}`,
                     )}
                   />
                   <Rows
@@ -89,14 +79,14 @@ export function EngineScreen(): ReactNode {
                       (milestone) =>
                         `${milestone.label} — ${milestone.category}${
                           milestone.binding === null
-                            ? ", confirmed by the customer"
-                            : milestone.binding.kind === "facts"
-                              ? `, once we know ${milestone.binding.keys.join(" and ")}`
-                              : milestone.binding.kind === "numeric"
+                            ? ', confirmed by the customer'
+                            : milestone.binding.kind === 'facts'
+                              ? `, once we know ${milestone.binding.keys.join(' and ')}`
+                              : milestone.binding.kind === 'numeric'
                                 ? `, at ${String(Math.round(milestone.binding.fraction * 100))}% of target`
-                                : milestone.binding.kind === "application"
+                                : milestone.binding.kind === 'application'
                                   ? `, when the ${milestone.binding.product} reaches ${milestone.binding.state}`
-                                  : ", on the target date"
+                                  : ', on the target date'
                         }`,
                     )}
                   />
@@ -106,10 +96,10 @@ export function EngineScreen(): ReactNode {
                       items={goal.checkins.map(
                         (checkin) =>
                           `${checkin.purpose} — ${
-                            checkin.kind === "event"
-                              ? `when ${checkin.event.replaceAll("_", " ")}`
+                            checkin.kind === 'event'
+                              ? `when ${checkin.event.replaceAll('_', ' ')}`
                               : `every ${String(checkin.everyMonths)} months`
-                          } · ${checkin.agenda.join("; ")}`,
+                          } · ${checkin.agenda.join('; ')}`,
                       )}
                     />
                   )}
@@ -117,8 +107,7 @@ export function EngineScreen(): ReactNode {
                     <Rows
                       label="Held back when"
                       items={goal.deferrals.map(
-                        (rule) =>
-                          `${rule.describe} — back when ${rule.revisitWhen}`,
+                        (rule) => `${rule.describe} — back when ${rule.revisitWhen}`,
                       )}
                     />
                   )}
@@ -131,15 +120,9 @@ export function EngineScreen(): ReactNode {
                   <Rows
                     label="Leads to"
                     items={[
-                      ...goal.relationships.related.map(
-                        (id) => `alongside ${id}`,
-                      ),
-                      ...goal.relationships.followOn.map(
-                        (id) => `afterwards ${id}`,
-                      ),
-                      ...goal.relationships.conflicts.map(
-                        (id) => `conflicts with ${id}`,
-                      ),
+                      ...goal.relationships.related.map((id) => `alongside ${id}`),
+                      ...goal.relationships.followOn.map((id) => `afterwards ${id}`),
+                      ...goal.relationships.conflicts.map((id) => `conflicts with ${id}`),
                     ]}
                   />
                   {goal.linkedNeeds.length > 0 && (
@@ -155,10 +138,7 @@ export function EngineScreen(): ReactNode {
         <Card className="py-0">
           <Accordion type="single" collapsible className="w-full">
             {needCatalogue
-              .filter(
-                (need) =>
-                  match(need.name) || match(need.id) || match(need.framing),
-              )
+              .filter((need) => match(need.name) || match(need.id) || match(need.framing))
               .map((need) => (
                 <Entry
                   key={need.id}
@@ -166,9 +146,9 @@ export function EngineScreen(): ReactNode {
                   title={need.name}
                   summary={need.framing}
                   badges={[
-                    { text: need.priority.replaceAll("_", " ") },
+                    { text: need.priority.replaceAll('_', ' ') },
                     ...(need.sensitive
-                      ? [{ text: "sensitive", tone: "destructive" as const }]
+                      ? [{ text: 'sensitive', tone: 'destructive' as const }]
                       : []),
                   ]}
                 >
@@ -176,25 +156,17 @@ export function EngineScreen(): ReactNode {
                     label="Raised when"
                     items={need.signals.map(
                       (signal) =>
-                        `${signal.describe} — ${signal.strength.replaceAll("_", " ")} (${String(
+                        `${signal.describe} — ${signal.strength.replaceAll('_', ' ')} (${String(
                           SIGNAL_STRENGTHS[signal.strength],
                         )})`,
                     )}
                   />
                   {need.clarifying.length > 0 && (
-                    <Rows
-                      label="Asks first"
-                      items={need.clarifying.map((item) => item.question)}
-                    />
+                    <Rows label="Asks first" items={need.clarifying.map((item) => item.question)} />
                   )}
-                  {need.products.length > 0 && (
-                    <Rows label="Offers" items={[...need.products]} />
-                  )}
+                  {need.products.length > 0 && <Rows label="Offers" items={[...need.products]} />}
                   {need.deferrals.length > 0 && (
-                    <Rows
-                      label="Held back when"
-                      items={need.deferrals.map((r) => r.describe)}
-                    />
+                    <Rows label="Held back when" items={need.deferrals.map((r) => r.describe)} />
                   )}
                   {need.suppressions.length > 0 && (
                     <Rows
@@ -220,15 +192,9 @@ export function EngineScreen(): ReactNode {
                   title={cluster.name}
                   summary={cluster.note}
                 >
-                  <Rows
-                    label="Recognised by"
-                    items={cluster.signals.map((s) => s.describe)}
-                  />
+                  <Rows label="Recognised by" items={cluster.signals.map((s) => s.describe)} />
                   <Rows label="Usually about" items={[...cluster.primary]} />
-                  <Rows
-                    label="Often alongside"
-                    items={[...cluster.secondary]}
-                  />
+                  <Rows label="Often alongside" items={[...cluster.secondary]} />
                   {cluster.deferred.length > 0 && (
                     <Rows label="Comes later" items={[...cluster.deferred]} />
                   )}
@@ -238,7 +204,7 @@ export function EngineScreen(): ReactNode {
         </Card>
       </TabsContent>
     </Tabs>
-  );
+  )
 }
 
 /**
@@ -255,14 +221,14 @@ function Entry({
   summary,
   children,
 }: {
-  readonly value: string;
-  readonly title: string;
+  readonly value: string
+  readonly title: string
   readonly badges?: readonly {
-    readonly text: string;
-    readonly tone?: "destructive";
-  }[];
-  readonly summary: string | null;
-  readonly children: ReactNode;
+    readonly text: string
+    readonly tone?: 'destructive'
+  }[]
+  readonly summary: string | null
+  readonly children: ReactNode
 }): ReactNode {
   return (
     <AccordionItem value={value}>
@@ -270,15 +236,13 @@ function Entry({
         <span className="min-w-0 flex-1 space-y-0.5">
           <span className="block font-medium">{title}</span>
           {summary !== null && (
-            <span className="text-muted-foreground block text-sm font-normal">
-              {summary}
-            </span>
+            <span className="text-muted-foreground block text-sm font-normal">{summary}</span>
           )}
         </span>
         {(badges ?? []).map((badge) => (
           <Badge
             key={badge.text}
-            variant={badge.tone === "destructive" ? "destructive" : "secondary"}
+            variant={badge.tone === 'destructive' ? 'destructive' : 'secondary'}
             className="shrink-0"
           >
             {badge.text}
@@ -289,17 +253,17 @@ function Entry({
         <dl className="divide-y border-t px-4">{children}</dl>
       </AccordionContent>
     </AccordionItem>
-  );
+  )
 }
 
 function Rows({
   label,
   items,
 }: {
-  readonly label: string;
-  readonly items: readonly string[];
+  readonly label: string
+  readonly items: readonly string[]
 }): ReactNode {
-  if (items.length === 0) return null;
+  if (items.length === 0) return null
 
   return (
     <div className="flex gap-4 py-3">
@@ -312,7 +276,7 @@ function Rows({
         ))}
       </dd>
     </div>
-  );
+  )
 }
 
 /**
@@ -327,18 +291,16 @@ function Thresholds(): ReactNode {
     <Alert>
       <AlertDescription className="space-y-1">
         <span className="block text-xs">
-          Evidence is combined across signals so several weak ones add up
-          without any being decisive. A goal is worth mentioning at{" "}
-          {GOAL_THRESHOLDS.secondary} and established at{" "}
-          {GOAL_THRESHOLDS.strong}; a need is clarified at{" "}
-          {NEED_THRESHOLDS.clarify} and offered at {NEED_THRESHOLDS.surface}.
+          Evidence is combined across signals so several weak ones add up without any being
+          decisive. A goal is worth mentioning at {GOAL_THRESHOLDS.secondary} and established at{' '}
+          {GOAL_THRESHOLDS.strong}; a need is clarified at {NEED_THRESHOLDS.clarify} and offered at{' '}
+          {NEED_THRESHOLDS.surface}.
         </span>
         <span className="text-muted-foreground block text-2xs">
-          The conditions below are code, not prompt text — the model cannot
-          change them, and neither can this screen. Adding a goal means adding
-          its conditions.
+          The conditions below are code, not prompt text — the model cannot change them, and neither
+          can this screen. Adding a goal means adding its conditions.
         </span>
       </AlertDescription>
     </Alert>
-  );
+  )
 }

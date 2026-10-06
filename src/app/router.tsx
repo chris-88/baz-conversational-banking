@@ -2,8 +2,7 @@ import { createHashRouter, Navigate, type RouteObject } from 'react-router-dom'
 import { Landing } from '@/surfaces/Landing'
 import { BazScreen } from '@/surfaces/BazScreen'
 import { PartnerJoin } from '@/partner/PartnerJoin'
-import { AdminConsole } from '@/admin/AdminConsole'
-import { AdminOverview } from '@/admin/AdminOverview'
+import { LazyAdminConsole, LazyAdminOverview } from '@/app/lazyAdmin'
 import { NotFound } from '@/components/NotFound'
 
 const routeObjects: RouteObject[] = [
@@ -14,13 +13,13 @@ const routeObjects: RouteObject[] = [
 
   {
     path: '/admin',
-    element: <AdminConsole />,
+    element: <LazyAdminConsole />,
     children: [
-      { index: true, element: <AdminOverview section="cases" /> },
-      { path: 'case/:caseId', element: <AdminOverview section="case" /> },
-      { path: 'guardrails', element: <AdminOverview section="guardrails" /> },
-      { path: 'persona', element: <AdminOverview section="persona" /> },
-      { path: 'engine', element: <AdminOverview section="engine" /> },
+      { index: true, element: <LazyAdminOverview section="cases" /> },
+      { path: 'case/:caseId', element: <LazyAdminOverview section="case" /> },
+      { path: 'guardrails', element: <LazyAdminOverview section="guardrails" /> },
+      { path: 'persona', element: <LazyAdminOverview section="persona" /> },
+      { path: 'engine', element: <LazyAdminOverview section="engine" /> },
     ],
   },
 

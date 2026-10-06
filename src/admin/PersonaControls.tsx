@@ -1,35 +1,34 @@
-import { useState, type ReactNode } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from "@llm/persona.ts";
-import { adminApi } from "@/admin/adminClient";
+import { useState, type ReactNode } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
+import { adminApi } from '@/admin/adminClient'
 
 /** §16 to §18 — style only. Persona cannot change scope, rules or protections. */
 export function PersonaControls({
   persona,
   onChanged,
 }: {
-  persona: Awaited<ReturnType<typeof adminApi.overview>>["persona"];
-  onChanged: () => void;
+  persona: Awaited<ReturnType<typeof adminApi.overview>>['persona']
+  onChanged: () => void
 }): ReactNode {
-  const [sliders, setSliders] = useState(persona.sliders);
+  const [sliders, setSliders] = useState(persona.sliders)
 
   const save = useMutation({
     mutationFn: adminApi.setPersona,
     onSuccess: () => onChanged(),
-  });
+  })
 
   return (
     <div className="space-y-6">
       <Alert>
         <AlertDescription>
-          Style only. Changing these cannot alter what Baz may discuss, what it
-          can do, or any customer protection — and it applies to the very next
-          message. §18, §56
+          Style only. Changing these cannot alter what Baz may discuss, what it can do, or any
+          customer protection — and it applies to the very next message. §18, §56
         </AlertDescription>
       </Alert>
 
@@ -40,11 +39,11 @@ export function PersonaControls({
             <Button
               key={preset}
               size="sm"
-              variant={persona.preset === preset ? "default" : "outline"}
+              variant={persona.preset === preset ? 'default' : 'outline'}
               disabled={save.isPending}
               onClick={() => save.mutate({ preset })}
             >
-              {preset.replace("_", " ")}
+              {preset.replace('_', ' ')}
             </Button>
           ))}
         </div>
@@ -78,10 +77,10 @@ export function PersonaControls({
             disabled={save.isPending}
             onClick={() => save.mutate({ sliders })}
           >
-            {save.isPending ? "Applying…" : "Apply to the next message"}
+            {save.isPending ? 'Applying…' : 'Apply to the next message'}
           </Button>
         </Card>
       </section>
     </div>
-  );
+  )
 }

@@ -2,7 +2,12 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
-import { adminRequestSchema, type AdminCase, type AdminOverview } from '../_shared/contracts/admin.ts'
+import {
+  adminRequestSchema,
+  PERIOD_DAYS,
+  type AdminCase,
+  type AdminOverview,
+} from '../_shared/contracts/admin.ts'
 import type { CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
@@ -132,6 +137,23 @@ function movesFor(
       note: possible ? move.note : `Not possible from "${application.state}".`,
     }
   })
+}
+
+/** The five headline counts, from a tally of event types. */
+function headlineCounts(counts: ReadonlyMap<string, number>): {
+  questionsAvoided: number
+  factsCaptured: number
+  productsOffered: number
+  applicationsStarted: number
+  requestsBlocked: number
+} {
+  return {
+    questionsAvoided: counts.get('context_reused') ?? 0,
+    factsCaptured: counts.get('context_captured') ?? 0,
+    productsOffered: counts.get('product_offered') ?? 0,
+    applicationsStarted: counts.get('application_created') ?? 0,
+    requestsBlocked: counts.get('request_blocked') ?? 0,
+  }
 }
 
 Deno.serve(async (request: Request): Promise<Response> => {
@@ -280,7 +302,11 @@ Deno.serve(async (request: Request): Promise<Response> => {
         admin.from('persona_config').select('preset, sliders').eq('scope', 'global').maybeSingle(),
         admin.from('cases').select('id, kind, label, updated_at').order('updated_at', { ascending: false }).limit(25),
         // Capped: metrics are a headline, not an audit, and the log grows without bound.
-        admin.from('events').select('type').order('created_at', { ascending: false }).limit(5000),
+        admin
+          .from('events')
+          .select('type, created_at')
+          .order('created_at', { ascending: false })
+          .limit(5000),
         admin
           .from('events')
           .select('payload, created_at')
@@ -289,8 +315,28 @@ Deno.serve(async (request: Request): Promise<Response> => {
           .limit(10),
       ])
 
+      /**
+       * Two windows: the one asked for, and the one immediately before it.
+       *
+       * Counted here rather than in two more round trips, because the rows are already loaded
+       * and a prototype's event log fits comfortably inside the cap above.
+       */
+      const days = PERIOD_DAYS[action.period]
+      const now = Date.now()
+      const windowStart = days === null ? null : now - days * 86_400_000
+      const previousStart = days === null || windowStart === null ? null : windowStart - days * 86_400_000
+
       const counts = new Map<string, number>()
-      for (const row of (events.data ?? []) as { type: string }[]) {
+      const before = new Map<string, number>()
+
+      for (const row of (events.data ?? []) as { type: string; created_at: string }[]) {
+        const at = Date.parse(row.created_at)
+
+        if (windowStart !== null && previousStart !== null && at < windowStart) {
+          if (at >= previousStart) before.set(row.type, (before.get(row.type) ?? 0) + 1)
+          continue
+        }
+
         counts.set(row.type, (counts.get(row.type) ?? 0) + 1)
       }
 
@@ -412,13 +458,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
           sliders: ((persona.data as { sliders?: unknown } | null)?.sliders ?? slidersFor('default')) as AdminOverview['persona']['sliders'],
         },
         cases: summaries,
-        metrics: {
-          questionsAvoided: counts.get('context_reused') ?? 0,
-          factsCaptured: counts.get('context_captured') ?? 0,
-          productsOffered: counts.get('product_offered') ?? 0,
-          applicationsStarted: counts.get('application_created') ?? 0,
-          requestsBlocked: counts.get('request_blocked') ?? 0,
-        },
+        metrics: headlineCounts(counts),
+        period: action.period,
+        // `all` has no earlier window, so there is nothing honest to compare against.
+        previous: days === null ? null : headlineCounts(before),
         blocked: ((blocked.data ?? []) as { payload: { category?: string }; created_at: string }[]).map(
           (row) => ({ category: row.payload?.category ?? 'unknown', at: row.created_at }),
         ),

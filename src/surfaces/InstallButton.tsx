@@ -68,8 +68,8 @@ export function InstallButton(): ReactNode {
             <span className="font-medium">Install app</span>.
           </li>
           <li>
-            <span className="font-medium">Desktop:</span> look for the install icon in the
-            address bar.
+            <span className="font-medium">Desktop:</span> look for the install icon in the address
+            bar.
           </li>
         </ol>
       </DialogContent>

@@ -52,7 +52,10 @@ export function ActivityFeed({
             {activity.map((item, index) => (
               <div
                 key={`${item.at}-${String(index)}`}
-                className={cn('flex items-baseline gap-3 px-6 py-2.5', item.signal && 'bg-primary/5')}
+                className={cn(
+                  'flex items-baseline gap-3 px-6 py-2.5',
+                  item.signal && 'bg-primary/5',
+                )}
               >
                 <span
                   aria-hidden

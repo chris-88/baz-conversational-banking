@@ -28,7 +28,6 @@ export function BazScreen(): ReactNode {
      * here can exceed the box, so there is no page scroll to go wrong.
      */
     <div className="bg-background flex h-[var(--viewport-height)] flex-col overflow-hidden overscroll-none">
-
       <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 z-30 shrink-0 border-b backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">
           <Button asChild variant="ghost" className="-ml-2 h-auto gap-2.5 px-2 py-1.5">

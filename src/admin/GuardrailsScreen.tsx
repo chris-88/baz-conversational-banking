@@ -1,17 +1,11 @@
-import type { ReactNode } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { ShieldAlertIcon } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import type { ReactNode } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { ShieldAlertIcon } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import {
   Table,
   TableBody,
@@ -19,12 +13,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { adminApi } from "@/admin/adminClient";
-import { boiDomainConfig } from "@tenants/boi/domain-config.ts";
-import { refusalFor } from "@llm/refusals.ts";
-import type { AdminOverview } from "@contracts/admin.ts";
+} from '@/components/ui/table'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { adminApi } from '@/admin/adminClient'
+import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
+import { refusalFor } from '@llm/refusals.ts'
+import type { AdminOverview } from '@contracts/admin.ts'
 
 /**
  * What Baz will and will not do, and what happens when somebody tries.
@@ -39,23 +33,22 @@ export function GuardrailsScreen({
   killSwitch,
   onChanged,
 }: {
-  readonly blocked: AdminOverview["blocked"];
-  readonly killSwitch: boolean;
-  readonly onChanged: () => void;
+  readonly blocked: AdminOverview['blocked']
+  readonly killSwitch: boolean
+  readonly onChanged: () => void
 }): ReactNode {
   const kill = useMutation({
     mutationFn: adminApi.setKillSwitch,
     onSuccess: onChanged,
-  });
+  })
 
   return (
     <div className="space-y-6">
       <Alert>
         <ShieldAlertIcon />
         <AlertDescription>
-          A classifier plus deterministic checks run in front of the model. A
-          blocked request never reaches Baz at all, and the refusal never
-          contains the answer. §25, §26
+          A classifier plus deterministic checks run in front of the model. A blocked request never
+          reaches Baz at all, and the refusal never contains the answer. §25, §26
         </AlertDescription>
       </Alert>
 
@@ -65,8 +58,8 @@ export function GuardrailsScreen({
           <CardHeader>
             <CardTitle>What gets through</CardTitle>
             <CardDescription>
-              Every message is classified before Baz sees it. These are the
-              categories and what each one gets back.
+              Every message is classified before Baz sees it. These are the categories and what each
+              one gets back.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -74,32 +67,23 @@ export function GuardrailsScreen({
               <div key={category.id} className="space-y-1.5">
                 {index > 0 && <Separator className="mb-5" />}
                 <div className="flex items-center gap-2">
-                  <h3 className="flex-1 text-sm font-medium">
-                    {category.label}
-                  </h3>
-                  <Badge
-                    variant={category.reachesModel ? "default" : "secondary"}
-                  >
-                    {category.reachesModel ? "reaches Baz" : "blocked"}
+                  <h3 className="flex-1 text-sm font-medium">{category.label}</h3>
+                  <Badge variant={category.reachesModel ? 'default' : 'secondary'}>
+                    {category.reachesModel ? 'reaches Baz' : 'blocked'}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground text-sm">
-                  {category.description}
-                </p>
+                <p className="text-muted-foreground text-sm">{category.description}</p>
 
                 {category.examples.length > 0 && (
                   <p className="text-muted-foreground text-sm">
-                    For example:{" "}
-                    {category.examples
-                      .map((example) => `“${example}”`)
-                      .join(", ")}
+                    For example: {category.examples.map((example) => `“${example}”`).join(', ')}
                   </p>
                 )}
 
                 {/* The actual words somebody gets back, so nobody has to guess at the tone. */}
                 {!category.reachesModel && (
                   <blockquote className="border-l-2 pl-3 text-sm italic">
-                    {refusalFor(category.id, "neutral")}
+                    {refusalFor(category.id, 'neutral')}
                   </blockquote>
                 )}
               </div>
@@ -115,9 +99,7 @@ export function GuardrailsScreen({
             <CardHeader>
               <CardTitle>Recently blocked</CardTitle>
               <CardDescription>
-                {blocked.length === 0
-                  ? "Nothing blocked yet."
-                  : "Most recent first."}
+                {blocked.length === 0 ? 'Nothing blocked yet.' : 'Most recent first.'}
               </CardDescription>
             </CardHeader>
             {blocked.length > 0 && (
@@ -150,17 +132,15 @@ export function GuardrailsScreen({
             <CardHeader>
               <CardTitle>Controls</CardTitle>
               <CardDescription>
-                Scope and categories are tenant configuration, read by the gate
-                on every turn. Changing them is a config edit, not a prompt
-                change. §20, §32
+                Scope and categories are tenant configuration, read by the gate on every turn.
+                Changing them is a config edit, not a prompt change. §20, §32
               </CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label htmlFor="pause">Pause Baz</Label>
                 <p className="text-muted-foreground text-sm">
-                  Every request is turned away at the gate, without calling a
-                  model. §43
+                  Every request is turned away at the gate, without calling a model. §43
                 </p>
               </div>
               <Switch
@@ -173,15 +153,15 @@ export function GuardrailsScreen({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 function Scope({
   title,
   items,
 }: {
-  readonly title: string;
-  readonly items: readonly string[];
+  readonly title: string
+  readonly items: readonly string[]
 }): ReactNode {
   return (
     <Card>
@@ -198,5 +178,5 @@ function Scope({
         </ul>
       </CardContent>
     </Card>
-  );
+  )
 }

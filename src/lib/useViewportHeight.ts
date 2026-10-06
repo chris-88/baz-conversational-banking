@@ -18,7 +18,10 @@ export function useViewportHeight(): void {
     if (!viewport) return undefined
 
     const apply = () => {
-      document.documentElement.style.setProperty('--viewport-height', `${String(viewport.height)}px`)
+      document.documentElement.style.setProperty(
+        '--viewport-height',
+        `${String(viewport.height)}px`,
+      )
 
       /*
        * While the keyboard is up it covers the home indicator, so the space normally reserved

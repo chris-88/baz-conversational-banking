@@ -41,7 +41,10 @@ export function useCaseProgress({ caseId, applications }: Input) {
       const supabase = requireSupabase()
 
       const [participants, facts, confirmations, documents] = await Promise.all([
-        supabase.from('participants').select('id, role, display_name').eq('case_id', caseId ?? ''),
+        supabase
+          .from('participants')
+          .select('id, role, display_name')
+          .eq('case_id', caseId ?? ''),
         supabase
           .from('facts')
           .select(
