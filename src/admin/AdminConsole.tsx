@@ -176,10 +176,6 @@ export function AdminConsole(): ReactNode {
         </Sidebar>
 
         <SidebarInset className="min-w-0">
-          {/* In the content column rather than above the layout: the sidebar is fixed, so a
-              banner outside it only ever spans the part of the page it is not covering. */}
-          <PrototypeBanner />
-
           <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 !h-4" />
@@ -235,7 +231,14 @@ function Trail(): ReactNode {
   )
 }
 
-/** The signed-out and still-checking states, which need none of the navigation. */
+/**
+ * The signed-out and still-checking states, which need none of the navigation.
+ *
+ * This keeps the prototype disclosure and the console itself does not. The banner exists so
+ * nobody who lands on a Bank of Ireland-branded page cold is misled, and signed in there is
+ * nobody to mislead — it is one person running their own prototype. Signed out is the part of
+ * `/admin` a stranger can actually reach.
+ */
 function Shell({ children }: { readonly children: ReactNode }): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
