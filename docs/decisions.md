@@ -867,3 +867,11 @@ section.
   `AlertDialog`, `Tooltip`, `ScrollArea`, `Separator` and the `Card` sub-components were all
   already installed. CLAUDE.md says never hand-roll something shadcn provides; this is what
   ignoring that looks like after a few screens.
+- **2026-10-06** — The console is laid out across the width, not down it, and a case is four tabs
+  rather than one scroll. Handover, conversation, act as the bank, and how Baz worked it out are
+  four genuinely different questions asked by four different people; stacked, the page was 4,600
+  pixels and everyone scrolled past three quarters of it. It is 1,000 now and fits on a screen.
+- **2026-10-06** — `useIsMobile` reads the media query through `useSyncExternalStore`. The
+  shadcn-generated version held the answer in state and wrote to it from an effect, which renders
+  once with the wrong answer and again with the right one — and trips this repo's lint rule about
+  synchronous setState in effects. A media query is an external store; it is read as one.

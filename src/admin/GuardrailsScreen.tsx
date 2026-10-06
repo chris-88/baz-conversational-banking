@@ -59,114 +59,119 @@ export function GuardrailsScreen({
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>What gets through</CardTitle>
-          <CardDescription>
-            Every message is classified before Baz sees it. These are the
-            categories and what each one gets back.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {boiDomainConfig.categories.map((category, index) => (
-            <div key={category.id} className="space-y-1.5">
-              {index > 0 && <Separator className="mb-5" />}
-              <div className="flex items-center gap-2">
-                <h3 className="flex-1 text-sm font-medium">{category.label}</h3>
-                <Badge
-                  variant={category.reachesModel ? "default" : "secondary"}
-                >
-                  {category.reachesModel ? "reaches Baz" : "blocked"}
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {category.description}
-              </p>
-
-              {category.examples.length > 0 && (
+      {/* The long list on the left, the reference material beside it. */}
+      <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle>What gets through</CardTitle>
+            <CardDescription>
+              Every message is classified before Baz sees it. These are the
+              categories and what each one gets back.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {boiDomainConfig.categories.map((category, index) => (
+              <div key={category.id} className="space-y-1.5">
+                {index > 0 && <Separator className="mb-5" />}
+                <div className="flex items-center gap-2">
+                  <h3 className="flex-1 text-sm font-medium">
+                    {category.label}
+                  </h3>
+                  <Badge
+                    variant={category.reachesModel ? "default" : "secondary"}
+                  >
+                    {category.reachesModel ? "reaches Baz" : "blocked"}
+                  </Badge>
+                </div>
                 <p className="text-muted-foreground text-sm">
-                  For example:{" "}
-                  {category.examples
-                    .map((example) => `“${example}”`)
-                    .join(", ")}
+                  {category.description}
                 </p>
-              )}
 
-              {/* The actual words somebody gets back, so nobody has to guess at the tone. */}
-              {!category.reachesModel && (
-                <blockquote className="border-l-2 pl-3 text-sm italic">
-                  {refusalFor(category.id, "neutral")}
-                </blockquote>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+                {category.examples.length > 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    For example:{" "}
+                    {category.examples
+                      .map((example) => `“${example}”`)
+                      .join(", ")}
+                  </p>
+                )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Scope title="In scope" items={boiDomainConfig.inScope} />
-        <Scope title="Out of scope" items={boiDomainConfig.outOfScope} />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recently blocked</CardTitle>
-          <CardDescription>
-            {blocked.length === 0
-              ? "Nothing blocked yet."
-              : "Most recent first."}
-          </CardDescription>
-        </CardHeader>
-        {blocked.length > 0 && (
-          <CardContent className="px-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">When</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {blocked.map((item, index) => (
-                  <TableRow key={`${item.at}-${String(index)}`}>
-                    <TableCell>
-                      <Badge variant="secondary">{item.category}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground tabular text-right">
-                      {new Date(item.at).toLocaleTimeString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                {/* The actual words somebody gets back, so nobody has to guess at the tone. */}
+                {!category.reachesModel && (
+                  <blockquote className="border-l-2 pl-3 text-sm italic">
+                    {refusalFor(category.id, "neutral")}
+                  </blockquote>
+                )}
+              </div>
+            ))}
           </CardContent>
-        )}
-      </Card>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Controls</CardTitle>
-          <CardDescription>
-            Scope and categories are tenant configuration, read by the gate on
-            every turn. Changing them is a config edit, not a prompt change.
-            §20, §32
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="pause">Pause Baz</Label>
-            <p className="text-muted-foreground text-sm">
-              Every request is turned away at the gate, without calling a model.
-              §43
-            </p>
-          </div>
-          <Switch
-            id="pause"
-            checked={killSwitch}
-            onCheckedChange={(enabled) => kill.mutate(enabled)}
-          />
-        </CardContent>
-      </Card>
+        <div className="min-w-0 space-y-6">
+          <Scope title="In scope" items={boiDomainConfig.inScope} />
+          <Scope title="Out of scope" items={boiDomainConfig.outOfScope} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recently blocked</CardTitle>
+              <CardDescription>
+                {blocked.length === 0
+                  ? "Nothing blocked yet."
+                  : "Most recent first."}
+              </CardDescription>
+            </CardHeader>
+            {blocked.length > 0 && (
+              <CardContent className="px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">When</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {blocked.map((item, index) => (
+                      <TableRow key={`${item.at}-${String(index)}`}>
+                        <TableCell>
+                          <Badge variant="secondary">{item.category}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground tabular text-right">
+                          {new Date(item.at).toLocaleTimeString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Controls</CardTitle>
+              <CardDescription>
+                Scope and categories are tenant configuration, read by the gate
+                on every turn. Changing them is a config edit, not a prompt
+                change. §20, §32
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="pause">Pause Baz</Label>
+                <p className="text-muted-foreground text-sm">
+                  Every request is turned away at the gate, without calling a
+                  model. §43
+                </p>
+              </div>
+              <Switch
+                id="pause"
+                checked={killSwitch}
+                onCheckedChange={(enabled) => kill.mutate(enabled)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

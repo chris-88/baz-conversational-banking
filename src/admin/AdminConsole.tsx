@@ -1,19 +1,43 @@
-import type { ReactNode } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import type { ReactNode } from 'react'
+import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router-dom'
 import {
-  LayoutDashboardIcon,
+  CompassIcon,
+  LogOutIcon,
   MessagesSquareIcon,
   ShieldAlertIcon,
   SlidersHorizontalIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AdminLogin } from "@/admin/AdminLogin";
-import { useAdminAuth } from "@/admin/useAdminAuth";
-import { PrototypeBanner } from "@/components/PrototypeBanner";
-import { BazAvatar } from "@/baz/BazAvatar";
-import { routes } from "@/app/routes";
-import { cn } from "@/lib/utils";
+} from 'lucide-react'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { AdminLogin } from '@/admin/AdminLogin'
+import { useAdminAuth } from '@/admin/useAdminAuth'
+import { PrototypeBanner } from '@/components/PrototypeBanner'
+import { BazAvatar } from '@/baz/BazAvatar'
+import { routes } from '@/app/routes'
 
 /**
  * Four screens: the conversations, and the three things that shape them.
@@ -21,147 +45,202 @@ import { cn } from "@/lib/utils";
  * There were six, and the split between "overview", "cases" and "audience" was a distinction
  * only the person who built it could hold — all three were lists of the same conversations.
  */
-const sections = [
+const SECTIONS = [
   {
     to: routes.admin.root,
-    label: "Cases",
-    icon: <MessagesSquareIcon />,
+    label: 'Cases',
+    hint: 'Live conversations',
+    icon: MessagesSquareIcon,
+    end: true,
+  },
+  {
+    to: routes.admin.engine,
+    label: 'Goals & needs',
+    hint: 'What Baz can recognise',
+    icon: CompassIcon,
     end: false,
   },
   {
     to: routes.admin.guardrails,
-    label: "Guardrails",
-    icon: <ShieldAlertIcon />,
+    label: 'Guardrails',
+    hint: 'What it will not do',
+    icon: ShieldAlertIcon,
     end: false,
   },
   {
     to: routes.admin.persona,
-    label: "Persona",
-    icon: <SlidersHorizontalIcon />,
+    label: 'Persona',
+    hint: 'How it speaks',
+    icon: SlidersHorizontalIcon,
     end: false,
   },
-  {
-    to: routes.admin.engine,
-    label: "Goals & needs",
-    icon: <LayoutDashboardIcon />,
-    end: false,
-  },
-] as const;
+] as const
 
 /**
- * §37 to §44 — the presenter console.
+ * §37 to §44 — the console.
  *
- * Sidebar on a desk, a scrolling row on a phone. Signing in only decides what is drawn: the
- * server checks admin status on every call, which is what actually protects it.
+ * A real sidebar rather than an aside pretending to be one: it collapses on a narrow screen,
+ * remembers whether it was open, and keeps the keyboard behaviour that comes with it. Signing in
+ * only decides what is drawn — the server checks admin status on every call, which is what
+ * actually protects this.
  */
 export function AdminConsole(): ReactNode {
-  const auth = useAdminAuth();
-  const { pathname } = useLocation();
+  const auth = useAdminAuth()
+  const { pathname } = useLocation()
 
+  if (auth.checking) {
+    return (
+      <Shell>
+        <Skeleton className="h-64 w-full" />
+      </Shell>
+    )
+  }
+
+  // Signed out, there is nothing to navigate, so the chrome would only be in the way.
+  if (auth.email === null) {
+    return (
+      <Shell>
+        <AdminLogin onSignIn={auth.signIn} />
+      </Shell>
+    )
+  }
+
+  return (
+    <div className="bg-sidebar min-h-dvh">
+      <SidebarProvider>
+        <Sidebar collapsible="icon">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" asChild>
+                  <Link to={routes.admin.root}>
+                    <BazAvatar size="sm" />
+                    <span className="grid flex-1 text-left leading-tight">
+                      <span className="truncate font-semibold">Baz</span>
+                      <span className="text-muted-foreground truncate text-xs">
+                        Admin console
+                      </span>
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Console</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {SECTIONS.map((section) => (
+                    <SidebarMenuItem key={section.to}>
+                      <NavLink to={section.to} end={section.end}>
+                        {({ isActive }) => (
+                          <SidebarMenuButton
+                            isActive={isActive}
+                            tooltip={section.label}
+                            // Rendered as a span because NavLink already owns the anchor; nesting
+                            // one inside another is invalid and breaks the active styling.
+                            asChild
+                          >
+                            <span>
+                              <section.icon />
+                              <span>{section.label}</span>
+                            </span>
+                          </SidebarMenuButton>
+                        )}
+                      </NavLink>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => void auth.signOut()}
+                  tooltip={auth.email}
+                  className="text-muted-foreground"
+                >
+                  <LogOutIcon />
+                  <span className="truncate">Sign out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+
+          <SidebarRail />
+        </Sidebar>
+
+        <SidebarInset className="min-w-0">
+          {/* In the content column rather than above the layout: the sidebar is fixed, so a
+              banner outside it only ever spans the part of the page it is not covering. */}
+          <PrototypeBanner />
+
+          <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 !h-4" />
+            <Trail />
+          </header>
+
+          {/*
+            Keyed on the path so a new screen starts at the top rather than inheriting the last
+            one's scroll, which on a long case page lands you in the middle of somebody else's
+            conversation.
+          */}
+          <main className="min-w-0 flex-1 p-4 lg:p-6" key={pathname}>
+            <div className="mx-auto w-full max-w-7xl">
+              <Outlet />
+            </div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
+  )
+}
+
+/** Where you are, and the way back. */
+function Trail(): ReactNode {
+  const { pathname } = useLocation()
+  const onCase = useMatch('/admin/case/:caseId') !== null
+  const section = SECTIONS.find((candidate) =>
+    candidate.end ? pathname === candidate.to : pathname.startsWith(candidate.to),
+  )
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {onCase ? (
+          <>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to={routes.admin.root}>Cases</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Conversation</BreadcrumbPage>
+            </BreadcrumbItem>
+          </>
+        ) : (
+          <BreadcrumbItem>
+            <BreadcrumbPage>{section?.label ?? 'Cases'}</BreadcrumbPage>
+          </BreadcrumbItem>
+        )}
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
+}
+
+/** The signed-out and still-checking states, which need none of the navigation. */
+function Shell({ children }: { readonly children: ReactNode }): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
       <PrototypeBanner />
-
-      <div className="mx-auto flex w-full max-w-6xl gap-0 lg:gap-6 lg:px-6 lg:py-6">
-        <aside className="hidden w-56 shrink-0 lg:block">
-          <div className="sticky top-6 space-y-6">
-            <Link
-              to={routes.admin.root}
-              className="flex items-center gap-2.5 px-2"
-            >
-              <BazAvatar size="sm" />
-              <span className="leading-tight">
-                <span className="block text-sm font-bold tracking-tight">
-                  Baz
-                </span>
-                <span className="text-muted-foreground block text-2xs">
-                  Admin console
-                </span>
-              </span>
-            </Link>
-
-            {auth.email !== null && (
-              <nav className="space-y-0.5">
-                {sections.map((section) => (
-                  <NavLink
-                    key={section.to}
-                    to={section.to}
-                    end={section.end}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors [&>svg]:size-4",
-                        isActive
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "text-muted-foreground hover:bg-muted",
-                      )
-                    }
-                  >
-                    {section.icon}
-                    {section.label}
-                  </NavLink>
-                ))}
-              </nav>
-            )}
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <header className="bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30 border-b backdrop-blur lg:border-0 lg:bg-transparent">
-            <div className="flex items-center gap-3 px-4 py-3 lg:px-0">
-              <BazAvatar size="sm" className="lg:hidden" />
-              <div className="min-w-0 flex-1">
-                <h1 className="text-h3 truncate font-semibold">
-                  Presenter console
-                </h1>
-                <p className="text-muted-foreground truncate text-xs">
-                  {auth.email ?? "Run the demonstration from here."}
-                </p>
-              </div>
-              {auth.email !== null && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void auth.signOut()}
-                >
-                  Sign out
-                </Button>
-              )}
-            </div>
-
-            {auth.email !== null && (
-              <nav className="flex gap-1 overflow-x-auto px-2 pb-2 lg:hidden">
-                {sections.map((section) => (
-                  <NavLink
-                    key={section.to}
-                    to={section.to}
-                    end={section.end}
-                    className={({ isActive }) =>
-                      cn(
-                        "rounded-lg px-3 py-1.5 text-xs whitespace-nowrap",
-                        isActive
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "text-muted-foreground",
-                      )
-                    }
-                  >
-                    {section.label}
-                  </NavLink>
-                ))}
-              </nav>
-            )}
-          </header>
-
-          <main className="space-y-6 px-4 py-6 lg:px-0 lg:pt-4" key={pathname}>
-            {auth.checking ? (
-              <Skeleton className="h-40 w-full" />
-            ) : auth.email === null ? (
-              <AdminLogin onSignIn={auth.signIn} />
-            ) : (
-              <Outlet />
-            )}
-          </main>
-        </div>
-      </div>
+      <div className="mx-auto w-full max-w-md px-4 py-12">{children}</div>
     </div>
-  );
+  )
 }
