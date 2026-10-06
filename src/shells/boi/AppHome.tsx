@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRightIcon, BellIcon, MoreHorizontalIcon, WalletIcon } from 'lucide-react'
-import { canonicalCustomer } from '@domain/seed/canonical.ts'
 import { Card } from '@/components/ui/card'
 import { IconTile } from '@/components/IconTile'
 import { SetupNotice } from '@/components/SetupNotice'
@@ -34,6 +33,9 @@ export function AppHome(): ReactNode {
   const navigate = useNavigate()
   const session = useCaseSession()
   const applications = useApplications(session.data?.caseId ?? null)
+  // Whoever is actually signed in, rather than a name baked in at build time.
+  const firstName = session.data?.customerFirstName ?? 'there'
+
   const plans = usePlans(session.data?.caseId ?? null)
   const progress = useCaseProgress({
     caseId: session.data?.caseId ?? null,
@@ -47,10 +49,10 @@ export function AppHome(): ReactNode {
           aria-hidden
           className="bg-muted text-muted-foreground grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold"
         >
-          {canonicalCustomer.firstName.slice(0, 1)}
+          {firstName.slice(0, 1)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">Hi {canonicalCustomer.firstName}</p>
+          <p className="truncate text-sm font-semibold">Hi {firstName}</p>
           <p className="text-muted-foreground text-xs">{greeting()}</p>
         </div>
         <Link

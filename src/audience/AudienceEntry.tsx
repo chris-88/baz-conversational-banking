@@ -13,15 +13,17 @@ import { routes } from '@/app/routes'
 /**
  * §45, §46 — the audience entry point.
  *
- * Every scan gets its own case. Isolation is by ownership, so nothing anyone does here can
- * reach the presenter's case on screen.
+ * Every visitor gets their own case, and the only choice that matters is whether the bank
+ * already deals with them. That is a real difference a customer would feel, not a mode: a new
+ * customer is asked everything, an existing one is asked almost nothing, and the gap between
+ * those two conversations is the whole argument.
  */
 export function AudienceEntry(): ReactNode {
   const navigate = useNavigate()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const start = (mode: 'fresh' | 'clone') => {
+  const start = (mode: 'new' | 'known') => {
     setBusy(mode)
     setError(null)
     startSession(mode)
@@ -35,30 +37,30 @@ export function AudienceEntry(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
       <PrototypeBanner />
-      <MobileHeader subtitle="Try it yourself" />
+      <MobileHeader subtitle="Talk to Baz" />
 
       <main className="mx-auto w-full max-w-md space-y-6 px-4 py-6">
         <section className="space-y-3">
-          <h1 className="text-xl font-semibold tracking-tight">Try Baz</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Talk to Baz</h1>
           <p className="text-muted-foreground text-sm">
-            Your own private conversation, completely separate from the demonstration on screen.
+            Your own conversation, kept entirely separate from anyone else&rsquo;s.
           </p>
         </section>
 
         <Card className="gap-0 divide-y p-0">
           <ListRow
             leading={<IconTile tone="primary"><SparklesIcon /></IconTile>}
-            title="Start fresh"
-            subtitle="A brand new customer, with nothing known about them"
+            title="I'm new to the bank"
+            subtitle="Nothing is known about you yet"
             disabled={busy !== null}
-            onClick={() => start('fresh')}
+            onClick={() => start('new')}
           />
           <ListRow
             leading={<IconTile tone="deep"><UserRoundIcon /></IconTile>}
-            title="Use the demo customer"
-            subtitle="Already signed in, with the facts the bank holds"
+            title="I'm already a customer"
+            subtitle="Signed in, with the details the bank already holds"
             disabled={busy !== null}
-            onClick={() => start('clone')}
+            onClick={() => start('known')}
           />
         </Card>
 
@@ -69,7 +71,7 @@ export function AudienceEntry(): ReactNode {
         )}
 
         <p className="text-muted-foreground text-2xs">
-          Nothing you do here can affect the demonstration. Conversations are capped, and no
+          Nothing you do here can reach anybody else's conversation. Conversations are capped, and no
           notifications are sent.
         </p>
       </main>

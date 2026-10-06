@@ -210,7 +210,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     )
   }
 
-  const startMode = parsed.data.action === 'start' ? parsed.data.mode : 'fresh'
+  const startMode = parsed.data.action === 'start' ? parsed.data.mode : 'new'
 
   // Already attached? Return the same case — this is what makes a PWA and a browser tab land
   // on the same conversation rather than starting two.
@@ -242,56 +242,31 @@ Deno.serve(async (request: Request): Promise<Response> => {
     )
   }
 
-  if (startMode === 'demo') {
-    const presenter = await admin
-      .from('participants')
-      .select('id, case_id, cases!inner(kind, auth_level, customer_id)')
-      .eq('role', 'primary')
-      .eq('cases.kind', 'presenter')
-      .limit(1)
-
-    const participant = (presenter.data ?? [])[0] as any
-    if (!participant) {
-      return errorResponse('not_found', 'The demonstration case has not been seeded yet.')
-    }
-
-    await admin
-      .from('participant_sessions')
-      .insert({ participant_id: participant.id, auth_user_id: authUserId })
-
-    return json(
-      ok({
-        caseId: participant.case_id,
-        participantId: participant.id,
-        role: 'primary',
-        authLevel: participant.cases.auth_level,
-        customerFirstName: participant.cases.customer_id ? canonicalCase.customer.firstName : null,
-        created: false,
-        hasUpdates: await updatesSince(participant.case_id),
-      } satisfies SessionResponse),
-      200,
-    )
-  }
-
-  // §47 — a hard ceiling on audience cases, so a room full of people cannot exhaust the
-  // project. Configured rather than hard-coded.
+  // §47 — a hard ceiling, so a room full of people cannot exhaust the project. Configured
+  // rather than hard-coded.
   const maxCases = Number((globalThis as any).Deno?.env?.get('AUDIENCE_MAX_CASES') ?? '50')
-  const audienceCount = await admin
+  const openCases = await admin
     .from('cases')
     .select('id', { count: 'exact', head: true })
-    .eq('kind', 'audience')
+    .eq('kind', 'customer')
 
-  if ((audienceCount.count ?? 0) >= maxCases) {
+  if ((openCases.count ?? 0) >= maxCases) {
     return errorResponse(
       'rate_limited',
       'The demonstration is at capacity right now. Try again in a few minutes.',
     )
   }
 
-  // A fresh case knows nothing about the visitor (§46 "start fresh").
+  /**
+   * A case of their own, which knows nothing about them yet.
+   *
+   * Everyone gets one — there is no rehearsed case to join. The bank learns who somebody is
+   * when they sign in, which is the same thing that happens to a real customer and the reason
+   * the reuse story lands at all.
+   */
   const created = await admin
     .from('cases')
-    .insert({ kind: 'audience', auth_level: 'anonymous', label: 'Audience case' })
+    .insert({ kind: 'customer', auth_level: 'anonymous', label: null })
     .select('id')
     .single()
 
@@ -311,9 +286,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
     .from('participant_sessions')
     .insert({ participant_id: participant.data.id, auth_user_id: authUserId })
 
-  // §46 "use demo customer" — the same starting point as the presenter case, in a case of
-  // their own. Isolation is by ownership: an audience case can never touch the presenter's.
-  if (startMode === 'clone') {
+  /**
+   * `known` starts them as somebody the bank already deals with: signed in, with the details
+   * it holds already loaded. Not a demonstration shortcut — it is the difference between a new
+   * customer and an existing one, and the existing one is where §53 has anything to show.
+   */
+  if (startMode === 'known') {
     const customer = await admin
       .from('customers')
       .select('id')
@@ -354,8 +332,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       caseId: created.data.id,
       participantId: participant.data.id,
       role: 'primary',
-      authLevel: startMode === 'clone' ? 'authenticated' : 'anonymous',
-      customerFirstName: startMode === 'clone' ? canonicalCase.customer.firstName : null,
+      authLevel: startMode === 'known' ? 'authenticated' : 'anonymous',
+      customerFirstName: startMode === 'known' ? canonicalCase.customer.firstName : null,
       created: true,
       hasUpdates: false,
     } satisfies SessionResponse),

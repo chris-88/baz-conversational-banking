@@ -56,17 +56,19 @@ describe('surfaces', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
-  it('the audience surface offers both starting options', () => {
+  it('offers the choice that actually changes the conversation', () => {
+    // New versus existing customer is the difference §53 exists to show: one is asked
+    // everything, the other almost nothing.
     renderSurface(<AudienceEntry />)
-    expect(screen.getByRole('button', { name: /start fresh/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /use the demo customer/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new to the bank/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /already a customer/i })).toBeInTheDocument()
   })
 
   it('the admin console asks for a sign-in before showing anything (§37)', () => {
     renderSurface(<AdminConsole />)
     // The server checks admin status on every call regardless, but the console must not
     // present controls to someone who has not signed in.
-    expect(screen.queryByText(/reset the presenter case/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/reset this case/i)).not.toBeInTheDocument()
   })
 })
 

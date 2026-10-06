@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLinkIcon, FileCheckIcon, PiggyBankIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
+import { FileCheckIcon, PiggyBankIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,6 @@ import { IconTile } from '@/components/IconTile'
 import { queryKeys } from '@/lib/queryKeys'
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { adminApi } from '@/admin/adminClient'
-import { routes } from '@/app/routes'
 import { ActivityFeed, ActivityPlaceholder } from '@/admin/ActivityFeed'
 import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
 import { CaseInspector } from '@/admin/CaseInspector'
@@ -110,9 +109,9 @@ function Overview({
               <RotateCcwIcon />
             </IconTile>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Reset the presenter case</p>
+              <p className="text-sm font-medium">Reset this case</p>
               <p className="text-muted-foreground text-xs">
-                Back to the start: signed in, bank-held facts, nothing else. §43
+                Back to the start: signed in, with the details the bank holds and nothing else.
               </p>
             </div>
             <Button size="sm" variant="outline" disabled={reset.isPending} onClick={() => reset.mutate()}>
@@ -133,7 +132,7 @@ function Overview({
             <Switch
               checked={data.killSwitch}
               onCheckedChange={(enabled) => kill.mutate(enabled)}
-              aria-label="Pause the demonstration"
+              aria-label="Pause Baz"
             />
           </div>
         </Card>
@@ -194,34 +193,11 @@ function DemoActions({
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold">Demo controls</h2>
+        <h2 className="text-sm font-semibold">Act as the bank</h2>
         <Badge variant="secondary" className="text-2xs">
-          One tap each
+          Applies to the case on screen
         </Badge>
       </div>
-
-      {/*
-        §55 opens on the public website, and a public conversation normally starts a case of
-        its own that these moves cannot touch. This link starts it on the presenter case
-        instead, so the whole story runs as one take.
-      */}
-      <a
-        href={`#${routes.baz}?demo=1`}
-        target="_blank"
-        rel="noreferrer"
-        className="bg-card hover:bg-muted/60 focus-visible:ring-ring mb-2 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <IconTile tone="deep" size="sm">
-          <ExternalLinkIcon />
-        </IconTile>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">Open the public site for the demo</span>
-          <span className="text-muted-foreground block text-2xs">
-            Starts the public conversation on this case, so the moves below reach it. An
-            ordinary visitor still gets a case of their own. §55
-          </span>
-        </span>
-      </a>
 
       <div className="grid gap-2 sm:grid-cols-2">
         {data.demoActions.map((move) => (
@@ -442,7 +418,7 @@ function Audience({
           ))}
         </Card>
         <p className="text-muted-foreground text-2xs">
-          Purging clears audience conversations only. The presenter case is never touched. §45
+          Clears every conversation except the one on screen. §45
         </p>
       </section>
     </div>

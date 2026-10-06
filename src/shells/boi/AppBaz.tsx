@@ -23,7 +23,7 @@ export function AppBaz(): ReactNode {
         composerClassName="pb-[calc(0.75rem+4.5rem)]"
         suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
-        mode="demo"
+        mode="new"
         greeting={
           <div className="space-y-2">
             <p>Hi again — Baz here. Still an AI, still better than a form.</p>

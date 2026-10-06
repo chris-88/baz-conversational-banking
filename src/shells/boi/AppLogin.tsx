@@ -36,7 +36,7 @@ export function AppLogin(): ReactNode {
     try {
       // With a code, this is the handoff. Without one, it is an ordinary sign-in.
       if (code !== null) await redeemHandoff(code)
-      else await startSession('demo')
+      else await startSession('known')
 
       await queryClient.invalidateQueries()
       void navigate(code !== null ? routes.app.baz : routes.app.root)

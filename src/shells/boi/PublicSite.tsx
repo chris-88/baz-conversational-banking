@@ -166,23 +166,8 @@ export function PublicSite(): ReactNode {
           </Card>
         </section>
 
-        <div className="mt-10 max-w-xl space-y-4">
+        <div className="mt-10 max-w-xl">
           <SetupNotice />
-
-          <ListRow
-            className="border-input rounded-xl border"
-            leading={<IconTile tone="deep"><ShieldCheckIcon /></IconTile>}
-            title="Presenter console"
-            subtitle="Persona, domain controls, case inspection and audience activity"
-            to={routes.admin.root}
-          />
-          <ListRow
-            className="border-input rounded-xl border"
-            leading={<IconTile tone="neutral"><CreditCardIcon /></IconTile>}
-            title="Audience demo"
-            subtitle="Start your own isolated conversation"
-            to={routes.audience}
-          />
         </div>
       </main>
     </div>

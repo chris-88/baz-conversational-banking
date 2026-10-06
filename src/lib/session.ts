@@ -36,6 +36,6 @@ export async function redeemHandoff(code: string): Promise<SessionResponse> {
   return sessionResponseSchema.parse(await invoke({ action: 'redeem_handoff', code }))
 }
 
-export async function startSession(mode: 'demo' | 'fresh' | 'clone'): Promise<SessionResponse> {
+export async function startSession(mode: 'new' | 'known' = 'new'): Promise<SessionResponse> {
   return sessionResponseSchema.parse(await invoke({ action: 'start', mode }))
 }

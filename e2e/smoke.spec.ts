@@ -56,26 +56,3 @@ test('an unknown route falls back rather than breaking', async ({ page }) => {
   await page.goto('/#/this-route-does-not-exist')
   await expect(page.getByText(/that page does not exist/i)).toBeVisible()
 })
-
-/** TEMPORARY: the branch badge. Remove this test when BuildBadge goes. */
-test('every surface shows which branch is deployed', async ({ page }) => {
-  for (const surface of surfaces) {
-    await page.goto(surface.route)
-    const badge = page.getByTestId('build-badge')
-    await expect(badge, surface.route).toBeVisible()
-    // branch, sha, timestamp — separators are flex gaps, so there is no literal whitespace
-    await expect(badge, surface.route).toContainText(/[0-9a-f]{7}/)
-    await expect(badge, surface.route).toContainText(/\d{4}-\d{2}-\d{2}/)
-  }
-})
-
-test('the branch badge sits in flow and obscures nothing', async ({ page }) => {
-  await page.goto('/#/')
-
-  // It used to be a fixed overlay pinned to the bottom, where it covered the app's tab bar
-  // labels. In normal flow it cannot overlap anything, so this link stays clickable.
-  await page.getByRole('link', { name: /presenter console/i }).click()
-
-  await expect(page).toHaveURL(/#\/admin/)
-  await expect(page.getByText(/presenter console/i).first()).toBeVisible()
-})

@@ -10,6 +10,6 @@ export function useCaseSession() {
     enabled: isBackendConfigured,
     staleTime: Infinity,
     retry: false,
-    queryFn: () => startSession('demo'),
+    queryFn: () => startSession(),
   })
 }

@@ -1,0 +1,2227 @@
+{
+  "metadata": {
+    "name": "Baz Goal Catalogue",
+    "version": "1.0",
+    "purpose": "Blueprint catalogue for long-lived retail financial goals, milestones, dependencies and overlaps.",
+    "guiding_principle": "Life circumstances create goals. Goals create milestones. Needs and products are tools used to achieve those goals."
+  },
+  "operating_model": {
+    "layers": [
+      "customer_context",
+      "life_circumstances",
+      "goals",
+      "goal_relationships",
+      "milestones",
+      "needs",
+      "actions",
+      "products_services",
+      "applications",
+      "events",
+      "plan_recalculation"
+    ],
+    "goal_states": [
+      "DRAFT",
+      "ACTIVE",
+      "PAUSED",
+      "COMPLETED",
+      "ABANDONED",
+      "ARCHIVED"
+    ],
+    "milestone_types": [
+      "financial",
+      "life",
+      "process"
+    ],
+    "milestone_states": [
+      "NOT_STARTED",
+      "IN_PROGRESS",
+      "ACHIEVED",
+      "MISSED",
+      "NO_LONGER_RELEVANT"
+    ],
+    "signal_strengths": {
+      "explicit": 1.0,
+      "strong_inferred": 0.7,
+      "soft_inferred": 0.35
+    },
+    "rules": [
+      "Discovery is not activation: customer consent is required before a candidate goal becomes a persistent plan.",
+      "A goal may be relevant without being appropriate to surface immediately.",
+      "Goals may overlap and share facts or milestones.",
+      "The same financial resource must not be silently allocated to conflicting goals.",
+      "Products support goals; goals should not exist merely to sell products."
+    ]
+  },
+  "goals": [
+    {
+      "id": "ORGANISE_DAY_TO_DAY_FINANCES",
+      "name": "Get day-to-day finances organised",
+      "category": "foundations",
+      "description": "Create a stable view of income, spending, bills and everyday cashflow.",
+      "discovery_signals": [
+        {
+          "text": "my money is all over the place",
+          "strength": "explicit"
+        },
+        {
+          "text": "I don't know where my money goes",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I need to organise bills and spending",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "monthly_net_income",
+        "fixed_costs",
+        "variable_spend",
+        "existing_accounts",
+        "existing_debt",
+        "regular_bills"
+      ],
+      "milestones": [
+        {
+          "id": "CASHFLOW_UNDERSTOOD",
+          "name": "Cashflow understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "BILLS_MAPPED",
+          "name": "Regular bills mapped",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "SPENDING_BUFFER_DEFINED",
+          "name": "Spending buffer defined",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUILD_EMERGENCY_FUND",
+          "REDUCE_DEBT",
+          "SHARED_HOUSEHOLD_FINANCES"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [
+          "BUILD_EMERGENCY_FUND",
+          "SAVE_FOR_DEFINED_PURCHASE"
+        ],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "everyday_banking",
+        "shared_household_finances"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "offset": "P1M",
+          "purpose": "Review first month of organised cashflow"
+        }
+      ],
+      "completion_criteria": [
+        "customer_has_clear_monthly_cashflow"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "BUILD_EMERGENCY_FUND",
+      "name": "Build an emergency fund",
+      "category": "foundations",
+      "description": "Build an accessible reserve for unexpected costs or income disruption.",
+      "discovery_signals": [
+        {
+          "text": "I want a rainy day fund",
+          "strength": "explicit"
+        },
+        {
+          "text": "I have no savings buffer",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I need a safety net",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "essential_monthly_expenditure",
+        "current_accessible_savings",
+        "target_months_of_cover",
+        "monthly_contribution"
+      ],
+      "milestones": [
+        {
+          "id": "TARGET_DEFINED",
+          "name": "Emergency target defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "ONE_MONTH_BUFFER",
+          "name": "One month saved",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "THREE_MONTH_BUFFER",
+          "name": "Three months saved",
+          "type": "financial",
+          "required": false
+        },
+        {
+          "id": "TARGET_REACHED",
+          "name": "Emergency target reached",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ORGANISE_DAY_TO_DAY_FINANCES",
+          "INCOME_RESILIENCE",
+          "FAMILY_PROTECTION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [
+          "START_INVESTING"
+        ],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "emergency_fund"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "cadence": "P1M",
+          "purpose": "Check emergency-fund progress"
+        },
+        {
+          "type": "event",
+          "event": "TARGET_REACHED",
+          "purpose": "Review next goal"
+        }
+      ],
+      "completion_criteria": [
+        "accessible_savings_gte_target"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "REDUCE_DEBT",
+      "name": "Reduce expensive debt",
+      "category": "foundations",
+      "description": "Stabilise cashflow and reduce expensive or problematic borrowing.",
+      "discovery_signals": [
+        {
+          "text": "I want to clear my debt",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm always in the overdraft",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "my card balance is getting out of hand",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "all_debts",
+        "costs_or_rates",
+        "minimum_payments",
+        "arrears_status",
+        "monthly_surplus"
+      ],
+      "milestones": [
+        {
+          "id": "DEBTS_INVENTORIED",
+          "name": "Debts understood",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "PLAN_DEFINED",
+          "name": "Repayment plan defined",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "PRIORITY_DEBT_CLEARED",
+          "name": "Priority debt cleared",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "DEBT_GOAL_REACHED",
+          "name": "Debt goal reached",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ORGANISE_DAY_TO_DAY_FINANCES",
+          "BUILD_EMERGENCY_FUND"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": [
+          "NEW_DISCRETIONARY_BORROWING"
+        ]
+      },
+      "linked_needs": [
+        "short_term_cashflow_gap"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [
+        "customer_defined_debt_target_reached"
+      ],
+      "suppressions": [
+        "Where the customer cannot meet essentials or is in arrears, prioritise support over new credit."
+      ]
+    },
+    {
+      "id": "SAVE_FOR_DEFINED_PURCHASE",
+      "name": "Save for a defined purchase or event",
+      "category": "saving",
+      "description": "Build a known amount by a target date for a specific purpose.",
+      "discovery_signals": [
+        {
+          "text": "I'm saving for a wedding",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I need €10,000 next year",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I have a savings target",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "target_amount",
+        "target_date",
+        "current_savings",
+        "monthly_contribution",
+        "access_requirements"
+      ],
+      "milestones": [
+        {
+          "id": "TARGET_DEFINED",
+          "name": "Savings target defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "SAVINGS_25",
+          "name": "25% saved",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "SAVINGS_50",
+          "name": "50% saved",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "SAVINGS_75",
+          "name": "75% saved",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "SAVINGS_100",
+          "name": "Target funded",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUILD_EMERGENCY_FUND"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "regular_saving",
+        "specific_goal_saving"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "cadence": "P1M",
+          "purpose": "Check savings progress"
+        }
+      ],
+      "completion_criteria": [
+        "current_savings_gte_target_amount"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "BUY_FIRST_HOME",
+      "name": "Buy first home",
+      "category": "housing",
+      "description": "Move from deposit preparation into mortgage readiness, purchase and completion.",
+      "discovery_signals": [
+        {
+          "text": "I want to buy my first home",
+          "strength": "explicit"
+        },
+        {
+          "text": "we're saving for a deposit",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we're renting and viewing houses",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "target_property_price",
+        "target_purchase_date",
+        "current_deposit_savings",
+        "monthly_savings",
+        "household_income",
+        "existing_credit_commitments",
+        "applicants",
+        "property_identified"
+      ],
+      "milestones": [
+        {
+          "id": "AFFORDABILITY_UNDERSTOOD",
+          "name": "Affordability understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "DEPOSIT_TARGET_DEFINED",
+          "name": "Deposit target defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "DEPOSIT_TARGET_REACHED",
+          "name": "Deposit target reached",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "MORTGAGE_READY",
+          "name": "Mortgage readiness complete",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "MORTGAGE_SUBMITTED",
+          "name": "Mortgage submitted",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "MORTGAGE_APPROVED",
+          "name": "Mortgage approved",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "PROPERTY_SELECTED",
+          "name": "Property selected",
+          "type": "life",
+          "required": true
+        },
+        {
+          "id": "PROTECTION_IN_PLACE",
+          "name": "Mortgage protection in place",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "HOME_INSURANCE_IN_PLACE",
+          "name": "Home insurance in place",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "HOME_PURCHASE_COMPLETE",
+          "name": "Home purchase completed",
+          "type": "life",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "SHARED_HOUSEHOLD_FINANCES",
+          "BUILD_EMERGENCY_FUND",
+          "FAMILY_PROTECTION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [
+          "REBUILD_SAVINGS_AFTER_HOME_PURCHASE",
+          "RENOVATE_HOME"
+        ],
+        "conflicts": [
+          "NEW_UNSECURED_BORROWING_BEFORE_MORTGAGE_COMPLETE"
+        ]
+      },
+      "linked_needs": [
+        "first_home",
+        "first_home_deposit",
+        "mortgage_protection_need",
+        "home_protection"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "cadence": "P1M",
+          "phase": "PREPARING",
+          "purpose": "Review deposit progress"
+        },
+        {
+          "type": "event",
+          "event": "DEPOSIT_TARGET_REACHED",
+          "purpose": "Run mortgage-readiness review"
+        }
+      ],
+      "completion_criteria": [
+        "HOME_PURCHASE_COMPLETE"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "MOVE_HOME",
+      "name": "Move home",
+      "category": "housing",
+      "description": "Plan the sale and purchase of a new principal home.",
+      "discovery_signals": [
+        {
+          "text": "we need a bigger house",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we're downsizing",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we want to move home",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "current_property_value",
+        "current_mortgage_balance",
+        "target_property_price",
+        "estimated_equity",
+        "household_income",
+        "sale_required",
+        "target_move_date"
+      ],
+      "milestones": [
+        {
+          "id": "EQUITY_UNDERSTOOD",
+          "name": "Equity position understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "MOVE_AFFORDABILITY_UNDERSTOOD",
+          "name": "Move affordability understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "SALE_PLAN_DEFINED",
+          "name": "Sale/purchase sequence defined",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "MORTGAGE_ROUTE_READY",
+          "name": "Mortgage route ready",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "MOVE_COMPLETED",
+          "name": "Move completed",
+          "type": "life",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "FAMILY_PROTECTION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [
+          "RENOVATE_HOME",
+          "REBUILD_SAVINGS_AFTER_HOME_PURCHASE"
+        ],
+        "conflicts": [
+          "NEW_UNSECURED_BORROWING_BEFORE_MORTGAGE_COMPLETE"
+        ]
+      },
+      "linked_needs": [
+        "moving_home",
+        "home_protection",
+        "mortgage_protection_need"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [
+        "MOVE_COMPLETED"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "RENOVATE_HOME",
+      "name": "Renovate or improve home",
+      "category": "housing",
+      "description": "Plan, budget and fund home improvement or retrofit works.",
+      "discovery_signals": [
+        {
+          "text": "new kitchen",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "extension",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "home renovation",
+          "strength": "explicit"
+        },
+        {
+          "text": "retrofit",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "scope_of_works",
+        "estimated_cost",
+        "quotes",
+        "current_savings",
+        "desired_start_date",
+        "energy_efficiency_component",
+        "available_home_equity"
+      ],
+      "milestones": [
+        {
+          "id": "WORK_SCOPE_DEFINED",
+          "name": "Scope defined",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "QUOTES_OBTAINED",
+          "name": "Quotes obtained",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "FUNDING_PLAN_DEFINED",
+          "name": "Funding plan defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "WORK_STARTED",
+          "name": "Works started",
+          "type": "life",
+          "required": true
+        },
+        {
+          "id": "WORK_COMPLETED",
+          "name": "Works completed",
+          "type": "life",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ENERGY_UPGRADE_HOME",
+          "BUILD_EMERGENCY_FUND"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": [
+          "ACTIVE_MORTGAGE_AFFORDABILITY"
+        ]
+      },
+      "linked_needs": [
+        "home_improvement",
+        "energy_upgrade"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [
+        "WORK_COMPLETED"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "REBUILD_SAVINGS_AFTER_HOME_PURCHASE",
+      "name": "Rebuild savings after buying a home",
+      "category": "housing",
+      "description": "Re-establish liquidity after deposit, moving and completion costs.",
+      "discovery_signals": [
+        {
+          "text": "we used most of our savings buying the house",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "our cash buffer is low after moving",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "current_accessible_savings",
+        "essential_monthly_expenditure",
+        "desired_emergency_target",
+        "monthly_contribution"
+      ],
+      "milestones": [
+        {
+          "id": "POST_MOVE_POSITION_UNDERSTOOD",
+          "name": "Post-move cash position understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "NEW_TARGET_DEFINED",
+          "name": "New emergency target defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "BUFFER_REBUILT",
+          "name": "Buffer rebuilt",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUY_FIRST_HOME",
+          "MOVE_HOME",
+          "BUILD_EMERGENCY_FUND"
+        ],
+        "prerequisites": [
+          "HOME_PURCHASE_COMPLETE_OR_MOVE_COMPLETED"
+        ],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "emergency_fund",
+        "regular_saving"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [
+        "accessible_savings_gte_target"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "SHARED_HOUSEHOLD_FINANCES",
+      "name": "Combine or organise finances with a partner",
+      "category": "family",
+      "description": "Create a shared structure for bills, spending, saving and joint goals.",
+      "discovery_signals": [
+        {
+          "text": "we just got married",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "we keep our money separate",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we want a joint account",
+          "strength": "explicit"
+        },
+        {
+          "text": "we need a house account",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "household_participants",
+        "shared_expenses",
+        "desired_joint_scope",
+        "existing_accounts",
+        "shared_savings_goals"
+      ],
+      "milestones": [
+        {
+          "id": "MODEL_DEFINED",
+          "name": "Shared-finance approach agreed",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "JOINT_ACCOUNT_READY",
+          "name": "Joint account ready",
+          "type": "process",
+          "required": false
+        },
+        {
+          "id": "SHARED_BILLS_MOVED",
+          "name": "Shared bills moved",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUY_FIRST_HOME",
+          "PREPARE_FOR_BABY",
+          "FAMILY_PROTECTION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "shared_household_finances"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "PREPARE_FOR_BABY",
+      "name": "Prepare financially for a baby",
+      "category": "family",
+      "description": "Understand parental-leave, childcare, household and dependant impacts.",
+      "discovery_signals": [
+        {
+          "text": "we're expecting a baby",
+          "strength": "explicit"
+        },
+        {
+          "text": "we just had a baby",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm going on parental leave",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "birth_date",
+        "parental_leave_income_change",
+        "childcare_expectation",
+        "household_income",
+        "essential_expenditure",
+        "emergency_savings",
+        "existing_protection"
+      ],
+      "milestones": [
+        {
+          "id": "BABY_BUDGET_UNDERSTOOD",
+          "name": "Baby budget understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "LEAVE_IMPACT_UNDERSTOOD",
+          "name": "Parental-leave impact understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "EMERGENCY_RESERVE_REVIEWED",
+          "name": "Emergency reserve reviewed",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "PROTECTION_REVIEWED",
+          "name": "Protection reviewed",
+          "type": "process",
+          "required": false
+        },
+        {
+          "id": "CHILD_SAVING_DECISION",
+          "name": "Child saving decision made",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "FAMILY_PROTECTION",
+          "INCOME_RESILIENCE",
+          "SAVE_FOR_CHILD",
+          "SHARED_HOUSEHOLD_FINANCES",
+          "MOVE_HOME"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "family_protection",
+        "save_for_child",
+        "shared_household_finances"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "offset": "P3M",
+          "purpose": "Review household finances after baby-related changes"
+        }
+      ],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "SAVE_FOR_CHILD",
+      "name": "Save for a child",
+      "category": "family",
+      "description": "Build money over time for a child's future or education.",
+      "discovery_signals": [
+        {
+          "text": "save for my child",
+          "strength": "explicit"
+        },
+        {
+          "text": "college fund",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "save for my baby",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "child_age",
+        "goal_purpose",
+        "goal_horizon",
+        "target_amount",
+        "monthly_contribution",
+        "access_need"
+      ],
+      "milestones": [
+        {
+          "id": "CHILD_GOAL_DEFINED",
+          "name": "Child goal defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "CONTRIBUTION_STARTED",
+          "name": "Contribution started",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "ANNUAL_REVIEW",
+          "name": "Annual review completed",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "PREPARE_FOR_BABY",
+          "FUND_EDUCATION",
+          "START_INVESTING"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "save_for_child",
+        "regular_long_term_investment"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "cadence": "P1Y",
+          "purpose": "Review child saving goal"
+        }
+      ],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "FAMILY_PROTECTION",
+      "name": "Protect family finances",
+      "category": "family",
+      "description": "Understand who depends on household income and whether financial protection is adequate.",
+      "discovery_signals": [
+        {
+          "text": "my family relies on my income",
+          "strength": "explicit"
+        },
+        {
+          "text": "we just had a baby",
+          "strength": "soft_inferred"
+        },
+        {
+          "text": "I want life cover",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "financial_dependants",
+        "household_income",
+        "essential_expenditure",
+        "existing_cover",
+        "employer_benefits",
+        "major_liabilities"
+      ],
+      "milestones": [
+        {
+          "id": "DEPENDANTS_UNDERSTOOD",
+          "name": "Dependants understood",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "EXISTING_COVER_REVIEWED",
+          "name": "Existing cover reviewed",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "PROTECTION_GAP_UNDERSTOOD",
+          "name": "Protection gap understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "PROTECTION_DECISION",
+          "name": "Protection decision made",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "PREPARE_FOR_BABY",
+          "BUY_FIRST_HOME",
+          "INCOME_RESILIENCE"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "family_protection",
+        "mortgage_protection_need"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "Do not infer a protection sale from an unrelated medical diagnosis.",
+        "Avoid fear-based language."
+      ]
+    },
+    {
+      "id": "INCOME_RESILIENCE",
+      "name": "Protect household income",
+      "category": "family",
+      "description": "Understand how the household would cope if an earner could not work.",
+      "discovery_signals": [
+        {
+          "text": "what if I couldn't work",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm the sole earner",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we couldn't manage without my salary",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "household_income",
+        "essential_expenditure",
+        "sick_pay",
+        "employer_benefits",
+        "accessible_savings",
+        "existing_income_protection"
+      ],
+      "milestones": [
+        {
+          "id": "INCOME_RISK_UNDERSTOOD",
+          "name": "Income dependency understood",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "BENEFITS_REVIEWED",
+          "name": "Employer benefits reviewed",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "RESILIENCE_GAP_DEFINED",
+          "name": "Resilience gap defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "PROTECTION_DECISION",
+          "name": "Protection decision made",
+          "type": "process",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUILD_EMERGENCY_FUND",
+          "FAMILY_PROTECTION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "income_resilience"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "Do not use a disclosed diagnosis as a sales trigger."
+      ]
+    },
+    {
+      "id": "START_CAREER",
+      "name": "Start career after education",
+      "category": "life_transition",
+      "description": "Move from student finances into salary, everyday banking and early long-term planning.",
+      "discovery_signals": [
+        {
+          "text": "I just graduated",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I got my first job",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "starting work after college",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "employment_start_date",
+        "salary",
+        "existing_student_accounts",
+        "existing_debt",
+        "initial_savings",
+        "workplace_pension"
+      ],
+      "milestones": [
+        {
+          "id": "SALARY_BANKING_READY",
+          "name": "Salary banking ready",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "FIRST_MONTH_BUDGETED",
+          "name": "First working-month budget understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "EMERGENCY_SAVING_STARTED",
+          "name": "Emergency saving started",
+          "type": "process",
+          "required": false
+        },
+        {
+          "id": "PENSION_POSITION_UNDERSTOOD",
+          "name": "Pension position understood",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ORGANISE_DAY_TO_DAY_FINANCES",
+          "BUILD_EMERGENCY_FUND",
+          "START_PENSION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "graduate_transition",
+        "everyday_banking"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "DEAL_WITH_INCOME_CHANGE",
+      "name": "Respond to a major income change",
+      "category": "life_transition",
+      "description": "Re-plan finances after promotion, job change, reduced hours or redundancy.",
+      "discovery_signals": [
+        {
+          "text": "I got a pay rise",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I've lost my job",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm going part-time",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "my income changed a lot",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "old_income",
+        "new_income",
+        "effective_date",
+        "essential_expenditure",
+        "existing_commitments",
+        "emergency_savings",
+        "affected_goals"
+      ],
+      "milestones": [
+        {
+          "id": "NEW_CASHFLOW_UNDERSTOOD",
+          "name": "New cashflow understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "GOALS_RECALCULATED",
+          "name": "Affected goals recalculated",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "PLAN_UPDATED",
+          "name": "Savings/debt plan updated",
+          "type": "process",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ORGANISE_DAY_TO_DAY_FINANCES",
+          "BUILD_EMERGENCY_FUND",
+          "START_PENSION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "If income falls and affordability is stressed, prioritise support over new borrowing."
+      ]
+    },
+    {
+      "id": "FINANCIAL_DIFFICULTY_RECOVERY",
+      "name": "Recover from financial difficulty",
+      "category": "life_transition",
+      "description": "Stabilise immediate obligations, stop deterioration and rebuild resilience.",
+      "discovery_signals": [
+        {
+          "text": "I can't pay my bills",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm behind on repayments",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm in arrears",
+          "strength": "explicit"
+        },
+        {
+          "text": "I can't afford essentials",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "arrears",
+        "essential_expenditure",
+        "income",
+        "priority_bills",
+        "credit_commitments",
+        "available_support"
+      ],
+      "milestones": [
+        {
+          "id": "POSITION_UNDERSTOOD",
+          "name": "Immediate position understood",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "SUPPORT_STARTED",
+          "name": "Support route started",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "ARREARS_STABILISED",
+          "name": "Arrears stabilised",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "BUDGET_STABILISED",
+          "name": "Budget stabilised",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "REDUCE_DEBT",
+          "BUILD_EMERGENCY_FUND"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": [
+          "NEW_DISCRETIONARY_BORROWING"
+        ]
+      },
+      "linked_needs": [],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "Suppress opportunistic credit cross-sell.",
+        "Suppress playful persona treatment in serious financial distress."
+      ]
+    },
+    {
+      "id": "SEPARATE_FINANCES",
+      "name": "Separate finances after relationship breakdown",
+      "category": "life_transition",
+      "description": "Untangle shared banking and rebuild an individual financial position.",
+      "discovery_signals": [
+        {
+          "text": "we're separating",
+          "strength": "explicit"
+        },
+        {
+          "text": "we need to split our finances",
+          "strength": "explicit"
+        },
+        {
+          "text": "we're divorcing",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "shared_accounts",
+        "shared_liabilities",
+        "individual_income",
+        "housing_position",
+        "dependants",
+        "shared_costs"
+      ],
+      "milestones": [
+        {
+          "id": "SHARED_POSITION_MAPPED",
+          "name": "Shared position mapped",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "INDIVIDUAL_CASHFLOW_DEFINED",
+          "name": "Individual cashflow understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "BANKING_SEPARATED",
+          "name": "Required banking separation completed",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "NEW_GOALS_DEFINED",
+          "name": "New personal goals defined",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ORGANISE_DAY_TO_DAY_FINANCES",
+          "BUILD_EMERGENCY_FUND",
+          "MOVE_HOME"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "Suppress humour and inappropriate sales-led cross-sell."
+      ]
+    },
+    {
+      "id": "MANAGE_LUMP_SUM",
+      "name": "Manage an inheritance, bonus or lump sum",
+      "category": "life_transition",
+      "description": "Allocate a significant one-off sum across immediate needs, debt, savings and long-term goals.",
+      "discovery_signals": [
+        {
+          "text": "I received an inheritance",
+          "strength": "explicit"
+        },
+        {
+          "text": "I got a big bonus",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I have a lump sum to manage",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "lump_sum_amount",
+        "source",
+        "near_term_commitments",
+        "existing_debt",
+        "emergency_savings",
+        "goal_horizons",
+        "access_need"
+      ],
+      "milestones": [
+        {
+          "id": "IMMEDIATE_NEEDS_RINGFENCED",
+          "name": "Immediate needs ring-fenced",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "LIQUIDITY_DEFINED",
+          "name": "Liquidity need defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "DEBT_REVIEWED",
+          "name": "Debt position reviewed",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "ALLOCATION_DEFINED",
+          "name": "Short- and long-term allocation defined",
+          "type": "process",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUILD_EMERGENCY_FUND",
+          "REDUCE_DEBT",
+          "START_INVESTING",
+          "START_PENSION",
+          "BUY_FIRST_HOME"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "lump_sum_with_notice",
+        "lump_sum_fixed_term",
+        "long_term_investment"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "Do not push investment before near-term liquidity and obligations are understood."
+      ]
+    },
+    {
+      "id": "START_INVESTING",
+      "name": "Start investing for long-term growth",
+      "category": "wealth",
+      "description": "Determine whether genuinely long-term surplus cash should enter an investment suitability journey.",
+      "discovery_signals": [
+        {
+          "text": "I want to start investing",
+          "strength": "explicit"
+        },
+        {
+          "text": "I have money I won't need for years",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I want long-term growth",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "investment_goal",
+        "time_horizon",
+        "accessible_emergency_savings",
+        "near_term_cash_needs",
+        "amount",
+        "regular_contribution",
+        "risk_tolerance"
+      ],
+      "milestones": [
+        {
+          "id": "SHORT_TERM_NEEDS_CONFIRMED",
+          "name": "Short-term cash needs separated",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "HORIZON_DEFINED",
+          "name": "Investment horizon defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "SUITABILITY_STARTED",
+          "name": "Suitability journey started",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "INVESTMENT_DECISION",
+          "name": "Investment decision made",
+          "type": "process",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "BUILD_EMERGENCY_FUND",
+          "START_PENSION",
+          "SAVE_FOR_CHILD"
+        ],
+        "prerequisites": [
+          "ADEQUATE_LIQUIDITY_FOR_CUSTOMER_CONTEXT"
+        ],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "long_term_investment",
+        "regular_long_term_investment"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": [
+        "Suppress if money is needed in the short/medium term.",
+        "Do not promise returns.",
+        "Do not select a specific investment outside the authorised suitability/advice process."
+      ]
+    },
+    {
+      "id": "START_PENSION",
+      "name": "Start or improve retirement saving",
+      "category": "retirement",
+      "description": "Understand existing retirement provision, target retirement and whether action is needed.",
+      "discovery_signals": [
+        {
+          "text": "I don't have a pension",
+          "strength": "explicit"
+        },
+        {
+          "text": "I need to start saving for retirement",
+          "strength": "explicit"
+        },
+        {
+          "text": "my pension contribution is low",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "age",
+        "target_retirement_age",
+        "existing_pensions",
+        "workplace_pension",
+        "current_contribution",
+        "desired_retirement_income"
+      ],
+      "milestones": [
+        {
+          "id": "PENSION_POSITION_UNDERSTOOD",
+          "name": "Pension position understood",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "RETIREMENT_GOAL_DEFINED",
+          "name": "Retirement goal defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "PROJECTED_GAP_UNDERSTOOD",
+          "name": "Projected gap understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "PENSION_ACTION",
+          "name": "Pension action taken",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "START_INVESTING",
+          "PREPARE_FOR_RETIREMENT"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "start_pension",
+        "review_pension"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "cadence": "P1Y",
+          "purpose": "Review pension progress"
+        }
+      ],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "PREPARE_FOR_RETIREMENT",
+      "name": "Prepare for retirement",
+      "category": "retirement",
+      "description": "Build a clear picture of retirement income, expenditure, debt and timing.",
+      "discovery_signals": [
+        {
+          "text": "I'm retiring in a few years",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "can I retire at 60",
+          "strength": "explicit"
+        },
+        {
+          "text": "am I on track for retirement",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "target_retirement_date",
+        "existing_pensions",
+        "expected_income",
+        "expected_expenditure",
+        "debt_at_retirement",
+        "cash_savings"
+      ],
+      "milestones": [
+        {
+          "id": "RETIREMENT_DATE_DEFINED",
+          "name": "Retirement date defined",
+          "type": "life",
+          "required": true
+        },
+        {
+          "id": "INCOME_ESTIMATED",
+          "name": "Retirement income estimated",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "EXPENDITURE_ESTIMATED",
+          "name": "Retirement expenditure estimated",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "GAP_UNDERSTOOD",
+          "name": "Retirement gap understood",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "OPTIONS_REVIEW",
+          "name": "Retirement options reviewed",
+          "type": "process",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "START_PENSION",
+          "TRANSITION_TO_RETIREMENT",
+          "REDUCE_DEBT"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "review_pension",
+        "retirement_income_choices"
+      ],
+      "default_checkins": [
+        {
+          "type": "scheduled",
+          "cadence": "P1Y",
+          "purpose": "Review retirement readiness"
+        }
+      ],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "TRANSITION_TO_RETIREMENT",
+      "name": "Transition into retirement",
+      "category": "retirement",
+      "description": "Turn accumulated retirement resources into a sustainable retirement-income and cashflow plan.",
+      "discovery_signals": [
+        {
+          "text": "I'm retiring this year",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "what do I do with my pension now",
+          "strength": "explicit"
+        },
+        {
+          "text": "ARF or annuity",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "retirement_date",
+        "pension_assets",
+        "desired_income",
+        "cash_reserve",
+        "other_income",
+        "debt",
+        "risk_preferences"
+      ],
+      "milestones": [
+        {
+          "id": "OPTIONS_UNDERSTOOD",
+          "name": "Retirement options understood",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "INCOME_ROUTE_SELECTED",
+          "name": "Retirement income route selected",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "CASH_RESERVE_DEFINED",
+          "name": "Retirement cash reserve defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "RETIREMENT_INCOME_STARTED",
+          "name": "Retirement income started",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "PREPARE_FOR_RETIREMENT",
+          "ORGANISE_DAY_TO_DAY_FINANCES"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "retirement_income_choices"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [
+        "retirement_income_started"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "FUND_EDUCATION",
+      "name": "Fund education",
+      "category": "education",
+      "description": "Prepare for tuition and related education costs using savings and borrowing where needed.",
+      "discovery_signals": [
+        {
+          "text": "college fees",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "masters fees",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "I need to pay for university",
+          "strength": "explicit"
+        }
+      ],
+      "information_needed": [
+        "course_type",
+        "course_start_date",
+        "expected_cost",
+        "available_savings",
+        "grants_or_other_funding",
+        "remaining_gap"
+      ],
+      "milestones": [
+        {
+          "id": "COST_ESTIMATED",
+          "name": "Education cost estimated",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "AVAILABLE_FUNDING_MAPPED",
+          "name": "Available funding mapped",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "GAP_DEFINED",
+          "name": "Funding gap defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "FUNDING_IN_PLACE",
+          "name": "Funding in place",
+          "type": "financial",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "SAVE_FOR_CHILD"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "education_finance",
+        "student_banking"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "BUY_CAR",
+      "name": "Buy a car",
+      "category": "major_purchase",
+      "description": "Plan and fund a vehicle purchase while understanding impacts on household cashflow and other goals.",
+      "discovery_signals": [
+        {
+          "text": "I need a new car",
+          "strength": "explicit"
+        },
+        {
+          "text": "I'm changing my car",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "we need a bigger car for the family",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "vehicle_budget",
+        "cash_contribution",
+        "vehicle_type",
+        "target_date",
+        "existing_car_finance",
+        "monthly_affordability"
+      ],
+      "milestones": [
+        {
+          "id": "CAR_BUDGET_DEFINED",
+          "name": "Vehicle budget defined",
+          "type": "financial",
+          "required": true
+        },
+        {
+          "id": "FUNDING_MIX_DEFINED",
+          "name": "Funding mix decided",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "VEHICLE_PURCHASED",
+          "name": "Vehicle purchased",
+          "type": "life",
+          "required": true
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "SAVE_FOR_DEFINED_PURCHASE"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": [
+          "ACTIVE_MORTGAGE_AFFORDABILITY"
+        ]
+      },
+      "linked_needs": [
+        "car_purchase"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [
+        "vehicle_purchase_complete"
+      ],
+      "suppressions": []
+    },
+    {
+      "id": "MOVE_TO_IRELAND",
+      "name": "Move to Ireland",
+      "category": "life_transition",
+      "description": "Set up practical banking and financial arrangements for relocation to Ireland.",
+      "discovery_signals": [
+        {
+          "text": "I'm moving to Ireland",
+          "strength": "explicit"
+        },
+        {
+          "text": "starting a job in Dublin",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "relocating from abroad",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "move_date",
+        "employment_status",
+        "irish_address_status",
+        "existing_payment_accounts",
+        "salary_currency",
+        "international_payment_needs"
+      ],
+      "milestones": [
+        {
+          "id": "IRISH_BANKING_READY",
+          "name": "Irish banking ready",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "SALARY_READY",
+          "name": "Salary arrangements ready",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "FX_REVIEWED",
+          "name": "International money needs reviewed",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "ORGANISE_DAY_TO_DAY_FINANCES",
+          "INTERNATIONAL_MONEY"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "moving_to_ireland",
+        "international_money_movement"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": []
+    },
+    {
+      "id": "INTERNATIONAL_MONEY",
+      "name": "Manage international money needs",
+      "category": "international",
+      "description": "Handle recurring or one-off foreign-currency transfers, income or obligations.",
+      "discovery_signals": [
+        {
+          "text": "send money abroad",
+          "strength": "explicit"
+        },
+        {
+          "text": "I get paid in dollars",
+          "strength": "strong_inferred"
+        },
+        {
+          "text": "pay overseas tuition",
+          "strength": "strong_inferred"
+        }
+      ],
+      "information_needed": [
+        "currency",
+        "destination_country",
+        "amount",
+        "frequency",
+        "need_to_hold_currency"
+      ],
+      "milestones": [
+        {
+          "id": "FX_NEED_DEFINED",
+          "name": "International money need defined",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "ROUTE_SELECTED",
+          "name": "Transfer or holding route selected",
+          "type": "process",
+          "required": true
+        },
+        {
+          "id": "FIRST_PAYMENT_COMPLETED",
+          "name": "First payment completed",
+          "type": "process",
+          "required": false
+        }
+      ],
+      "relationships": {
+        "related_goals": [
+          "MOVE_TO_IRELAND",
+          "FUND_EDUCATION"
+        ],
+        "prerequisites": [],
+        "follow_on_goals": [],
+        "conflicts": []
+      },
+      "linked_needs": [
+        "international_money_movement",
+        "foreign_currency_holding"
+      ],
+      "default_checkins": [],
+      "completion_criteria": [],
+      "suppressions": []
+    }
+  ],
+  "life_event_clusters": [
+    {
+      "id": "RECENTLY_MARRIED",
+      "name": "Recently married / combining households",
+      "signals": [
+        "recently married",
+        "moving in together",
+        "combining finances"
+      ],
+      "primary_goal_candidates": [
+        "SHARED_HOUSEHOLD_FINANCES"
+      ],
+      "secondary_goal_candidates": [
+        "BUILD_EMERGENCY_FUND",
+        "FAMILY_PROTECTION",
+        "BUY_FIRST_HOME"
+      ],
+      "notes": "Do not assume joint banking is desired; clarify how the couple wants to manage shared and individual money."
+    },
+    {
+      "id": "NEW_BABY",
+      "name": "New baby / growing family",
+      "signals": [
+        "pregnancy",
+        "new baby",
+        "parental leave",
+        "childcare planning"
+      ],
+      "primary_goal_candidates": [
+        "PREPARE_FOR_BABY"
+      ],
+      "secondary_goal_candidates": [
+        "FAMILY_PROTECTION",
+        "INCOME_RESILIENCE",
+        "SAVE_FOR_CHILD",
+        "BUILD_EMERGENCY_FUND",
+        "MOVE_HOME",
+        "SHARED_HOUSEHOLD_FINANCES"
+      ],
+      "notes": "Broad financial transition, not an automatic insurance trigger."
+    },
+    {
+      "id": "FIRST_HOME_LIFE_STAGE",
+      "name": "First-home life stage",
+      "signals": [
+        "saving deposit",
+        "first-time buyer",
+        "renting and viewing",
+        "mortgage research"
+      ],
+      "primary_goal_candidates": [
+        "BUY_FIRST_HOME"
+      ],
+      "secondary_goal_candidates": [
+        "SHARED_HOUSEHOLD_FINANCES",
+        "BUILD_EMERGENCY_FUND",
+        "FAMILY_PROTECTION",
+        "REBUILD_SAVINGS_AFTER_HOME_PURCHASE"
+      ],
+      "deferred_goal_candidates": [
+        "RENOVATE_HOME",
+        "BUY_CAR"
+      ],
+      "notes": "New unsecured borrowing may conflict with mortgage affordability."
+    },
+    {
+      "id": "GROWING_FAMILY_HOME_PRESSURE",
+      "name": "Growing family needing more space",
+      "signals": [
+        "new child",
+        "house too small",
+        "need another bedroom"
+      ],
+      "primary_goal_candidates": [
+        "MOVE_HOME"
+      ],
+      "secondary_goal_candidates": [
+        "FAMILY_PROTECTION",
+        "BUILD_EMERGENCY_FUND",
+        "SHARED_HOUSEHOLD_FINANCES"
+      ]
+    },
+    {
+      "id": "GRADUATION_FIRST_JOB",
+      "name": "Graduation and first job",
+      "signals": [
+        "graduated",
+        "first job",
+        "salary starts soon"
+      ],
+      "primary_goal_candidates": [
+        "START_CAREER"
+      ],
+      "secondary_goal_candidates": [
+        "ORGANISE_DAY_TO_DAY_FINANCES",
+        "BUILD_EMERGENCY_FUND",
+        "START_PENSION"
+      ]
+    },
+    {
+      "id": "MAJOR_INCOME_INCREASE",
+      "name": "Major income increase",
+      "signals": [
+        "promotion",
+        "large pay rise",
+        "bonus"
+      ],
+      "primary_goal_candidates": [
+        "DEAL_WITH_INCOME_CHANGE"
+      ],
+      "secondary_goal_candidates": [
+        "BUILD_EMERGENCY_FUND",
+        "REDUCE_DEBT",
+        "START_PENSION",
+        "START_INVESTING"
+      ]
+    },
+    {
+      "id": "INCOME_SHOCK",
+      "name": "Income shock",
+      "signals": [
+        "job loss",
+        "reduced hours",
+        "salary stopped"
+      ],
+      "primary_goal_candidates": [
+        "DEAL_WITH_INCOME_CHANGE"
+      ],
+      "secondary_goal_candidates": [
+        "FINANCIAL_DIFFICULTY_RECOVERY",
+        "BUILD_EMERGENCY_FUND",
+        "REDUCE_DEBT"
+      ],
+      "notes": "Suppress discretionary borrowing and sales-led prompts."
+    },
+    {
+      "id": "RELATIONSHIP_BREAKDOWN",
+      "name": "Relationship breakdown",
+      "signals": [
+        "separation",
+        "divorce",
+        "splitting finances"
+      ],
+      "primary_goal_candidates": [
+        "SEPARATE_FINANCES"
+      ],
+      "secondary_goal_candidates": [
+        "ORGANISE_DAY_TO_DAY_FINANCES",
+        "BUILD_EMERGENCY_FUND",
+        "MOVE_HOME"
+      ]
+    },
+    {
+      "id": "LUMP_SUM_RECEIVED",
+      "name": "Lump sum received",
+      "signals": [
+        "inheritance",
+        "bonus",
+        "sale proceeds"
+      ],
+      "primary_goal_candidates": [
+        "MANAGE_LUMP_SUM"
+      ],
+      "secondary_goal_candidates": [
+        "BUILD_EMERGENCY_FUND",
+        "REDUCE_DEBT",
+        "START_INVESTING",
+        "START_PENSION",
+        "BUY_FIRST_HOME"
+      ]
+    },
+    {
+      "id": "APPROACHING_RETIREMENT",
+      "name": "Approaching retirement",
+      "signals": [
+        "retiring in a few years",
+        "pension maturity",
+        "can I afford to retire"
+      ],
+      "primary_goal_candidates": [
+        "PREPARE_FOR_RETIREMENT"
+      ],
+      "secondary_goal_candidates": [
+        "REDUCE_DEBT",
+        "BUILD_EMERGENCY_FUND",
+        "TRANSITION_TO_RETIREMENT"
+      ]
+    }
+  ]
+}

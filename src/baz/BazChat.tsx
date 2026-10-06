@@ -26,7 +26,7 @@ export function BazChat({
   suggestions,
   openingMessage,
   greeting,
-  mode = 'demo',
+  mode = 'new',
   footer,
   composerClassName,
   className,
@@ -36,7 +36,7 @@ export function BazChat({
   openingMessage?: string | null
   greeting: ReactNode
   /** `fresh` knows nothing about the visitor; `demo` joins the seeded customer (§46). */
-  mode?: 'demo' | 'fresh' | 'clone'
+  mode?: 'new' | 'known'
   /** Shown once there is something worth carrying into the app (§29). */
   footer?: (caseId: string) => ReactNode
   /** Extra space under the composer, for shells with a fixed bar of their own. */
