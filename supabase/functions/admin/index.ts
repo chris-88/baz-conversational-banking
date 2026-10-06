@@ -151,11 +151,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     case 'reset_case': {
-      // §43 — the presenter case only. Audience cases are deliberately left alone.
-      const presenter = await admin.from('cases').select('id').eq('kind', 'presenter')
-      for (const row of (presenter.data ?? []) as { id: string }[]) {
-        await admin.from('cases').delete().eq('id', row.id)
-      }
+      // §43 — the case named, or the most recent. Everyone else's is left alone.
+      const target =
+        action.caseId === undefined
+          ? (
+              (
+                await admin
+                  .from('cases')
+                  .select('id')
+                  .order('updated_at', { ascending: false })
+                  .limit(1)
+              ).data as { id: string }[] | null
+            )?.[0]?.id
+          : action.caseId
+
+      if (target !== undefined) await admin.from('cases').delete().eq('id', target)
 
       const customer = await admin
         .from('customers')
@@ -290,8 +300,23 @@ Deno.serve(async (request: Request): Promise<Response> => {
         updatedAt: row.updated_at,
       }))
 
-      // Work out which one-click moves are possible from where the presenter case is now.
-      const presenter = caseRows.find((row) => row.kind === 'presenter') ?? null
+      /**
+       * The case the console is driving: the one asked for, else the most recently active.
+       *
+       * There is no rehearsed case any more, so "which case" is a live question — the
+       * presenter is working with whoever is talking to Baz in front of them.
+       */
+      const asked = action.caseId
+      const mostRecent = [...caseRows].sort((a, b) =>
+        String(b.updated_at).localeCompare(String(a.updated_at)),
+      )[0]
+
+      const focus =
+        (asked === undefined ? undefined : caseRows.find((row) => row.id === asked)) ??
+        mostRecent ??
+        null
+
+      const presenter = focus
       const presenterApps = presenter
         ? ((
             await admin
@@ -354,7 +379,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         activity,
         killSwitch: (config.data as { kill_switch?: boolean } | null)?.kill_switch ?? false,
         demoActions,
-        presenterCaseId: presenter?.id ?? null,
+        focusCaseId: focus?.id ?? null,
         persona: {
           preset: (persona.data as { preset?: string } | null)?.preset ?? 'default',
           sliders: ((persona.data as { sliders?: unknown } | null)?.sliders ?? slidersFor('default')) as AdminOverview['persona']['sliders'],

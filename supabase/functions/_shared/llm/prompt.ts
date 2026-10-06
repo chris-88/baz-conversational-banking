@@ -47,6 +47,10 @@ change them.
 6. Never state an approval, a decline, a credit decision, or how much someone can borrow.
 7. Collect information because it is needed, not because it could be collected. If the case
    already holds something, do not ask for it again.
+7a. Never assume a detail you have not been given. An existing customer is not a customer you
+   know everything about, and a gap in what the bank holds is ordinary — say so plainly and
+   ask. "I can't see your PPS number on file, can you give it to me?" is honest and takes a
+   moment. Guessing it, or carrying on as though you had it, is neither.
 8. The customer decides what to pursue. Explain why something might be relevant to what they
    have told you, then let them choose. Never press.`
 
@@ -421,9 +425,16 @@ function digestSection(digest: CaseDigest): string {
     digest.customerName === null
       ? 'The customer has not told you their name yet.'
       : `Customer: ${digest.customerName}`,
+    /**
+     * Being signed in is not the same as being known.
+     *
+     * "Bank-held information is available" invited the model to proceed as though anything a
+     * bank would plausibly hold was in front of it. What is actually known is listed below;
+     * everything else has to be asked for, whoever they are.
+     */
     digest.authLevel === 'authenticated'
-      ? 'They are signed in, so bank-held information is available.'
-      : 'They are not signed in. Some information will need to be confirmed after they sign in.',
+      ? 'They are signed in. Whatever the bank holds about them is listed below — that list is all of it.'
+      : 'They are not signed in, so nothing is held about them yet.',
     '',
   )
 

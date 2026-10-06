@@ -17,9 +17,13 @@ const sliders = z.object(
 )
 
 export const adminRequestSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('overview') }),
+  /**
+   * `caseId` is the conversation the presenter is driving. Omitted, the console focuses the
+   * most recently active one, which is almost always the one on screen.
+   */
+  z.object({ action: z.literal('overview'), caseId: z.uuid().optional() }),
   /** §43 — restores the canonical presenter case. Audience cases are untouched. */
-  z.object({ action: z.literal('reset_case') }),
+  z.object({ action: z.literal('reset_case'), caseId: z.uuid().optional() }),
   /** §43 — the gate returns "demo paused" to everything. */
   z.object({ action: z.literal('set_kill_switch'), enabled: z.boolean() }),
   /** §38, §56 — style changes apply to the very next turn. */
@@ -115,7 +119,8 @@ export const adminOverviewSchema = z.object({
   killSwitch: z.boolean(),
   /** The one-click moves, with whether each is possible from where the case currently is. */
   demoActions: z.array(demoActionSchema).default([]),
-  presenterCaseId: z.uuid().nullable().default(null),
+  /** The case the controls below act on. */
+  focusCaseId: z.uuid().nullable().default(null),
   persona: z.object({ preset: z.string(), sliders: sliders }),
   cases: z.array(
     z.object({

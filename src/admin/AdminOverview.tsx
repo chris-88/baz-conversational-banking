@@ -162,7 +162,7 @@ function DemoActions({
   onChanged: () => void
 }): ReactNode {
   const [notification, setNotification] = useState<string | null>(null)
-  const caseId = data.presenterCaseId
+  const caseId = data.focusCaseId
 
   const run = useMutation({
     mutationFn: (move: Parameters<typeof adminApi.demoAction>[1]) =>
