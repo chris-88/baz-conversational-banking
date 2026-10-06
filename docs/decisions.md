@@ -875,3 +875,8 @@ section.
   shadcn-generated version held the answer in state and wrote to it from an effect, which renders
   once with the wrong answer and again with the right one — and trips this repo's lint rule about
   synchronous setState in effects. A media query is an external store; it is read as one.
+- **2026-10-06** — The chat client gives up on a stream that has gone silent for 45 seconds.
+  Reported live: a turn where the typing indicator ran forever with nothing to click. A read that
+  never settles is the worst way for a turn to fail — the connection stays open, no bytes arrive,
+  and the customer has no way out. Measured between chunks rather than across the turn, because a
+  turn that is working sends text the whole way through and a stalled one sends nothing at all.

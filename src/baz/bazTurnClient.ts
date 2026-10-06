@@ -15,6 +15,15 @@ export type BazTurnInput = {
   readonly signal?: AbortSignal
 }
 
+/**
+ * How long the stream may say nothing before it is treated as dead.
+ *
+ * Measured between chunks rather than for the whole turn, because a turn that is working sends
+ * text the whole way through and a turn that has stalled sends nothing at all. Generous enough
+ * to cover the gap before the first token while the gate runs and the model starts.
+ */
+const SILENCE_LIMIT_MS = 45_000
+
 export async function streamBazTurn(
   input: BazTurnInput,
   onEvent: (event: StreamEvent) => void,
@@ -53,7 +62,31 @@ export async function streamBazTurn(
   let buffer = ''
 
   for (;;) {
-    const { done, value } = await reader.read()
+    /**
+     * A read that never settles is the worst way for a turn to fail.
+     *
+     * The connection stays open, no bytes arrive, and the customer watches a typing indicator
+     * forever with nothing to click. Racing each read against a timer turns that into an
+     * ordinary error they can act on.
+     */
+    const next = await Promise.race([
+      reader.read(),
+      new Promise<'silent'>((resolve) => setTimeout(() => resolve('silent'), SILENCE_LIMIT_MS)),
+    ])
+
+    if (next === 'silent') {
+      await reader.cancel().catch(() => undefined)
+      onEvent({
+        type: 'error',
+        error: {
+          code: 'upstream_unavailable',
+          message: 'That took too long and I lost the thread. Say it again and I will pick it up.',
+        },
+      })
+      return
+    }
+
+    const { done, value } = next
     if (done) break
     buffer += value
 
