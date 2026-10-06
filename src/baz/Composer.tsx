@@ -44,7 +44,13 @@ export function Composer({
         disabled={disabled}
         placeholder={placeholder}
         aria-label="Message Baz"
-        className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent py-2 text-sm outline-none disabled:opacity-60"
+        /*
+         * 16px, not 14. iOS zooms the whole page the moment a focused field computes smaller
+         * than that, and once it has zoomed the layout viewport no longer matches the screen —
+         * which is why the reply and the options slid out of view rather than just looking big.
+         * Scaled back down above the phone breakpoint, where nothing zooms.
+         */
+        className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent py-2 text-base outline-none disabled:opacity-60 sm:text-sm"
       />
 
 

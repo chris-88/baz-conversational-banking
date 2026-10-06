@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- `resizes-content` makes Android shrink the layout viewport for the keyboard, which is
+         what iOS will not do; `useViewportHeight` covers iOS. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="theme-color" content="#0b2a4a" />
     <!-- A Bank-of-Ireland-branded prototype on a personal domain must not be discoverable. -->
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />

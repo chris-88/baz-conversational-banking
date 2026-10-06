@@ -908,3 +908,10 @@ section.
   testing: every round spent calling a tool the server refused, and the customer got an empty
   bubble. Silence is the one reply that cannot be recovered from — nothing to read, nothing to
   tap.
+- **2026-10-06** — The chat screen is a fixed box the height of the visual viewport, not a page
+  with a minimum height. Three things broke it in an installed PWA: the composer computed at
+  14px, which makes iOS zoom the whole page on focus; `100dvh` does not shrink for the on-screen
+  keyboard on iOS, so the composer sat behind it; and a `flex-1` child without `min-h-0` will not
+  shrink below its content, so the transcript could not give the space back. `useViewportHeight`
+  tracks `window.visualViewport` for the one measurement that reflects what is genuinely on
+  screen, and `interactive-widget=resizes-content` covers Android.

@@ -50,6 +50,8 @@ export function BazChat({
   const [loadingHistory, setLoadingHistory] = useState(isBackendConfigured)
 
   const transcript = useRef<HTMLDivElement>(null)
+  /** Whether they were reading the newest turn, remembered from before the keyboard opens. */
+  const atBottom = useRef(true)
   const openingSent = useRef(false)
   const returnSent = useRef(false)
   const [hasUpdates, setHasUpdates] = useState(false)
@@ -184,7 +186,49 @@ export function BazChat({
     if (distanceFromBottom > 160) return
 
     el.scrollTop = el.scrollHeight
+    atBottom.current = true
   }, [entries, streaming])
+
+  /**
+   * And keep it in view when the keyboard opens.
+   *
+   * The transcript gets shorter the moment the keyboard appears, which pushes whatever was at
+   * the bottom out of sight — the reply and the options the customer was about to tap. Nothing
+   * in the conversation changed, so the effect above never runs.
+   *
+   * Whether they were at the bottom has to be remembered from before the resize. Measuring it
+   * afterwards always says no: shrinking the box is itself what put the bottom out of reach.
+   */
+  useEffect(() => {
+    const el = transcript.current
+    const viewport = window.visualViewport
+    if (el === null || !viewport) return undefined
+
+    const remember = () => {
+      atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 160
+    }
+
+    const pin = () => {
+      if (!atBottom.current) return
+
+      /*
+       * After the next frame, not now. The resize handler runs before the browser has
+       * reflowed for the new height, so scrolling here lands on where the bottom used to be
+       * and leaves the newest turn just as hidden.
+       */
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight
+      })
+    }
+
+    el.addEventListener('scroll', remember, { passive: true })
+    viewport.addEventListener('resize', pin)
+
+    return () => {
+      el.removeEventListener('scroll', remember)
+      viewport.removeEventListener('resize', pin)
+    }
+  }, [])
 
   // Once Baz's own bubble exists the dots would sit beneath it saying the same thing.
   const last = entries.at(-1)
@@ -278,7 +322,7 @@ export function BazChat({
 
   return (
     <div className={className}>
-      <div ref={transcript} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div ref={transcript} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
         <ChatBubble author="baz">{greeting}</ChatBubble>
 
         {entries.map((entry, index) => {
@@ -334,7 +378,7 @@ export function BazChat({
 
       <div
         className={cn(
-          'bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-0 border-t px-4 py-3 backdrop-blur',
+          'bg-background/95 supports-[backdrop-filter]:bg-background/80 shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur',
           composerClassName,
         )}
       >

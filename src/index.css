@@ -217,6 +217,12 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /*
+     * The fallback for `useViewportHeight`, which overwrites it with what is genuinely on
+     * screen once a visual viewport is available. `dvh` is right everywhere except with an
+     * on-screen keyboard open, which is exactly when a chat screen needs it most.
+     */
+    --viewport-height: 100dvh;
   }
 
   body {
