@@ -178,7 +178,19 @@ async function handleTurn(request: Request): Promise<Response> {
   const tone = toneBucket(loaded.persona)
 
   // ---- Gate -------------------------------------------------------------
-  const anthropic = new Anthropic({ apiKey: env('ANTHROPIC_API_KEY') })
+  /**
+   * Bounded, because the SDK default is ten minutes.
+   *
+   * That is far longer than this function is allowed to live, so a stalled API call does not
+   * time out — it holds the connection until the platform kills the whole invocation, and the
+   * customer is left watching a stream that will never say anything. A turn that has not
+   * finished in ninety seconds has failed; failing as an error beats failing as a hang.
+   */
+  const anthropic = new Anthropic({
+    apiKey: env('ANTHROPIC_API_KEY'),
+    timeout: 90_000,
+    maxRetries: 1,
+  })
   const classify = createClassifier({
     apiKey: env('ANTHROPIC_API_KEY'),
     model: env('GATE_MODEL'),

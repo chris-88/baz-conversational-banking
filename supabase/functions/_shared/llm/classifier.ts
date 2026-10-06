@@ -71,7 +71,10 @@ export type ClassifyInput = {
 }
 
 export function createClassifier(options: ClassifierOptions) {
-  const client = options.client ?? new Anthropic({ apiKey: options.apiKey })
+  // The gate runs before anything is said, so a slow one is a silent one. It already fails
+  // closed with a retry message, which is a far better outcome than waiting.
+  const client =
+    options.client ?? new Anthropic({ apiKey: options.apiKey, timeout: 20_000, maxRetries: 1 })
   const system = buildClassifierSystemPrompt(options.domainConfig)
 
   return async function classify(input: ClassifyInput): Promise<Classification> {
