@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { InstallButton } from '@/surfaces/InstallButton'
 import { routes } from '@/app/routes'
@@ -26,7 +25,6 @@ import { routes } from '@/app/routes'
 export function Landing(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
-      <PrototypeBanner />
 
       <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-6">
         <BazAvatar />

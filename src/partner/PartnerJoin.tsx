@@ -19,7 +19,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconTile } from '@/components/IconTile'
 import { StatusBadge } from '@/components/StatusBadge'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { callPartner } from '@/partner/partnerClient'
 import { isBackendConfigured } from '@/lib/env'
@@ -98,7 +97,6 @@ export function PartnerJoin(): ReactNode {
 
   return (
     <div className="bg-background min-h-dvh">
-      <PrototypeBanner />
       <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-30 border-b backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">
           <BazAvatar />

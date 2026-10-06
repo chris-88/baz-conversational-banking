@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { BazChat } from '@/baz/BazChat'
 import { OPENING_SUGGESTIONS } from '@/baz/suggestions'
@@ -19,7 +18,6 @@ export function BazScreen(): ReactNode {
 
   return (
     <div className="bg-background flex min-h-dvh flex-col">
-      <PrototypeBanner />
 
       <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-30 border-b backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">

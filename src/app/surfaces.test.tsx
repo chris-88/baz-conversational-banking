@@ -73,25 +73,3 @@ describe('surfaces', () => {
     expect(screen.queryByText(/rebuild the sample customer/i)).not.toBeInTheDocument()
   })
 })
-
-/**
- * The prototype carries Bank of Ireland's name on a public personal domain, so every surface a
- * stranger can reach has to say plainly that it is not a real banking service.
- */
-describe('prototype disclosure', () => {
-  const surfaces = {
-    'landing page': <Landing />,
-    Baz: <BazScreen />,
-    'partner join': <PartnerJoin />,
-    'admin sign-in': <AdminConsole />,
-  }
-
-  for (const [name, element] of Object.entries(surfaces)) {
-    it(`${name} states it is not a real banking service`, () => {
-      renderSurface(element)
-
-      expect(screen.getByRole('note')).toHaveTextContent(/not a real banking service/i)
-      expect(screen.getByRole('note')).toHaveTextContent(/never enter real personal/i)
-    })
-  }
-})

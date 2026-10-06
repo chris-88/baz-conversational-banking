@@ -892,3 +892,7 @@ section.
 - **2026-10-06** — The landing page offers the address and a copy button where the design has a QR
   code. Rendering a QR needs an encoder and CLAUDE.md says not to add a dependency without
   asking; the copy button is the part that has to work either way.
+- **2026-10-06** — The prototype banner is gone from every surface. It existed because the site
+  was a replica of a bank's own website carrying its branding on a public personal domain, and
+  somebody landing on it cold could plausibly have taken it for the real thing. With the replica
+  removed, what is left is a product called Baz that reads as what it is.

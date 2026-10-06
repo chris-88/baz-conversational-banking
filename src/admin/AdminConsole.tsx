@@ -35,7 +35,6 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdminLogin } from '@/admin/AdminLogin'
 import { useAdminAuth } from '@/admin/useAdminAuth'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { routes } from '@/app/routes'
 
@@ -233,16 +232,10 @@ function Trail(): ReactNode {
 
 /**
  * The signed-out and still-checking states, which need none of the navigation.
- *
- * This keeps the prototype disclosure and the console itself does not. The banner exists so
- * nobody who lands on a Bank of Ireland-branded page cold is misled, and signed in there is
- * nobody to mislead — it is one person running their own prototype. Signed out is the part of
- * `/admin` a stranger can actually reach.
  */
 function Shell({ children }: { readonly children: ReactNode }): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
-      <PrototypeBanner />
       <div className="mx-auto w-full max-w-md px-4 py-12">{children}</div>
     </div>
   )

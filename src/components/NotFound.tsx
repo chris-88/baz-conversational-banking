@@ -3,13 +3,11 @@ import { Link } from 'react-router-dom'
 import { CompassIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { IconTile } from '@/components/IconTile'
-import { PrototypeBanner } from '@/components/PrototypeBanner'
 import { routes } from '@/app/routes'
 
 export function NotFound(): ReactNode {
   return (
     <div className="bg-background flex min-h-dvh flex-col">
-      <PrototypeBanner />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-5 px-4 text-center">
         <IconTile tone="neutral" size="lg">
           <CompassIcon />
