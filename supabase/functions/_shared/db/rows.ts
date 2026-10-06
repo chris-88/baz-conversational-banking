@@ -74,6 +74,7 @@ export const productInterestRow = z.object({
 export const messageRow = z.object({
   role: z.enum(['customer', 'baz', 'system']),
   content: z.string(),
+  created_at: z.string(),
   /**
    * The cards rendered with this turn. Only their types are needed here — enough to know a
    * card is already on screen without carrying its whole payload through the loader.

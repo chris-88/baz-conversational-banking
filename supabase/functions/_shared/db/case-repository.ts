@@ -83,7 +83,7 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
     client.from('product_interests').select('product, status, reason').eq('case_id', caseId),
     client
       .from('messages')
-      .select('role, content, cards')
+      .select('role, content, cards, created_at')
       .eq('case_id', caseId)
       .order('created_at', { ascending: false })
       .limit(MESSAGE_WINDOW),
@@ -180,7 +180,13 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
     messages: rows.messageRow
       .array()
       .parse(unwrap(messagesData, 'messages'))
-      .reverse(),
+      .reverse()
+      .map((message) => ({
+        role: message.role,
+        content: message.content,
+        cards: message.cards,
+        createdAt: message.created_at,
+      })),
     eventsSinceLastSeen,
     persona,
     killSwitch: domainConfig === null ? false : rows.domainConfigRow.parse(domainConfig).kill_switch,

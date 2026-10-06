@@ -1,137 +1,90 @@
-import { type ReactNode } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
-import { queryKeys } from '@/lib/queryKeys'
-import { adminApi } from '@/admin/adminClient'
 import { HandoffNote } from '@/admin/HandoffNote'
 import { CaseInspector } from '@/admin/CaseInspector'
 import { DemoActions } from '@/admin/DemoActions'
-import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import type { AdminCase } from '@contracts/admin.ts'
 
 /**
- * One case, in four views rather than one long scroll.
+ * One conversation, in the views somebody actually needs.
  *
- * Tabs because the four audiences for this page are genuinely different: somebody about to make
- * a call wants the note, somebody checking what happened wants the transcript, somebody moving
- * the case on wants the controls, and somebody asking whether the model decided any of this
- * wants the reasoning. Stacked, the page was two and a half thousand pixels and everybody
- * scrolled past three quarters of it.
+ * The data is fetched once by the workspace and shared with the context pane, so the two halves
+ * of a case can never disagree about what state it is in.
  */
-export function CaseDetail(): ReactNode {
-  const { caseId } = useParams<{ caseId: string }>()
-  const queryClient = useQueryClient()
-
-  const refresh = () => {
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.caseInspection(caseId ?? ''),
-    })
-    void queryClient.invalidateQueries({ queryKey: queryKeys.admin.cases() })
-  }
-
-  // The console should move as the customer talks, rather than needing a reload to find out
-  // whether anything happened.
-  useRealtimeInvalidation(
-    ['messages', 'facts', 'applications', 'events', 'product_interests'],
-    refresh,
-  )
-
-  const inspection = useQuery({
-    queryKey: queryKeys.admin.caseInspection(caseId ?? ''),
-    queryFn: () => adminApi.inspect(caseId ?? ''),
-    enabled: caseId !== undefined,
-  })
-
-  if (caseId === undefined) {
-    return (
-      <Alert>
-        <AlertDescription>No case selected.</AlertDescription>
-      </Alert>
-    )
-  }
-
-  if (inspection.isPending) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-72" />
-        <Skeleton className="h-9 w-full max-w-md" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    )
-  }
-
-  if (inspection.isError) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{inspection.error.message}</AlertDescription>
-      </Alert>
-    )
-  }
-
-  const data = inspection.data
-  const live = data.applications.filter(
-    (application) => application.state !== 'completed' && application.state !== 'declined',
-  )
-
+export function CaseDetail({
+  caseId,
+  data,
+  onChanged,
+}: {
+  readonly caseId: string
+  readonly data: AdminCase
+  readonly onChanged: () => void
+}): ReactNode {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{data.handoff.who}</h1>
-          <p className="text-muted-foreground text-sm">
+    <Tabs defaultValue="conversation" className="flex h-full min-h-0 flex-col gap-0">
+      <div className="space-y-3 border-b p-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold tracking-tight">{data.handoff.who}</h2>
+          <p className="text-muted-foreground text-xs">
             {data.handoff.turns} {data.handoff.turns === 1 ? 'message' : 'messages'}
             {data.handoff.lastSeen !== null &&
               ` · last spoke ${data.handoff.lastSeen.slice(0, 10)}`}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {live.map((application) => (
-            <Badge key={application.id} variant="secondary">
-              {application.displayName} · {application.stateLabel}
-            </Badge>
-          ))}
-          {data.plans
-            .filter((plan) => plan.status === 'active')
-            .map((plan) => (
-              <Badge key={plan.id}>{plan.title}</Badge>
-            ))}
-        </div>
+        <TabsList>
+          <TabsTrigger value="conversation" className="text-xs">
+            Conversation
+          </TabsTrigger>
+          <TabsTrigger value="act" className="text-xs">
+            Act as the bank
+          </TabsTrigger>
+          <TabsTrigger value="handover" className="text-xs">
+            Handover
+          </TabsTrigger>
+          <TabsTrigger value="events" className="text-xs">
+            Events
+          </TabsTrigger>
+          <TabsTrigger value="reasoning" className="text-xs">
+            Reasoning
+          </TabsTrigger>
+        </TabsList>
       </div>
 
-      <Tabs defaultValue="handover" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="handover">Handover</TabsTrigger>
-          <TabsTrigger value="conversation">Conversation</TabsTrigger>
-          <TabsTrigger value="act">Act as the bank</TabsTrigger>
-          <TabsTrigger value="reasoning">How Baz worked it out</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="handover">
-          <HandoffNote handoff={data.handoff} />
-        </TabsContent>
-
+      <div className="@container min-h-0 flex-1 overflow-y-auto p-4">
         <TabsContent value="conversation">
           <Conversation conversation={data.conversation} />
         </TabsContent>
 
         <TabsContent value="act" className="space-y-6">
-          <DemoActions caseId={caseId} moves={data.demoActions} onChanged={refresh} />
+          <DemoActions caseId={caseId} moves={data.demoActions} onChanged={onChanged} />
           <CaseInspector caseId={caseId} show="handling" />
+        </TabsContent>
+
+        <TabsContent value="handover">
+          <HandoffNote handoff={data.handoff} />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <Events events={data.events} />
         </TabsContent>
 
         <TabsContent value="reasoning">
           <CaseInspector caseId={caseId} show="reasoning" />
         </TabsContent>
-      </Tabs>
-    </div>
+      </div>
+    </Tabs>
   )
 }
 
@@ -143,7 +96,7 @@ function Conversation({
 }): ReactNode {
   if (conversation.length === 0) {
     return (
-      <Empty className="border border-dashed">
+      <Empty className="border border-dashed py-12">
         <EmptyHeader>
           <EmptyTitle>Nothing said yet</EmptyTitle>
           <EmptyDescription>
@@ -155,45 +108,46 @@ function Conversation({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>The conversation</CardTitle>
-        <CardDescription>{conversation.length} turns, oldest first.</CardDescription>
-      </CardHeader>
-      <CardContent className="px-0">
-        <ScrollArea className="h-[32rem]">
-          <div className="space-y-4 px-6">
-            {conversation.map((message, index) => (
-              <Turn key={`${String(index)}-${message.role}`} message={message} />
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      {conversation.map((message, index) => (
+        <Turn key={`${String(index)}-${message.role}`} message={message} />
+      ))}
+    </div>
   )
 }
 
 /**
  * One turn, sided like the chat it came from.
  *
- * Reading a transcript as a flat list of labelled paragraphs is much harder than it needs to
- * be; who said what should be apparent before the words are.
+ * A system note is neither side — it is something the interface did on the customer's behalf,
+ * and rendering it as speech is how fabricated customer messages got into this transcript in
+ * the first place. It gets a rule across the page instead of a bubble.
  */
 function Turn({ message }: { readonly message: AdminCase['conversation'][number] }): ReactNode {
+  const at = message.at.slice(11, 16)
+
+  if (message.role === 'system') {
+    return (
+      <div className="flex items-center gap-2 py-1">
+        <span className="bg-border h-px flex-1" />
+        <span className="text-muted-foreground text-2xs">
+          {message.content} · {at}
+        </span>
+        <span className="bg-border h-px flex-1" />
+      </div>
+    )
+  }
+
   const customer = message.role === 'customer'
 
   return (
     <div className={customer ? 'flex justify-end' : 'flex justify-start'}>
       <div className="max-w-[85%] space-y-1">
         <div
-          className={
-            customer
-              ? 'flex items-center justify-end gap-2'
-              : 'flex items-center justify-start gap-2'
-          }
+          className={customer ? 'flex items-center justify-end gap-2' : 'flex items-center gap-2'}
         >
-          <span className="text-muted-foreground text-xs font-medium">
-            {customer ? 'Customer' : message.role === 'baz' ? 'Baz' : 'System'}
+          <span className="text-muted-foreground text-2xs font-medium">
+            {customer ? 'Customer' : 'Baz'} · {at}
           </span>
           {message.cards.map((card) => (
             <Badge key={card} variant="outline" className="text-2xs">
@@ -201,16 +155,86 @@ function Turn({ message }: { readonly message: AdminCase['conversation'][number]
             </Badge>
           ))}
         </div>
-        <div
-          className={
-            customer
-              ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2.5'
-              : 'bg-muted rounded-2xl rounded-bl-md px-4 py-2.5'
-          }
-        >
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        </div>
+        {/*
+          No bubble for nothing. A turn where Baz showed a card and said nothing is terse but
+          not broken — an empty grey rectangle is what makes it look broken.
+        */}
+        {message.content.trim().length > 0 && (
+          <div
+            className={
+              customer
+                ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2.5'
+                : 'bg-muted rounded-2xl rounded-bl-md px-4 py-2.5'
+            }
+          >
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Everything that happened to this case, in order (§5, Events tab).
+ *
+ * The spec asks for a Result column. There is not one: for almost every event the outcome is
+ * the event — "Mortgage approved" has no separate result — and a column of dashes would be
+ * worse than no column at all.
+ */
+function Events({ events }: { readonly events: AdminCase['events'] }): ReactNode {
+  if (events.length === 0) {
+    return (
+      <Empty className="border border-dashed py-12">
+        <EmptyHeader>
+          <EmptyTitle>Nothing has happened yet</EmptyTitle>
+          <EmptyDescription>Every significant change is recorded here. §52</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Events</CardTitle>
+        <CardDescription>
+          {events.length} recorded, newest first. Metrics are derived from these.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-20">Time</TableHead>
+              <TableHead>Event</TableHead>
+              <TableHead className="w-24">Source</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {events.map((event, index) => (
+              <TableRow key={`${event.at}-${String(index)}`}>
+                <TableCell className="text-muted-foreground tabular align-top text-xs">
+                  {event.at.slice(11, 19)}
+                </TableCell>
+                <TableCell className="align-top">
+                  <span className={event.signal ? 'text-sm font-medium' : 'text-sm'}>
+                    {event.describe}
+                  </span>
+                  {event.object.length > 0 && (
+                    <span className="text-muted-foreground block text-xs">{event.object}</span>
+                  )}
+                </TableCell>
+                <TableCell className="align-top">
+                  <Badge variant="outline" className="text-2xs">
+                    {event.actor}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   )
 }

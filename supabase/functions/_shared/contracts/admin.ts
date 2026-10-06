@@ -217,6 +217,20 @@ export const notificationSchema = z.object({
 
 export const adminCaseSchema = z.object({
   caseId: z.uuid(),
+  /**
+   * §5 — the identity panel: who this is and how long they have been here.
+   *
+   * There is no channel field because there is one surface, and no account because there is no
+   * sign-in. `daysActive` is how "returning" is answered honestly without an identity to track.
+   */
+  customer: z.object({
+    name: z.string().nullable(),
+    authLevel: z.enum(['anonymous', 'authenticated']),
+    firstSeen: z.string().nullable(),
+    lastSeen: z.string().nullable(),
+    daysActive: z.number().int(),
+    messages: z.number().int(),
+  }),
   facts: z.array(
     z.object({
       key: z.string(),
@@ -249,6 +263,8 @@ export const adminCaseSchema = z.object({
       describe: z.string(),
       /** True for the things worth watching happen: plans, milestones, check-ins, notices. */
       signal: z.boolean(),
+      /** What it was about — an application, a plan, a product. Empty when it was the case. */
+      object: z.string().default(''),
     }),
   ),
   /** §27 — needs the customer parked, and what would bring each one back. */
@@ -340,6 +356,7 @@ export const adminCaseSchema = z.object({
       role: z.enum(['customer', 'baz', 'system']),
       content: z.string(),
       cards: z.array(z.string()),
+      at: z.string(),
     }),
   ),
   planSteps: z.array(z.string()),

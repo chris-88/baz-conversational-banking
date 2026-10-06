@@ -156,6 +156,15 @@ function headlineCounts(counts: ReadonlyMap<string, number>): {
   }
 }
 
+/** What an event was about, from whatever the payload names. */
+function objectOf(payload: Record<string, unknown>): string {
+  for (const key of ['title', 'label', 'product', 'purpose', 'name']) {
+    const value = payload[key]
+    if (typeof value === 'string' && value.length > 0) return value.replaceAll('_', ' ')
+  }
+  return ''
+}
+
 Deno.serve(async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return errorResponse('bad_request', 'Use POST.')
@@ -967,8 +976,26 @@ Deno.serve(async (request: Request): Promise<Response> => {
         .eq('case_id', action.caseId)
         .order('created_at', { ascending: false })
 
+      /**
+       * How long they have been here, and whether they have come back.
+       *
+       * `daysActive` is the honest answer to "returning customer" in a prototype with no
+       * sign-in: distinct days on which they said something. One day is a first visit, more
+       * than one means they came back.
+       */
+      const spoken = loaded.messages.filter((message) => message.role === 'customer')
+      const days = new Set(spoken.map((message) => message.createdAt.slice(0, 10)))
+
       const inspected: AdminCase = {
         caseId: action.caseId,
+        customer: {
+          name: loaded.customerName,
+          authLevel: loaded.authLevel,
+          firstSeen: loaded.messages[0]?.createdAt ?? null,
+          lastSeen: loaded.messages.at(-1)?.createdAt ?? null,
+          daysActive: days.size,
+          messages: spoken.length,
+        },
         needs: candidates
           .filter((candidate) => candidate.confidence > 0 || candidate.state !== 'latent')
           .map((candidate) => ({
@@ -1046,6 +1073,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           role: message.role,
           content: message.content,
           cards: [...message.cards],
+          at: message.createdAt,
         })),
         planSteps: (plan?.steps ?? []).map((step) => `${step.title} — ${step.because}`),
         // Every figure here is computed by the plan engine, so the console and the customer
@@ -1126,6 +1154,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
           type: row.type,
           actor: row.actor,
           at: row.created_at,
+          // What it was about, where the payload says. Most events name the thing they changed.
+          object: objectOf(row.payload ?? {}),
           ...describeAdminEvent(row.type, row.payload ?? {}),
         })),
         parked,

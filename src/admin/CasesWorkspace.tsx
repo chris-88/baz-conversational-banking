@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react'
+import { useCallback } from 'react'
 import { useParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Skeleton } from '@/components/ui/skeleton'
+import { queryKeys } from '@/lib/queryKeys'
+import { adminApi } from '@/admin/adminClient'
+import { CaseContext } from '@/admin/CaseContext'
+import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { MessagesSquareIcon } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
@@ -37,6 +44,32 @@ export function CasesWorkspace({
   readonly onPeriodChange: (next: Period) => void
 }): ReactNode {
   const { caseId } = useParams<{ caseId: string }>()
+  const queryClient = useQueryClient()
+
+  /**
+   * One fetch for both panes.
+   *
+   * The conversation and the context are two views of the same case, and fetching them
+   * separately is two chances for them to disagree about what state it is in.
+   */
+  const inspection = useQuery({
+    queryKey: queryKeys.admin.caseInspection(caseId ?? ''),
+    queryFn: () => adminApi.inspect(caseId ?? ''),
+    enabled: caseId !== undefined,
+  })
+
+  const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'case'] })
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'cases'] })
+  }, [queryClient])
+
+  // The console follows the conversation as it happens, rather than needing a reload.
+  useRealtimeInvalidation(
+    ['messages', 'facts', 'applications', 'events', 'product_interests'],
+    refresh,
+  )
+
+  const inspected = inspection.data ?? null
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
@@ -62,29 +95,45 @@ export function CasesWorkspace({
         <ResizablePanel defaultSize="50" minSize="30">
           {caseId === undefined ? (
             <NothingSelected />
+          ) : inspected === null ? (
+            <Loading />
           ) : (
             // Keyed so switching case resets the tabs rather than keeping whichever one the
             // previous conversation happened to be open on.
-            // `@container`, so what is inside measures the pane rather than the window. A
-            // two-column note keyed to `lg:` stayed two-column in a 550px pane.
-            <div className="@container h-full overflow-y-auto p-4">
-              <CaseDetail key={caseId} />
-            </div>
+            <CaseDetail key={caseId} caseId={caseId} data={inspected} onChanged={refresh} />
           )}
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
+        {/*
+          The right pane answers "what do I need to know": about this customer when one is
+          selected, about everything when none is. Two questions, one place to look.
+        */}
         <ResizablePanel defaultSize="25" minSize="18" maxSize="40">
-          <div className="h-full overflow-y-auto p-3">
-            {data.activity.length > 0 ? (
-              <ActivityFeed activity={data.activity} />
-            ) : (
-              <ActivityPlaceholder />
-            )}
-          </div>
+          {inspected === null ? (
+            <div className="h-full overflow-y-auto p-3">
+              {data.activity.length > 0 ? (
+                <ActivityFeed activity={data.activity} />
+              ) : (
+                <ActivityPlaceholder />
+              )}
+            </div>
+          ) : (
+            <CaseContext key={caseId} data={inspected} />
+          )}
         </ResizablePanel>
       </ResizablePanelGroup>
+    </div>
+  )
+}
+
+function Loading(): ReactNode {
+  return (
+    <div className="space-y-3 p-4">
+      <Skeleton className="h-7 w-48" />
+      <Skeleton className="h-8 w-full" />
+      <Skeleton className="h-72 w-full" />
     </div>
   )
 }

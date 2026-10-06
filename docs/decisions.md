@@ -946,3 +946,16 @@ section.
   screen is handed a definite height and chooses — the workspace fills it and scrolls within its
   panes, a long reference screen overflows and scrolls. A wrapper that decided for them clipped
   the long ones instead of scrolling them.
+- **2026-10-06** — The case is fetched once by the workspace and shared with both panes. The
+  conversation and the context are two views of the same case, and fetching them separately is
+  two chances for them to disagree about what state it is in.
+- **2026-10-06** — The right pane answers "what do I need to know": about this customer when one
+  is selected, about everything when none is. The live feed is not lost, it is what that pane
+  says when nothing is open.
+- **2026-10-06** — The Events tab has no Result column, which §5 asks for. For almost every event
+  the outcome *is* the event — "Mortgage approved" has no separate result — and a column of
+  dashes is worse than no column. `object` was added instead, resolved from the payload, because
+  "which application" is the question the table could not answer.
+- **2026-10-06** — "Returning customer" is answered as distinct days on which they said something.
+  There is no sign-in and no identity across sessions, so anything stronger would be a guess
+  dressed as a fact.

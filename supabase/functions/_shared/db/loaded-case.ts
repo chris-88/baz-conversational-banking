@@ -48,6 +48,7 @@ export type LoadedMessage = {
   readonly content: string
   /** Types of the cards rendered with this turn, oldest first. */
   readonly cards: readonly string[]
+  readonly createdAt: string
 }
 
 export type LoadedEvent = {
