@@ -835,3 +835,11 @@ section.
   replies to one decision. A card that has committed also stays spent, and `decline_product` no
   longer writes a second event — metrics are derived from events, so a duplicate is not just
   noise on screen.
+- **2026-10-06** — Purge clears every conversation except the one on screen, anything marked
+  `presenter`, and anything somebody named. It used to delete `kind = 'audience'`, which matched
+  nothing once every visitor started getting an ordinary `customer` case — the button sat there
+  reporting "Purge 0" while test conversations piled up, and the help text beside it already
+  claimed to clear everything but the current one. The rule lives in `domain/case.ts` and takes
+  an explicit `named` flag rather than reading a label, because the console is sent a display
+  label that falls back to "Unnamed · 1a2b3c4d": sniffing it there found a name on every case
+  and spared the lot. Same rule, same answer, on both sides.

@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileCheckIcon, PiggyBankIcon, PowerIcon, RotateCcwIcon, SendIcon, ShieldAlertIcon, ZapIcon } from 'lucide-react'
 import { PRESET_NAMES, SLIDER_NAMES, type PresetName } from '@llm/persona.ts'
+import { isPurgeable } from '@domain/case.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,7 +61,14 @@ export function AdminOverview({ section }: { section?: Section }): ReactNode {
     case 'cases':
       return <Cases cases={data.cases} metrics={data.metrics} />
     case 'audience':
-      return <Audience cases={data.cases} metrics={data.metrics} onChanged={refresh} />
+      return (
+        <Audience
+          cases={data.cases}
+          metrics={data.metrics}
+          focusCaseId={data.focusCaseId}
+          onChanged={refresh}
+        />
+      )
     case 'overview':
       return <Overview data={data} onChanged={refresh} />
   }
@@ -371,54 +379,71 @@ function CaseList({
   )
 }
 
-/** §44, §47 — what the room is doing, and how to clear it. */
+/** §44, §47 — the conversations that have piled up, and how to clear them out. */
 function Audience({
   cases,
   metrics,
+  focusCaseId,
   onChanged,
 }: {
   cases: Awaited<ReturnType<typeof adminApi.overview>>['cases']
   metrics: Awaited<ReturnType<typeof adminApi.overview>>['metrics']
+  focusCaseId: string | null
   onChanged: () => void
 }): ReactNode {
-  const audience = cases.filter((item) => item.kind === 'audience')
-  const purge = useMutation({ mutationFn: adminApi.purgeAudience, onSuccess: onChanged })
+  // The same rule the server applies, imported rather than restated, so the number on the
+  // button is exactly the set of conversations that disappear.
+  const doomed = cases.filter((item) => isPurgeable(item, focusCaseId))
+  const purge = useMutation({
+    mutationFn: () => adminApi.purgeCases(focusCaseId ?? undefined),
+    onSuccess: onChanged,
+  })
 
   return (
     <div className="space-y-6">
       <Metrics metrics={metrics} />
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Audience conversations</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Conversations</h2>
           <Button
             size="sm"
             variant="outline"
-            disabled={purge.isPending || audience.length === 0}
+            disabled={purge.isPending || doomed.length === 0}
             onClick={() => purge.mutate()}
           >
-            {purge.isPending ? 'Clearing…' : `Purge ${String(audience.length)}`}
+            {purge.isPending ? 'Clearing…' : `Purge ${String(doomed.length)}`}
           </Button>
         </div>
         <Card className="gap-0 divide-y p-0">
-          {audience.length === 0 && (
+          {cases.length === 0 && (
             <p className="text-muted-foreground p-4 text-sm">Nobody has tried it yet.</p>
           )}
-          {audience.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 p-4">
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {item.label ?? item.id.slice(0, 8)}
+          {cases.map((item) => {
+            const kept = !doomed.some((candidate) => candidate.id === item.id)
+
+            return (
+              <div key={item.id} className="flex items-center gap-3 p-4">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {item.label ?? item.id.slice(0, 8)}
+                  </span>
+                  <span className="text-muted-foreground tabular block text-xs">
+                    {item.applications} applications · {item.messages} messages
+                  </span>
                 </span>
-                <span className="text-muted-foreground tabular block text-xs">
-                  {item.applications} applications · {item.messages} messages
-                </span>
-              </span>
-            </div>
-          ))}
+                {/* Marked on each row rather than only in the footnote, so nothing goes by
+                    surprise and nothing expected to go quietly stays. */}
+                <Badge variant={kept ? 'secondary' : 'outline'} className="text-2xs shrink-0">
+                  {kept ? (item.id === focusCaseId ? 'on screen' : 'kept') : 'will be cleared'}
+                </Badge>
+              </div>
+            )
+          })}
         </Card>
         <p className="text-muted-foreground text-2xs">
-          Clears every conversation except the one on screen. §45
+          Deletes every conversation except the one on screen, along with its facts, applications
+          and plans. This cannot be undone. §47
         </p>
       </section>
     </div>

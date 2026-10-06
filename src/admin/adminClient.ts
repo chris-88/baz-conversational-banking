@@ -22,7 +22,8 @@ export const adminApi = {
   inspect: async (caseId: string): Promise<AdminCase> =>
     adminCaseSchema.parse(await call({ action: 'inspect_case', caseId })),
   resetCase: () => call({ action: 'reset_case' }),
-  purgeAudience: () => call({ action: 'purge_audience' }),
+  purgeCases: (keepCaseId?: string) =>
+    call({ action: 'purge_cases', ...(keepCaseId === undefined ? {} : { keepCaseId }) }),
   setSavingsBalance: (caseId: string, amount: number) =>
     call({ action: 'set_savings_balance', caseId, amount }) as Promise<{
       amount: number
