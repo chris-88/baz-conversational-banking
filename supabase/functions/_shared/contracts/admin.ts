@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CASE_KINDS } from '../domain/case.ts'
+import { CASE_KINDS, CASE_STATUSES } from '../domain/case.ts'
 
 /** The windows the console can look at. */
 export const PERIODS = ['7d', '30d', '90d', 'all'] as const
@@ -157,6 +157,10 @@ export const adminOverviewSchema = z.object({
       applications: z.number().int(),
       messages: z.number().int(),
       updatedAt: z.string(),
+      /** §5 — what this case needs from whoever is watching. Derived, never stored. */
+      status: z.enum(CASE_STATUSES).default('new'),
+      /** The last thing said, trimmed to a line, for the list. */
+      latest: z.string().default(''),
     }),
   ),
   /**

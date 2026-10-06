@@ -8,7 +8,7 @@ import {
   type AdminCase,
   type AdminOverview,
 } from '../_shared/contracts/admin.ts'
-import type { CaseKind } from '../_shared/domain/case.ts'
+import { caseStatus, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import type { Product } from '../_shared/domain/journey.ts'
@@ -345,9 +345,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       // Two queries, not two per case. This is a console someone drives live, and the N+1
       // version took long enough to look broken.
-      const [allApps, allMessages, allNames] = await Promise.all([
-        admin.from('applications').select('case_id').in('case_id', caseIds),
-        admin.from('messages').select('case_id').in('case_id', caseIds),
+      const [allApps, allMessages, allNames, allBlocked, allCheckins] = await Promise.all([
+        admin.from('applications').select('case_id, state').in('case_id', caseIds),
+        // Role and content too: the list shows the latest thing said, and the status rules count
+        // only what the customer said rather than everything in the transcript.
+        admin
+          .from('messages')
+          .select('case_id, role, content, created_at')
+          .in('case_id', caseIds)
+          .order('created_at', { ascending: true }),
         // Whoever the case is actually about. One query for every case, same as the others.
         admin
           .from('facts')
@@ -356,6 +362,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
           .is('superseded_by', null)
           .in('case_id', caseIds)
           .order('captured_at', { ascending: true }),
+        admin.from('events').select('case_id').eq('type', 'request_blocked').in('case_id', caseIds),
+        // A check-in the bank promised and has not kept is the clearest "somebody look at this".
+        admin
+          .from('plan_checkins')
+          .select('state, plans!inner(case_id)')
+          .eq('state', 'due'),
       ])
 
       const tally = (rows: unknown): Map<string, number> => {
@@ -368,6 +380,36 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       const appCounts = tally(allApps.data)
       const messageCounts = tally(allMessages.data)
+
+      // Everything the status rules read, grouped by case in one pass each.
+      const appStates = new Map<string, { state: string }[]>()
+      for (const row of (allApps.data ?? []) as { case_id: string; state: string }[]) {
+        appStates.set(row.case_id, [...(appStates.get(row.case_id) ?? []), { state: row.state }])
+      }
+
+      const customerCounts = new Map<string, number>()
+      const latest = new Map<string, string>()
+      for (const row of (allMessages.data ?? []) as {
+        case_id: string
+        role: string
+        content: string
+      }[]) {
+        if (row.role === 'customer') {
+          customerCounts.set(row.case_id, (customerCounts.get(row.case_id) ?? 0) + 1)
+        }
+        // Ordered oldest first, so the last one written wins.
+        if (row.role !== 'system') latest.set(row.case_id, row.content)
+      }
+
+      const blockedCases = new Set(
+        ((allBlocked.data ?? []) as { case_id: string }[]).map((row) => row.case_id),
+      )
+
+      const dueCases = new Set(
+        ((allCheckins.data ?? []) as { plans?: { case_id?: string } }[])
+          .map((row) => row.plans?.case_id)
+          .filter((id): id is string => typeof id === 'string'),
+      )
 
       /**
        * A list of eleven rows all called "Audience case" is unusable the moment more than one
@@ -392,6 +434,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
         applications: appCounts.get(row.id) ?? 0,
         messages: messageCounts.get(row.id) ?? 0,
         updatedAt: row.updated_at,
+        status: caseStatus({
+          everBlocked: blockedCases.has(row.id),
+          applications: appStates.get(row.id) ?? [],
+          checkinDue: dueCases.has(row.id),
+          customerMessages: customerCounts.get(row.id) ?? 0,
+        }),
+        // Trimmed here rather than in the browser: the list shows one line of it and there is no
+        // reason to send a whole turn across the wire for every case.
+        latest: (latest.get(row.id) ?? '').replace(/\s+/g, ' ').slice(0, 140),
       }))
 
       /**

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +20,16 @@ export function useRealtimeInvalidation(
   enabled = true,
 ): void {
   const queries = useQueryClient()
+
+  /**
+   * One channel per caller, not one per table list.
+   *
+   * `client.channel(topic)` hands back the existing channel when the topic matches, and adding
+   * handlers to a channel that has already subscribed throws. Two screens watching the same
+   * tables used to be fine because only one was ever mounted; the moment the case pane sat
+   * inside the case list, the second one threw on mount and stopped updating.
+   */
+  const instance = useId()
 
   // Joined so the effect keys on the contents rather than a fresh array each render.
   const key = tables.join(',')
@@ -47,7 +57,7 @@ export function useRealtimeInvalidation(
       if (token !== undefined) await client.realtime.setAuth(token)
       if (cancelled) return
 
-      channel = client.channel(`watch:${key}`)
+      channel = client.channel(`watch:${instance}:${key}`)
 
       for (const table of key.split(',')) {
         channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
@@ -63,5 +73,5 @@ export function useRealtimeInvalidation(
       if (channel !== null) void client.removeChannel(channel)
     }
     // `client` is stable; `invalidate` is the caller's concern to keep stable.
-  }, [key, enabled, invalidate, queries])
+  }, [key, instance, enabled, invalidate, queries])
 }

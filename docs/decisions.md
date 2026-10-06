@@ -933,3 +933,16 @@ section.
   change. A prototype a day old is in the middle case for every metric, and "0%" would claim
   nothing had happened. The arrow is never coloured: blocked requests falling is good and
   conversations falling is not, and the card cannot know which it is holding.
+- **2026-10-06** — Case status is derived on every read: blocked, then needs review, then
+  completed, then in progress. A case that was blocked *and* has an application waiting reports
+  as blocked, because that is the thing somebody should look at. `new` is a fifth value and not a
+  tab — every visitor gets a case the moment they arrive, so most are empty, and counting those
+  as conversations would make the busiest tab the least useful.
+- **2026-10-06** — `useRealtimeInvalidation` opens one channel per caller. `client.channel(topic)`
+  returns the existing channel when the topic matches, and adding handlers after `subscribe()`
+  throws — which never happened while only one screen was mounted, and happened immediately once
+  the case pane sat inside the case list.
+- **2026-10-06** — The console is a fixed app shell: the viewport height, scrolling inside. A
+  screen is handed a definite height and chooses — the workspace fills it and scrolls within its
+  panes, a long reference screen overflows and scrolls. A wrapper that decided for them clipped
+  the long ones instead of scrolling them.

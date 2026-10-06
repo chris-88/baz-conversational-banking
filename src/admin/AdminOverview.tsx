@@ -5,8 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { queryKeys } from '@/lib/queryKeys'
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { adminApi } from '@/admin/adminClient'
-import { CasesScreen } from '@/admin/CasesScreen'
-import { CaseDetail } from '@/admin/CaseDetail'
+import { CasesWorkspace } from '@/admin/CasesWorkspace'
 import { EngineScreen } from '@/admin/EngineScreen'
 import { GuardrailsScreen } from '@/admin/GuardrailsScreen'
 import { PersonaControls } from '@/admin/PersonaControls'
@@ -22,7 +21,7 @@ import { usePeriod } from '@/admin/usePeriod'
 type Section = 'cases' | 'case' | 'guardrails' | 'persona' | 'engine'
 
 /** The screens that read the shared overview. The other two fetch their own, or nothing. */
-type OverviewSection = Extract<Section, 'cases' | 'guardrails' | 'persona'>
+type OverviewSection = Extract<Section, 'cases' | 'case' | 'guardrails' | 'persona'>
 
 export function AdminOverview({ section }: { readonly section?: Section }): ReactNode {
   /**
@@ -32,7 +31,6 @@ export function AdminOverview({ section }: { readonly section?: Section }): Reac
    * neither should sit behind a spinner waiting for a case list it will never read.
    */
   if (section === 'engine') return <EngineScreen />
-  if (section === 'case') return <CaseDetail />
 
   return <WithOverview section={section ?? 'cases'} />
 }
@@ -89,9 +87,9 @@ function WithOverview({ section }: { readonly section: OverviewSection }): React
       return (
         <GuardrailsScreen blocked={data.blocked} killSwitch={data.killSwitch} onChanged={refresh} />
       )
+    // Both render the workspace; the route decides which conversation is open in it.
     case 'cases':
-      return (
-        <CasesScreen data={data} period={period} onPeriodChange={setPeriod} onChanged={refresh} />
-      )
+    case 'case':
+      return <CasesWorkspace data={data} period={period} onPeriodChange={setPeriod} />
   }
 }

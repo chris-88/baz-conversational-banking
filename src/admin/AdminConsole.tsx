@@ -105,8 +105,17 @@ export function AdminConsole(): ReactNode {
   }
 
   return (
-    <div className="bg-sidebar min-h-dvh">
-      <SidebarProvider>
+    /*
+     * Fixed to the viewport, with the scrolling inside it.
+     *
+     * `min-h-dvh` let the whole page grow, so a three-pane workspace meant for one screen
+     * produced a 2,200px page with its own panes scrolling inside it — two scrollbars, neither
+     * of them where you reach for one.
+     */
+    <div className="bg-sidebar h-dvh overflow-hidden">
+      {/* `h-full min-h-0` overrides the provider's own `min-h-svh`, which otherwise lets the
+          layout grow past the screen and get clipped rather than scroll. */}
+      <SidebarProvider className="h-full min-h-0">
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <SidebarMenu>
@@ -172,7 +181,7 @@ export function AdminConsole(): ReactNode {
           <SidebarRail />
         </Sidebar>
 
-        <SidebarInset className="min-w-0">
+        <SidebarInset className="min-h-0 min-w-0">
           <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 !h-4" />
@@ -184,11 +193,22 @@ export function AdminConsole(): ReactNode {
             one's scroll, which on a long case page lands you in the middle of somebody else's
             conversation.
           */}
-          <main className="min-w-0 flex-1 p-4 lg:p-6" key={pathname}>
-            <div className="mx-auto w-full max-w-7xl">
+          {/*
+            A flex column with `min-h-0`, so a screen that wants to fill the space can — the
+            workspace sizes its panes from here rather than guessing the chrome's height.
+          */}
+          {/*
+            The shell hands every screen a definite height and lets it choose what to do with
+            it: the workspace fills it with `h-full` and scrolls inside its own panes, while a
+            long reference screen overflows and scrolls here. A wrapper that did the deciding
+            clipped the long ones instead.
+          */}
+          {/* A div, not a main: `SidebarInset` is already the page's `<main>`. */}
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-4 lg:p-6" key={pathname}>
+            <div className="mx-auto h-full w-full max-w-[110rem] overflow-y-auto">
               <Outlet />
             </div>
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </div>

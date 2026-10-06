@@ -35,7 +35,7 @@ export function HandoffNote({ handoff }: { readonly handoff: AdminCase['handoff'
   const body = handoff.sections.filter((section) => !section.caution)
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
+    <div className="@3xl:grid-cols-[1fr_20rem] grid items-start gap-6">
       <Card className="min-w-0">
         <CardContent className="space-y-6">
           {body.map((section, index) => (
@@ -60,7 +60,7 @@ export function HandoffNote({ handoff }: { readonly handoff: AdminCase['handoff'
         </CardContent>
       </Card>
 
-      <div className="space-y-4 lg:sticky lg:top-20">
+      <div className="@3xl:sticky @3xl:top-4 space-y-4">
         <Button variant="outline" className="w-full" onClick={copy}>
           {copied ? <CheckIcon /> : <CopyIcon />}
           {copied ? 'Copied to clipboard' : 'Copy the note'}
