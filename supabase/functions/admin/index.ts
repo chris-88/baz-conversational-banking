@@ -18,6 +18,8 @@ import { loadPlans, planContextFor, reconcilePlans } from '../_shared/db/plans.t
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { evaluateNeeds } from '../_shared/domain/needs/engine.ts'
+import { contentionIn, evaluateGoals, matchedClusters } from '../_shared/domain/goals/engine.ts'
+import { goalContextFor } from '../_shared/db/goals.ts'
 import { buildPlan } from '../_shared/domain/needs/plan.ts'
 
 /**
@@ -813,6 +815,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const candidates = needContext === null ? [] : evaluateNeeds(needContext)
       const plan = needContext === null ? null : buildPlan(needContext, candidates)
 
+      // Plans are loaded once and shared: the goal engine treats a goal with a plan as settled
+      // rather than a candidate, so it has to see the same plans the console displays.
+      const loadedPlans = await loadPlans(admin, action.caseId, loaded)
+      const goalContext = goalContextFor(loaded, loadedPlans, { sensitiveDisclosure: false })
+      const goalCandidates = goalContext === null ? [] : evaluateGoals(goalContext)
+
       const watchRows = await admin
         .from('plan_watches')
         .select('describe, met_at, created_at')
@@ -831,10 +839,42 @@ Deno.serve(async (request: Request): Promise<Response> => {
             evidence: candidate.evidence.map((item) => item.describe),
             reason: candidate.reason,
           })),
+        goals: goalCandidates.map((candidate) => ({
+          id: candidate.goal.id,
+          name: candidate.goal.name,
+          category: candidate.goal.category,
+          tier: candidate.tier,
+          confidence: candidate.confidence,
+          evidence: candidate.evidence.map((item) => item.describe),
+          clusters: [...candidate.clusters],
+          reason: candidate.reason,
+          revisitWhen: candidate.revisitWhen,
+          missing: candidate.missing.map((key) => factCatalogue[key]?.label ?? key),
+        })),
+        lifeEvents:
+          goalContext === null
+            ? []
+            : matchedClusters(goalContext).map((cluster) => ({
+                id: cluster.id,
+                name: cluster.name,
+                because:
+                  cluster.signals.find((signal) => signal.when(goalContext))?.describe ??
+                  'their situation',
+                note: cluster.note,
+              })),
+        contentions:
+          goalContext === null
+            ? []
+            : contentionIn(goalContext).map((contention) => ({
+                resource: contention.resource,
+                describe: contention.describe,
+                needed: contention.needed,
+                available: contention.available,
+              })),
         planSteps: (plan?.steps ?? []).map((step) => `${step.title} — ${step.because}`),
         // Every figure here is computed by the plan engine, so the console and the customer
         // are looking at the same arithmetic (§40).
-        plans: (await loadPlans(admin, action.caseId, loaded)).map(({ plan: p, progress }) => ({
+        plans: loadedPlans.map(({ plan: p, progress }) => ({
           id: p.id,
           title: p.title,
           status: p.status,

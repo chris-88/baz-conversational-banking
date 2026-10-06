@@ -10,6 +10,7 @@ import { StatusDot } from '@/components/StatusDot'
 import { queryKeys } from '@/lib/queryKeys'
 import { adminApi } from '@/admin/adminClient'
 import { PlanControls } from '@/admin/PlanControls'
+import { GoalInsight } from '@/admin/GoalInsight'
 import type { ApplicationState } from '@domain/state-machine.ts'
 
 const EVENT_LABELS: Record<string, string> = {
@@ -153,6 +154,12 @@ export function CaseInspector({ caseId }: { caseId: string }): ReactNode {
       </section>
 
       <PlanControls caseId={caseId} plans={data.plans} onChanged={refresh} />
+
+      {/*
+        Goals before needs, because that is the hierarchy: a goal is where they are going, a
+        need is what is required along the way (§3).
+      */}
+      <GoalInsight data={data} />
 
       {/* §27 — a parked need is otherwise invisible: it looks exactly like one never raised. */}
       {data.parked.length > 0 && (

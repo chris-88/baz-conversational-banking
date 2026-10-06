@@ -172,12 +172,36 @@ describe('the customer decides what the conversation is about', () => {
     expect(inTier(candidates, 'primary')).toHaveLength(1)
   })
 
-  it('falls back to the best-evidenced goal when nothing has been declared', () => {
+  /**
+   * A circumstance is not a declaration. Somebody having a new baby has told the bank a fact
+   * about their life, not what they want to do about it — and "what they came in about" is a
+   * claim about what they said.
+   */
+  it('has no primary goal when the customer has not named one', () => {
     const candidates = evaluateGoals(
       contextOf({ 'lifeEvent.newChild': true, 'expenditure.monthlyChildcare': 900 }),
     )
 
-    expect(primaryGoal(candidates)?.goal.id).toBe('prepare_for_baby')
+    expect(primaryGoal(candidates)).toBeNull()
+    // Still plenty to work with: the goals are recognised, just not spoken for.
+    expect(ids(worthRaising(candidates))).toContain('prepare_for_baby')
+  })
+
+  it('does not promote an unnamed goal when the one they named is already planned', () => {
+    const candidates = evaluateGoals(
+      contextOf(
+        {
+          'goals.primaryObjective': 'we want to buy our first home',
+          'housing.firstTimeBuyer': true,
+          'household.buyingWith': 'partner',
+        },
+        { plans: [{ goal: 'buy_first_home', status: 'active', targetAmount: 60_000, short: 8_000 }] },
+      ),
+    )
+
+    expect(find(candidates, 'buy_first_home').tier).toBe('planned')
+    expect(primaryGoal(candidates)).toBeNull()
+    expect(find(candidates, 'shared_household_finances').tier).toBe('strong_related')
   })
 })
 

@@ -110,11 +110,14 @@ export function evaluateGoals(context: GoalContext): readonly GoalCandidate[] {
   })
 
   /**
-   * One primary at most, and it is whichever goal the customer named.
+   * One primary at most, and only ever a goal the customer named themselves.
    *
-   * Ranking by confidence instead would hand "primary" to whichever goal happened to collect the
-   * most corroborating circumstances, which is not the same as what they came in about. Only
-   * when nobody has declared anything does the best-evidenced goal take it.
+   * There is deliberately no fallback to the best-evidenced goal. "What they came in about" is a
+   * claim about what they said, and ranking by confidence would put those words in their mouth —
+   * the console showed "organise money together" under that heading for a customer who had only
+   * ever mentioned buying a house, because the house already had a plan and something had to come
+   * first. Nothing has to come first. A case with no stated objective has no primary goal, and
+   * the related ones are still there to work with.
    */
   const contenders = unranked.filter(
     (item) =>
@@ -125,14 +128,14 @@ export function evaluateGoals(context: GoalContext): readonly GoalCandidate[] {
       !item.goal.deferrals.some((rule) => rule.when(context)),
   )
 
-  const declaredContenders = contenders.filter((item) => item.declared)
   const primary =
-    (declaredContenders.length > 0 ? declaredContenders : contenders).sort(
+    contenders
+      .filter((item) => item.declared)
       // Corroboration breaks the tie, because a declared goal is already at full confidence and
       // several can be. Of two goals the customer named, the one the rest of the case supports is
       // the one they are actually working on.
-      (a, b) => b.confidence - a.confidence || b.evidence.length - a.evidence.length,
-    )[0] ?? null
+      .sort((a, b) => b.confidence - a.confidence || b.evidence.length - a.evidence.length)[0] ??
+    null
 
   return unranked.map((item): GoalCandidate => {
     const { goal, evidence, confidence, cluster, missing } = item

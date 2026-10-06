@@ -228,6 +228,43 @@ export const adminCaseSchema = z.object({
       reason: z.string().nullable(),
     }),
   ),
+  /**
+   * What the Goal Engine makes of this case: every goal in the catalogue, where it stands, and
+   * the evidence behind it.
+   *
+   * All of them, including the ones nothing points at. "Why was this never mentioned to me" is
+   * as fair a question as "why was this suggested", and a console that can only answer the
+   * second is a console that cannot show the engine is making decisions rather than guesses.
+   */
+  goals: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      category: z.string(),
+      tier: z.string(),
+      confidence: z.number(),
+      evidence: z.array(z.string()),
+      /** Life events that contributed, so "because you mentioned a baby" is answerable. */
+      clusters: z.array(z.string()),
+      reason: z.string().nullable(),
+      revisitWhen: z.string().nullable(),
+      /** Fact labels the goal still needs before it could be planned properly. */
+      missing: z.array(z.string()),
+    }),
+  ),
+  /** §11 — the life events the case evidences, with the caution each one carries. */
+  lifeEvents: z.array(
+    z.object({ id: z.string(), name: z.string(), because: z.string(), note: z.string().nullable() }),
+  ),
+  /** §10 — two goals laying claim to the same money. Raised, never resolved. */
+  contentions: z.array(
+    z.object({
+      resource: z.string(),
+      describe: z.string(),
+      needed: z.number(),
+      available: z.number(),
+    }),
+  ),
   planSteps: z.array(z.string()),
   /** §38 — every plan on the case, as the engine currently computes it. */
   plans: z.array(
