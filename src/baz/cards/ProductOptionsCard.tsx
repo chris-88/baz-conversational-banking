@@ -40,9 +40,20 @@ export function ProductOptionsCard({
     fn: ((products: readonly string[]) => Promise<void> | void) | undefined,
     products: readonly string[],
   ) => {
-    if (!fn || products.length === 0) return
+    if (!fn || products.length === 0 || busy) return
     setBusy(true)
-    void Promise.resolve(fn(products)).finally(() => setBusy(false))
+
+    /**
+     * A card that has committed stays spent.
+     *
+     * `busy` used to clear on completion, which put a live "Not right now" back on screen while
+     * Baz was still answering the first one. Choosing and declining are decisions, not controls,
+     * and the card stays in the transcript afterwards as a record of what was decided. Only a
+     * failure gives it back, because then nothing was decided.
+     */
+    void Promise.resolve(fn(products)).catch(() => {
+      setBusy(false)
+    })
   }
 
   return (

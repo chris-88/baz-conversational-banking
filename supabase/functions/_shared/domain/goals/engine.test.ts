@@ -13,7 +13,7 @@ import {
 } from './engine.ts'
 import { goalCatalogue } from './catalogue.ts'
 import { lifeEventClusters } from './clusters.ts'
-import { GOAL_IDS, type GoalCandidate, type GoalContext, type GoalId } from './types.ts'
+import { GOAL_IDS, GOAL_THRESHOLDS, type GoalCandidate, type GoalContext, type GoalId } from './types.ts'
 import { needCatalogue } from '../needs/catalogue.ts'
 import { factCatalogue } from '../facts.ts'
 
@@ -464,5 +464,69 @@ describe('§21: a new baby, separate money, and six months from a deposit', () =
     // cannot be understood without it.
     expect(primaryGoal(candidates)?.missing).toContain('income.annualBasic')
     expect(primaryGoal(candidates)?.missing).not.toContain('housing.purchasePrice')
+  })
+})
+
+/**
+ * Discovery depth — what `show_product_options` gates on.
+ *
+ * Reported from a live test: a customer opened with "I'm just looking to have a broad
+ * conversation about my financial position", said they were married with a baby coming, renting
+ * and €46,000 saved, and was shown a mortgage card in the same turn Baz was still asking them
+ * what price range they had in mind. Being certain somebody needs a mortgage is not the same as
+ * understanding their position, and the gate was only testing the first.
+ */
+describe('knowing what a goal needs before acting on it', () => {
+  const understood = (candidate: GoalCandidate): boolean =>
+    candidate.missing.length <= Math.floor(candidate.goal.informationNeeded.length / 2)
+
+  it('is not satisfied by being certain what they need', () => {
+    const early = evaluateGoals(
+      contextOf({
+        'goals.primaryObjective':
+          'we want to understand mortgages and how we can build towards moving house',
+        'housing.currentTenure': 'renting',
+        'assets.depositAmount': 46_000,
+        'lifeEvent.newChild': true,
+        'identity.maritalStatus:primary': 'married',
+      }),
+    )
+
+    const home = find(early, 'buy_first_home')
+    // Certain, and nowhere near ready: nothing is known about income, price or timing.
+    expect(home.confidence).toBeGreaterThanOrEqual(GOAL_THRESHOLDS.strong)
+    expect(understood(home)).toBe(false)
+    expect(home.missing).toContain('income.annualBasic')
+    expect(home.missing).toContain('housing.purchasePrice')
+  })
+
+  it('is satisfied once the case can answer most of what the goal needs', () => {
+    const later = evaluateGoals(
+      contextOf({
+        'goals.primaryObjective': 'we want to buy our first home',
+        'housing.currentTenure': 'renting',
+        'housing.purchasePrice': 600_000,
+        'assets.depositAmount': 46_000,
+        'goals.monthlySaving': 2_300,
+        'income.annualBasic:primary': 92_000,
+        'household.buyingWith': 'partner',
+      }),
+    )
+
+    expect(understood(find(later, 'buy_first_home'))).toBe(true)
+  })
+
+  /** The question Baz asks next should be the one the goal is actually missing. */
+  it('names what is still unknown, so the next question is not a guess', () => {
+    const candidates = evaluateGoals(
+      contextOf({
+        'goals.primaryObjective': 'we want to buy our first home',
+        'assets.depositAmount': 46_000,
+      }),
+    )
+
+    expect(worthRaising(candidates, 1)[0]?.missing).toEqual(
+      expect.arrayContaining(['housing.purchasePrice', 'income.annualBasic', 'goals.monthlySaving']),
+    )
   })
 })

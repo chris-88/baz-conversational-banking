@@ -1,13 +1,13 @@
 # Baz
 ## A personal banker for everyone.
 
-> **What if digital banking didn't just let customers use the bank — what if it understood what they were trying to achieve and helped them get there?**
+> What if digital banking didn't just let customers use the bank, what if it understood what they were trying to achieve and helped them get there?
 
 Baz is an experimental AI-powered relationship layer for retail banking.
 
 It is an attempt to answer a simple question:
 
-> **Can AI give every retail customer the kind of continuity, context and personal service that has traditionally only been possible in private banking?**
+> Can AI give every retail customer the kind of continuity, context and personal service that has traditionally only been possible in private banking?
 
 We think it can.
 
@@ -41,7 +41,7 @@ If you've just had a baby, got married and are trying to buy your first home, th
 
 The customer sees one thing:
 
-> **My life has changed. Help me work out what I need to do.**
+> My life has changed. Help me work out what I need to do.
 
 That is the gap Baz is exploring.
 
@@ -133,7 +133,7 @@ And perhaps:
 
 Not an appointment with a member of staff.
 
-An appointment with **Baz**.
+An conversation with **Baz**.
 
 ---
 
@@ -149,13 +149,13 @@ The customer says:
 
 The plan updates.
 
-Months later, the deposit reaches the agreed target.
+Months later, the deposit reaches the customers target.
 
 Baz can come back:
 
-> You've reached the €60,000 deposit target we set.
+> You've reached the €60,000 deposit target you set.
 >
-> When we last spoke, we agreed this would be the point to review your mortgage readiness.
+> When we last spoke, you agreed this would be the point to review your mortgage readiness.
 >
 > Want to do that now?
 
@@ -179,11 +179,11 @@ Digital banking added:
 
 > **Products**
 
-Baz introduces:
+Baz discovers:
 
 > **Intent**
 
-And the Goal Engine introduces:
+And the *Goal Engine* introduces:
 
 > **Trajectory**
 
@@ -197,7 +197,7 @@ The relationship starts to answer four much more useful questions:
 
 > **When should we speak again?**
 
-That is what we mean by relationship banking.
+That is what we mean by conversational relationship banking.
 
 ---
 
@@ -346,11 +346,7 @@ Later:
 
 > When we were preparing your mortgage, you mentioned around €15,000 of work on the house. Now that the mortgage has completed, do you still want to look at that?
 
-That's cross-selling.
-
-But it doesn't feel like cross-selling.
-
-It feels like:
+That's not cross-selling, it's supporting the customers real financial needs, and importantly to the customer it feels like:
 
 > **the bank remembered.**
 
@@ -896,7 +892,7 @@ That is the opportunity we're exploring.
 
 This project started with a question:
 
-> Can we make applying for several banking products conversational?
+> Can we make applying for several banking products conversationally?
 
 It has become a bigger one:
 

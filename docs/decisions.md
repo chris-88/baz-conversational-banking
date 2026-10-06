@@ -821,3 +821,17 @@ section.
   said yes it was Baz's estimate from the purchase price; once agreed, it is something they told
   the bank, so the deposit engine stops re-deriving it and the "target defined" milestone can be
   evidenced rather than ticked.
+- **2026-10-06** — Product options are gated on understanding the customer's position, not on a
+  need being established. The two were conflated: "is a need established" is answered the moment
+  somebody says the word mortgage, so a customer who had asked for a broad conversation about
+  their whole position got a mortgage card in the same turn Baz was still asking what price range
+  they had in mind. The gate is now the Goal Engine's `missing` — most of what the leading goal
+  needs to know has to be answerable — and the refusal names the specific gaps, so the next
+  question is targeted rather than generic. Patience raised from 4 customer turns to 7; four was
+  two exchanges.
+- **2026-10-06** — `send` guards re-entry on a ref, not on React state. `streaming` is still
+  false for every handler that runs before the next render, so two taps on a card inside one tick
+  both passed and the customer saw four "noted, I'll leave that" messages and five near-identical
+  replies to one decision. A card that has committed also stays spent, and `decline_product` no
+  longer writes a second event — metrics are derived from events, so a duplicate is not just
+  noise on screen.

@@ -19,6 +19,16 @@ export function useConversation(caseId: string | null) {
   const [error, setError] = useState<string | null>(null)
   const counter = useRef(0)
 
+  /**
+   * The same flag, synchronously.
+   *
+   * `streaming` is React state, so it is still false for every handler that runs before the
+   * next render. Two taps on a card inside one tick therefore both passed the guard, and the
+   * customer got four "noted, I'll leave that" messages and five near-identical replies to a
+   * single decision. A ref flips immediately, so the second tap has something true to read.
+   */
+  const inFlight = useRef(false)
+
   const nextId = () => {
     counter.current += 1
     return `entry-${String(counter.current)}`
@@ -26,8 +36,9 @@ export function useConversation(caseId: string | null) {
 
   const send = useCallback(
     async (message: string, trigger: 'message' | 'opening' | 'return' = 'message') => {
-      if (!caseId || streaming) return
+      if (!caseId || inFlight.current) return
 
+      inFlight.current = true
       setError(null)
       setStreaming(true)
 
@@ -80,10 +91,11 @@ export function useConversation(caseId: string | null) {
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Something went wrong.')
       } finally {
+        inFlight.current = false
         setStreaming(false)
       }
     },
-    [caseId, streaming],
+    [caseId],
   )
 
   /** Clears the transcript, for when the case it belonged to no longer exists. */

@@ -39,8 +39,8 @@ import {
   reconcilePlans,
 } from '../_shared/db/plans.ts'
 import { blueprintFor } from '../_shared/domain/goals/catalogue.ts'
+import { worthRaising, wouldContend } from '../_shared/domain/goals/engine.ts'
 import { planDraftFor } from '../_shared/domain/goals/plan.ts'
-import { wouldContend } from '../_shared/domain/goals/engine.ts'
 import { describeGoals, goalContextFor } from '../_shared/db/goals.ts'
 import { depositGap } from '../_shared/domain/needs/catalogue.ts'
 import type { PlanGoal } from '../_shared/domain/plans/types.ts'
@@ -71,10 +71,13 @@ const ENABLED_TOOLS: readonly ToolName[] = [
 const INVITE_CARD_WINDOW = 8
 
 /**
- * A customer who will not answer questions must still be able to get somewhere, so the needs
- * gate lifts once they have had their say regardless of what was established.
+ * How many customer turns before the discovery gate lifts regardless.
+ *
+ * A customer who will not answer questions must still be able to get somewhere. Four was two
+ * exchanges — enough to learn that somebody is renting and has savings, and nothing about what
+ * they earn, what they are buying or who else is involved.
  */
-const DISCOVERY_PATIENCE = 4
+const DISCOVERY_PATIENCE = 7
 
 /**
  * Status is worth refreshing as things change, so this window is short — it only stops the
@@ -429,11 +432,18 @@ async function handleTurn(request: Request): Promise<Response> {
                 const { products } = input as { products: { product: any; reason: string }[] }
 
                 /**
-                 * §5, §6 — the needs engine decides whether there is enough to go on.
+                 * §5, §6 — is there enough understanding of this person to be offering anything?
                  *
-                 * This was a count of discovery facts, which was a guess at the same thing.
-                 * The engine scores evidence properly, so the threshold it already applies is
-                 * the one that should hold here.
+                 * Two different questions were being conflated. "Is a need established" is
+                 * answered the moment somebody says the word mortgage, and the gate passed on
+                 * that — so a customer who had said they wanted a broad conversation about their
+                 * whole position, and had given one round of answers, was handed a mortgage card
+                 * in the same turn Baz was still asking them what price range they had in mind.
+                 *
+                 * Being sure what somebody needs is not the same as understanding their
+                 * position, and a person doing this job would keep asking. The Goal Engine
+                 * already works out what a goal needs to know before it can be acted on, so the
+                 * gate is whether the case can answer most of it.
                  */
                 const candidates = needsFor(loaded, {
                   sensitiveDisclosure: gate.suppressHumour,
@@ -444,12 +454,35 @@ async function handleTurn(request: Request): Promise<Response> {
                 )
                 const customerTurns = loaded.messages.filter((m) => m.role === 'customer').length
 
-                if (!established && customerTurns < DISCOVERY_PATIENCE) {
+                // Whichever goal the offer is in service of: the one they named, or failing that
+                // the best-evidenced one worth raising.
+                const leading = worthRaising(goals.candidates, 1)[0] ?? null
+                const needed = leading?.goal.informationNeeded.length ?? 0
+                const unknown = leading?.missing.length ?? 0
+                const understood = needed === 0 || unknown <= Math.floor(needed / 2)
+
+                /**
+                 * The escape hatch, raised from four turns.
+                 *
+                 * Somebody who will not answer questions still has to be able to get somewhere,
+                 * and past a certain point continuing to ask is its own failure. But four turns
+                 * is two exchanges, which is nowhere near enough to have understood anybody.
+                 */
+                if ((!established || !understood) && customerTurns < DISCOVERY_PATIENCE) {
+                  const ask =
+                    leading === null || leading.missing.length === 0
+                      ? 'what has changed for them, who else is involved and what they are hoping to do'
+                      : leading.missing
+                          .slice(0, 4)
+                          .map((key) => factCatalogue[key]?.label?.toLowerCase() ?? key)
+                          .join(', ')
+
                   return {
                     result:
-                      'Too early. Nothing about their situation is established yet, so any offer is a guess. ' +
-                      'Ask what has changed for them, who else is involved and what they are hoping to do — ' +
-                      'record what they tell you, then offer. Do not mention that you were stopped.',
+                      `Too early — you do not understand their position well enough to be offering anything yet. ` +
+                      `Still unknown: ${ask}. Ask about those, in their language and a couple at a time, ` +
+                      'and record what they tell you. Offer once you can actually see where they stand. ' +
+                      'Do not mention that you were stopped, and do not ask a question and show options in the same breath.',
                   }
                 }
 
@@ -494,7 +527,20 @@ async function handleTurn(request: Request): Promise<Response> {
                   })
                 }
 
-                return { result: 'Options shown. The customer chooses in the card.', card }
+                /**
+                 * Offering and asking at once reads as not listening.
+                 *
+                 * The card is a decision point: it asks the customer to choose. Putting a fresh
+                 * question beside it gives them two things to answer and makes the offer look
+                 * like something Baz was going to say regardless of their reply.
+                 */
+                return {
+                  result:
+                    'Options shown. The customer chooses in the card, so stop there — say in a ' +
+                    'sentence why these and leave them to it. Do not ask another question in the ' +
+                    'same turn; whatever it is will keep until they have decided.',
+                  card,
+                }
               }
 
               case 'show_status': {

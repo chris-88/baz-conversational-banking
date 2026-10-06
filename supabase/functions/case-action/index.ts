@@ -119,12 +119,31 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     case 'decline_product': {
-      await admin
+      /**
+       * Declining twice is declining once.
+       *
+       * The upsert was always idempotent; the event was not, so a repeated tap wrote a second
+       * `product_declined` and sent Baz a second turn to answer. Metrics are derived from
+       * events (Invariant 9), so a duplicate here is not just noise on screen.
+       */
+      const already = loaded.productInterests.some(
+        (interest) => interest.product === action.product && interest.status === 'declined',
+      )
+
+      if (already) {
+        summary = 'Already left to one side.'
+        break
+      }
+
+      const written = await admin
         .from('product_interests')
         .upsert(
           { case_id: caseId, product: action.product, status: 'declined' },
           { onConflict: 'case_id,product' },
         )
+
+      if (written.error) return errorResponse('conflict', 'That could not be recorded.')
+
       await writeEvent(admin, {
         caseId,
         type: 'product_declined',
