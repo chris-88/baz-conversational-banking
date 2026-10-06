@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { adminRequestSchema, type AdminCase, type AdminOverview } from '../_shared/contracts/admin.ts'
+import type { CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { stateLabel, transition, type TransitionEvent } from '../_shared/domain/state-machine.ts'
@@ -290,7 +291,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       const summaries = caseRows.map((row) => ({
         id: row.id,
-        kind: row.kind as 'presenter' | 'audience',
+        kind: row.kind as CaseKind,
         label:
           row.kind === 'presenter'
             ? row.label

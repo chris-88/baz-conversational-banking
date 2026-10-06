@@ -103,7 +103,30 @@ function env(name: string): string {
   return value
 }
 
+/**
+ * Anything thrown before the stream opens would otherwise be answered by the runtime's own
+ * handler: status 500, body "Internal Server Error", and — the part that matters — no CORS
+ * headers, so the browser blocks the response and the customer sees "Load failed" with no
+ * clue what failed. A turn is allowed to fail; it is not allowed to fail silently.
+ */
 Deno.serve(async (request: Request): Promise<Response> => {
+  try {
+    return await handleTurn(request)
+  } catch (error) {
+    console.error('baz-turn failed before the stream opened', error)
+    return streamOf([
+      {
+        type: 'error',
+        error: {
+          code: 'upstream_unavailable',
+          message: error instanceof Error ? error.message : 'Something went wrong.',
+        },
+      },
+    ])
+  }
+})
+
+async function handleTurn(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return errorResponse('bad_request', 'Use POST.')
 
@@ -954,7 +977,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   return new Response(stream, {
     headers: { ...CORS, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
   })
-})
+}
 
 function streamOf(events: readonly StreamEvent[]): Response {
   const encoder = new TextEncoder()

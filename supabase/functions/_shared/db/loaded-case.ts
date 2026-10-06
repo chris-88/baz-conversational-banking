@@ -1,3 +1,4 @@
+import type { CaseKind } from '../domain/case.ts'
 import type { ApplicationId, Fact, ParticipantId, ParticipantRole } from '../domain/facts.ts'
 import type { Product } from '../domain/journey.ts'
 import type { Application } from '../domain/state-machine.ts'
@@ -57,7 +58,7 @@ export type LoadedEvent = {
 
 export type LoadedCase = {
   readonly caseId: string
-  readonly kind: 'presenter' | 'audience'
+  readonly kind: CaseKind
   readonly authLevel: 'anonymous' | 'authenticated'
   readonly customerName: string | null
   readonly lastSeenAt: string | null

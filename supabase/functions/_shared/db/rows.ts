@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CASE_KINDS } from '../domain/case.ts'
 import { FACT_SOURCES, isFactKey } from '../domain/facts.ts'
 import { PRODUCTS } from '../domain/journey.ts'
 import { APPLICATION_STATES } from '../domain/state-machine.ts'
@@ -13,7 +14,7 @@ import { APPLICATION_STATES } from '../domain/state-machine.ts'
 
 export const caseRow = z.object({
   id: z.uuid(),
-  kind: z.enum(['presenter', 'audience']),
+  kind: z.enum(CASE_KINDS),
   auth_level: z.enum(['anonymous', 'authenticated']),
   last_seen_at: z.string().nullable(),
   customer_id: z.uuid().nullable(),

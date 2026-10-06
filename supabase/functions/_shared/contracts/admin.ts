@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CASE_KINDS } from '../domain/case.ts'
 import { PRESET_NAMES, SLIDER_NAMES } from '../llm/persona.ts'
 
 /**
@@ -125,7 +126,7 @@ export const adminOverviewSchema = z.object({
   cases: z.array(
     z.object({
       id: z.uuid(),
-      kind: z.enum(['presenter', 'audience']),
+      kind: z.enum(CASE_KINDS),
       label: z.string().nullable(),
       applications: z.number().int(),
       messages: z.number().int(),

@@ -791,3 +791,15 @@ section.
   triggered by the same push get one immediately. With `cancel-in-progress: true`, pushing
   again inside that window cancels the run already waiting — so retrying makes it worse. Wait,
   do not retry, and verify by grepping the live bundle rather than trusting the run status.
+- **2026-10-06** — `cases.kind` is defined once, in `_shared/domain/case.ts`, with the schema
+  drift test checking it against the migrations. The migration that made `customer` the
+  ordinary kind left the Zod row schema accepting only `presenter | audience`, so every case in
+  the system failed to parse and every conversation died on load. The union was written down in
+  four places; the drift test covered application states, products, fact sources and document
+  types, but not this one. Both halves of the fix matter — one definition, and a test that
+  notices.
+- **2026-10-06** — `baz-turn` catches anything thrown before the stream opens and answers with
+  an SSE `error` event. Without it the runtime's own 500 carries no CORS headers, so the browser
+  blocks the response and the customer sees "Load failed" with no cause anywhere: not in the
+  response, not in the network tab, and `supabase functions logs` does not exist. Half an hour
+  went on finding an error the function already knew. A turn may fail; it may not fail mutely.

@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { CASE_KINDS } from '../supabase/functions/_shared/domain/case.ts'
 import { FACT_SOURCES } from '../supabase/functions/_shared/domain/facts.ts'
 import { DOCUMENT_TYPES, PRODUCTS } from '../supabase/functions/_shared/domain/journey.ts'
 import { APPLICATION_STATES } from '../supabase/functions/_shared/domain/state-machine.ts'
@@ -59,6 +60,15 @@ describe('the database agrees with the TypeScript unions', () => {
 
   it('accepts exactly the twelve application states (§13)', () => {
     expect([...checkConstraintLiterals('applications', 'state')].sort()).toEqual([...APPLICATION_STATES].sort())
+  })
+
+  /**
+   * The gap this closes cost a working demonstration. A migration made `customer` the default
+   * case kind; the Zod row schema still accepted only `presenter` and `audience`, so every
+   * case in the system failed to parse and every conversation died on load.
+   */
+  it('accepts exactly the three case kinds', () => {
+    expect([...checkConstraintLiterals('cases', 'kind')].sort()).toEqual([...CASE_KINDS].sort())
   })
 
   it('accepts exactly the five products (§7)', () => {
