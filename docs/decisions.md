@@ -803,3 +803,21 @@ section.
   blocks the response and the customer sees "Load failed" with no cause anywhere: not in the
   response, not in the network tab, and `supabase functions logs` does not exist. Half an hour
   went on finding an error the function already knew. A turn may fail; it may not fail mutely.
+- **2026-10-06** — Goal discovery and plan milestones come from blueprints, not from code. All
+  26 catalogue goals and 10 life-event clusters are data; signals are conditions over recorded
+  facts, with one exception — `goals.primaryObjective`, the customer's own statement of what
+  they came in about, which extraction has already turned into a fact. Everything else about a
+  customer's circumstances is read, not matched.
+- **2026-10-06** — Primary goal means a goal the customer declared, with no fallback. Ranking by
+  confidence put "organise money together" under "what they came in about" for someone who had
+  only mentioned buying a house. A case with no stated objective has no primary goal, and the
+  related ones are still there to work with.
+- **2026-10-06** — A `facts` milestone kind: reached once the case can answer a set of fact
+  keys. Most of the catalogue's milestones read "affordability understood" or "debts understood",
+  which is not a tick box but whether the information exists. Plan progress now moves as the
+  conversation happens rather than waiting for somebody to mark it, which is Invariant 3 applied
+  to plans.
+- **2026-10-06** — Keeping a plan records its target as `goals.savingsTarget`. Until the customer
+  said yes it was Baz's estimate from the purchase price; once agreed, it is something they told
+  the bank, so the deposit engine stops re-deriving it and the "target defined" milestone can be
+  evidenced rather than ticked.
