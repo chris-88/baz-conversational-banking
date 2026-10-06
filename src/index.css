@@ -223,6 +223,11 @@
      * on-screen keyboard open, which is exactly when a chat screen needs it most.
      */
     --viewport-height: 100dvh;
+    /*
+     * Room for the home indicator, which `useViewportHeight` zeroes while the keyboard is up —
+     * the keyboard covers the indicator, so reserving space for it is a gap and nothing else.
+     */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   body {

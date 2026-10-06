@@ -915,3 +915,8 @@ section.
   shrink below its content, so the transcript could not give the space back. `useViewportHeight`
   tracks `window.visualViewport` for the one measurement that reflects what is genuinely on
   screen, and `interactive-widget=resizes-content` covers Android.
+- **2026-10-06** — Nothing sits under the composer. "Baz is an AI assistant." took a line and a
+  margin on the screen where space is scarcest, and the header carries the same words
+  permanently. The home-indicator inset is zeroed while the keyboard is up, because the keyboard
+  covers the indicator and reserving space for it is a gap and nothing else. Connecting now shows
+  in the composer's placeholder, which is where somebody waiting to type is looking.

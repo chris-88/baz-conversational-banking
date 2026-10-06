@@ -20,6 +20,17 @@ export function useViewportHeight(): void {
     const apply = () => {
       document.documentElement.style.setProperty('--viewport-height', `${String(viewport.height)}px`)
 
+      /*
+       * While the keyboard is up it covers the home indicator, so the space normally reserved
+       * for that is just a gap above the keys.
+       */
+      const keyboardOpen = window.innerHeight - viewport.height > 120
+      if (keyboardOpen) {
+        document.documentElement.style.setProperty('--safe-bottom', '0px')
+      } else {
+        document.documentElement.style.removeProperty('--safe-bottom')
+      }
+
       // The page itself should never be scrolled; only the transcript inside it.
       if (window.scrollY !== 0) window.scrollTo(0, 0)
     }
@@ -32,6 +43,7 @@ export function useViewportHeight(): void {
       viewport.removeEventListener('resize', apply)
       viewport.removeEventListener('scroll', apply)
       document.documentElement.style.removeProperty('--viewport-height')
+      document.documentElement.style.removeProperty('--safe-bottom')
     }
   }, [])
 }

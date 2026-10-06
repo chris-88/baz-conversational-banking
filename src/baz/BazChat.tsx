@@ -376,16 +376,25 @@ export function BazChat({
         <div className="px-4 pb-2">{footer(caseId)}</div>
       )}
 
+      {/*
+        Nothing under the composer.
+        
+        "Baz is an AI assistant." sat there taking a line and a margin on the one screen where
+        space is scarcest, and the header says it already. `--safe-bottom` is the home indicator
+        when there is one and zero when the keyboard covers it, which is where the rest of the
+        dead space was going.
+      */}
       <div
         className={cn(
-          'bg-background/95 supports-[backdrop-filter]:bg-background/80 shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur',
+          'bg-background/95 supports-[backdrop-filter]:bg-background/80 shrink-0 border-t px-4 pt-2.5 pb-[max(0.625rem,var(--safe-bottom))] backdrop-blur',
           composerClassName,
         )}
       >
-        <Composer disabled={!ready || streaming} onSend={(message) => void send(message)} />
-        <p className="text-muted-foreground mt-2 text-center text-2xs">
-          {joining ? 'Connecting…' : 'Baz is an AI assistant.'}
-        </p>
+        <Composer
+          disabled={!ready || streaming}
+          onSend={(message) => void send(message)}
+          {...(joining ? { placeholder: 'Connecting…' } : {})}
+        />
       </div>
     </div>
   )
