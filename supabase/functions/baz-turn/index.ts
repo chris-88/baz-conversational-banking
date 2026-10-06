@@ -224,6 +224,29 @@ async function handleTurn(request: Request): Promise<Response> {
     })
   }
 
+  /**
+   * A tap is recorded as what it was.
+   *
+   * It used to be saved as a customer message, so "Started Savings account, Joint current
+   * account, Mortgage. 7 things carried over from what we already knew." appeared in the
+   * transcript as something the customer had typed. They had not — they had ticked two boxes.
+   * The transcript is the record a person reads before phoning them, and putting words in
+   * somebody's mouth there is not a cosmetic problem.
+   *
+   * `system` is already filtered out of the chat and out of the history Baz sees on later
+   * turns, which is right: what the tap actually did is in the case, and the digest reports it
+   * from there (Invariant 2).
+   */
+  if (turn.trigger === 'action' && customerMessage.length > 0) {
+    await saveMessage(admin, {
+      caseId: turn.caseId,
+      participantId: session.participant_id,
+      role: 'system',
+      content: customerMessage,
+      gateCategory: 'banking',
+    })
+  }
+
   // A blocked turn never reaches the model (Invariant 4). The canned reply is persisted so
   // the conversation reads correctly afterwards, and the block is auditable (§52).
   if (!gate.allowed) {
@@ -355,6 +378,17 @@ async function handleTurn(request: Request): Promise<Response> {
     .map((message) => ({ role: message.role === 'customer' ? 'user' as const : 'assistant' as const, content: message.content }))
 
   if (isCustomerTurn) history.push({ role: 'user', content: customerMessage })
+
+  if (turn.trigger === 'action') {
+    // Told as an event, not quoted as speech, so Baz does not answer a question nobody asked.
+    history.push({
+      role: 'user',
+      content:
+        `(The customer did this in the app: ${customerMessage} They did not type anything, so ` +
+        'do not reply as though they had and do not thank them for a message. ' +
+        `${turn.note ?? 'Say what it means for them and what you need next.'} Keep it brief.)`,
+    })
+  }
 
   if (turn.trigger === 'return') {
     // §36 — the customer did not ask anything; they came back. Lead with what changed.

@@ -35,13 +35,19 @@ export function useConversation(caseId: string | null) {
   }
 
   const send = useCallback(
-    async (message: string, trigger: 'message' | 'opening' | 'return' = 'message') => {
+    async (
+      message: string,
+      trigger: 'message' | 'opening' | 'return' | 'action' = 'message',
+      note?: string,
+    ) => {
       if (!caseId || inFlight.current) return
 
       inFlight.current = true
       setError(null)
       setStreaming(true)
 
+      // Only a typed message gets a bubble. A tap is not something the customer said, and
+      // rendering it as one put words in their mouth in the record a person reads later.
       if (trigger === 'message' && message.length > 0) {
         // Shown immediately: the customer should never wonder whether it sent.
         setEntries((current) => [
@@ -55,7 +61,14 @@ export function useConversation(caseId: string | null) {
 
       try {
         await streamBazTurn(
-          { caseId, trigger, ...(trigger === 'message' ? { message } : {}) },
+          // `opening` and `return` carry no text; `action` carries what the tap did, which
+          // the server stores as a system note rather than as something they said.
+          {
+            caseId,
+            trigger,
+            ...(trigger === 'message' || trigger === 'action' ? { message } : {}),
+            ...(note === undefined ? {} : { note }),
+          },
           (event) => {
             switch (event.type) {
               case 'text_delta': {

@@ -134,6 +134,7 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
 
     if (message.stop_reason !== 'tool_use' || toolUses.length === 0) {
       yield* cards.map((card): StreamEvent => ({ type: 'card', card }))
+      yield* nothingSaid(spoken, cards)
       return
     }
 
@@ -175,4 +176,22 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
 
   // The round limit was reached with tools still pending; show what was produced anyway.
   yield* cards.map((card): StreamEvent => ({ type: 'card', card }))
+  yield* nothingSaid(spoken, cards)
+}
+
+/**
+ * A turn that produced no words and no card has failed, whatever the model thought it was doing.
+ *
+ * Seen once in testing: every round spent calling a tool that the server refused, and the
+ * customer got an empty bubble. Silence is the one reply that cannot be recovered from — there
+ * is nothing to read and nothing to tap — so it is replaced with something that at least invites
+ * them to try again.
+ */
+function* nothingSaid(spoken: boolean, cards: readonly unknown[]): Generator<StreamEvent> {
+  if (spoken || cards.length > 0) return
+
+  yield {
+    type: 'text_delta',
+    text: 'Sorry — I lost my thread there. Could you say that again?',
+  }
 }

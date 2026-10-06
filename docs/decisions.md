@@ -896,3 +896,15 @@ section.
   was a replica of a bank's own website carrying its branding on a public personal domain, and
   somebody landing on it cold could plausibly have taken it for the real thing. With the replica
   removed, what is left is a product called Baz that reads as what it is.
+- **2026-10-06** — A tap is an `action` turn, recorded as a `system` message, not as something the
+  customer said. "Started Savings account, Joint current account, Mortgage. 7 things carried over
+  from what we already knew." used to appear in the transcript in the customer's own bubble; they
+  had ticked two boxes. The transcript is the record a person reads before phoning them, so
+  putting words in somebody's mouth there is not cosmetic. Baz is told what happened as an event
+  and instructed not to reply as though they had written in. The instruction travels in a
+  separate `note` field, because direction is not something that happened and has no business in
+  the record.
+- **2026-10-06** — A turn that produces no words and no card now says something. Seen once in
+  testing: every round spent calling a tool the server refused, and the customer got an empty
+  bubble. Silence is the one reply that cannot be recovered from — nothing to read, nothing to
+  tap.

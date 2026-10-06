@@ -10,7 +10,7 @@ import type { PromptInput } from './prompt.ts'
  * A scripted stand-in for the SDK's streaming client: each entry is one round's reply, as the
  * text it streams plus whatever tool it asks for.
  */
-type Round = { readonly text: string; readonly tool?: string }
+type Round = { readonly text: string; readonly tool?: string; readonly input?: unknown }
 
 function clientReturning(rounds: readonly Round[]): Anthropic {
   let round = -1
@@ -24,7 +24,16 @@ function clientReturning(rounds: readonly Round[]): Anthropic {
         const content: Anthropic.ContentBlock[] = [
           { type: 'text', text: current.text, citations: null },
           ...(current.tool
-            ? [{ type: 'tool_use', id: `t${String(round)}`, name: current.tool, input: {} } as Anthropic.ContentBlock]
+            ? [
+                {
+                  type: 'tool_use',
+                  id: `t${String(round)}`,
+                  name: current.tool,
+                  // Tool input is validated before anything runs, so a card only appears when a
+                  // round supplies input the schema accepts.
+                  input: current.input ?? {},
+                } as Anthropic.ContentBlock,
+              ]
             : []),
         ]
 
@@ -71,20 +80,25 @@ const prompt: PromptInput = {
   },
 }
 
-function options(rounds: readonly Round[]): BazTurnOptions {
+function options(rounds: readonly Round[], withCard = false): BazTurnOptions {
   return {
     client: clientReturning(rounds),
     model: 'test-model',
     prompt,
     history: [{ role: 'user', content: 'I want to buy my first home' }],
-    executeTool: () => Promise.resolve({ result: 'Options shown.' }),
+    executeTool: () =>
+      Promise.resolve(
+        withCard
+          ? { result: 'Status shown.', card: { type: 'status', applications: [] } as never }
+          : { result: 'Options shown.' },
+      ),
     enabledTools: ['show_product_options'],
   }
 }
 
-async function textOf(rounds: readonly Round[]): Promise<string> {
+async function textOf(rounds: readonly Round[], withCard = false): Promise<string> {
   let text = ''
-  for await (const event of runBazTurn(options(rounds))) {
+  for await (const event of runBazTurn(options(rounds, withCard))) {
     if (event.type === 'text_delta') text += event.text
   }
   return text
@@ -114,5 +128,37 @@ describe('runBazTurn', () => {
     expect(await textOf([{ text: 'A mortgage is the place to start.' }])).toBe(
       'A mortgage is the place to start.',
     )
+  })
+
+  /**
+   * Seen once in testing: every round spent calling a tool the server refused, and the customer
+   * got an empty bubble. Silence is the one reply that cannot be recovered from — nothing to
+   * read and nothing to tap.
+   */
+  it('says something when every round went on tools and none on words', async () => {
+    const text = await textOf([
+      { text: '', tool: 'show_product_options' },
+      { text: '', tool: 'show_product_options' },
+      { text: '', tool: 'show_product_options' },
+    ])
+
+    expect(text).toMatch(/say that again/i)
+  })
+
+  it('stays quiet when a card carries the turn', async () => {
+    // A card on its own is terse, not broken, so nothing is added to it.
+    const text = await textOf(
+      [
+        {
+          text: '',
+          tool: 'show_product_options',
+          input: { products: [{ product: 'mortgage', reason: 'They said they are buying.' }] },
+        },
+        { text: '' },
+      ],
+      true,
+    )
+
+    expect(text).toBe('')
   })
 })

@@ -66,17 +66,25 @@ export function BazChat({
    */
   const commit = async (
     action: Parameters<typeof runCaseAction>[0],
-    followUp: string,
+    nudge: string,
   ): Promise<boolean> => {
     setActionError(null)
     try {
       const result = await runCaseAction(action)
 
-      // Report the outcome as soon as the server confirms it. Telling Baz is a full streamed
-      // turn, and awaiting that first left the card that committed the action sitting on
-      // "Submitting…" for the whole reply with the answer already in hand. Cards are disabled
-      // while a turn streams, so nothing else can be committed in the meantime.
-      void send(`${result.summary} ${followUp}`)
+      /**
+       * Reported as an action, not as something the customer said.
+       *
+       * It used to go through as a `message`, so the server stored it as customer speech and
+       * the transcript showed "Started Savings account, Joint current account, Mortgage. 7
+       * things carried over." in their own bubble. They ticked two boxes.
+       *
+       * Sent as soon as the server confirms rather than awaited: telling Baz is a full streamed
+       * turn, and waiting left the card that committed the action sitting on "Submitting…" with
+       * the answer already in hand. Cards are disabled while a turn streams, so nothing else
+       * can be committed in the meantime.
+       */
+      void send(result.summary, 'action', nudge)
       return true
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : 'That did not work.')
@@ -194,19 +202,19 @@ export function BazChat({
     onSelectProducts: async (products) => {
       await commit(
         { action: 'select_products', caseId: caseId ?? '', products: products as Product[] },
-        'What did that start, and what do you need from me first?',
+        'Say what is now in progress and what you need from them first.',
       )
     },
     onDeclineProducts: async (products) => {
       await commit(
         { action: 'decline_product', caseId: caseId ?? '', product: products[0] as Product },
-        'I will leave those for now.',
+        'Acknowledge briefly and move on; do not raise those again.',
       )
     },
     onSubmit: (applicationId, confirmations) =>
       commit(
         { action: 'submit_application', applicationId, confirmations: [...confirmations] },
-        'What happens next?',
+        'Say what happens next and roughly when.',
       ),
     onInvitePartner: async (name) => {
       setActionError(null)
@@ -215,7 +223,7 @@ export function BazChat({
 
         // The link exists the moment the server returns it, so it goes on screen now rather
         // than ten seconds later when Baz has finished talking about it.
-        void send(`${result.summary} What happens on their side?`)
+        void send(result.summary, 'action', 'Say what happens on their side.')
         return result.inviteUrl
       } catch (caught) {
         setActionError(caught instanceof Error ? caught.message : 'That did not work.')
@@ -225,24 +233,24 @@ export function BazChat({
     onConsent: async (applicationId, requirementId) => {
       await commit(
         { action: 'grant_consent', applicationId, requirementId },
-        'What do you need from me now?',
+        'Say what is still outstanding on that application.',
       )
     },
     onHealthForm: async (applicationId, values) => {
       await commit(
         { action: 'submit_health_form', applicationId, values: [...values] },
-        'Where does that leave the application?',
+        'Say where that leaves the application.',
       )
     },
     onConfirmPlan: (planId) =>
       commit(
         { action: 'decide_plan', caseId: caseId ?? '', planId, decision: 'keep' },
-        'What should we do first?',
+        'Say what is worth doing first.',
       ),
     onDeclinePlan: async (planId) => {
       await commit(
         { action: 'decide_plan', caseId: caseId ?? '', planId, decision: 'not_now' },
-        'We can come back to it.',
+        'Confirm it is parked and say what would bring it back.',
       )
     },
     onUpload: async (requestId, file, documentType) => {
@@ -255,7 +263,11 @@ export function BazChat({
       // Throws on failure so the card can say so where the customer is looking, rather than
       // the error appearing somewhere else on screen.
       await callFunctionWithFile('upload', form)
-      void send(`I have uploaded ${file.name}. What is next?`)
+      void send(
+        `Uploaded ${file.name}.`,
+        'action',
+        'Say whether that clears the request and what is still outstanding.',
+      )
     },
     onPauseDecision: async (applicationId, decision) => {
       if (decision === 'pause') {

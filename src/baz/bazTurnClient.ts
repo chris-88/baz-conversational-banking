@@ -10,8 +10,10 @@ import { parseStreamEvent, type StreamEvent } from '@contracts/stream.ts'
  */
 export type BazTurnInput = {
   readonly caseId: string
-  readonly trigger?: 'message' | 'opening' | 'return'
+  readonly trigger?: 'message' | 'opening' | 'return' | 'action'
   readonly message?: string
+  /** For `action`: what Baz should do about it. Not recorded. */
+  readonly note?: string
   readonly signal?: AbortSignal
 }
 
@@ -44,6 +46,7 @@ export async function streamBazTurn(
       caseId: input.caseId,
       trigger: input.trigger ?? 'message',
       ...(input.message === undefined ? {} : { message: input.message }),
+      ...(input.note === undefined ? {} : { note: input.note }),
     }),
     ...(input.signal ? { signal: input.signal } : {}),
   })

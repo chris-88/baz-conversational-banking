@@ -114,7 +114,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
         created.length === 0
           ? 'Those were already started.'
           : `Started ${names.join(', ')}.` +
-            (reused > 0 ? ` ${String(reused)} things carried over from what we already knew.` : '')
+            (reused > 0
+              ? ` ${String(reused)} ${reused === 1 ? 'thing' : 'things'} carried over from what we already knew.`
+              : '')
       break
     }
 
