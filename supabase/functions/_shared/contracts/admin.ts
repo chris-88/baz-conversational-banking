@@ -275,6 +275,36 @@ export const adminCaseSchema = z.object({
       available: z.number(),
     }),
   ),
+  /**
+   * The note a person reads before picking up the phone.
+   *
+   * Composed on the server from the case, never written by the model: a brief somebody is about
+   * to act on is the last place to put invented prose.
+   */
+  handoff: z.object({
+    who: z.string(),
+    turns: z.number().int(),
+    lastSeen: z.string().nullable(),
+    sections: z.array(
+      z.object({
+        heading: z.string(),
+        lines: z.array(z.string()),
+        caution: z.boolean().default(false),
+      }),
+    ),
+    /** The same note as plain text, for pasting wherever the adviser actually works. */
+    text: z.string(),
+  }),
+  /** §41 — the hand-moves available on this case, checked against the state machine. */
+  demoActions: z.array(demoActionSchema).default([]),
+  /** The conversation, oldest first, so a person can read what was actually said. */
+  conversation: z.array(
+    z.object({
+      role: z.enum(['customer', 'baz', 'system']),
+      content: z.string(),
+      cards: z.array(z.string()),
+    }),
+  ),
   planSteps: z.array(z.string()),
   /** §38 — every plan on the case, as the engine currently computes it. */
   plans: z.array(

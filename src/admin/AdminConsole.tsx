@@ -5,7 +5,6 @@ import {
   MessagesSquareIcon,
   ShieldAlertIcon,
   SlidersHorizontalIcon,
-  UsersIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,12 +15,17 @@ import { BazAvatar } from '@/baz/BazAvatar'
 import { routes } from '@/app/routes'
 import { cn } from '@/lib/utils'
 
+/**
+ * Four screens: the conversations, and the three things that shape them.
+ *
+ * There were six, and the split between "overview", "cases" and "audience" was a distinction
+ * only the person who built it could hold — all three were lists of the same conversations.
+ */
 const sections = [
-  { to: routes.admin.root, label: 'Overview', icon: <LayoutDashboardIcon />, end: true },
-  { to: routes.admin.cases, label: 'Cases', icon: <MessagesSquareIcon />, end: false },
-  { to: routes.admin.domain, label: 'Guardrails', icon: <ShieldAlertIcon />, end: false },
+  { to: routes.admin.root, label: 'Cases', icon: <MessagesSquareIcon />, end: false },
+  { to: routes.admin.guardrails, label: 'Guardrails', icon: <ShieldAlertIcon />, end: false },
   { to: routes.admin.persona, label: 'Persona', icon: <SlidersHorizontalIcon />, end: false },
-  { to: routes.admin.audience, label: 'Audience', icon: <UsersIcon />, end: false },
+  { to: routes.admin.engine, label: 'Goals & needs', icon: <LayoutDashboardIcon />, end: false },
 ] as const
 
 /**

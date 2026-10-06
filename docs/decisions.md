@@ -843,3 +843,15 @@ section.
   an explicit `named` flag rather than reading a label, because the console is sent a display
   label that falls back to "Unnamed · 1a2b3c4d": sniffing it there found a name on every case
   and spared the lot. Same rule, same answer, on both sides.
+- **2026-10-06** — The console is four screens: cases, guardrails, persona, goals & needs. It was
+  six, and "overview", "cases" and "audience" were three lists of the same conversations under
+  different headings — a distinction only the person who built it could hold. A case is now a
+  page rather than a pane, so everything about one has room instead of competing with the others.
+- **2026-10-06** — The handover note is composed on the server from the case, never written by
+  the model. A brief somebody is about to act on — move an application, make a commitment,
+  correct a figure — is the last place to put invented prose, and everything worth telling them
+  is already recorded. Composing it is arranging facts, not summarising them (Invariant 2).
+- **2026-10-06** — A case page opens on what a call needs and folds the rest away. Fully expanded
+  it was 4,600px; the engines' reasoning is the most interesting part of the build and the least
+  useful part of a phone call. Same for the catalogue: 26 goals open at once was 11,800px, which
+  is a reference manual rather than a console.

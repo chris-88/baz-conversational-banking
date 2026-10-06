@@ -17,10 +17,11 @@ export const routes = {
   audience: '/try',
 
   admin: {
+    /** The case list is the console's home: everything else is a setting. */
     root: '/admin',
-    cases: '/admin/cases',
+    case: (caseId: string) => `/admin/case/${caseId}`,
+    guardrails: '/admin/guardrails',
     persona: '/admin/persona',
-    domain: '/admin/domain',
-    audience: '/admin/audience',
+    engine: '/admin/engine',
   },
 } as const

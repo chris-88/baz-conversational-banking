@@ -6,7 +6,9 @@ import { adminRequestSchema, type AdminCase, type AdminOverview } from '../_shar
 import { isPurgeable, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
-import { stateLabel, transition, type TransitionEvent } from '../_shared/domain/state-machine.ts'
+import type { Product } from '../_shared/domain/journey.ts'
+import { asApplicationId } from '../_shared/domain/facts.ts'
+import { stateLabel, transition, type ApplicationState, type TransitionEvent } from '../_shared/domain/state-machine.ts'
 import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { loadCase, recordFacts, type Insert, writeEvent } from '../_shared/db/case-repository.ts'
@@ -20,6 +22,7 @@ import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { evaluateNeeds } from '../_shared/domain/needs/engine.ts'
 import { contentionIn, evaluateGoals, matchedClusters } from '../_shared/domain/goals/engine.ts'
 import { goalContextFor } from '../_shared/db/goals.ts'
+import { buildHandoffNote, handoffAsText } from '../_shared/db/handoff.ts'
 import { buildPlan } from '../_shared/domain/needs/plan.ts'
 
 /**
@@ -87,6 +90,48 @@ const DEMO_MOVES: Record<
     steps: ['received_by_bank', 'assessment_approved'],
     note: 'Takes the submitted protection through to approved.',
   },
+}
+
+/**
+ * Which hand-moves are possible on a case right now, and why not when they are not.
+ *
+ * Shared, because the case list and the case itself both offer them and a button that is live
+ * on one screen and dead on the other is worse than no button. Each is checked against the
+ * state machine rather than guessed, so nothing fails in front of anybody (§41).
+ */
+function movesFor(
+  applications: readonly { id: string; product: string; state: string; resume_to: string | null }[],
+): readonly { id: string; label: string; available: boolean; note: string }[] {
+  return Object.entries(DEMO_MOVES).map(([id, move]) => {
+    const application = applications.find((candidate) => candidate.product === move.product)
+
+    if (!application) {
+      return {
+        id,
+        label: move.label,
+        available: false,
+        note: `No ${move.product.replaceAll('_', ' ')} on the case yet.`,
+      }
+    }
+
+    const first = move.steps[0]
+    const possible = transition(
+      {
+        id: asApplicationId(application.id),
+        product: application.product as Product,
+        state: application.state as ApplicationState,
+        resumeTo: application.resume_to as ApplicationState | null,
+      },
+      { type: first } as TransitionEvent,
+    ).ok
+
+    return {
+      id,
+      label: move.label,
+      available: possible,
+      note: possible ? move.note : `Not possible from "${application.state}".`,
+    }
+  })
 }
 
 Deno.serve(async (request: Request): Promise<Response> => {
@@ -330,30 +375,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
           ).data ?? [])
         : []
 
-      const demoActions = Object.entries(DEMO_MOVES).map(([id, move]) => {
-        const application = (presenterApps as any[]).find((a) => a.product === move.product)
-        if (!application) {
-          return {
-            id,
-            label: move.label,
-            available: false,
-            note: `No ${move.product.replaceAll('_', ' ')} on the case yet.`,
-          }
-        }
-
-        const first = move.steps[0]
-        const possible = transition(
-          { id: application.id, product: application.product, state: application.state, resumeTo: application.resume_to },
-          { type: first } as TransitionEvent,
-        ).ok
-
-        return {
-          id,
-          label: move.label,
-          available: possible,
-          note: possible ? move.note : `Not possible from "${String(application.state)}".`,
-        }
-      })
+      const demoActions = movesFor(
+        (presenterApps as { id: string; product: string; state: string; resume_to: string | null }[]),
+      )
 
       const recent = await admin
         .from('events')
@@ -382,7 +406,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const overview: AdminOverview = {
         activity,
         killSwitch: (config.data as { kill_switch?: boolean } | null)?.kill_switch ?? false,
-        demoActions,
+        demoActions: [...demoActions],
         focusCaseId: focus?.id ?? null,
         persona: {
           preset: (persona.data as { preset?: string } | null)?.preset ?? 'default',
@@ -896,6 +920,42 @@ Deno.serve(async (request: Request): Promise<Response> => {
                 needed: contention.needed,
                 available: contention.available,
               })),
+        handoff: (() => {
+          const note = buildHandoffNote({
+            loaded,
+            goals: goalCandidates,
+            goalContext,
+            needs: candidates,
+            plans: loadedPlans,
+          })
+
+          return {
+            who: note.who,
+            turns: note.turns,
+            lastSeen: note.lastSeen,
+            sections: note.sections.map((section) => ({
+              heading: section.heading,
+              lines: [...section.lines],
+              caution: section.caution ?? false,
+            })),
+            text: handoffAsText(note),
+          }
+        })(),
+        demoActions: [
+          ...movesFor(
+            loaded.applications.map((application) => ({
+              id: String(application.id),
+              product: application.product,
+              state: application.state,
+              resume_to: application.resumeTo,
+            })),
+          ),
+        ],
+        conversation: loaded.messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+          cards: [...message.cards],
+        })),
         planSteps: (plan?.steps ?? []).map((step) => `${step.title} — ${step.because}`),
         // Every figure here is computed by the plan engine, so the console and the customer
         // are looking at the same arithmetic (§40).

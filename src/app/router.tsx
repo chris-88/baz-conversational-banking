@@ -33,11 +33,11 @@ const routeObjects: RouteObject[] = [
     path: '/admin',
     element: <AdminConsole />,
     children: [
-      { index: true, element: <AdminOverview /> },
-      { path: 'cases', element: <AdminOverview section="cases" /> },
+      { index: true, element: <AdminOverview section="cases" /> },
+      { path: 'case/:caseId', element: <AdminOverview section="case" /> },
+      { path: 'guardrails', element: <AdminOverview section="guardrails" /> },
       { path: 'persona', element: <AdminOverview section="persona" /> },
-      { path: 'domain', element: <AdminOverview section="domain" /> },
-      { path: 'audience', element: <AdminOverview section="audience" /> },
+      { path: 'engine', element: <AdminOverview section="engine" /> },
     ],
   },
 
