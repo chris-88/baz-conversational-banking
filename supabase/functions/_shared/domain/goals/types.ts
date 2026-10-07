@@ -28,6 +28,15 @@ import type { PlanStatus } from '../plans/types.ts'
  * turns language into facts, and this turns facts into goals.
  */
 
+/**
+ * Which revision of the catalogue document this folder was translated from.
+ *
+ * The console shows it because "where did this come from" is a fair question about a list of
+ * twenty-six objectives, and the honest answer is a document rather than anybody's judgement
+ * on the day. `docs/goal-catalogue/README.md`.
+ */
+export const GOAL_CATALOGUE_VERSION = '1.0'
+
 export const GOAL_CATEGORIES = [
   'foundations',
   'saving',
