@@ -36,7 +36,7 @@ export function BazScreen(): ReactNode {
               <span className="text-left leading-tight">
                 <span className="block text-sm font-semibold">Baz</span>
                 <span className="text-muted-foreground block text-2xs font-normal">
-                  AI assistant
+                  Jarvis, but for banking
                 </span>
               </span>
             </Link>
