@@ -14,6 +14,33 @@ export type IllustrativeTerm = {
   readonly value: string
 }
 
+/**
+ * A version of a product with its own numbers.
+ *
+ * Structured rather than the prose in `illustrativeTerms`, because a quote card needs figures
+ * to compute from and prose is what left Baz doing arithmetic in its replies. The prose stays:
+ * it is what Baz says about a product, and this is what the engine measures with.
+ *
+ * `shape` decides which sums apply. Borrowing amortises, saving compounds, revolving clears a
+ * balance at a monthly payment.
+ */
+export type ProductVariant = {
+  readonly id: string
+  readonly name: string
+  /** A fact about this option against the others on screen, never a claim about other customers. */
+  readonly highlight?: string
+  readonly shape: 'borrowing' | 'saving' | 'revolving'
+  /** Illustrative, like everything else here. */
+  readonly annualRate: number
+  /** Where a rate is only held for a while. */
+  readonly fixedYears?: number
+  readonly minMonths?: number
+  readonly maxMonths?: number
+  readonly minAmount?: number
+  readonly maxAmount?: number
+  readonly note?: string
+}
+
 export type ProductInfo = {
   readonly product: Product
   readonly name: string
@@ -24,6 +51,8 @@ export type ProductInfo = {
   readonly relevantWhen: readonly string[]
   readonly eligibility: readonly string[]
   readonly illustrativeTerms: readonly IllustrativeTerm[]
+  /** Present where the product has numbers worth comparing. Absent where it does not. */
+  readonly variants?: readonly ProductVariant[]
   /** Anything Baz should be careful about when explaining this product. */
   readonly cautions: readonly string[]
 }
@@ -57,6 +86,46 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       { label: 'Illustrative fixed rate', value: '3.85% for 3 years' },
       { label: 'Illustrative term', value: 'Up to 35 years' },
       { label: 'Illustrative maximum loan', value: '4 times combined gross annual income' },
+    ],
+    variants: [
+      {
+        id: 'fixed_4y',
+        name: '4-year fixed',
+        highlight: 'Lowest monthly',
+        shape: 'borrowing',
+        annualRate: 0.031,
+        fixedYears: 4,
+        maxMonths: 420,
+        note: 'The rate is held for four years, then moves to the variable rate of the day.',
+      },
+      {
+        id: 'fixed_1y',
+        name: '1-year fixed',
+        highlight: 'Most flexible',
+        shape: 'borrowing',
+        annualRate: 0.033,
+        fixedYears: 1,
+        maxMonths: 420,
+        note: 'Only held for a year, so you can switch sooner without a break cost.',
+      },
+      {
+        id: 'fixed_5y',
+        name: '5-year fixed',
+        highlight: 'Longest certainty',
+        shape: 'borrowing',
+        annualRate: 0.034,
+        fixedYears: 5,
+        maxMonths: 420,
+        note: 'Five years of knowing exactly what you pay.',
+      },
+      {
+        id: 'variable',
+        name: 'Variable',
+        shape: 'borrowing',
+        annualRate: 0.039,
+        maxMonths: 420,
+        note: 'Moves with rates. Overpay or clear it early with no break cost.',
+      },
     ],
     cautions: [
       'Never state or imply an approval decision. Assessment is done by the mortgage team.',
@@ -111,6 +180,23 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       { label: 'Illustrative minimum repayment', value: '5% of the balance, or €5' },
       { label: 'Illustrative government stamp duty', value: '€30 a year' },
     ],
+    variants: [
+      {
+        id: 'card_standard',
+        name: 'Standard card',
+        shape: 'revolving',
+        annualRate: 0.229,
+        note: 'Interest only on what is left unpaid at the end of the month.',
+      },
+      {
+        id: 'card_low_rate',
+        name: 'Low rate card',
+        highlight: 'Cheapest to carry',
+        shape: 'revolving',
+        annualRate: 0.139,
+        note: 'For a balance you expect to clear over months rather than weeks.',
+      },
+    ],
     cautions: [
       'Do not state the limit the customer will receive.',
       'If the customer is applying for a mortgage, mention that new credit forms part of the ' +
@@ -138,6 +224,41 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       { label: 'Illustrative rate', value: '8.5% APR' },
       { label: 'Illustrative amount', value: '€2,000 to €75,000' },
       { label: 'Illustrative term', value: '1 to 5 years' },
+    ],
+    variants: [
+      {
+        id: 'loan_3y',
+        name: 'Over 3 years',
+        highlight: 'Least interest',
+        shape: 'borrowing',
+        annualRate: 0.079,
+        minAmount: 2_000,
+        maxAmount: 75_000,
+        minMonths: 36,
+        maxMonths: 36,
+      },
+      {
+        id: 'loan_5y',
+        name: 'Over 5 years',
+        highlight: 'Lowest monthly',
+        shape: 'borrowing',
+        annualRate: 0.085,
+        minAmount: 2_000,
+        maxAmount: 75_000,
+        minMonths: 60,
+        maxMonths: 60,
+      },
+      {
+        id: 'loan_7y',
+        name: 'Over 7 years',
+        shape: 'borrowing',
+        annualRate: 0.094,
+        minAmount: 10_000,
+        maxAmount: 75_000,
+        minMonths: 84,
+        maxMonths: 84,
+        note: 'Only for larger amounts, and the longer term costs more overall.',
+      },
     ],
     cautions: [
       'Where a mortgage application is active, additional borrowing affects affordability. ' +
@@ -193,6 +314,32 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       { label: 'Monthly amount', value: 'From €50 to €2,500 a month' },
       { label: 'Access', value: 'Withdraw at any time without notice' },
       { label: 'Interest', value: 'Illustrative only — real rates come from the live product pages' },
+    ],
+    variants: [
+      {
+        id: 'save_instant',
+        name: 'Instant access',
+        highlight: 'Money stays available',
+        shape: 'saving',
+        annualRate: 0.02,
+        note: 'Take it out whenever you need it.',
+      },
+      {
+        id: 'save_regular',
+        name: 'Regular saver',
+        highlight: 'Best rate',
+        shape: 'saving',
+        annualRate: 0.03,
+        note: 'A better rate for paying in every month without dipping into it.',
+      },
+      {
+        id: 'save_fixed_1y',
+        name: 'Fixed for a year',
+        shape: 'saving',
+        annualRate: 0.035,
+        minMonths: 12,
+        note: 'Locked away for a year, which is why it pays more.',
+      },
     ],
     cautions: [
       'Moving savings from another bank is the customer\'s decision, not a recommendation to make for them. Explain what having it in one place does and does not change, and leave the choice with them.',
