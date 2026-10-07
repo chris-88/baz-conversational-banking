@@ -77,15 +77,28 @@ function fromClusters(goal: GoalBlueprint, matched: readonly LifeEventCluster[])
 }
 
 /**
+ * The catalogue a call should use.
+ *
+ * Defaulted rather than required so every existing caller and test keeps working, and so the
+ * compiled catalogue stays the answer when nobody has edited anything. The one caller that
+ * passes something else is `baz-turn`, which hands over the catalogue with the admin overlay
+ * already applied (`domain/catalogue/overlay.ts`).
+ */
+type Catalogue = readonly GoalBlueprint[]
+
+/**
  * Every goal in the catalogue, with where it stands and why.
  *
  * All of them, not only the interesting ones: "why was this never mentioned to me" is as fair a
  * question as "why was this suggested", and the console has to be able to answer both (§19).
  */
-export function evaluateGoals(context: GoalContext): readonly GoalCandidate[] {
+export function evaluateGoals(
+  context: GoalContext,
+  catalogue: Catalogue = goalCatalogue,
+): readonly GoalCandidate[] {
   const matched = matchedClusters(context)
 
-  const unranked = goalCatalogue.map((goal) => {
+  const unranked = catalogue.map((goal) => {
     const own = goal.signals.filter((signal) => signal.when(context))
     const cluster = fromClusters(goal, matched)
 
@@ -289,12 +302,12 @@ export function heldForLater(candidates: readonly GoalCandidate[]): readonly Goa
 }
 
 /** What tends to come next once a goal is done. Offered on completion, not before. */
-export function followOnFor(id: GoalId): readonly GoalBlueprint[] {
-  const blueprint = goalCatalogue.find((goal) => goal.id === id)
+export function followOnFor(id: GoalId, catalogue: Catalogue = goalCatalogue): readonly GoalBlueprint[] {
+  const blueprint = catalogue.find((goal) => goal.id === id)
   if (blueprint === undefined) return []
 
   return blueprint.relationships.followOn
-    .map((followOn) => goalCatalogue.find((goal) => goal.id === followOn))
+    .map((followOn) => catalogue.find((goal) => goal.id === followOn))
     .filter((goal): goal is GoalBlueprint => goal !== undefined)
 }
 

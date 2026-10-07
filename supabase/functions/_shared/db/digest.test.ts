@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { goalCatalogue } from '../domain/goals/catalogue.ts'
+import { needCatalogue } from '../domain/needs/catalogue.ts'
 import {
   asApplicationId,
   asFactId,
@@ -47,6 +49,10 @@ function loaded(overrides: Partial<LoadedCase> = {}): LoadedCase {
     customerName: 'Aoife',
     lastSeenAt: null,
     participants: [{ id: PRIMARY, role: 'primary', displayName: 'Aoife' }],
+    // No overlay: these tests are about the digest, not about what an admin reworded.
+    overrides: [],
+    goals: goalCatalogue,
+    needs: needCatalogue,
     facts: [],
     applications: [],
     confirmations: [],

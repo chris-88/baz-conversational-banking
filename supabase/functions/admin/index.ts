@@ -27,6 +27,9 @@ import { loadCase, recordFacts, type Insert, writeEvent } from '../_shared/db/ca
 import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor, revivableNeeds } from '../_shared/db/needs.ts'
 import { describeAdminEvent } from '../_shared/db/admin-events.ts'
+import { catalogueOverrideRow, toOverride } from '../_shared/db/rows.ts'
+import { checkinKey } from '../_shared/domain/catalogue/overlay.ts'
+import { goalCatalogue } from '../_shared/domain/goals/catalogue.ts'
 import { needCatalogue } from '../_shared/domain/needs/catalogue.ts'
 import { loadPlans, planContextFor, reconcilePlans } from '../_shared/db/plans.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
@@ -330,6 +333,115 @@ Deno.serve(async (request: Request): Promise<Response> => {
         .update(update as Insert<'persona_config'>)
         .eq('scope', 'global')
       return json(ok(update), 200)
+    }
+
+    /**
+     * Plan §3.2 — reword a catalogue entry, or switch it off.
+     *
+     * Validated against the compiled catalogue before it is written: an override for a goal that
+     * does not exist, or a milestone label keyed to a milestone that is not on it, is dead weight
+     * that nothing will ever apply and that nobody will ever notice is doing nothing.
+     */
+    case 'set_catalogue_override': {
+      const entry =
+        action.kind === 'goal'
+          ? goalCatalogue.find((goal) => goal.id === action.entryId)
+          : needCatalogue.find((need) => need.id === action.entryId)
+
+      if (entry === undefined) {
+        return errorResponse('not_found', `No ${action.kind} called ${action.entryId}.`)
+      }
+
+      if (action.priority !== null && action.kind !== 'need') {
+        return errorResponse('bad_request', 'Only a need has a priority. A goal is ranked by evidence.')
+      }
+
+      if ('milestones' in entry) {
+        const ids = new Set(entry.milestones.map((milestone) => milestone.id))
+        const unknown = Object.keys(action.milestoneLabels).find((id) => !ids.has(id))
+        if (unknown !== undefined) {
+          return errorResponse('bad_request', `${action.entryId} has no milestone ${unknown}.`)
+        }
+
+        const keys = new Set(entry.checkins.map(checkinKey))
+        const strayCheckin = Object.keys(action.checkinAgendas).find((key) => !keys.has(key))
+        if (strayCheckin !== undefined) {
+          return errorResponse('bad_request', `${action.entryId} has no check-in ${strayCheckin}.`)
+        }
+      } else if (
+        Object.keys(action.milestoneLabels).length > 0 ||
+        Object.keys(action.checkinAgendas).length > 0
+      ) {
+        return errorResponse('bad_request', 'A need has no milestones or check-ins.')
+      }
+
+      /*
+       * `version` is bumped in the upsert rather than by a trigger, so it counts saves from this
+       * action and not any other write that might touch the row. It is lifecycle metadata for a
+       * human reading the console, not a concurrency token.
+       */
+      const existing = await admin
+        .from('catalogue_overrides')
+        .select('version')
+        .eq('kind', action.kind)
+        .eq('entry_id', action.entryId)
+        .maybeSingle()
+
+      const version = ((existing.data?.version as number | undefined) ?? 0) + 1
+
+      const upsert = await admin.from('catalogue_overrides').upsert(
+        {
+          kind: action.kind,
+          entry_id: action.entryId,
+          enabled: action.enabled,
+          name: action.name,
+          summary: action.summary,
+          priority: action.priority,
+          milestone_labels: action.milestoneLabels,
+          checkin_agendas: action.checkinAgendas,
+          version,
+        } as Insert<'catalogue_overrides'>,
+        { onConflict: 'kind,entry_id' },
+      )
+
+      if (upsert.error !== null) {
+        return errorResponse('bad_request', upsert.error.message)
+      }
+
+      /*
+       * No event row. `events` is per-case and a catalogue edit is global, which is also why
+       * `set_persona` writes none. The row's own version and timestamps are the audit trail,
+       * and they are the lifecycle metadata the console displays.
+       */
+      return json(ok({ version }), 200)
+    }
+
+    /** Plan §3.2 — drop the row and go back to what is compiled in. */
+    case 'clear_catalogue_override': {
+      await admin
+        .from('catalogue_overrides')
+        .delete()
+        .eq('kind', action.kind)
+        .eq('entry_id', action.entryId)
+
+      return json(ok({ cleared: true }), 200)
+    }
+
+    /** Plan §3.2 — what is currently overridden, for the catalogue screen. */
+    case 'catalogue_overrides': {
+      const result = await admin
+        .from('catalogue_overrides')
+        .select(
+          'kind, entry_id, enabled, name, summary, priority, milestone_labels, checkin_agendas, version, created_at, updated_at',
+        )
+
+      if (result.error !== null) {
+        return errorResponse('bad_request', result.error.message)
+      }
+
+      const overrides = catalogueOverrideRow.array().parse(result.data).map(toOverride)
+
+      return json(ok({ overrides }), 200)
     }
 
     case 'reset_case': {
@@ -1064,21 +1176,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
         }[]
       ).map((row) => ({
         needId: row.need_id,
-        name: needCatalogue.find((need) => need.id === row.need_id)?.name ?? row.need_id,
+        name: loaded.needs.find((need) => need.id === row.need_id)?.name ?? row.need_id,
         reason: row.reason ?? 'parked',
         revisitWhen: row.revisit_when,
         ready: ready.has(row.need_id),
       }))
 
       const needContext = needContextFor(loaded, { sensitiveDisclosure: false })
-      const candidates = needContext === null ? [] : evaluateNeeds(needContext)
+      const candidates = needContext === null ? [] : evaluateNeeds(needContext, loaded.needs)
       const plan = needContext === null ? null : buildPlan(needContext, candidates)
 
       // Plans are loaded once and shared: the goal engine treats a goal with a plan as settled
       // rather than a candidate, so it has to see the same plans the console displays.
       const loadedPlans = await loadPlans(admin, action.caseId, loaded)
       const goalContext = goalContextFor(loaded, loadedPlans, { sensitiveDisclosure: false })
-      const goalCandidates = goalContext === null ? [] : evaluateGoals(goalContext)
+      const goalCandidates = goalContext === null ? [] : evaluateGoals(goalContext, loaded.goals)
 
       const watchRows = await admin
         .from('plan_watches')

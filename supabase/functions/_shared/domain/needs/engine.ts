@@ -4,6 +4,7 @@ import {
   SIGNAL_STRENGTHS,
   type NeedCandidate,
   type NeedContext,
+  type NeedDefinition,
   type NeedEvidence,
   type NeedState,
   type SignalStrength,
@@ -42,8 +43,12 @@ export function combineConfidence(strengths: readonly SignalStrength[]): number 
  * Returns all of them rather than only the interesting ones: "why is this not being offered"
  * is as much a question the bank has to answer as "why is it" (§15).
  */
-export function evaluateNeeds(context: NeedContext): readonly NeedCandidate[] {
-  return needCatalogue.map((need): NeedCandidate => {
+export function evaluateNeeds(
+  context: NeedContext,
+  /** Defaulted so every existing caller keeps working; `baz-turn` passes the overlaid catalogue. */
+  catalogue: readonly NeedDefinition[] = needCatalogue,
+): readonly NeedCandidate[] {
+  return catalogue.map((need): NeedCandidate => {
     const matched = need.signals.filter((signal) => signal.when(context))
 
     const evidence: NeedEvidence[] = matched.map((signal) => ({

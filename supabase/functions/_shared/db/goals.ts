@@ -1,6 +1,6 @@
 import { caseFactReader } from './fact-reader.ts'
 import { contentionIn, evaluateGoals, heldForLater, worthRaising } from '../domain/goals/engine.ts'
-import type { GoalCandidate, GoalContext } from '../domain/goals/types.ts'
+import type { GoalBlueprint, GoalCandidate, GoalContext } from '../domain/goals/types.ts'
 import { isGoalId } from '../domain/goals/types.ts'
 import { factCatalogue } from '../domain/facts.ts'
 import type { LoadedCase } from './loaded-case.ts'
@@ -51,13 +51,17 @@ export function goalContextFor(
  * how a concierge turns back into a product menu — so the digest carries the one they came in
  * about, a couple worth mentioning, what is being held for later, and anything in contention.
  */
-export function describeGoals(context: GoalContext | null): {
+export function describeGoals(
+  context: GoalContext | null,
+  /** The catalogue in force, from `loaded.goals`. Defaulted so tests need not supply it. */
+  catalogue?: readonly GoalBlueprint[],
+): {
   readonly candidates: readonly GoalCandidate[]
   readonly lines: readonly string[]
 } {
   if (context === null) return { candidates: [], lines: [] }
 
-  const candidates = evaluateGoals(context)
+  const candidates = evaluateGoals(context, catalogue)
   const lines: string[] = []
 
   const raise = worthRaising(candidates)

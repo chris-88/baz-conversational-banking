@@ -213,7 +213,7 @@ export function buildCaseDigest(
   const needContext = needContextFor(loaded, {
     sensitiveDisclosure: options.sensitiveDisclosure ?? false,
   })
-  const needs = needContext === null ? [] : evaluateNeeds(needContext)
+  const needs = needContext === null ? [] : evaluateNeeds(needContext, loaded.needs)
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
 

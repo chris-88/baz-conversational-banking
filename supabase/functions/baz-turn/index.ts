@@ -28,7 +28,6 @@ import {
 } from '../_shared/db/case-repository.ts'
 import { buildCaseDigest } from '../_shared/db/digest.ts'
 import { needContextFor, needsFor, revivableNeeds } from '../_shared/db/needs.ts'
-import { needCatalogue } from '../_shared/domain/needs/catalogue.ts'
 import {
   describePlan,
   dueCheckins,
@@ -333,7 +332,7 @@ async function handleTurn(request: Request): Promise<Response> {
   const revivable = await revivableNeeds(admin, turn.caseId, loaded)
   const revived = revivable
     .map((item) => {
-      const need = needCatalogue.find((candidate) => candidate.id === item.needId)
+      const need = loaded.needs.find((candidate) => candidate.id === item.needId)
       return need === undefined ? null : { name: need.name, reason: item.reason }
     })
     .filter((item): item is { name: string; reason: string } => item !== null)
@@ -350,7 +349,7 @@ async function handleTurn(request: Request): Promise<Response> {
   const goalContext = goalContextFor(loaded, loadedPlans, {
     sensitiveDisclosure: gate.suppressHumour,
   })
-  const goals = describeGoals(goalContext)
+  const goals = describeGoals(goalContext, loaded.goals)
 
   /**
    * Whether what they are looking at is what suits them.

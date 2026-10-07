@@ -16,7 +16,7 @@ export function needsFor(
   options: { readonly sensitiveDisclosure: boolean },
 ): readonly NeedCandidate[] {
   const context = needContextFor(loaded, options)
-  return context === null ? [] : evaluateNeeds(context)
+  return context === null ? [] : evaluateNeeds(context, loaded.needs)
 }
 
 /** The same context, for callers that need more than the verdict — the plan builder. */

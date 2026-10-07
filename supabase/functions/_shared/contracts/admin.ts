@@ -13,6 +13,7 @@ export const PERIOD_DAYS: Readonly<Record<Period, number | null>> = {
   all: null,
 }
 import { PRESET_NAMES, SLIDER_NAMES } from '../llm/persona.ts'
+import { NEED_PRIORITIES } from '../domain/needs/types.ts'
 
 /**
  * `admin` — the presenter console (§37 to §44).
@@ -109,6 +110,37 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
     message: z.string().min(1).max(500),
   }),
 
+  /**
+   * Plan §3.2 — reword a catalogue entry, or switch it off.
+   *
+   * Prose only. The conditions that raise a goal are predicates over facts and are not in this
+   * schema at any depth, which is the guarantee: a malformed edit can make Baz read badly and
+   * cannot make it behave wrongly. `enabled` is the single exception and it is a boolean.
+   *
+   * Every prose field is nullable, and null means "use the compiled wording" rather than "blank".
+   */
+  z.object({
+    action: z.literal('set_catalogue_override'),
+    kind: z.enum(['goal', 'need']),
+    entryId: z.string().min(1).max(120),
+    enabled: z.boolean(),
+    name: z.string().trim().min(1).max(120).nullable(),
+    summary: z.string().trim().min(1).max(400).nullable(),
+    priority: z.enum(NEED_PRIORITIES).nullable(),
+    milestoneLabels: z.record(z.string(), z.string().trim().min(1).max(120)),
+    checkinAgendas: z.record(z.string(), z.array(z.string().trim().min(1).max(200)).max(8)),
+  }),
+
+  /** Plan §3.2 — what is currently overridden. */
+  z.object({ action: z.literal('catalogue_overrides') }),
+
+  /** Plan §3.2 — drop the row and go back to what is compiled in. */
+  z.object({
+    action: z.literal('clear_catalogue_override'),
+    kind: z.enum(['goal', 'need']),
+    entryId: z.string().min(1).max(120),
+  }),
+
   /** §41 — the bank checks what was sent in, so a document needing verification can pass. */
   z.object({ action: z.literal('verify_documents'), caseId: z.uuid() }),
 
@@ -161,6 +193,35 @@ export const demoActionSchema = z.object({
   available: z.boolean(),
   note: z.string(),
 })
+
+/**
+ * One catalogue override as the console reads it.
+ *
+ * Carries the lifecycle metadata the spec asks for — version, created, updated — which a
+ * constant in a TypeScript file cannot have and a row can.
+ */
+export const catalogueOverrideSchema = z.object({
+  kind: z.enum(['goal', 'need']),
+  entryId: z.string(),
+  enabled: z.boolean(),
+  name: z.string().nullable(),
+  summary: z.string().nullable(),
+  priority: z.enum(NEED_PRIORITIES).nullable(),
+  milestoneLabels: z.record(z.string(), z.string()),
+  checkinAgendas: z.record(z.string(), z.array(z.string())),
+  version: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type CatalogueOverrideDto = z.infer<typeof catalogueOverrideSchema>
+
+/** Every override there is. Small enough to send whole; there are at most 35 possible rows. */
+export const catalogueOverridesSchema = z.object({
+  overrides: z.array(catalogueOverrideSchema),
+})
+
+export type CatalogueOverrides = z.infer<typeof catalogueOverridesSchema>
 
 export const adminOverviewSchema = z.object({
   killSwitch: z.boolean(),

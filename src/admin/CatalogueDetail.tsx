@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { PencilIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
@@ -10,6 +12,7 @@ import {
 } from '@domain/goals/types.ts'
 import { SIGNAL_STRENGTHS, type NeedDefinition } from '@domain/needs/types.ts'
 import { factCatalogue } from '@domain/facts.ts'
+import type { CatalogueOverrideDto } from '@contracts/admin.ts'
 
 /**
  * The detail half of master/detail (§6).
@@ -18,12 +21,21 @@ import { factCatalogue } from '@domain/facts.ts'
  * does it need to know, how do you know it is progressing, when do you come back to it, what
  * holds it back, and what sits around it. Seven, because that is how many questions there are.
  */
-export function GoalDetail({ goal }: { readonly goal: GoalBlueprint }): ReactNode {
+export function GoalDetail({
+  goal,
+  override,
+  onEdit,
+}: {
+  readonly goal: GoalBlueprint
+  readonly override: CatalogueOverrideDto | undefined
+  readonly onEdit: () => void
+}): ReactNode {
   return (
     <div className="space-y-4">
       <Head
         name={goal.name}
         summary={goal.description}
+        onEdit={onEdit}
         badges={[
           { text: goal.category.replaceAll('_', ' ') },
           ...(goal.draws === null
@@ -52,11 +64,7 @@ export function GoalDetail({ goal }: { readonly goal: GoalBlueprint }): ReactNod
                   ? `routes to ${goal.linkedNeeds.length === 1 ? 'a need' : `${String(goal.linkedNeeds.length)} needs`}`
                   : 'recognised and tracked, no product route',
             },
-            {
-              label: 'History',
-              value: 'none — the catalogue is compiled into the build',
-              muted: true,
-            },
+            ...lifecycle(override),
           ]}
         />
       </Pane>
@@ -185,12 +193,21 @@ export function GoalDetail({ goal }: { readonly goal: GoalBlueprint }): ReactNod
 }
 
 /** A need is a smaller object, so it gets fewer cards rather than padded ones. */
-export function NeedDetail({ need }: { readonly need: NeedDefinition }): ReactNode {
+export function NeedDetail({
+  need,
+  override,
+  onEdit,
+}: {
+  readonly need: NeedDefinition
+  readonly override: CatalogueOverrideDto | undefined
+  readonly onEdit: () => void
+}): ReactNode {
   return (
     <div className="space-y-4">
       <Head
         name={need.name}
         summary={need.framing}
+        onEdit={onEdit}
         badges={[
           { text: `${need.priority.replaceAll('_', ' ')} priority` },
           ...(need.sensitive ? [{ text: 'sensitive', tone: 'destructive' as const }] : []),
@@ -208,6 +225,7 @@ export function NeedDetail({ need }: { readonly need: NeedDefinition }): ReactNo
                 ? 'sensitive — humour is forced off and no product is offered on that turn'
                 : 'standard',
             },
+            ...lifecycle(override),
           ]}
         />
       </Pane>
@@ -371,14 +389,25 @@ function Head({
   name,
   summary,
   badges,
+  onEdit,
 }: {
   readonly name: string
   readonly summary: string | null
   readonly badges: readonly { readonly text: string; readonly tone?: 'destructive' | 'outline' }[]
+  /** Absent for a life-event cluster, which has no prose worth overriding. */
+  readonly onEdit?: () => void
 }): ReactNode {
   return (
     <div className="space-y-2">
-      <h2 className="text-xl font-semibold tracking-tight">{name}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="min-w-0 flex-1 text-xl font-semibold tracking-tight">{name}</h2>
+        {onEdit !== undefined && (
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <PencilIcon />
+            Reword
+          </Button>
+        )}
+      </div>
       {summary !== null && <p className="text-muted-foreground text-sm">{summary}</p>}
       {badges.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -386,7 +415,7 @@ function Head({
             <Badge
               key={badge.text}
               variant={badge.tone ?? 'secondary'}
-              className="text-2xs capitalize"
+              className="text-2xs first-letter:uppercase"
             >
               {badge.text}
             </Badge>
@@ -500,6 +529,32 @@ function Related({
       </div>
     </div>
   )
+}
+
+/**
+ * Lifecycle metadata, which only exists once somebody has edited something.
+ *
+ * The spec asks for created, updated and version. A constant in a TypeScript file has none of
+ * those, so the honest answer when nothing has been reworded is to say where the wording comes
+ * from rather than to invent a date for it (plan §3.2).
+ */
+function lifecycle(
+  override: CatalogueOverrideDto | undefined,
+): readonly { readonly label: string; readonly value: string; readonly muted?: boolean }[] {
+  if (override === undefined) {
+    return [
+      { label: 'Wording', value: 'as compiled into the build — never reworded', muted: true },
+    ]
+  }
+
+  return [
+    {
+      label: 'Wording',
+      value: `reworded ${override.version === 1 ? 'once' : `${String(override.version)} times`}`,
+    },
+    { label: 'First edited', value: override.createdAt.slice(0, 10) },
+    { label: 'Last edited', value: override.updatedAt.slice(0, 10) },
+  ]
 }
 
 /** How the engine knows a milestone happened, said in English. */

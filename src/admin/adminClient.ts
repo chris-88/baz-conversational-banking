@@ -1,7 +1,9 @@
 import { callFunction } from '@/lib/callFunction'
 import {
+  catalogueOverridesSchema,
   guardrailTestSchema,
   personaPreviewSchema,
+  type CatalogueOverrides,
   type GuardrailTest,
   type PersonaPreview,
   type Period,
@@ -32,6 +34,13 @@ export const adminApi = {
   purgeCases: () => call({ action: 'purge_cases' }),
   testGuardrail: async (message: string): Promise<GuardrailTest> =>
     guardrailTestSchema.parse(await call({ action: 'test_guardrail', message })),
+  catalogueOverrides: async (): Promise<CatalogueOverrides> =>
+    catalogueOverridesSchema.parse(await call({ action: 'catalogue_overrides' })),
+  setCatalogueOverride: (
+    edit: Omit<Extract<AdminRequest, { action: 'set_catalogue_override' }>, 'action'>,
+  ) => call({ action: 'set_catalogue_override', ...edit }),
+  clearCatalogueOverride: (kind: 'goal' | 'need', entryId: string) =>
+    call({ action: 'clear_catalogue_override', kind, entryId }),
   previewPersona: async (
     sliders: Extract<AdminRequest, { action: 'preview_persona' }>['sliders'],
     message: string,

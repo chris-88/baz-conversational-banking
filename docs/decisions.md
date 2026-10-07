@@ -988,3 +988,11 @@ section.
   among them. "€3,000 over about two years" against a loan offering three, five and seven used to
   return nothing, because every option failed the filter — and "I could not work that out" when
   three perfectly good options exist is the worst of both.
+
+**2026-10-07 — Catalogue editing is a prose overlay, not a rules engine.** §6, plan §3.2.
+`catalogue_overrides` holds name, summary, priority, milestone labels, check-in agendas and an
+enabled flag, keyed by `(kind, entry_id)`. `domain/catalogue/overlay.ts` applies it to the
+compiled catalogue; `loadCase` does that once so no call site can forget. Signals stay in code.
+The split is the guarantee: a malformed edit can make Baz read badly and cannot make it behave
+wrongly. Check-ins have no id in the catalogue, so the overlay keys them by what they are
+(`every:3`, `on:mortgage_approved`) and a test asserts those are unique within every goal.

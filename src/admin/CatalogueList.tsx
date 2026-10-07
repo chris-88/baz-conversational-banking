@@ -44,6 +44,8 @@ export function CatalogueList({
   onSelect,
   groupLabel,
   sortable,
+  off,
+  onSelectOff,
 }: {
   readonly entries: readonly CatalogueEntry[]
   readonly selected: string | undefined
@@ -52,6 +54,12 @@ export function CatalogueList({
   readonly groupLabel: string
   /** Whether ranking by priority is meaningful. Only needs carry one. */
   readonly sortable: boolean
+  /**
+   * Entries switched off, which are no longer in `entries` because they are no longer in the
+   * catalogue the engines are handed. Shown at the end so there is still a way back.
+   */
+  readonly off: readonly { readonly id: string; readonly name: string }[]
+  readonly onSelectOff: (id: string) => void
 }): ReactNode {
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState('all')
@@ -129,8 +137,9 @@ export function CatalogueList({
 
         <p className="text-muted-foreground tabular text-2xs">
           {shown.length === entries.length
-            ? `${String(entries.length)} in the catalogue`
+            ? `${String(entries.length)} in use`
             : `${String(shown.length)} of ${String(entries.length)}`}
+          {off.length > 0 && ` · ${String(off.length)} switched off`}
         </p>
       </div>
 
@@ -165,7 +174,7 @@ export function CatalogueList({
                     </Badge>
                   )}
                   {entry.rank !== null && (
-                    <Badge variant="secondary" className="text-2xs shrink-0 capitalize">
+                    <Badge variant="secondary" className="text-2xs shrink-0 first-letter:uppercase">
                       {entry.rank.replaceAll('_', ' ')}
                     </Badge>
                   )}
@@ -173,6 +182,33 @@ export function CatalogueList({
                 <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{entry.summary}</p>
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Not filtered or sorted with the rest: it is a short list of exceptions, not part of
+            the catalogue, and burying it among 26 rows is how somebody loses a goal. */}
+        {off.length > 0 && (
+          <div className="border-t">
+            <p className="text-muted-foreground px-4 pt-3 pb-1 text-2xs font-medium">
+              Switched off
+            </p>
+            <div className="divide-y">
+              {off.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => onSelectOff(entry.id)}
+                  data-state={entry.id === selected ? 'selected' : undefined}
+                  className={cn(
+                    'hover:bg-muted/50 data-[state=selected]:bg-muted block w-full px-4 py-2.5 text-left transition-colors',
+                    entry.id === selected &&
+                      'border-primary -ml-px border-l-2 pl-[calc(1rem-1px)]',
+                  )}
+                >
+                  <span className="text-muted-foreground text-sm line-through">{entry.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </ScrollArea>

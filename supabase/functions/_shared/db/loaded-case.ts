@@ -3,6 +3,9 @@ import type { ApplicationId, Fact, ParticipantId, ParticipantRole } from '../dom
 import type { Product } from '../domain/journey.ts'
 import type { Application } from '../domain/state-machine.ts'
 import type { PersonaSliders } from '../llm/persona.ts'
+import type { CatalogueOverride } from '../domain/catalogue/overlay.ts'
+import type { GoalBlueprint } from '../domain/goals/types.ts'
+import type { NeedDefinition } from '../domain/needs/types.ts'
 
 /**
  * Everything a turn needs, loaded once and then used purely.
@@ -78,6 +81,17 @@ export type LoadedCase = {
 
   readonly persona: PersonaSliders
   readonly killSwitch: boolean
+
+  /** The admin's prose edits, as rows. The console shows these; nothing else needs them. */
+  readonly overrides: readonly CatalogueOverride[]
+  /**
+   * The catalogues actually in force, with `overrides` already applied.
+   *
+   * Everything downstream reads these rather than importing the module constants, so a disabled
+   * goal is a goal the engines never hear about (plan §3.2, `domain/catalogue/overlay.ts`).
+   */
+  readonly goals: readonly GoalBlueprint[]
+  readonly needs: readonly NeedDefinition[]
 }
 
 export function participantFor(

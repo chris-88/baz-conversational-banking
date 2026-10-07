@@ -42,5 +42,6 @@ export const queryKeys = {
     persona: () => ['admin', 'persona'] as const,
     domainConfig: () => ['admin', 'domain-config'] as const,
     audienceMetrics: () => ['admin', 'audience-metrics'] as const,
+    catalogue: () => ['admin', 'catalogue-overrides'] as const,
   },
 } as const

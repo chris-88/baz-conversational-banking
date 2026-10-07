@@ -3,6 +3,8 @@ import { CASE_KINDS } from '../domain/case.ts'
 import { FACT_SOURCES, isFactKey } from '../domain/facts.ts'
 import { PRODUCTS } from '../domain/journey.ts'
 import { APPLICATION_STATES } from '../domain/state-machine.ts'
+import { NEED_PRIORITIES } from '../domain/needs/types.ts'
+import type { CatalogueOverride } from '../domain/catalogue/overlay.ts'
 
 /**
  * Row schemas.
@@ -106,3 +108,41 @@ export const personaRow = z.object({
 export const domainConfigRow = z.object({ kill_switch: z.boolean() })
 
 export const customerRow = z.object({ full_name: z.string() })
+
+/**
+ * A catalogue override (plan §3.2).
+ *
+ * The jsonb columns are parsed rather than cast: they hold presenter-entered prose, and the one
+ * thing worse than an unreadable agenda is an agenda that is not an array of strings being
+ * handed to the prompt composer.
+ */
+export const catalogueOverrideRow = z.object({
+  kind: z.enum(['goal', 'need']),
+  entry_id: z.string(),
+  enabled: z.boolean(),
+  name: z.string().nullable(),
+  summary: z.string().nullable(),
+  priority: z.enum(NEED_PRIORITIES).nullable(),
+  milestone_labels: z.record(z.string(), z.string()),
+  checkin_agendas: z.record(z.string(), z.array(z.string())),
+  version: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+
+/** Row to domain. The overlay works in domain terms and knows nothing about column names. */
+export function toOverride(row: z.infer<typeof catalogueOverrideRow>): CatalogueOverride {
+  return {
+    kind: row.kind,
+    entryId: row.entry_id,
+    enabled: row.enabled,
+    name: row.name,
+    summary: row.summary,
+    priority: row.priority,
+    milestoneLabels: row.milestone_labels,
+    checkinAgendas: row.checkin_agendas,
+    version: row.version,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}

@@ -242,6 +242,48 @@ export type Database = {
           },
         ]
       }
+      catalogue_overrides: {
+        Row: {
+          checkin_agendas: Json
+          created_at: string
+          enabled: boolean
+          entry_id: string
+          kind: string
+          milestone_labels: Json
+          name: string | null
+          priority: string | null
+          summary: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          checkin_agendas?: Json
+          created_at?: string
+          enabled?: boolean
+          entry_id: string
+          kind: string
+          milestone_labels?: Json
+          name?: string | null
+          priority?: string | null
+          summary?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          checkin_agendas?: Json
+          created_at?: string
+          enabled?: boolean
+          entry_id?: string
+          kind?: string
+          milestone_labels?: Json
+          name?: string | null
+          priority?: string | null
+          summary?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       consents: {
         Row: {
           case_id: string

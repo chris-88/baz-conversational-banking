@@ -1,4 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { effectiveGoals, effectiveNeeds } from '../domain/catalogue/overlay.ts'
+import { goalCatalogue } from '../domain/goals/catalogue.ts'
+import { needCatalogue } from '../domain/needs/catalogue.ts'
 import type { Database, Json } from './database.types.ts'
 
 /**
@@ -70,6 +73,7 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
     messagesData,
     personaData,
     domainData,
+    overridesData,
   ] = await Promise.all([
     client.from('participants').select('id, role, display_name').eq('case_id', caseId),
     client
@@ -89,9 +93,29 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
       .limit(MESSAGE_WINDOW),
     client.from('persona_config').select('preset, sliders').eq('scope', 'global').maybeSingle(),
     client.from('domain_config').select('kill_switch').eq('scope', 'global').maybeSingle(),
+    /*
+     * Read fresh every turn, for the same reason persona is: a presenter who reworded a goal
+     * between run-throughs expects the next message to use the new wording, not the wording
+     * that happened to be deployed.
+     */
+    client
+      .from('catalogue_overrides')
+      .select(
+        'kind, entry_id, enabled, name, summary, priority, milestone_labels, checkin_agendas, version, created_at, updated_at',
+      ),
   ])
 
   const customerName = await loadCustomerName(client, theCase.customer_id)
+
+  /*
+   * Applied here rather than at each call site. The engines take a catalogue and evaluate
+   * everything in it; if the overlay were applied by each caller, one caller forgetting would be
+   * a goal that was switched off still being offered.
+   */
+  const overrides = rows.catalogueOverrideRow
+    .array()
+    .parse(unwrap(overridesData as Query, 'catalogue overrides'))
+    .map(rows.toOverride)
 
   const participants = rows.participantRow
     .array()
@@ -190,6 +214,9 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
     eventsSinceLastSeen,
     persona,
     killSwitch: domainConfig === null ? false : rows.domainConfigRow.parse(domainConfig).kill_switch,
+    overrides,
+    goals: effectiveGoals(goalCatalogue, overrides),
+    needs: effectiveNeeds(needCatalogue, overrides),
   }
 }
 
