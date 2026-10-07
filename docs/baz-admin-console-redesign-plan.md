@@ -224,24 +224,40 @@ Events tab table. The Summary tab's model call.
 Master/detail polish, expandable categories, **Test a request**.
 *Smallest chunk, best demo-value-per-hour in the document.*
 
-### Chunk 5 — Persona · ~0.5 day
-Slider descriptions and value chips, Reset, live preview.
+### Chunk 5 — Persona · ~0.5 day — **done 2026-10-07**
+Slider descriptions and value chips, Reset, live preview. The preview is on demand rather than
+per-drag: a model call per pointer move is slow and costs money, and the point is to hear a
+setting rather than watch one.
 
-### Chunk 6 — Goals & needs, read view · ~1 day
-Master/detail replacing the accordion, the seven cards, search/sort/filter.
+### Chunk 6 — Goals & needs, read view · ~1 day — **done 2026-10-07**
+Master/detail replacing the accordion, the seven cards, search/sort/filter. Search covers the
+signal wording, not only names. Life events now show what cluster membership is worth —
+`strong_inferred` for primary, `soft_inferred` for the rest — which is the mechanism that stops
+one sentence producing six plans.
 
-### Chunk 7 — Goals & needs, editing · ~1.5 days *(if option B)*
-Overlay table, `Sheet` editor, enable/disable, lifecycle metadata.
+### Chunk 7 — Goals & needs, editing · ~1.5 days — **done 2026-10-07**
+`catalogue_overrides`, applied by `domain/catalogue/overlay.ts` inside `loadCase` so no call site
+can forget. `Sheet` editor, enable/disable, lifecycle metadata from the row. Conditions stay in
+code. Check-ins are keyed by what they are rather than where they sit, with a test asserting
+those keys are unique within every goal.
 
-### Chunk 8 — Metrics backend · ~1 day
-`metrics_by_day`, period comparison, the `goal_identified` event, outcome classification.
-*Nothing visible. Everything in Chunk 9 depends on it.*
+### Chunk 8 — Metrics backend · ~1 day — **done 2026-10-07**
+`metrics_by_day` and `messages_by_day` as Postgres functions, period comparison, the
+`goal_identified` event (deduplicated per goal per case), `caseOutcome` beside `caseStatus`.
+*Nothing visible. Everything in Chunk 9 depended on it.*
 
-### Chunk 9 — Analytics · ~2 days
-KPI sparklines, volume chart, funnel, top goals, guardrail triggers, insights panel.
+### Chunk 9 — Analytics · ~2 days — **done 2026-10-07**
+KPI sparklines, volume chart, funnel, top goals, guardrail triggers, outcomes, insights.
 *Seven panels, not nine: channel mix and new-vs-returning are dropped (decision 3).*
+Chart colour tokens did not exist and were added. Insights are deterministic rules in
+`domain/insights.ts`, tested — a console whose headline claim is that the engine is
+deterministic cannot have one corner of itself guessing.
 
-### Chunk 10 — Profile · ~0.5 day
+### Chunk 10 — Profile · ~0.5 day — **done 2026-10-07**
+Decorative, and nothing on it untrue. Every unbuilt setting is shown off and disabled with a line
+saying what would have to exist. Theme went the other way and is now a real setting, scoped to
+the console — the class is applied by the shell and removed when it unmounts, so an admin who
+chooses dark does not find the bank's front door in dark mode.
 Header card, personal details, role and permissions, security, sessions, preferences.
 *Decorative, and honestly so: the email and the role are real, the rest is visibly inert.*
 
