@@ -1,4 +1,5 @@
 import type { Product } from '../../domain/journey.ts'
+import type { ProductVariant } from '../../domain/quotes/types.ts'
 
 /**
  * §51 — product information integrity.
@@ -12,33 +13,6 @@ import type { Product } from '../../domain/journey.ts'
 export type IllustrativeTerm = {
   readonly label: string
   readonly value: string
-}
-
-/**
- * A version of a product with its own numbers.
- *
- * Structured rather than the prose in `illustrativeTerms`, because a quote card needs figures
- * to compute from and prose is what left Baz doing arithmetic in its replies. The prose stays:
- * it is what Baz says about a product, and this is what the engine measures with.
- *
- * `shape` decides which sums apply. Borrowing amortises, saving compounds, revolving clears a
- * balance at a monthly payment.
- */
-export type ProductVariant = {
-  readonly id: string
-  readonly name: string
-  /** A fact about this option against the others on screen, never a claim about other customers. */
-  readonly highlight?: string
-  readonly shape: 'borrowing' | 'saving' | 'revolving'
-  /** Illustrative, like everything else here. */
-  readonly annualRate: number
-  /** Where a rate is only held for a while. */
-  readonly fixedYears?: number
-  readonly minMonths?: number
-  readonly maxMonths?: number
-  readonly minAmount?: number
-  readonly maxAmount?: number
-  readonly note?: string
 }
 
 export type ProductInfo = {

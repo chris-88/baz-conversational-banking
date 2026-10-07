@@ -1,4 +1,4 @@
-import type { ProductVariant } from '../../tenants/boi/products.ts'
+import type { ProductVariant } from './types.ts'
 import {
   monthsFor,
   monthsToSave,

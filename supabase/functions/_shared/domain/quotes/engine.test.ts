@@ -1,8 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import { buildQuote } from './engine.ts'
-import { boiProducts } from '../../tenants/boi/products.ts'
+import type { ProductVariant } from './types.ts'
 
-const variants = (product: keyof typeof boiProducts) => boiProducts[product].variants ?? []
+/**
+ * Fixtures rather than Bank of Ireland's catalogue.
+ *
+ * Invariant 11 keeps the domain free of tenants, and it is right for a second reason: an engine
+ * test that reads live product data fails whenever somebody edits a rate, which teaches people
+ * to change the test rather than look at it.
+ */
+const FIXTURES: Readonly<Record<string, readonly ProductVariant[]>> = {
+  mortgage: [
+    { id: 'fixed_4y', name: '4-year fixed', highlight: 'Lowest monthly', shape: 'borrowing', annualRate: 0.031, fixedYears: 4, maxMonths: 420 },
+    { id: 'fixed_1y', name: '1-year fixed', shape: 'borrowing', annualRate: 0.033, fixedYears: 1, maxMonths: 420 },
+    { id: 'fixed_5y', name: '5-year fixed', shape: 'borrowing', annualRate: 0.034, fixedYears: 5, maxMonths: 420 },
+  ],
+  personal_loan: [
+    { id: 'loan_3y', name: 'Over 3 years', shape: 'borrowing', annualRate: 0.079, minAmount: 2_000, minMonths: 36, maxMonths: 36 },
+    { id: 'loan_5y', name: 'Over 5 years', shape: 'borrowing', annualRate: 0.085, minAmount: 2_000, minMonths: 60, maxMonths: 60 },
+    { id: 'loan_7y', name: 'Over 7 years', shape: 'borrowing', annualRate: 0.094, minAmount: 10_000, minMonths: 84, maxMonths: 84 },
+  ],
+  savings: [
+    { id: 'save_instant', name: 'Instant access', shape: 'saving', annualRate: 0.02 },
+    { id: 'save_regular', name: 'Regular saver', shape: 'saving', annualRate: 0.03 },
+  ],
+  credit_card: [{ id: 'card_standard', name: 'Standard card', shape: 'revolving', annualRate: 0.229 }],
+  joint_account: [],
+}
+
+const variants = (product: keyof typeof FIXTURES) => FIXTURES[product] ?? []
 
 /**
  * The two questions from the brief, asked from opposite ends.
