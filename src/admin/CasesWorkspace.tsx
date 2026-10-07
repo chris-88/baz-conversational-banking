@@ -29,15 +29,7 @@ import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { MessagesSquareIcon } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { CalendarIcon } from 'lucide-react'
-import { PageHeader, MetricCard } from '@/admin/parts'
+import { PeriodSelect, PageHeader, MetricCard } from '@/admin/parts'
 import { CaseList } from '@/admin/CaseList'
 import { CaseDetail } from '@/admin/CaseDetail'
 import { ActivityFeed, ActivityPlaceholder } from '@/admin/ActivityFeed'
@@ -248,30 +240,6 @@ function NothingSelected(): ReactNode {
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
-  )
-}
-
-/** How far back the numbers reach. */
-function PeriodSelect({
-  value,
-  onChange,
-}: {
-  readonly value: Period
-  readonly onChange: (next: Period) => void
-}): ReactNode {
-  return (
-    <Select value={value} onValueChange={(next) => onChange(next as Period)}>
-      <SelectTrigger className="w-40">
-        <CalendarIcon />
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="7d">Last 7 days</SelectItem>
-        <SelectItem value="30d">Last 30 days</SelectItem>
-        <SelectItem value="90d">Last 90 days</SelectItem>
-        <SelectItem value="all">All time</SelectItem>
-      </SelectContent>
-    </Select>
   )
 }
 

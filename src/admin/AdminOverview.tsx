@@ -7,6 +7,8 @@ import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { adminApi } from '@/admin/adminClient'
 import { CasesWorkspace } from '@/admin/CasesWorkspace'
 import { EngineScreen } from '@/admin/EngineScreen'
+import { AnalyticsScreen } from '@/admin/AnalyticsScreen'
+import { PeriodSelect } from '@/admin/parts'
 import { GuardrailsScreen } from '@/admin/GuardrailsScreen'
 import { PersonaControls } from '@/admin/PersonaControls'
 import { usePeriod } from '@/admin/usePeriod'
@@ -18,21 +20,36 @@ import { usePeriod } from '@/admin/usePeriod'
  * conversations under different headings, and the difference between them was a distinction
  * only the person who built it could hold.
  */
-type Section = 'cases' | 'case' | 'guardrails' | 'persona' | 'engine'
+type Section = 'cases' | 'case' | 'guardrails' | 'persona' | 'engine' | 'analytics'
 
-/** The screens that read the shared overview. The other two fetch their own, or nothing. */
+/** The screens that read the shared overview. The others fetch their own. */
 type OverviewSection = Extract<Section, 'cases' | 'case' | 'guardrails' | 'persona'>
 
 export function AdminOverview({ section }: { readonly section?: Section }): ReactNode {
-  /**
-   * Two screens need nothing from the server.
+  /*
+   * Two screens read none of the overview.
    *
-   * The catalogue is compiled into the bundle and a case detail fetches its own data, so
+   * Both fetch exactly what they need — the catalogue overlay, or the analytics window — so
    * neither should sit behind a spinner waiting for a case list it will never read.
    */
   if (section === 'engine') return <EngineScreen />
+  if (section === 'analytics') return <Analytics />
 
   return <WithOverview section={section ?? 'cases'} />
+}
+
+/** The one screen that wants the period but not the overview. */
+function Analytics(): ReactNode {
+  const [period, setPeriod] = usePeriod()
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <PeriodSelect value={period} onChange={setPeriod} />
+      </div>
+      <AnalyticsScreen period={period} />
+    </div>
+  )
 }
 
 function WithOverview({ section }: { readonly section: OverviewSection }): ReactNode {

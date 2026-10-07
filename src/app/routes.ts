@@ -22,5 +22,6 @@ export const routes = {
     guardrails: '/admin/guardrails',
     persona: '/admin/persona',
     engine: '/admin/engine',
+    analytics: '/admin/analytics',
   },
 } as const

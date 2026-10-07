@@ -461,8 +461,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       const previousFrom = days === null ? null : new Date(from.getTime() - days * 86_400_000)
 
-      const [series, windowEvents, priorEvents, applications, caseFacts] = await Promise.all([
+      const [series, messageSeries, windowEvents, priorEvents, applications, caseFacts] =
+        await Promise.all([
         admin.rpc('metrics_by_day', { from_ts: from.toISOString(), to_ts: to.toISOString() }),
+        /* Volume is messages, not events: nothing writes a `message_sent` event, and adding one
+           per message would double the log to record what the log already holds. Merged into
+           the same series so every chart on the screen reads one array. */
+        admin.rpc('messages_by_day', { from_ts: from.toISOString(), to_ts: to.toISOString() }),
         admin
           .from('events')
           .select('type, case_id, payload')
@@ -497,7 +502,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
               .gte('created_at', previousFrom.toISOString())
               .lt('created_at', from.toISOString())
 
-      for (const result of [series, windowEvents, applications, caseFacts, priorFacts]) {
+      for (const result of [series, messageSeries, windowEvents, applications, caseFacts, priorFacts]) {
         if (result.error !== null) return errorResponse('conflict', result.error.message)
       }
 
@@ -664,7 +669,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
           to: to.toISOString(),
           totals,
           previous,
-          series: (series.data ?? []) as { day: string; type: string; count: number }[],
+          series: [
+            ...((series.data ?? []) as { day: string; type: string; count: number }[]),
+            ...((messageSeries.data ?? []) as { day: string; role: string; count: number }[]).map(
+              (row) => ({ day: row.day, type: `message:${row.role}`, count: row.count }),
+            ),
+          ],
           funnel,
           topGoals,
           guardrails,

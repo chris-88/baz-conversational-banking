@@ -1,4 +1,13 @@
 import type { ReactNode } from 'react'
+import { CalendarIcon } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { Period } from '@contracts/admin.ts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -264,5 +273,29 @@ export function ReasonedButton({
     <Button variant={variant} disabled={disabled} onClick={onClick} title={reason}>
       {children}
     </Button>
+  )
+}
+
+/** How far back the numbers reach. Shared, because two screens count over the same window. */
+export function PeriodSelect({
+  value,
+  onChange,
+}: {
+  readonly value: Period
+  readonly onChange: (next: Period) => void
+}): ReactNode {
+  return (
+    <Select value={value} onValueChange={(next) => onChange(next as Period)}>
+      <SelectTrigger className="w-40">
+        <CalendarIcon />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="7d">Last 7 days</SelectItem>
+        <SelectItem value="30d">Last 30 days</SelectItem>
+        <SelectItem value="90d">Last 90 days</SelectItem>
+        <SelectItem value="all">All time</SelectItem>
+      </SelectContent>
+    </Select>
   )
 }

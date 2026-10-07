@@ -1028,6 +1028,14 @@ export type Database = {
     Functions: {
       can_read_case: { Args: { target_case_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      messages_by_day: {
+        Args: { from_ts: string; to_ts: string }
+        Returns: {
+          count: number
+          day: string
+          role: string
+        }[]
+      }
       metrics_by_day: {
         Args: { from_ts: string; to_ts: string; types?: string[] }
         Returns: {

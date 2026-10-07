@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router-dom'
 import {
   CompassIcon,
   LogOutIcon,
+  ChartLineIcon,
   MessagesSquareIcon,
   ShieldAlertIcon,
   SlidersHorizontalIcon,
@@ -57,6 +58,13 @@ const SECTIONS = [
     label: 'Goals & needs',
     hint: 'What Baz can recognise',
     icon: CompassIcon,
+    end: false,
+  },
+  {
+    to: routes.admin.analytics,
+    label: 'Analytics',
+    hint: 'What has happened',
+    icon: ChartLineIcon,
     end: false,
   },
   {

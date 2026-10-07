@@ -39,6 +39,20 @@
   --primary: var(--boi-blue);
   --primary-foreground: oklch(0.99 0 0);
 
+  /*
+   * Chart series, in the order Recharts asks for them.
+   *
+   * Built out from the BOI blue rather than a stock rainbow, so a chart in the console reads as
+   * part of the same product as everything around it. Ordered so the first two are the most
+   * distinct: most charts here have two or three series, and nobody should have to consult a
+   * legend to tell them apart.
+   */
+  --chart-1: var(--boi-blue);
+  --chart-2: oklch(0.65 0.14 195);
+  --chart-3: oklch(0.72 0.14 85);
+  --chart-4: oklch(0.6 0.16 310);
+  --chart-5: oklch(0.56 0.13 150);
+
   --brand-deep: var(--boi-navy);
   --brand-deep-foreground: oklch(0.985 0.003 248);
 
@@ -108,6 +122,13 @@
 
   --primary: oklch(0.68 0.15 256);
   --primary-foreground: oklch(0.15 0.03 258);
+
+  /* Lifted and desaturated: the same hues, legible against a dark card. */
+  --chart-1: oklch(0.68 0.15 256);
+  --chart-2: oklch(0.72 0.12 195);
+  --chart-3: oklch(0.78 0.13 85);
+  --chart-4: oklch(0.68 0.14 310);
+  --chart-5: oklch(0.66 0.12 150);
 
   --brand-deep: oklch(0.24 0.07 258);
   --brand-deep-foreground: oklch(0.985 0.005 255);
@@ -197,6 +218,11 @@
   --color-product-personal-loan: var(--product-personal-loan);
   --color-product-savings: var(--product-savings);
   --color-product-protection: var(--product-protection);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

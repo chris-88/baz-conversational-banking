@@ -20,6 +20,7 @@ const routeObjects: RouteObject[] = [
       { path: 'guardrails', element: <LazyAdminOverview section="guardrails" /> },
       { path: 'persona', element: <LazyAdminOverview section="persona" /> },
       { path: 'engine', element: <LazyAdminOverview section="engine" /> },
+      { path: 'analytics', element: <LazyAdminOverview section="analytics" /> },
     ],
   },
 
