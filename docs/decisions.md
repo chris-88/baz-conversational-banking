@@ -996,3 +996,24 @@ compiled catalogue; `loadCase` does that once so no call site can forget. Signal
 The split is the guarantee: a malformed edit can make Baz read badly and cannot make it behave
 wrongly. Check-ins have no id in the catalogue, so the overlay keys them by what they are
 (`every:3`, `on:mortgage_approved`) and a test asserts those are unique within every goal.
+
+**2026-10-07 — A quote selection ends on the customer's move, not on a question.** §51.
+Choosing an option to talk through used to be followed by "explain it, then keep finding out what
+the money is for" — and Baz explained the four-year fixed and in the same breath asked what the
+two of them earned and which county the house was in. The turn now ends by offering two ways
+forward: more about this option, or what applying would involve. Discovery resumes after they
+answer. Same principle as the product options card: explaining and interrogating at once reads as
+not listening.
+
+**2026-10-07 — "What applying involves" comes from the journey, not the model.** §8, §51.
+`domain/prospect.ts` runs the requirement engine against a hypothetical application, so the
+answer is the real journey against what the case already knows. Without it the model answered
+from whatever it knew about Irish mortgages, which is inventing a bank's paperwork — the same
+class of mistake as inventing its rates. `show_quote` writes a `product_quoted` event so the next
+turn knows which product is in play.
+
+**2026-10-07 — Variants are the only source of rates.** §51.
+`illustrativeTerms` carried hand-written rates beside the computed ones and they had drifted: the
+mortgage advertised "3.85% for 3 years" while the card offered 3.1%, 3.3%, 3.4% and 3.9%. The
+prompt now derives rate lines from the variants, and `products.test.ts` fails any rate written in
+prose beside a variant.

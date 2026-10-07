@@ -57,7 +57,6 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       'The property must be in the Republic of Ireland.',
     ],
     illustrativeTerms: [
-      { label: 'Illustrative fixed rate', value: '3.85% for 3 years' },
       { label: 'Illustrative term', value: 'Up to 35 years' },
       { label: 'Illustrative maximum loan', value: '4 times combined gross annual income' },
     ],
@@ -150,7 +149,6 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       'The credit limit offered is set by that assessment, not chosen by the customer.',
     ],
     illustrativeTerms: [
-      { label: 'Illustrative purchase APR', value: '22.9% variable' },
       { label: 'Illustrative minimum repayment', value: '5% of the balance, or €5' },
       { label: 'Illustrative government stamp duty', value: '€30 a year' },
     ],
@@ -195,9 +193,7 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
       'Minimum and maximum loan amounts apply.',
     ],
     illustrativeTerms: [
-      { label: 'Illustrative rate', value: '8.5% APR' },
       { label: 'Illustrative amount', value: '€2,000 to €75,000' },
-      { label: 'Illustrative term', value: '1 to 5 years' },
     ],
     variants: [
       {

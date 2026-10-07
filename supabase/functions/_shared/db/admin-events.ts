@@ -21,6 +21,8 @@ const SIGNALS = new Set([
   'savings_target_reached',
   'notification_sent',
   'context_reused',
+  'goal_identified',
+  'product_quoted',
   'application_created',
   'application_submitted',
   'partner_joined',
@@ -66,6 +68,10 @@ export function describeAdminEvent(
         return `Balance moved to ${money(payload, 'amount') ?? 'a new figure'}`
       case 'context_reused':
         return 'A question that did not have to be asked'
+      case 'goal_identified':
+        return `Worked out a goal: ${text(payload, 'goal')?.replaceAll('_', ' ') ?? 'something they are after'}`
+      case 'product_quoted':
+        return `Showed figures for ${text(payload, 'product')?.replaceAll('_', ' ') ?? 'a product'}`
       case 'context_captured':
         return `Recorded ${text(payload, 'key') ?? 'something they said'}`
       case 'application_created':

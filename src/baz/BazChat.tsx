@@ -5,6 +5,7 @@ import { ChatBubble } from '@/baz/ChatBubble'
 import { TypingBubble } from '@/baz/TypingBubble'
 import { Composer } from '@/baz/Composer'
 import { SuggestionList, type Suggestion } from '@/baz/SuggestionList'
+import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
@@ -47,6 +48,14 @@ export function BazChat({
   const [joining, setJoining] = useState(isBackendConfigured)
   const [joinError, setJoinError] = useState<string | null>(null)
   const { entries, streaming, error, send, loadFrom, reset } = useConversation(caseId)
+
+  /**
+   * The fork offered after a quote option has been talked through.
+   *
+   * Local and short-lived: anything the customer does next clears it, because a pair of chips
+   * still sitting there two turns later is answering a question nobody is still asking.
+   */
+  const [followUps, setFollowUps] = useState<readonly Suggestion[]>([])
   const [loadingHistory, setLoadingHistory] = useState(isBackendConfigured)
 
   const transcript = useRef<HTMLDivElement>(null)
@@ -252,19 +261,31 @@ export function BazChat({
     /**
      * A quote option the customer wants to go through.
      *
-     * Nothing is committed — no application, no recorded decision. It asks Baz to explain that
-     * option and, more to the point, to keep asking: what the money is for and how they mean to
-     * repay it are the things that decide whether this is even the right product, and a
-     * repayment figure on its own cannot tell them that.
+     * Nothing is committed — no application, no recorded decision.
+     *
+     * The instruction used to end "then keep finding out what the money is for and how soon they
+     * expect to clear it", and Baz did exactly that: it explained the four-year fixed and in the
+     * same breath asked what the two of them earned and which county the house was in. Somebody
+     * who has just chosen something to look at more closely has not finished looking at it.
+     *
+     * So the turn ends on their move instead — more about this option, or what applying would
+     * involve — and discovery picks up after they have answered. Same reason the product options
+     * card says not to ask a question in the turn that offers it: explaining and interrogating at
+     * once reads as not listening.
      */
-    onDiscussQuote: (option) =>
-      send(
+    onDiscussQuote: async (option) => {
+      setFollowUps([])
+      await send(
         `Chose "${option.name}" to talk through.`,
         'action',
-        'Explain what that option means in practice and what is good and less good about it. ' +
-          'Then keep finding out: what the money is for, and how soon they expect to clear it. ' +
-          'Do not start an application yet.',
-      ),
+        'Explain what that option means in practice and what is good and less good about it, in ' +
+          'a few sentences. Then stop and let them steer: ask whether they want to go further ' +
+          'into this one or hear what applying would actually involve. Ask nothing else in this ' +
+          'turn — no income, no property, no timing, however obviously you need it next. Do not ' +
+          'start an application.',
+      )
+      setFollowUps(QUOTE_FOLLOW_UPS)
+    },
 
     onDeclineProducts: async (products) => {
       await commit(
@@ -373,6 +394,22 @@ export function BazChat({
           />
         )}
 
+        {/*
+          Only after a turn has finished. Offering a choice while Baz is still mid-sentence
+          invites a tap that lands in the middle of the answer it is replying to.
+        */}
+        {followUps.length > 0 && !streaming && (
+          <SuggestionList
+            suggestions={followUps}
+            className="pt-1 pl-10"
+            disabled={streaming}
+            onSelect={(suggestion) => {
+              setFollowUps([])
+              void send(suggestion.label)
+            }}
+          />
+        )}
+
         {problem !== null && (
           <Alert variant="destructive">
             <TriangleAlertIcon />
@@ -409,7 +446,10 @@ export function BazChat({
       >
         <Composer
           disabled={!ready || streaming}
-          onSend={(message) => void send(message)}
+          onSend={(message) => {
+            setFollowUps([])
+            void send(message)
+          }}
           {...(joining ? { placeholder: 'Connecting…' } : {})}
         />
       </div>

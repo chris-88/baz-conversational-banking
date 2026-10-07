@@ -19,6 +19,11 @@ export const PRODUCTS = [
 ] as const
 export type Product = (typeof PRODUCTS)[number]
 
+/** For reading a product back off an event payload, which is `unknown` until it is checked. */
+export function isProduct(value: unknown): value is Product {
+  return typeof value === 'string' && (PRODUCTS as readonly string[]).includes(value)
+}
+
 /** Who must supply a requirement. */
 export type RequirementSubject = ParticipantRole | 'household'
 

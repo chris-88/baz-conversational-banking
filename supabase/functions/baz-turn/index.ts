@@ -40,7 +40,8 @@ import {
 import { blueprintFor } from '../_shared/domain/goals/catalogue.ts'
 import { buildQuote } from '../_shared/domain/quotes/engine.ts'
 import { suggestionsFor } from '../_shared/domain/quotes/suitability.ts'
-import type { Product } from '../_shared/domain/journey.ts'
+import { isProduct, type Product } from '../_shared/domain/journey.ts'
+import { describeProspect, wouldInvolve } from '../_shared/domain/prospect.ts'
 import { worthRaising, wouldContend } from '../_shared/domain/goals/engine.ts'
 import { planDraftFor } from '../_shared/domain/goals/plan.ts'
 import { describeGoals, goalContextFor } from '../_shared/db/goals.ts'
@@ -436,11 +437,47 @@ async function handleTurn(request: Request): Promise<Response> {
           },
         }).map((suggestion) => `${productInfo(suggestion.to).name}: ${suggestion.because}`)
 
+  /*
+   * What applying for the quoted product would involve.
+   *
+   * Only for something they have been shown figures for and have not applied for — once an
+   * application exists the digest already describes it properly, and two accounts of the same
+   * product would let the model pick the wrong one. Computed from the real journey so that
+   * "what would I need?" has an answer that is not improvised (§51, Invariant 3).
+   */
+  const quoted = await admin
+    .from('events')
+    .select('payload')
+    .eq('case_id', turn.caseId)
+    .eq('type', 'product_quoted')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const quotedProduct = (quoted.data?.payload as { product?: string } | undefined)?.product
+  const primaryParticipant = participantFor(loaded, 'primary')
+
+  const prospect =
+    quotedProduct === undefined ||
+    primaryParticipant === null ||
+    !isProduct(quotedProduct) ||
+    loaded.applications.some((application) => application.product === quotedProduct)
+      ? []
+      : describeProspect(
+          wouldInvolve(quotedProduct, {
+            facts: loaded.facts,
+            primary: primaryParticipant,
+            partner: participantFor(loaded, 'partner'),
+          }),
+          productInfo(quotedProduct).name,
+        )
+
   const digest = buildCaseDigest(loaded, {
     sensitiveDisclosure: gate.suppressHumour,
     plans: keptPlans,
     ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
     ...(suitability.length === 0 ? {} : { suitability }),
+    ...(prospect.length === 0 ? {} : { prospect: [...prospect] }),
     ...(revived.length === 0 ? {} : { revived }),
     ...(dueNow === null
       ? {}
@@ -1131,6 +1168,19 @@ async function handleTurn(request: Request): Promise<Response> {
                     footnote: option.footnote,
                   })),
                 }
+
+                /*
+                 * Showing somebody what a mortgage would cost is significant (Invariant 9), and
+                 * it is also the only record that this product is in play. The next turn reads
+                 * it to work out what applying would involve, which it cannot do from a card
+                 * payload nothing stores.
+                 */
+                await writeEvent(admin, {
+                  caseId: turn.caseId,
+                  type: 'product_quoted',
+                  actor: 'model',
+                  payload: { product: ask.product, basis: quote.basis },
+                })
 
                 return {
                   result:

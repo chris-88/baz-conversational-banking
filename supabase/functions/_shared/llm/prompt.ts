@@ -342,6 +342,14 @@ export type CaseDigest = {
    */
   readonly suitability?: readonly string[]
   /**
+   * What applying for the product they are looking at would involve, from the real journey.
+   *
+   * Present only when they have been quoted something they have not applied for. Without it the
+   * model answers "what would I need?" from whatever it knows about Irish mortgages, which is
+   * inventing a bank's paperwork — the same mistake as inventing its rates (§51).
+   */
+  readonly prospect?: readonly string[]
+  /**
    * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
    * already reasoned about — what is primary, what is worth mentioning once, what is being held
    * and why, and anything two goals are both laying claim to.
@@ -380,6 +388,35 @@ function domainSection(config: DomainConfig): string {
   ].join('\n')
 }
 
+/**
+ * The rates, from the variants the quote card is built from.
+ *
+ * Written out here rather than kept by hand in `illustrativeTerms`, because the two drifted the
+ * moment variants were added: the mortgage advertised "3.85% for 3 years" in prose while the
+ * card offered 3.1%, 3.3%, 3.4% and 3.9% over different terms. Baz read both, quoted the prose,
+ * and then told the customer to go by the card — which is the model doing its best with a
+ * catalogue that contradicted itself.
+ *
+ * One source of truth. `catalogue.test.ts` holds the other half of this: a hand-written term
+ * carrying a percentage is a second source, and fails.
+ */
+function describeVariants(product: ProductInfo): readonly string[] {
+  const variants = product.variants ?? []
+  if (variants.length === 0) return []
+
+  return [
+    `- Rates (these are what the quote card shows, and the only ones to quote):`,
+    ...variants.map((variant) => {
+      const rate = `${(variant.annualRate * 100).toFixed(2).replace(/\.?0+$/, '')}%`
+      const term =
+        variant.fixedYears === undefined
+          ? ''
+          : ` fixed for ${String(variant.fixedYears)} year${variant.fixedYears === 1 ? '' : 's'}`
+      return `  - ${variant.name}: ${rate}${term}`
+    }),
+  ]
+}
+
 function productSection(products: Readonly<Record<Product, ProductInfo>>): string {
   const entries = Object.values(products).map((product) =>
     [
@@ -391,6 +428,7 @@ function productSection(products: Readonly<Record<Product, ProductInfo>>): strin
       'Eligibility:',
       ...product.eligibility.map((item) => `- ${item}`),
       'Illustrative terms:',
+      ...describeVariants(product),
       ...product.illustrativeTerms.map((term) => `- ${term.label}: ${term.value}`),
       'Care:',
       ...product.cautions.map((item) => `- ${item}`),
@@ -509,6 +547,23 @@ function digestSection(digest: CaseDigest): string {
       'figure. Do not argue for it — both may be reasonable and the choice is theirs. Never',
       'recalculate any of these:',
       ...suitability.map((line) => `- ${line}`),
+      '',
+    )
+  }
+
+  const prospect = digest.prospect ?? []
+  if (prospect.length > 0) {
+    lines.push(
+      '## What applying would actually involve',
+      'From the real journey for that product, against what this case already knows. If they ask',
+      'what is involved, answer from this and nothing else — never from what you know about how',
+      'banks usually work, and never guess at a requirement that is not listed here.',
+      'Lead with what they would NOT be asked again. That is the whole point and the one thing',
+      'they will not expect. Then give the shape of the rest — roughly how many things, and what',
+      'kind — rather than reciting it. They asked what is involved, not for an inventory.',
+      'Nothing here starts an application, and this is not permission to start asking: if they',
+      'have not said to go ahead, finish by asking whether they want to.',
+      ...prospect.map((line) => line.startsWith('  ') ? line : `- ${line}`),
       '',
     )
   }
