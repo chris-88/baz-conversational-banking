@@ -959,3 +959,12 @@ section.
 - **2026-10-06** — "Returning customer" is answered as distinct days on which they said something.
   There is no sign-in and no identity across sessions, so anything stronger would be a guess
   dressed as a fact.
+- **2026-10-07** — "Test a request" runs the real gate: same classifier, same deterministic
+  checks, same refusal wording, with no case attached. Nothing is recorded — a test is not
+  something that happened to anybody, and logging it would make the blocked-requests metric a
+  tally of how often the feature was demonstrated.
+- **2026-10-07** — `request_blocked` now records the first 200 characters of what was asked. §39
+  wants enforcement observable, and a log of categories and timestamps does not show that: "off
+  topic at 14:06" proves nothing, "count to 10,000 — off topic" proves the thing. The request
+  still never reaches the model (Invariant 4); recording what was turned away is the opposite of
+  answering it.

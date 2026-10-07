@@ -254,7 +254,20 @@ async function handleTurn(request: Request): Promise<Response> {
       caseId: turn.caseId,
       type: 'request_blocked',
       actor: 'system',
-      payload: { category: gate.category, reason: gate.reason, injectionFlagged: gate.injectionFlagged },
+      payload: {
+        category: gate.category,
+        reason: gate.reason,
+        injectionFlagged: gate.injectionFlagged,
+        /**
+         * What was actually asked, capped.
+         *
+         * §39 wants enforcement observable, and a log of categories and timestamps does not
+         * show that: "off topic at 14:06" proves nothing, "count to 10,000 — off topic" proves
+         * the thing. The request never reaches the model either way (Invariant 4); this is the
+         * record of what was turned away, which is the opposite of answering it.
+         */
+        request: customerMessage.slice(0, 200),
+      },
     })
     const messageId = await saveMessage(admin, {
       caseId: turn.caseId,

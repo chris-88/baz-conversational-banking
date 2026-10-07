@@ -88,6 +88,15 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   /** §47 — delete every conversation. No exceptions; the sample customer is one click to rebuild. */
   z.object({ action: z.literal('purge_cases') }),
 
+  /**
+   * §39 — put a request through the gate and report what happened to it.
+   *
+   * The same classifier and the same deterministic checks a customer's message meets, with no
+   * case attached and nothing recorded. The point of the screen is that enforcement is a thing
+   * you can watch work, not a paragraph claiming it does.
+   */
+  z.object({ action: z.literal('test_guardrail'), message: z.string().min(1).max(2000) }),
+
   /** §41 — the bank checks what was sent in, so a document needing verification can pass. */
   z.object({ action: z.literal('verify_documents'), caseId: z.uuid() }),
 
@@ -206,7 +215,14 @@ export const adminOverviewSchema = z.object({
     .nullable()
     .default(null),
   /** §39 — enforcement made observable. */
-  blocked: z.array(z.object({ category: z.string(), at: z.string() })),
+  blocked: z.array(
+    z.object({
+      category: z.string(),
+      at: z.string(),
+      /** What was asked, capped. Empty for anything blocked before this was recorded. */
+      request: z.string().default(''),
+    }),
+  ),
 })
 
 export const notificationSchema = z.object({
@@ -389,6 +405,21 @@ export const adminCaseSchema = z.object({
     z.object({ describe: z.string(), met: z.boolean(), createdAt: z.string() }),
   ),
 })
+
+/** What the gate did with a test request. */
+export const guardrailTestSchema = z.object({
+  category: z.string(),
+  reachesModel: z.boolean(),
+  /** The exact words a customer would get back. Null when the request is allowed through. */
+  response: z.string().nullable(),
+  /** Why it was turned away, where the reason is more specific than the category. */
+  reason: z.string().nullable(),
+  injectionFlagged: z.boolean(),
+  profanity: z.boolean(),
+  sensitive: z.boolean(),
+})
+
+export type GuardrailTest = z.infer<typeof guardrailTestSchema>
 
 export type AdminRequest = z.infer<typeof adminRequestSchema>
 export type AdminOverview = z.infer<typeof adminOverviewSchema>

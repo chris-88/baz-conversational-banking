@@ -7,7 +7,12 @@ import {
   PERIOD_DAYS,
   type AdminCase,
   type AdminOverview,
+  type GuardrailTest,
 } from '../_shared/contracts/admin.ts'
+import Anthropic from '@anthropic-ai/sdk'
+import { runGate } from '../_shared/llm/gate.ts'
+import { createClassifier } from '../_shared/llm/classifier.ts'
+import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { caseStatus, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
@@ -201,6 +206,57 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const action = parsed.data
 
   switch (action.action) {
+    /**
+     * §39 — the gate, run on demand.
+     *
+     * The real classifier and the real deterministic checks, through `runGate`, so what this
+     * reports cannot drift from what a customer would meet. Nothing is written: a test is not
+     * something that happened to anybody, and putting it in the event log would make the
+     * blocked-requests metric a count of how often somebody demonstrated the feature.
+     */
+    case 'test_guardrail': {
+      const config = await admin
+        .from('domain_config')
+        .select('kill_switch')
+        .eq('scope', 'global')
+        .maybeSingle()
+
+      const anthropic = new Anthropic({
+        apiKey: env('ANTHROPIC_API_KEY'),
+        timeout: 20_000,
+        maxRetries: 1,
+      })
+
+      const classify = createClassifier({
+        apiKey: env('ANTHROPIC_API_KEY'),
+        model: env('GATE_MODEL'),
+        domainConfig: boiDomainConfig,
+        client: anthropic,
+      })
+
+      // No previous turn: a test request stands alone, which is also the hardest case for the
+      // classifier and therefore the honest one to show.
+      const result = await runGate(action.message, {
+        classify: (message) => classify({ message }),
+        domainConfig: boiDomainConfig,
+        killSwitch: (config.data as { kill_switch?: boolean } | null)?.kill_switch ?? false,
+        tone: 'neutral',
+      })
+
+      return json(
+        ok({
+          category: result.category,
+          reachesModel: result.allowed,
+          response: result.allowed ? null : result.response,
+          reason: result.allowed ? null : result.reason,
+          injectionFlagged: result.injectionFlagged,
+          profanity: result.allowed ? false : false,
+          sensitive: result.allowed ? result.suppressHumour : false,
+        } satisfies GuardrailTest),
+        200,
+      )
+    }
+
     case 'set_kill_switch': {
       await admin
         .from('domain_config')
@@ -522,9 +578,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
         period: action.period,
         // `all` has no earlier window, so there is nothing honest to compare against.
         previous: days === null ? null : headlineCounts(before),
-        blocked: ((blocked.data ?? []) as { payload: { category?: string }; created_at: string }[]).map(
-          (row) => ({ category: row.payload?.category ?? 'unknown', at: row.created_at }),
-        ),
+        blocked: (
+          (blocked.data ?? []) as {
+            payload: { category?: string; request?: string }
+            created_at: string
+          }[]
+        ).map((row) => ({
+          category: row.payload?.category ?? 'unknown',
+          at: row.created_at,
+          request: row.payload?.request ?? '',
+        })),
       }
 
       return json(ok(overview), 200)

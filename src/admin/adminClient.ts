@@ -1,5 +1,5 @@
 import { callFunction } from '@/lib/callFunction'
-import type { Period } from '@contracts/admin.ts'
+import { guardrailTestSchema, type GuardrailTest, type Period } from '@contracts/admin.ts'
 import {
   adminCaseSchema,
   adminOverviewSchema,
@@ -24,6 +24,8 @@ export const adminApi = {
     adminCaseSchema.parse(await call({ action: 'inspect_case', caseId })),
   resetCase: () => call({ action: 'reset_case' }),
   purgeCases: () => call({ action: 'purge_cases' }),
+  testGuardrail: async (message: string): Promise<GuardrailTest> =>
+    guardrailTestSchema.parse(await call({ action: 'test_guardrail', message })),
   setSavingsBalance: (caseId: string, amount: number) =>
     call({ action: 'set_savings_balance', caseId, amount }) as Promise<{
       amount: number

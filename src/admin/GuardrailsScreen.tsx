@@ -1,21 +1,13 @@
 import type { ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ShieldAlertIcon } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { adminApi } from '@/admin/adminClient'
+import { PageHeader } from '@/admin/parts'
+import { GuardrailTest } from '@/admin/GuardrailTest'
 import { boiDomainConfig } from '@tenants/boi/domain-config.ts'
 import { refusalFor } from '@llm/refusals.ts'
 import type { AdminOverview } from '@contracts/admin.ts'
@@ -44,13 +36,11 @@ export function GuardrailsScreen({
 
   return (
     <div className="space-y-6">
-      <Alert>
-        <ShieldAlertIcon />
-        <AlertDescription>
-          A classifier plus deterministic checks run in front of the model. A blocked request never
-          reaches Baz at all, and the refusal never contains the answer. §25, §26
-        </AlertDescription>
-      </Alert>
+      <PageHeader
+        title="Guardrails"
+        description="A classifier plus deterministic checks run in front of the model. A blocked request never reaches Baz at all, and the refusal never contains the answer. §25, §26"
+        actions={<GuardrailTest />}
+      />
 
       {/* The long list on the left, the reference material beside it. */}
       <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -99,31 +89,33 @@ export function GuardrailsScreen({
             <CardHeader>
               <CardTitle>Recently blocked</CardTitle>
               <CardDescription>
-                {blocked.length === 0 ? 'Nothing blocked yet.' : 'Most recent first.'}
+                {blocked.length === 0
+                  ? 'Nothing blocked yet.'
+                  : 'What was asked, and which rule turned it away.'}
               </CardDescription>
             </CardHeader>
             {blocked.length > 0 && (
-              <CardContent className="px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">When</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {blocked.map((item, index) => (
-                      <TableRow key={`${item.at}-${String(index)}`}>
-                        <TableCell>
-                          <Badge variant="secondary">{item.category}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground tabular text-right">
-                          {new Date(item.at).toLocaleTimeString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="space-y-3">
+                {blocked.map((item, index) => (
+                  <div key={`${item.at}-${String(index)}`} className="space-y-1">
+                    <p className="text-sm">
+                      {/* Older rows predate the request being recorded, so they say so. */}
+                      {item.request.length > 0 ? (
+                        <>&ldquo;{item.request}&rdquo;</>
+                      ) : (
+                        <span className="text-muted-foreground italic">not recorded</span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-2xs">
+                        {item.category.replaceAll('_', ' ')}
+                      </Badge>
+                      <span className="text-muted-foreground tabular text-2xs">
+                        {new Date(item.at).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             )}
           </Card>
