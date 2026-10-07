@@ -337,6 +337,11 @@ export type CaseDigest = {
   /** §27 — parked earlier, and the thing they were waiting for has happened. */
   readonly revived?: readonly { readonly name: string; readonly reason: string }[]
   /**
+   * Whether what they asked for is what suits them, worked out from what they have said about
+   * the amount and how soon they mean to repay it. Already decided; the figures are not yours.
+   */
+  readonly suitability?: readonly string[]
+  /**
    * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
    * already reasoned about — what is primary, what is worth mentioning once, what is being held
    * and why, and anything two goals are both laying claim to.
@@ -491,6 +496,19 @@ function digestSection(digest: CaseDigest): string {
     lines.push(
       'Anything not listed here is not established. Do not offer it, however reasonable it',
       'sounds.',
+      '',
+    )
+  }
+
+  const suitability = digest.suitability ?? []
+  if (suitability.length > 0) {
+    lines.push(
+      '## Something else may suit them better',
+      'They asked about one product; these are worked out from what they have actually told you',
+      'about the amount and how soon they mean to repay it. Raise it once, plainly, with the',
+      'figure. Do not argue for it — both may be reasonable and the choice is theirs. Never',
+      'recalculate any of these:',
+      ...suitability.map((line) => `- ${line}`),
       '',
     )
   }

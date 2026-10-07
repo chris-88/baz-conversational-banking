@@ -74,6 +74,17 @@ describe('a question about money becomes options', () => {
     expect(three?.headline.value).not.toBe(seven?.headline.value)
   })
 
+  /**
+   * The product does not do two years; what it does is the answer. Returning nothing when three
+   * perfectly good options exist is the worst of both.
+   */
+  it('offers the terms a product has when the one they asked for is not among them', () => {
+    const quote = buildQuote(variants('personal_loan'), { amount: 3_000, months: 24 })
+
+    expect(quote.problem).toBeNull()
+    expect(quote.options.map((option) => option.name)).toEqual(['Over 3 years', 'Over 5 years'])
+  })
+
   it('leaves out what the customer cannot have rather than listing it greyed', () => {
     // €5,000 is below the seven-year minimum, so that option is simply not there.
     const quote = buildQuote(variants('personal_loan'), { amount: 5_000 })

@@ -977,3 +977,14 @@ section.
   because those are what decide whether it is the right product at all, and a repayment figure
   cannot tell anybody that. Deliberately not gated by discovery either: a question about cost is
   a question, and making somebody complete an interview before seeing a figure reads as evasive.
+- **2026-10-07** — Whether the product they asked for suits them is decided by rules, not by the
+  model noticing. A customer asks for a personal loan because that is the product they have heard
+  of; whether it fits depends on two things nobody asked them — what the money is for, and how
+  soon they mean to be rid of it. `borrowing.repaymentMonths` is the fact that distinguishes
+  €3,000 cleared by Christmas from €3,000 over four years, and nothing else in the case does.
+  The rules stay silent until both the amount and the horizon are known, because guessing a
+  recommendation from an amount alone is how cross-selling works.
+- **2026-10-07** — A quote offers the terms a product actually has when the one asked for is not
+  among them. "€3,000 over about two years" against a loan offering three, five and seven used to
+  return nothing, because every option failed the filter — and "I could not work that out" when
+  three perfectly good options exist is the worst of both.

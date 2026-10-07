@@ -499,6 +499,21 @@ export const factCatalogue = {
     extractable: true,
     label: 'Amount the customer wants to borrow',
   },
+  /**
+   * How soon they expect to be rid of it.
+   *
+   * The fact that decides whether a loan is even the right shape. Somebody borrowing €3,000 they
+   * mean to clear by Christmas wants something without a term attached; the same €3,000 over
+   * four years wants the opposite. Nothing else in the case distinguishes the two.
+   */
+  'borrowing.repaymentMonths': {
+    schema: z.number().int().positive().max(480),
+    subject: 'household',
+    reuse: 'fresh',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'How soon they expect to repay it',
+  },
   'borrowing.purpose': {
     schema: z.string().min(3).max(200),
     subject: 'household',

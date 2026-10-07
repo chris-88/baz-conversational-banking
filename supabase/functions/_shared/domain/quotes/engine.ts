@@ -104,7 +104,17 @@ function fits(variant: ProductVariant, request: QuoteRequest): boolean {
     if (variant.maxAmount !== undefined && amount > variant.maxAmount) return false
   }
 
-  if (months !== undefined) {
+  /**
+   * A variant with a term of its own is not filtered by the term they asked for.
+   *
+   * "€3,000 over about two years" against a loan offering three, five and seven years used to
+   * return nothing at all, because every option failed the test. The product does not do two
+   * years; what it does is the answer, and saying "I could not work that out" when three
+   * perfectly good options exist is the worst of both.
+   */
+  const fixedTerm = variant.minMonths !== undefined && variant.minMonths === variant.maxMonths
+
+  if (months !== undefined && !fixedTerm) {
     if (variant.minMonths !== undefined && months < variant.minMonths) return false
     if (variant.maxMonths !== undefined && months > variant.maxMonths) return false
   }

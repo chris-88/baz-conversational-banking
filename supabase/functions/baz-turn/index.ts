@@ -40,6 +40,7 @@ import {
 } from '../_shared/db/plans.ts'
 import { blueprintFor } from '../_shared/domain/goals/catalogue.ts'
 import { buildQuote } from '../_shared/domain/quotes/engine.ts'
+import { suggestionsFor } from '../_shared/domain/quotes/suitability.ts'
 import type { Product } from '../_shared/domain/journey.ts'
 import { worthRaising, wouldContend } from '../_shared/domain/goals/engine.ts'
 import { planDraftFor } from '../_shared/domain/goals/plan.ts'
@@ -351,10 +352,49 @@ async function handleTurn(request: Request): Promise<Response> {
   })
   const goals = describeGoals(goalContext)
 
+  /**
+   * Whether what they are looking at is what suits them.
+   *
+   * Evaluated against whatever borrowing is actually in play — an application they have started,
+   * or the product they have been quoted. Silent until they have said both what they want and
+   * how soon they mean to repay it, because guessing a recommendation from an amount alone is
+   * how cross-selling works.
+   */
+  const borrowing = loaded.applications.find((application) =>
+    ['personal_loan', 'credit_card'].includes(application.product),
+  )?.product
+
+  /**
+   * An application if there is one, otherwise whatever they have described wanting.
+   *
+   * Looking only at started applications meant the rules never ran during the conversation that
+   * decides which product to start — which is the one conversation they are for. Somebody who
+   * has said an amount and a date is considering borrowing whether or not anything exists yet,
+   * and a loan is what people ask for by default.
+   */
+  const considering: Product | null =
+    (borrowing as Product | undefined) ??
+    (goalContext !== null && goalContext.facts.has('borrowing.requestedAmount', 'household')
+      ? 'personal_loan'
+      : null)
+
+  const suitability =
+    considering === null || goalContext === null
+      ? []
+      : suggestionsFor(considering, {
+          facts: goalContext.facts,
+          variants: {
+            personal_loan: boiProducts.personal_loan.variants,
+            credit_card: boiProducts.credit_card.variants,
+            savings: boiProducts.savings.variants,
+          },
+        }).map((suggestion) => `${productInfo(suggestion.to).name}: ${suggestion.because}`)
+
   const digest = buildCaseDigest(loaded, {
     sensitiveDisclosure: gate.suppressHumour,
     plans: keptPlans,
     ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
+    ...(suitability.length === 0 ? {} : { suitability }),
     ...(revived.length === 0 ? {} : { revived }),
     ...(dueNow === null
       ? {}
