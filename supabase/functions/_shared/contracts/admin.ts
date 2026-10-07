@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CASE_KINDS, CASE_STATUSES } from '../domain/case.ts'
+import { CASE_KINDS, CASE_OUTCOMES, CASE_STATUSES } from '../domain/case.ts'
 
 /** The windows the console can look at. */
 export const PERIODS = ['7d', '30d', '90d', 'all'] as const
@@ -131,6 +131,17 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
     checkinAgendas: z.record(z.string(), z.array(z.string().trim().min(1).max(200)).max(8)),
   }),
 
+  /**
+   * §9 — everything the analytics screen draws, in one round trip.
+   *
+   * One action rather than seven, because every panel is a view of the same window and seven
+   * requests would let the funnel and the series disagree about which days they covered.
+   */
+  z.object({
+    action: z.literal('analytics'),
+    period: z.enum(PERIODS).default('30d'),
+  }),
+
   /** Plan §3.2 — what is currently overridden. */
   z.object({ action: z.literal('catalogue_overrides') }),
 
@@ -222,6 +233,69 @@ export const catalogueOverridesSchema = z.object({
 })
 
 export type CatalogueOverrides = z.infer<typeof catalogueOverridesSchema>
+
+/** One day, one event type, one count. Gaps are filled with zero by `metrics_by_day`. */
+export const dailyCountSchema = z.object({
+  day: z.string(),
+  type: z.string(),
+  count: z.number().int(),
+})
+
+/**
+ * §9 — the analytics screen, as data.
+ *
+ * Every field here is counted from events or application states. Nothing is modelled, estimated
+ * or filled in: the spec is explicit that a dashboard should not be populated with numbers that
+ * have nothing behind them, which is also why channel mix and new-versus-returning are absent
+ * (decision 3) — there is no channel field and no identity across sessions.
+ */
+export const analyticsSchema = z.object({
+  period: z.enum(PERIODS),
+  /** Inclusive start, exclusive end, so a caller can say exactly what was counted. */
+  from: z.string(),
+  to: z.string(),
+
+  /** The headline numbers, each with the same window immediately before it for comparison. */
+  totals: z.object({
+    conversations: z.number().int(),
+    applications: z.number().int(),
+    goals: z.number().int(),
+    blocked: z.number().int(),
+  }),
+  /** Null when the period is `all`: there is no earlier window to compare against. */
+  previous: z
+    .object({
+      conversations: z.number().int(),
+      applications: z.number().int(),
+      goals: z.number().int(),
+      blocked: z.number().int(),
+    })
+    .nullable(),
+
+  /** A row per day per type, for the sparklines and the volume chart. */
+  series: z.array(dailyCountSchema),
+
+  /** Where applications got to. Each stage counts applications that reached it or passed it. */
+  funnel: z.array(z.object({ stage: z.string(), label: z.string(), count: z.number().int() })),
+
+  /** What was discovered, most often first. Needs the `goal_identified` event. */
+  topGoals: z.array(z.object({ goal: z.string(), name: z.string(), count: z.number().int() })),
+
+  /** Which rule turned something away, and how often. */
+  guardrails: z.array(z.object({ category: z.string(), count: z.number().int() })),
+
+  /** How far conversations got. Cases nobody spoke in are excluded, not counted as browsing. */
+  outcomes: z.array(
+    z.object({
+      outcome: z.enum(CASE_OUTCOMES),
+      label: z.string(),
+      note: z.string(),
+      count: z.number().int(),
+    }),
+  ),
+})
+
+export type Analytics = z.infer<typeof analyticsSchema>
 
 export const adminOverviewSchema = z.object({
   killSwitch: z.boolean(),

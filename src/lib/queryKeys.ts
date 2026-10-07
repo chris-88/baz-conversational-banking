@@ -43,5 +43,6 @@ export const queryKeys = {
     domainConfig: () => ['admin', 'domain-config'] as const,
     audienceMetrics: () => ['admin', 'audience-metrics'] as const,
     catalogue: () => ['admin', 'catalogue-overrides'] as const,
+    analytics: (period: string) => ['admin', 'analytics', period] as const,
   },
 } as const

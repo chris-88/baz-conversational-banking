@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CASE_KINDS, CASE_STATUSES, caseStatus, type CaseStatusInput } from './case.ts'
+import { caseOutcome, caseStatus, type CaseOutcomeInput, type CaseStatusInput } from './case.ts'
 
-const input = (over: Partial<CaseStatusInput> = {}): CaseStatusInput => ({
+const status = (over: Partial<CaseStatusInput> = {}): CaseStatusInput => ({
   everBlocked: false,
   applications: [],
   checkinDue: false,
@@ -9,50 +9,79 @@ const input = (over: Partial<CaseStatusInput> = {}): CaseStatusInput => ({
   ...over,
 })
 
-/**
- * §5 — what the case list sorts and filters by.
- *
- * Derived on every read, like every other state in this system, so a case cannot sit in the
- * wrong bucket because something forgot to update it.
- */
-describe('what a case needs from whoever is watching', () => {
-  it('leads with blocked, whatever else is true', () => {
-    // A case that was blocked and has an application waiting is reported as blocked: that is the
-    // thing somebody should actually look at.
+const outcome = (over: Partial<CaseOutcomeInput> = {}): CaseOutcomeInput => ({
+  everBlocked: false,
+  applications: [],
+  plans: 0,
+  goalsIdentified: 0,
+  customerMessages: 3,
+  ...over,
+})
+
+describe('case status', () => {
+  it('reports blocked above everything else somebody could look at', () => {
     expect(
-      caseStatus(input({ everBlocked: true, applications: [{ state: 'info_required' }] })),
+      caseStatus(status({ everBlocked: true, applications: [{ state: 'info_required' }] })),
     ).toBe('blocked')
   })
 
-  it('flags an application that cannot move without someone', () => {
-    expect(caseStatus(input({ applications: [{ state: 'info_required' }] }))).toBe('needs_review')
-    expect(caseStatus(input({ applications: [{ state: 'waiting_partner' }] }))).toBe('needs_review')
+  it('wants review when an application is waiting on somebody', () => {
+    expect(caseStatus(status({ applications: [{ state: 'waiting_partner' }] }))).toBe('needs_review')
+    expect(caseStatus(status({ applications: [{ state: 'info_required' }] }))).toBe('needs_review')
   })
 
-  it('flags a check-in the bank promised and has not kept', () => {
-    expect(caseStatus(input({ checkinDue: true }))).toBe('needs_review')
+  it('wants review when a promised check-in has come due', () => {
+    expect(caseStatus(status({ checkinDue: true }))).toBe('needs_review')
   })
 
-  it('is complete only when every application is finished', () => {
-    expect(caseStatus(input({ applications: [{ state: 'completed' }] }))).toBe('completed')
+  it('is completed only when every application is settled', () => {
+    expect(caseStatus(status({ applications: [{ state: 'completed' }] }))).toBe('completed')
     expect(
-      caseStatus(input({ applications: [{ state: 'completed' }, { state: 'declined' }] })),
-    ).toBe('completed')
-    // One still running means the case is not done, however many others are.
-    expect(
-      caseStatus(input({ applications: [{ state: 'completed' }, { state: 'in_progress' }] })),
+      caseStatus(status({ applications: [{ state: 'completed' }, { state: 'in_progress' }] })),
     ).toBe('in_progress')
   })
 
-  it('does not call an empty case "in progress"', () => {
-    // Every visitor gets a case the moment they arrive, so most of them are empty. Counting
-    // those as conversations would make the busiest tab the least useful one.
-    expect(caseStatus(input({ customerMessages: 0 }))).toBe('new')
-    expect(caseStatus(input({ customerMessages: 1 }))).toBe('in_progress')
+  it('separates a case nobody spoke in from one in progress', () => {
+    expect(caseStatus(status({ customerMessages: 0 }))).toBe('new')
+    expect(caseStatus(status({ customerMessages: 1 }))).toBe('in_progress')
+  })
+})
+
+describe('case outcome', () => {
+  it('has none for a case nobody spoke in', () => {
+    expect(caseOutcome(outcome({ customerMessages: 0 }))).toBeNull()
+    // Even if something else happened to it, which it should not have.
+    expect(caseOutcome(outcome({ customerMessages: 0, plans: 1 }))).toBeNull()
   })
 
-  it('knows its own values', () => {
-    expect(CASE_STATUSES).toContain('needs_review')
-    expect(CASE_KINDS).toContain('customer')
+  it('reports being turned away separately from how far it got', () => {
+    expect(caseOutcome(outcome({ everBlocked: true, plans: 2 }))).toBe('blocked')
+  })
+
+  it('reports the furthest point reached', () => {
+    const everything = { applications: [{ state: 'submitted' }], plans: 1, goalsIdentified: 4 }
+    expect(caseOutcome(outcome(everything))).toBe('applied')
+    expect(caseOutcome(outcome({ plans: 1, goalsIdentified: 4 }))).toBe('planned')
+    expect(caseOutcome(outcome({ goalsIdentified: 4 }))).toBe('explored')
+    expect(caseOutcome(outcome())).toBe('browsing')
+  })
+
+  it('does not count an application that never left the building', () => {
+    expect(caseOutcome(outcome({ applications: [{ state: 'in_progress' }] }))).toBe('browsing')
+    expect(caseOutcome(outcome({ applications: [{ state: 'ready' }] }))).toBe('browsing')
+    expect(caseOutcome(outcome({ applications: [{ state: 'paused' }] }))).toBe('browsing')
+  })
+
+  it('counts every state the bank has actually seen as applied', () => {
+    for (const state of ['submitted', 'under_review', 'info_required', 'approved', 'declined', 'completed']) {
+      expect(caseOutcome(outcome({ applications: [{ state }] })), state).toBe('applied')
+    }
+  })
+
+  it('disagrees with status where they measure different things', () => {
+    // Still being worked on, and has already produced something. Both are true.
+    const input = { applications: [{ state: 'submitted' }], customerMessages: 5 }
+    expect(caseStatus(status(input))).toBe('in_progress')
+    expect(caseOutcome(outcome(input))).toBe('applied')
   })
 })

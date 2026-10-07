@@ -351,6 +351,53 @@ async function handleTurn(request: Request): Promise<Response> {
   })
   const goals = describeGoals(goalContext, loaded.goals)
 
+  /*
+   * §9 — "top discovered goals" needs an event, and discovery is not a moment anything else
+   * records. A goal reaching a tier worth raising is the closest thing to one: it is when Baz
+   * first has grounds to bring it up, which is what the panel is actually asking about.
+   *
+   * Written once per goal per case. Tiering is recomputed every turn from the facts, so a goal
+   * that stays established would otherwise write an event on every message and the chart would
+   * measure how talkative somebody was.
+   */
+  const identifiedBefore = await admin
+    .from('events')
+    .select('payload')
+    .eq('case_id', turn.caseId)
+    .eq('type', 'goal_identified')
+
+  /*
+   * A failed read means writing nothing, not writing everything. Defaulting to an empty set
+   * would make every turn look like the first one and double-count every goal on the chart,
+   * which is a worse outcome than a gap — a missing event is visibly missing.
+   */
+  const alreadyIdentified =
+    identifiedBefore.error === null
+      ? new Set(
+          (identifiedBefore.data as { payload: { goal?: string } }[])
+            .map((row) => row.payload.goal)
+            .filter((goal): goal is string => goal !== undefined),
+        )
+      : null
+
+  for (const candidate of alreadyIdentified === null ? [] : goals.candidates) {
+    if (candidate.tier === 'latent' || candidate.tier === 'deferred') continue
+    if (alreadyIdentified?.has(candidate.goal.id) === true) continue
+
+    await writeEvent(admin, {
+      caseId: turn.caseId,
+      type: 'goal_identified',
+      actor: 'system',
+      payload: {
+        goal: candidate.goal.id,
+        tier: candidate.tier,
+        confidence: Number(candidate.confidence.toFixed(2)),
+        // What actually raised it, so "why is this on the chart" has an answer.
+        because: candidate.evidence[0]?.describe ?? null,
+      },
+    })
+  }
+
   /**
    * Whether what they are looking at is what suits them.
    *

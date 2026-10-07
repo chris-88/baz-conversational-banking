@@ -1028,6 +1028,14 @@ export type Database = {
     Functions: {
       can_read_case: { Args: { target_case_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      metrics_by_day: {
+        Args: { from_ts: string; to_ts: string; types?: string[] }
+        Returns: {
+          count: number
+          day: string
+          type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

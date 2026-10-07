@@ -66,3 +66,75 @@ export function caseStatus(input: CaseStatusInput): CaseStatus {
 
   return input.customerMessages > 0 ? 'in_progress' : 'new'
 }
+
+/**
+ * What a conversation came to (§9, "conversations by outcome").
+ *
+ * Different from status, which is where a case stands now. An outcome is how far it got, and
+ * the two can disagree: a case can be `in_progress` and have already produced an application.
+ *
+ * The spec's panel is only honest if every value is derivable, so the one everybody asks for —
+ * "abandoned" — is not here. Nothing in the data distinguishes a customer who gave up from one
+ * who is coming back tomorrow, and a prototype with no sign-in cannot tell them apart. Inventing
+ * the distinction is exactly what §9 forbids.
+ */
+export const CASE_OUTCOMES = ['applied', 'planned', 'explored', 'browsing', 'blocked'] as const
+
+export type CaseOutcome = (typeof CASE_OUTCOMES)[number]
+
+export const CASE_OUTCOME_LABELS: Readonly<Record<CaseOutcome, string>> = {
+  applied: 'Applied for something',
+  planned: 'Made a plan',
+  explored: 'Worked out what they needed',
+  browsing: 'Had a look',
+  blocked: 'Turned away',
+}
+
+/** One line each, for the chart's legend. The console explains its own numbers or it is noise. */
+export const CASE_OUTCOME_NOTES: Readonly<Record<CaseOutcome, string>> = {
+  applied: 'An application reached the bank.',
+  planned: 'A goal became a plan, with nothing submitted yet.',
+  explored: 'Baz established what they were after. Nothing was started.',
+  browsing: 'A conversation that never got as far as a goal.',
+  blocked: 'Something was turned away at the gate.',
+}
+
+export type CaseOutcomeInput = {
+  readonly everBlocked: boolean
+  readonly applications: readonly { readonly state: string }[]
+  readonly plans: number
+  readonly goalsIdentified: number
+  readonly customerMessages: number
+}
+
+/**
+ * How far a conversation got, in the order that counts as further.
+ *
+ * Reaching the bank outranks having a plan, which outranks having been understood. A case that
+ * did all three is reported at its furthest point, because "what came of it" has one answer.
+ *
+ * `blocked` is the exception and comes first: a conversation that was turned away is a different
+ * kind of outcome, not a lesser one, and burying it under "had a look" would hide the only
+ * category anybody needs to act on.
+ */
+export function caseOutcome(input: CaseOutcomeInput): CaseOutcome | null {
+  /*
+   * Null for a case nobody spoke in. On a prototype where every visitor gets a case the moment
+   * they arrive, most of them are empty, and counting those as "had a look" would make the
+   * largest slice of the outcomes chart a measurement of page loads.
+   */
+  if (input.customerMessages === 0) return null
+
+  if (input.everBlocked) return 'blocked'
+
+  const reached = (state: string) =>
+    ['submitted', 'under_review', 'info_required', 'approved', 'declined', 'completed'].includes(
+      state,
+    )
+
+  if (input.applications.some((application) => reached(application.state))) return 'applied'
+  if (input.plans > 0) return 'planned'
+  if (input.goalsIdentified > 0) return 'explored'
+
+  return 'browsing'
+}

@@ -28,6 +28,13 @@ import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor, revivableNeeds } from '../_shared/db/needs.ts'
 import { describeAdminEvent } from '../_shared/db/admin-events.ts'
 import { catalogueOverrideRow, toOverride } from '../_shared/db/rows.ts'
+import {
+  CASE_OUTCOMES,
+  CASE_OUTCOME_LABELS,
+  CASE_OUTCOME_NOTES,
+  caseOutcome,
+  type CaseOutcome,
+} from '../_shared/domain/case.ts'
 import { checkinKey } from '../_shared/domain/catalogue/overlay.ts'
 import { goalCatalogue } from '../_shared/domain/goals/catalogue.ts'
 import { needCatalogue } from '../_shared/domain/needs/catalogue.ts'
@@ -425,6 +432,246 @@ Deno.serve(async (request: Request): Promise<Response> => {
         .eq('entry_id', action.entryId)
 
       return json(ok({ cleared: true }), 200)
+    }
+
+    /**
+     * §9 — everything the analytics screen draws.
+     *
+     * Counted in Postgres where the shape suits it and in Deno where it does not. The daily
+     * series is a function call because `generate_series` fills the quiet days with zero, and a
+     * line that closes over its gaps is a lie about the shape; the rest are small enough to
+     * tally here.
+     */
+    case 'analytics': {
+      const days = PERIOD_DAYS[action.period]
+      const to = new Date()
+      /* `all` still needs a start for the series. The first event there has ever been is the
+         honest one, and it is one query. */
+      const earliest = await admin
+        .from('events')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      const from =
+        days === null
+          ? new Date((earliest.data?.created_at as string | undefined) ?? to.toISOString())
+          : new Date(to.getTime() - days * 86_400_000)
+
+      const previousFrom = days === null ? null : new Date(from.getTime() - days * 86_400_000)
+
+      const [series, windowEvents, priorEvents, applications, caseFacts] = await Promise.all([
+        admin.rpc('metrics_by_day', { from_ts: from.toISOString(), to_ts: to.toISOString() }),
+        admin
+          .from('events')
+          .select('type, case_id, payload')
+          .gte('created_at', from.toISOString())
+          .lt('created_at', to.toISOString()),
+        previousFrom === null
+          ? Promise.resolve({ data: [], error: null })
+          : admin
+              .from('events')
+              .select('type')
+              .gte('created_at', previousFrom.toISOString())
+              .lt('created_at', from.toISOString()),
+        /* Application states are current, not historical — an application submitted inside the
+           window may have moved on since. The funnel therefore describes where things stand,
+           which is what a funnel is for. */
+        admin.from('applications').select('case_id, state'),
+        admin
+          .from('messages')
+          .select('case_id, role')
+          .eq('role', 'customer')
+          .gte('created_at', from.toISOString()),
+      ])
+
+      // The same count over the window before, so the comparison measures the same thing.
+      const priorFacts =
+        previousFrom === null
+          ? { data: [] as { case_id: string }[], error: null }
+          : await admin
+              .from('messages')
+              .select('case_id')
+              .eq('role', 'customer')
+              .gte('created_at', previousFrom.toISOString())
+              .lt('created_at', from.toISOString())
+
+      for (const result of [series, windowEvents, applications, caseFacts, priorFacts]) {
+        if (result.error !== null) return errorResponse('conflict', result.error.message)
+      }
+
+      const rows = windowEvents.data as {
+        type: string
+        case_id: string
+        payload: Record<string, unknown>
+      }[]
+
+      const countOf = (list: { type: string }[], type: string): number =>
+        list.filter((row) => row.type === type).length
+
+      // A conversation is a case somebody spoke in, counted once however much was said.
+      const spokeIn = new Set(
+        (caseFacts.data as { case_id: string }[]).map((row) => row.case_id),
+      )
+
+      const totals = {
+        conversations: spokeIn.size,
+        applications: countOf(rows, 'application_created'),
+        goals: countOf(rows, 'goal_identified'),
+        blocked: countOf(rows, 'request_blocked'),
+      }
+
+      const prior = (priorEvents.data ?? []) as { type: string }[]
+      const previous =
+        previousFrom === null
+          ? null
+          : {
+              conversations: new Set(
+                (priorFacts.data as { case_id: string }[]).map((row) => row.case_id),
+              ).size,
+              applications: countOf(prior, 'application_created'),
+              goals: countOf(prior, 'goal_identified'),
+              blocked: countOf(prior, 'request_blocked'),
+            }
+
+      const appRows = applications.data as { case_id: string; state: string }[]
+
+      /* Each stage counts applications that reached it *or went past it*. A funnel that counted
+         only current states would show nothing at "started" once everything had been submitted,
+         which is the opposite of what a funnel is supposed to show. */
+      const ORDER = [
+        'not_started',
+        'in_progress',
+        'waiting_customer',
+        'waiting_partner',
+        'ready',
+        'submitted',
+        'under_review',
+        'info_required',
+        'approved',
+        'completed',
+      ]
+      const rank = (state: string): number => {
+        const index = ORDER.indexOf(state)
+        // `declined` and `paused` are off the path rather than behind on it.
+        return index === -1 ? 0 : index
+      }
+
+      const funnel = [
+        { stage: 'started', label: 'Started', at: 1 },
+        { stage: 'ready', label: 'Ready to submit', at: ORDER.indexOf('ready') },
+        { stage: 'submitted', label: 'Submitted', at: ORDER.indexOf('submitted') },
+        { stage: 'approved', label: 'Approved', at: ORDER.indexOf('approved') },
+      ].map((stage) => ({
+        stage: stage.stage,
+        label: stage.label,
+        count: appRows.filter((row) => rank(row.state) >= stage.at).length,
+      }))
+
+      const tallyBy = (key: string): Map<string, number> => {
+        const counts = new Map<string, number>()
+        for (const row of rows) {
+          const value = row.payload[key]
+          if (typeof value !== 'string') continue
+          counts.set(value, (counts.get(value) ?? 0) + 1)
+        }
+        return counts
+      }
+
+      const goalCounts = new Map<string, number>()
+      for (const row of rows) {
+        if (row.type !== 'goal_identified') continue
+        const goal = row.payload.goal
+        if (typeof goal !== 'string') continue
+        goalCounts.set(goal, (goalCounts.get(goal) ?? 0) + 1)
+      }
+
+      const topGoals = [...goalCounts.entries()]
+        .map(([goal, count]) => ({
+          goal,
+          name: goalCatalogue.find((item) => item.id === goal)?.name ?? goal,
+          count,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8)
+
+      const blockedCounts = new Map<string, number>()
+      for (const row of rows) {
+        if (row.type !== 'request_blocked') continue
+        const category = row.payload.category
+        if (typeof category !== 'string') continue
+        blockedCounts.set(category, (blockedCounts.get(category) ?? 0) + 1)
+      }
+
+      const guardrails = [...blockedCounts.entries()]
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count)
+
+      /* Outcomes are per case, from everything that happened to it — not only what happened
+         inside the window. "How far did this conversation get" has no meaning clipped to seven
+         days. The window decides which conversations are counted, not how far they got. */
+      const byCase = new Map<string, { blocked: boolean; goals: number; plans: number }>()
+      for (const id of spokeIn) byCase.set(id, { blocked: false, goals: 0, plans: 0 })
+
+      const allForCases = await admin
+        .from('events')
+        .select('case_id, type, payload')
+        .in('case_id', [...spokeIn])
+
+      if (allForCases.error !== null) {
+        return errorResponse('conflict', allForCases.error.message)
+      }
+
+      for (const row of allForCases.data as { case_id: string; type: string }[]) {
+        const entry = byCase.get(row.case_id)
+        if (entry === undefined) continue
+        if (row.type === 'request_blocked') entry.blocked = true
+        if (row.type === 'goal_identified') entry.goals += 1
+        if (row.type === 'plan_created') entry.plans += 1
+      }
+
+      const appsByCase = new Map<string, { state: string }[]>()
+      for (const row of appRows) {
+        appsByCase.set(row.case_id, [...(appsByCase.get(row.case_id) ?? []), { state: row.state }])
+      }
+
+      const outcomeCounts = new Map<CaseOutcome, number>()
+      for (const [caseId, entry] of byCase) {
+        const outcome = caseOutcome({
+          everBlocked: entry.blocked,
+          applications: appsByCase.get(caseId) ?? [],
+          plans: entry.plans,
+          goalsIdentified: entry.goals,
+          // Every case in `byCase` is one somebody spoke in; that is how it got there.
+          customerMessages: 1,
+        })
+        if (outcome === null) continue
+        outcomeCounts.set(outcome, (outcomeCounts.get(outcome) ?? 0) + 1)
+      }
+
+      const outcomes = CASE_OUTCOMES.map((outcome) => ({
+        outcome,
+        label: CASE_OUTCOME_LABELS[outcome],
+        note: CASE_OUTCOME_NOTES[outcome],
+        count: outcomeCounts.get(outcome) ?? 0,
+      })).filter((entry) => entry.count > 0)
+
+      return json(
+        ok({
+          period: action.period,
+          from: from.toISOString(),
+          to: to.toISOString(),
+          totals,
+          previous,
+          series: (series.data ?? []) as { day: string; type: string; count: number }[],
+          funnel,
+          topGoals,
+          guardrails,
+          outcomes,
+        }),
+        200,
+      )
     }
 
     /** Plan §3.2 — what is currently overridden, for the catalogue screen. */
