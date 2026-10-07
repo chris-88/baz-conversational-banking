@@ -58,7 +58,11 @@ export function useThemeApplied(): void {
   useEffect(() => {
     apply(theme)
 
-    const query = window.matchMedia('(prefers-color-scheme: dark)')
+    const query = prefersDark()
+    if (query === null) {
+      return () => document.documentElement.classList.remove('dark')
+    }
+
     const onChange = (): void => {
       // Following the machine means following it as it changes, not as it was on page load.
       if (current === 'system') apply('system')
@@ -82,10 +86,21 @@ function read(): Theme {
   return 'light'
 }
 
+/**
+ * The machine's preference, or null where it cannot be asked.
+ *
+ * jsdom has no `matchMedia`, and neither did the browsers this would have been tested in a few
+ * years ago. Reaching for it unguarded threw on mount and took the whole console down with it,
+ * which is a long way out of proportion to not knowing somebody's colour scheme.
+ */
+function prefersDark(): MediaQueryList | null {
+  if (typeof window.matchMedia !== 'function') return null
+  return window.matchMedia('(prefers-color-scheme: dark)')
+}
+
 function apply(theme: Theme): void {
-  const dark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  // `system` with nothing to ask falls back to light, which is what this console looks like.
+  const dark = theme === 'dark' || (theme === 'system' && prefersDark()?.matches === true)
 
   document.documentElement.classList.toggle('dark', dark)
 }
