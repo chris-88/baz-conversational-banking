@@ -28,7 +28,13 @@ const digest = (extra: Partial<CaseDigest> = {}): CaseDigest => ({
   ...extra,
 })
 
-const compose = (extra: Partial<CaseDigest> = {}): string =>
+/**
+ * Whitespace-normalised, because these assertions are about what the prompt says rather than
+ * how it is wrapped — a phrase broken across two lines is still the phrase.
+ */
+const compose = (extra: Partial<CaseDigest> = {}): string => raw(extra).replaceAll(/\s+/g, ' ')
+
+const raw = (extra: Partial<CaseDigest> = {}): string =>
   composeSystemPrompt({
     domainConfig: boiDomainConfig,
     products: boiProducts,
@@ -74,6 +80,55 @@ describe('the digest reaches the prompt', () => {
 
     expect(empty).not.toContain('What applying would actually involve')
     expect(empty).not.toContain('Something else may suit them better')
+  })
+})
+
+/**
+ * How an application is conducted, which is the thing customers least expect.
+ *
+ * Asked how long one takes, whether an appointment was needed and what documents were required,
+ * Baz declined all three. Two were honest; the third was wrong. But the real miss was that the
+ * answer to "how long does this take" is not a number — it is that there is nothing to turn up
+ * to and nothing to have ready, and nothing in the prompt said so.
+ */
+describe('how applying works', () => {
+  const prompt = compose()
+
+  it('says there is no appointment and nothing to sit down to', () => {
+    expect(prompt).toContain('no appointment')
+    expect(prompt).toMatch(/no branch visit/i)
+  })
+
+  it('says an application can be left and picked up later', () => {
+    expect(prompt).toMatch(/picked up whenever/i)
+    expect(prompt).toMatch(/place is held/i)
+  })
+
+  it('says nothing has to be gathered up front', () => {
+    expect(prompt).toMatch(/one thing at a time/i)
+  })
+
+  it('still refuses to invent a decision timeframe', () => {
+    expect(prompt).toMatch(/do not have a timeframe/i)
+    expect(prompt).toMatch(/must not invent one/i)
+  })
+
+  it('keeps starting an application the customer\'s tap', () => {
+    expect(prompt).toMatch(/customer's tap/i)
+  })
+})
+
+describe('what happens after what-is-involved', () => {
+  const prompt = compose({ prospect: ['Mortgage — what applying would involve:'] })
+
+  it('asks when, not what they earn', () => {
+    expect(prompt).toMatch(/ask when they are hoping to do it/i)
+    expect(prompt).toContain('Not their income')
+  })
+
+  it('routes a distant date to a plan rather than an application', () => {
+    expect(prompt).toContain('propose_plan')
+    expect(prompt).toMatch(/comes back to them when they reach/i)
   })
 })
 

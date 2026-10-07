@@ -149,6 +149,15 @@ describe('describing it', () => {
     expect(lines.join(' ')).toContain('could start it now')
   })
 
+  it('never states a document list without saying it is not exhaustive', () => {
+    const lines = describeProspect(view(), 'Mortgage').join('\n')
+
+    // A list stated flatly reads as the complete set, and an underwriter asking for one more
+    // thing later makes Baz look wrong rather than thorough.
+    expect(lines).toContain('assessed individually')
+    expect(lines).toContain('not exhaustive')
+  })
+
   it('tells the model where a declaration happens, so it does not ask for one in chat', () => {
     const lines = describeProspect(
       {

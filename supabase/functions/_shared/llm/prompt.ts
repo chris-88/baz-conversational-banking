@@ -104,6 +104,42 @@ captured, and if what you offer is something they can act on.
   the detail, so you do not have to repeat it.`
 
 /**
+ * How an application is actually conducted here.
+ *
+ * Asked how long one takes, whether an appointment was needed and what documents were required,
+ * Baz said it had no timeframe, nothing about appointments, and no document list — and declined
+ * all three. Two of those were honest and the third was wrong, but the real failure was that the
+ * answer to "how long does this take" is not a number. It is that there is nothing to turn up
+ * to, nothing to sit down and fill in, and no need to have anything ready before starting.
+ *
+ * That is the thing worth saying and nothing in the prompt said it. A customer who has only ever
+ * applied for a mortgage on paper assumes a folder of documents and a morning off, and will
+ * carry that assumption out of the conversation unless somebody contradicts it.
+ *
+ * Here rather than in tenant config because it describes how Baz works, not what this bank
+ * sells. If a tenant ever needs different conduct, it moves to `domain-config`.
+ */
+export const HOW_APPLYING_WORKS = `# How applying works
+
+This is the part customers least expect, so say it rather than assuming they know.
+
+- There is no appointment, no branch visit and no form to sit down to. It happens here, in the
+  conversation, and you are the one who steps them through it.
+- It does not have to be done in one go. An application can be started now and picked up
+  whenever — tomorrow, next week, from a different device. Their place is held and nothing is
+  lost. Say so: people put this off because they think they need a free afternoon.
+- Nothing has to be gathered up front. You ask for one thing at a time, only what is actually
+  still outstanding, and only when it is that item's turn. They never need a folder ready
+  before starting.
+- Documents are sent in as photos when they get to them, not brought anywhere.
+- You can tell them the kinds of document usually needed. Say plainly that every case is
+  assessed individually and the list is not exhaustive — more may be asked for.
+- You do not have a timeframe for a decision and must not invent one. That is a fair thing to
+  say, but say it as the one piece you cannot answer, after answering the rest.
+
+Starting is still the customer's tap, not yours. Describing how it works is not starting it.`
+
+/**
  * What each fact key accepts, generated from the catalogue.
  *
  * The `record_facts` schema types `value` as unknown, so without this the model is guessing.
@@ -561,8 +597,14 @@ function digestSection(digest: CaseDigest): string {
       'Lead with what they would NOT be asked again. That is the whole point and the one thing',
       'they will not expect. Then give the shape of the rest — roughly how many things, and what',
       'kind — rather than reciting it. They asked what is involved, not for an inventory.',
-      'Nothing here starts an application, and this is not permission to start asking: if they',
-      'have not said to go ahead, finish by asking whether they want to.',
+      '',
+      'Then ask when they are hoping to do it. Not their income, not the county, not who is',
+      'buying with them — when. It is the one answer that changes what should happen next: a',
+      'purchase this month is an application, and the same purchase in two years is a plan with',
+      'a savings target and a check-in, which is a different conversation and a better one.',
+      'If it turns out to be some way off, offer to keep it as a plan with propose_plan so the',
+      'bank comes back to them when they reach the date or the amount, rather than leaving them',
+      'to remember. Nothing here starts an application; describing it is not starting it.',
       ...prospect.map((line) => line.startsWith('  ') ? line : `- ${line}`),
       '',
     )
@@ -744,6 +786,7 @@ function stableSections(input: PromptInput): readonly string[] {
     VOICE,
     domainSection(input.domainConfig),
     TOOL_GUIDANCE,
+    HOW_APPLYING_WORKS,
     factReference(),
     productSection(input.products),
     composePersona(sliders),

@@ -445,11 +445,19 @@ async function handleTurn(request: Request): Promise<Response> {
    * product would let the model pick the wrong one. Computed from the real journey so that
    * "what would I need?" has an answer that is not improvised (§51, Invariant 3).
    */
+  /*
+   * Quoted or offered, whichever happened last.
+   *
+   * Only quoting was too narrow: a customer shown the product options card and asked "what
+   * documents do I need?" got "I don't have a fixed document list", because the list is only
+   * assembled for something they have been given figures for. Both events mean the same thing
+   * here — this product is the one on the table.
+   */
   const quoted = await admin
     .from('events')
     .select('payload')
     .eq('case_id', turn.caseId)
-    .eq('type', 'product_quoted')
+    .in('type', ['product_quoted', 'product_offered'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()

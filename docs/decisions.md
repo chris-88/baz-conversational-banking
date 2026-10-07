@@ -1025,3 +1025,13 @@ the caller spreads its options in, and TypeScript flags excess properties only o
 literal. Another one for the failures-presenting-as-silence list: no error, no warning, and a
 model that simply never mentioned any of it. `digest.test.ts` now fails if any option stops
 arriving.
+
+**2026-10-07 — "How long does it take?" is not answered with a number.** §8.
+Asked how long an application takes, whether an appointment was needed and what documents were
+required, Baz declined all three. Two of those were honest; the third was wrong. But the real
+miss was that the answer is that there is nothing to turn up to, nothing to sit down and fill
+in, and nothing to have ready — the application is conversational, async and resumable, which is
+the product's whole premise and nothing in the prompt said it. `HOW_APPLYING_WORKS` now does.
+Document lists always carry "assessed individually, not exhaustive", and the follow-up after
+"what is involved" is when they are hoping to do it — the one answer that decides between an
+application now and a plan with a check-in.

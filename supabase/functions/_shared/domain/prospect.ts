@@ -120,7 +120,16 @@ export function describeProspect(view: ProspectView, displayName: string): reado
   }
 
   if (view.toUpload.length > 0) {
-    lines.push(`  ${count(view.toUpload, 'document')} to send in: ${view.toUpload.join(', ')}.`)
+    /*
+     * The caveat travels with the list rather than being left to the model to remember. A
+     * document list stated flatly reads as the complete set, and an underwriter who later asks
+     * for a second payslip has made Baz look like it was wrong rather than being thorough.
+     */
+    lines.push(
+      `  ${count(view.toUpload, 'document')} to send in as photos: ${view.toUpload.join(', ')}. ` +
+        'Say that every case is assessed individually and this list is not exhaustive — more ' +
+        'may be asked for once the team looks at it.',
+    )
   }
 
   if (view.toDeclare.length > 0) {
