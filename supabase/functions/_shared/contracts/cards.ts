@@ -29,6 +29,33 @@ export const productOptionCardSchema = z.object({
     .min(1),
 })
 
+/**
+ * Three or more ways to do the same thing, with the trade-off visible (§51).
+ *
+ * Every figure is computed by the quote engine from the catalogue, never by the model. The card
+ * is a conversation device rather than a product picker: choosing one asks Baz to explain it and
+ * to keep asking how the customer intends to use and repay it.
+ */
+export const quoteCardSchema = z.object({
+  type: z.literal('quote'),
+  product: z.enum(PRODUCTS),
+  displayName: z.string(),
+  /** What the figures were computed from, so the card states its own assumptions. */
+  basis: z.string(),
+  options: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        highlight: z.string().nullable(),
+        headline: z.object({ label: z.string(), value: z.string() }),
+        figures: z.array(z.object({ label: z.string(), value: z.string() })),
+        footnote: z.string().nullable(),
+      }),
+    )
+    .min(1),
+})
+
 export const statusCardSchema = z.object({
   type: z.literal('status'),
   applications: z.array(
@@ -170,6 +197,7 @@ export const planProposalCardSchema = z.object({
 })
 
 export const cardSchema = z.discriminatedUnion('type', [
+  quoteCardSchema,
   planProposalCardSchema,
   consentCardSchema,
   healthFormCardSchema,
@@ -185,6 +213,7 @@ export type Card = z.infer<typeof cardSchema>
 export type CardType = Card['type']
 
 export const CARD_TYPES = [
+  'quote',
   'plan_proposal',
   'product_options',
   'status',

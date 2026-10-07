@@ -249,6 +249,23 @@ export function BazChat({
         'Say what is now in progress and what you need from them first.',
       )
     },
+    /**
+     * A quote option the customer wants to go through.
+     *
+     * Nothing is committed — no application, no recorded decision. It asks Baz to explain that
+     * option and, more to the point, to keep asking: what the money is for and how they mean to
+     * repay it are the things that decide whether this is even the right product, and a
+     * repayment figure on its own cannot tell them that.
+     */
+    onDiscussQuote: (option) =>
+      send(
+        `Chose "${option.name}" to talk through.`,
+        'action',
+        'Explain what that option means in practice and what is good and less good about it. ' +
+          'Then keep finding out: what the money is for, and how soon they expect to clear it. ' +
+          'Do not start an application yet.',
+      ),
+
     onDeclineProducts: async (products) => {
       await commit(
         { action: 'decline_product', caseId: caseId ?? '', product: products[0] as Product },

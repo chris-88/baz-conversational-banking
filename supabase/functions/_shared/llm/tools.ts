@@ -88,6 +88,23 @@ export const proposePlanInput = z.object({
   targetDate: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).optional(),
 })
 
+/**
+ * §51 — answering a question about money with figures rather than prose.
+ *
+ * The model passes only what the customer actually said. Every rate, repayment and total is
+ * computed by the server from the catalogue, so there is no number here for the model to get
+ * wrong. Any two of the three is enough; the engine works out the third.
+ */
+export const showQuoteInput = z.object({
+  product: z.enum(PRODUCTS),
+  /** Borrowed, owed, or saved towards. */
+  amount: z.number().positive().optional(),
+  /** The term, in months. 30 years is 360. */
+  months: z.number().int().positive().max(600).optional(),
+  /** What they can pay, or put away, each month. */
+  monthly: z.number().positive().optional(),
+})
+
 export const showPartnerInviteInput = z.object({
   applicationIds: z.array(applicationId).min(1).max(5),
 })
@@ -108,6 +125,7 @@ export const TOOL_INPUTS = {
   show_review: showReviewInput,
   show_pause_prompt: showPausePromptInput,
   propose_plan: proposePlanInput,
+  show_quote: showQuoteInput,
   request_upload: requestUploadInput,
   show_partner_invite: showPartnerInviteInput,
   show_status: showStatusInput,
@@ -171,6 +189,16 @@ export const TOOLS: readonly ToolDefinition[] = [
       'card is how they accept; nothing is kept until they tap it. Do not propose a plan for ' +
       'something they can simply do today.',
     schema: proposePlanInput,
+  },
+  {
+    name: 'show_quote',
+    description:
+      'Answer a question about what something costs, pays or takes, with options to compare. ' +
+      'Use it whenever a customer mentions an amount, a term or a monthly figure for any ' +
+      'product — borrowing, saving or a card balance. Pass only what they actually said; any ' +
+      'two of amount, months and monthly is enough and the third is worked out. Never do the ' +
+      'arithmetic yourself and never restate the figures: they are on the card.',
+    schema: showQuoteInput,
   },
   {
     name: 'show_partner_invite',

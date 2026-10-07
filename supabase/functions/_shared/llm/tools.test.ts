@@ -42,6 +42,10 @@ describe('the model has no tool that takes an action', () => {
     // worth being explicit: it writes a DRAFT plan nobody is held to. The plan becomes the
     // customer's when they tap the card, which calls case-action like every other commitment.
     // Proposing is not acting.
+    //
+    // `show_quote` is the tenth and computes nothing itself: it passes what the customer said
+    // to the quote engine, which does the arithmetic from the catalogue. Choosing an option on
+    // the card starts nothing either — it asks Baz to go through that one.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
@@ -50,6 +54,7 @@ describe('the model has no tool that takes an action', () => {
       'show_partner_invite',
       'show_pause_prompt',
       'show_product_options',
+      'show_quote',
       'show_review',
       'show_status',
     ])

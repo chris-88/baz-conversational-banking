@@ -968,3 +968,12 @@ section.
   topic at 14:06" proves nothing, "count to 10,000 — off topic" proves the thing. The request
   still never reaches the model (Invariant 4); recording what was turned away is the opposite of
   answering it.
+- **2026-10-07** — A question about money is answered with a quote card, not prose. The model
+  passes only what the customer said; the server computes every figure from the catalogue. A
+  reply containing three numbers the model worked out is three numbers that can be wrong, and a
+  repayment figure is the kind of wrong a customer acts on.
+- **2026-10-07** — Choosing an option on a quote card commits nothing. It asks Baz to explain
+  that option and to keep asking what the money is for and how soon they expect to clear it —
+  because those are what decide whether it is the right product at all, and a repayment figure
+  cannot tell anybody that. Deliberately not gated by discovery either: a question about cost is
+  a question, and making somebody complete an interview before seeing a figure reads as evasive.

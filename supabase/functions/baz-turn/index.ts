@@ -39,6 +39,8 @@ import {
   reconcilePlans,
 } from '../_shared/db/plans.ts'
 import { blueprintFor } from '../_shared/domain/goals/catalogue.ts'
+import { buildQuote } from '../_shared/domain/quotes/engine.ts'
+import type { Product } from '../_shared/domain/journey.ts'
 import { worthRaising, wouldContend } from '../_shared/domain/goals/engine.ts'
 import { planDraftFor } from '../_shared/domain/goals/plan.ts'
 import { describeGoals, goalContextFor } from '../_shared/db/goals.ts'
@@ -65,6 +67,7 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'show_partner_invite',
   'request_upload',
   'propose_plan',
+  'show_quote',
 ]
 
 /** How far back a card still counts as "on screen" rather than scrolled into history. */
@@ -88,6 +91,12 @@ const STATUS_CARD_WINDOW = 2
 
 /** Short, so a genuinely different set of options can still follow a turn later. */
 const OPTIONS_CARD_WINDOW = 2
+
+/**
+ * Longer than the options window: a quote is read and compared rather than acted on, so it
+ * stays useful further up the conversation, and a second copy of the same figures is noise.
+ */
+const QUOTE_CARD_WINDOW = 4
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -968,6 +977,81 @@ async function handleTurn(request: Request): Promise<Response> {
                 return {
                   result:
                     'Plan proposed. It is a draft and belongs to nobody until they tap it. Explain what it does for them in a sentence; do not list the milestones back.',
+                  card,
+                }
+              }
+
+              /**
+               * §51 — a question about money, answered with figures.
+               *
+               * Everything on the card is computed here from the catalogue. The model chose to
+               * show it and supplied what the customer said; it never sees a number it could
+               * restate wrongly, which is the whole reason this tool exists.
+               */
+              case 'show_quote': {
+                const ask = input as {
+                  product: Product
+                  amount?: number
+                  months?: number
+                  monthly?: number
+                }
+
+                /**
+                 * One quote, not one per turn.
+                 *
+                 * Asked to go through an option, the model reached for the tool again and put a
+                 * second card under the first — the same figures, one row shorter. The card is
+                 * still on screen; what the customer wanted was the explanation.
+                 */
+                const quoteOnScreen = loaded.messages
+                  .slice(-QUOTE_CARD_WINDOW)
+                  .some((message) => message.cards.includes('quote'))
+
+                if (quoteOnScreen) {
+                  return {
+                    result:
+                      'That quote is already on screen. Talk about it rather than showing it ' +
+                      'again — and keep finding out what they need it for and how they mean to ' +
+                      'repay it.',
+                  }
+                }
+
+                const info = productInfo(ask.product)
+                const quote = buildQuote(info.variants ?? [], {
+                  amount: ask.amount,
+                  months: ask.months,
+                  monthly: ask.monthly,
+                })
+
+                if (quote.problem !== null) {
+                  return {
+                    result:
+                      `No options to show: ${quote.problem} Say that plainly and ask for what ` +
+                      'would let you work it out.',
+                  }
+                }
+
+                const card: Card = {
+                  type: 'quote',
+                  product: ask.product,
+                  displayName: info.name,
+                  basis: quote.basis,
+                  options: quote.options.map((option) => ({
+                    id: option.id,
+                    name: option.name,
+                    highlight: option.highlight,
+                    headline: option.headline,
+                    figures: [...option.figures],
+                    footnote: option.footnote,
+                  })),
+                }
+
+                return {
+                  result:
+                    `Showing ${String(quote.options.length)} options for ${info.name}, based on ` +
+                    `${quote.basis}. The figures are on the card — do not repeat them. Say in a ` +
+                    'sentence what the trade-off between them is, and invite them to tap one so ' +
+                    'you can go through it properly. The rates are illustrative.',
                   card,
                 }
               }
