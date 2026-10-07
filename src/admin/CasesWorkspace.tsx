@@ -1,7 +1,26 @@
 import type { ReactNode } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { MoreHorizontalIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { queryKeys } from '@/lib/queryKeys'
 import { adminApi } from '@/admin/adminClient'
@@ -76,7 +95,12 @@ export function CasesWorkspace({
       <PageHeader
         title="Cases"
         description="Every live conversation, what Baz understood, and what you can do about it."
-        actions={<PeriodSelect value={period} onChange={onPeriodChange} />}
+        actions={
+          <>
+            <PeriodSelect value={period} onChange={onPeriodChange} />
+            <Controls onChanged={refresh} count={data.cases.length} />
+          </>
+        }
       />
 
       <Metrics metrics={data.metrics} previous={data.previous} />
@@ -125,6 +149,79 @@ export function CasesWorkspace({
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
+  )
+}
+
+/**
+ * Running the prototype, rather than running a case.
+ *
+ * In a menu because they are used between demonstrations and never during one, and a button bar
+ * that is wrong most of the time is worse than one click.
+ */
+function Controls({
+  count,
+  onChanged,
+}: {
+  readonly count: number
+  readonly onChanged: () => void
+}): ReactNode {
+  const [confirming, setConfirming] = useState(false)
+  const reset = useMutation({ mutationFn: adminApi.resetCase, onSuccess: onChanged })
+  const purge = useMutation({
+    mutationFn: adminApi.purgeCases,
+    onSuccess: () => {
+      setConfirming(false)
+      onChanged()
+    },
+  })
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" aria-label="Controls">
+            <MoreHorizontalIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuItem disabled={reset.isPending} onSelect={() => reset.mutate()}>
+            <RotateCcwIcon />
+            {reset.isPending ? 'Rebuilding…' : 'Rebuild the sample customer'}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={count === 0 || purge.isPending}
+            onSelect={(event) => {
+              // The menu would close and take the dialog with it.
+              event.preventDefault()
+              setConfirming(true)
+            }}
+          >
+            <Trash2Icon />
+            Purge all {count} conversations
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete every conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All {count} go, along with their facts, applications, plans and events. The sample
+              customer can be rebuilt afterwards from this menu. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep them</AlertDialogCancel>
+            <AlertDialogAction onClick={() => purge.mutate()}>
+              {purge.isPending ? 'Clearing…' : `Delete all ${String(count)}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
