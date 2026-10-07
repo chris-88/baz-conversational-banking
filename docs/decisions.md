@@ -1017,3 +1017,11 @@ turn knows which product is in play.
 mortgage advertised "3.85% for 3 years" while the card offered 3.1%, 3.3%, 3.4% and 3.9%. The
 prompt now derives rate lines from the variants, and `products.test.ts` fails any rate written in
 prose beside a variant.
+
+**2026-10-07 — The digest dropped everything it was not explicitly told to keep.** §14.
+`buildCaseDigest` copied `plans`, `checkin` and `revived` into its return and nothing else, so
+`goals` and `suitability` had been computed every turn and thrown away. It typechecked because
+the caller spreads its options in, and TypeScript flags excess properties only on a direct
+literal. Another one for the failures-presenting-as-silence list: no error, no warning, and a
+model that simply never mentioned any of it. `digest.test.ts` now fails if any option stops
+arriving.

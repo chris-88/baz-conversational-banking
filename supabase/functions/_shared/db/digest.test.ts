@@ -335,3 +335,44 @@ describe('every event worth returning for can be described', () => {
     }
   })
 })
+
+/**
+ * Everything handed to the digest has to come back out of it.
+ *
+ * `goals`, `suitability` and `prospect` were computed every turn, passed in, and dropped on the
+ * floor: the return literal copied `plans`, `checkin` and `revived` and nothing else. It
+ * typechecked because the caller spreads the options in — `...(x === 0 ? {} : { goals })` — and
+ * TypeScript only flags excess properties on a direct literal, never on a spread.
+ *
+ * So the Goal Engine's digest lines and the suitability re-steer were being worked out and
+ * thrown away, which is the quietest possible failure: no error, no warning, and a model that
+ * simply never mentioned any of it.
+ */
+describe('what the digest is given, it keeps', () => {
+  it('carries goals through to the prompt', () => {
+    const digest = buildCaseDigest(loaded(), { goals: ['They are buying a first home.'] })
+    expect(digest.goals).toEqual(['They are buying a first home.'])
+  })
+
+  it('carries suitability through to the prompt', () => {
+    const digest = buildCaseDigest(loaded(), { suitability: ['A loan would cost less.'] })
+    expect(digest.suitability).toEqual(['A loan would cost less.'])
+  })
+
+  it('carries what applying would involve through to the prompt', () => {
+    const digest = buildCaseDigest(loaded(), { prospect: ['Mortgage — what applying involves:'] })
+    expect(digest.prospect).toEqual(['Mortgage — what applying involves:'])
+  })
+
+  it('carries plans, check-ins and revived needs through, as it always did', () => {
+    const digest = buildCaseDigest(loaded(), {
+      plans: [{ title: 'Deposit', lines: ['on track'] }],
+      checkin: { purpose: 'Review', plan: 'Deposit', agenda: ['how it is going'] },
+      revived: [{ name: 'Protection', reason: 'the baby arrived' }],
+    })
+
+    expect(digest.plans).toHaveLength(1)
+    expect(digest.checkin?.purpose).toBe('Review')
+    expect(digest.revived).toHaveLength(1)
+  })
+})

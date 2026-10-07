@@ -208,6 +208,12 @@ export function buildCaseDigest(
     readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
     readonly checkin?: CaseDigest['checkin']
     readonly revived?: CaseDigest['revived']
+    /** Where the customer is trying to get to, from the Goal Engine. */
+    readonly goals?: readonly string[]
+    /** Whether what they are looking at is what suits them. */
+    readonly suitability?: readonly string[]
+    /** What applying for the product they have been quoted would involve. */
+    readonly prospect?: readonly string[]
   } = {},
 ): CaseDigest {
   const needContext = needContextFor(loaded, {
@@ -275,9 +281,18 @@ export function buildCaseDigest(
     sensitiveHeld: sensitiveAreas,
     needs: digestNeeds,
     plan: digestPlan,
+    /*
+     * Everything optional is copied here, and a new one that is not is silently dropped: the
+     * caller spreads its options in, and TypeScript only flags excess properties on a direct
+     * literal. `goals`, `suitability` and `prospect` were all computed every turn and thrown
+     * away for exactly that reason. `digest.test.ts` now fails if any of them stops arriving.
+     */
     ...(options.plans === undefined ? {} : { plans: options.plans }),
     ...(options.checkin === undefined ? {} : { checkin: options.checkin }),
     ...(options.revived === undefined ? {} : { revived: options.revived }),
+    ...(options.goals === undefined ? {} : { goals: options.goals }),
+    ...(options.suitability === undefined ? {} : { suitability: options.suitability }),
+    ...(options.prospect === undefined ? {} : { prospect: options.prospect }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,
