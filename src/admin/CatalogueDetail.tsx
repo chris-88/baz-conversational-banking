@@ -12,6 +12,7 @@ import {
 } from '@domain/goals/types.ts'
 import { SIGNAL_STRENGTHS, type NeedDefinition } from '@domain/needs/types.ts'
 import { factCatalogue } from '@domain/facts.ts'
+import { sentence } from '@/lib/utils'
 import type { CatalogueOverrideDto } from '@contracts/admin.ts'
 
 /**
@@ -415,9 +416,9 @@ function Head({
             <Badge
               key={badge.text}
               variant={badge.tone ?? 'secondary'}
-              className="text-2xs first-letter:uppercase"
+              className="text-2xs"
             >
-              {badge.text}
+              {sentence(badge.text)}
             </Badge>
           ))}
         </div>

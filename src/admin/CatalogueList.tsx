@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
-import { cn } from '@/lib/utils'
+import { cn, sentence } from '@/lib/utils'
 
 /** One row, reduced to what the list needs to show and sort by. */
 export type CatalogueEntry = {
@@ -174,8 +174,8 @@ export function CatalogueList({
                     </Badge>
                   )}
                   {entry.rank !== null && (
-                    <Badge variant="secondary" className="text-2xs shrink-0 first-letter:uppercase">
-                      {entry.rank.replaceAll('_', ' ')}
+                    <Badge variant="secondary" className="text-2xs shrink-0">
+                      {sentence(entry.rank.replaceAll('_', ' '))}
                     </Badge>
                   )}
                 </div>

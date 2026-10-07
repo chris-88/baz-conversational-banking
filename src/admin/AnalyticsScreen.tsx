@@ -27,6 +27,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { MetricCard, PageHeader } from '@/admin/parts'
+import { sentence } from '@/lib/utils'
 import { adminApi } from '@/admin/adminClient'
 import { queryKeys } from '@/lib/queryKeys'
 import { insightsFor } from '@domain/insights.ts'
@@ -491,8 +492,8 @@ function Guardrails({ categories }: { readonly categories: Analytics['guardrails
       {categories.map((entry) => (
         <div key={entry.category} className="space-y-1">
           <div className="flex items-baseline gap-2">
-            <Badge variant="secondary" className="text-2xs shrink-0 first-letter:uppercase">
-              {entry.category.replaceAll('_', ' ')}
+            <Badge variant="secondary" className="text-2xs shrink-0">
+              {sentence(entry.category.replaceAll('_', ' '))}
             </Badge>
             <span className="flex-1" />
             <span className="tabular text-sm font-medium">{entry.count}</span>
