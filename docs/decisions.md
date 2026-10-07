@@ -1035,3 +1035,11 @@ the product's whole premise and nothing in the prompt said it. `HOW_APPLYING_WOR
 Document lists always carry "assessed individually, not exhaustive", and the follow-up after
 "what is involved" is when they are hoping to do it — the one answer that decides between an
 application now and a plan with a check-in.
+
+**2026-10-07 — A target already passed is not a plan.** §38.
+Somebody with €60,000 against a €320,000 house was offered a plan to save €32,000 — ten per cent
+of the price, which is what `depositGap` assumes when nobody has said otherwise — and the card
+rendered "€60,000 of €32,000, 100%" on a goal two years away. `propose_plan` now refuses a target
+at or below what they already hold and tells the model to ask what they are actually aiming for.
+The figure was not wrong so much as beside the point: they had said they wanted to save more and
+nobody had asked what for.

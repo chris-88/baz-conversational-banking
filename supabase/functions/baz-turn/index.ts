@@ -81,6 +81,8 @@ const INVITE_CARD_WINDOW = 8
  * exchanges — enough to learn that somebody is renting and has savings, and nothing about what
  * they earn, what they are buying or who else is involved.
  */
+const money = (amount: number): string => `€${Math.round(amount).toLocaleString('en-IE')}`
+
 const DISCOVERY_PATIENCE = 7
 
 /**
@@ -1021,6 +1023,26 @@ async function handleTurn(request: Request): Promise<Response> {
                   return {
                     result:
                       'There is nothing measurable to plan towards yet. Find out what they are aiming for first.',
+                  }
+                }
+
+                /*
+                 * A target they have already passed is not a plan.
+                 *
+                 * Somebody with €60,000 against a €320,000 house was offered a plan to save
+                 * €32,000 — ten per cent of the price, which is what `depositGap` assumes when
+                 * nobody has said otherwise — and the card rendered "€60,000 of €32,000, 100%"
+                 * on a goal two years away. The figure was not wrong so much as beside the
+                 * point: they had said they wanted to save more, and nobody had asked what for.
+                 */
+                if (target !== null && gap !== null && target <= gap.saved) {
+                  return {
+                    result:
+                      `They already have ${money(gap.saved)} towards this, which is more than the ` +
+                      `${money(target)} in that plan — so there is nothing to save towards and the ` +
+                      'card would show it finished. Ask what they are actually aiming for before ' +
+                      'planning towards a figure. A bigger deposit means less borrowing and a ' +
+                      'better rate, so "more than the minimum" is a real answer worth pinning down.',
                   }
                 }
 
