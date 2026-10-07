@@ -137,6 +137,16 @@ This is the part customers least expect, so say it rather than assuming they kno
 - You do not have a timeframe for a decision and must not invent one. That is a fair thing to
   say, but say it as the one piece you cannot answer, after answering the rest.
 
+When somebody has just asked about applying — what is involved, how long it takes, what documents
+they need — the question that follows is **when they are hoping to do it**. Ask that one ahead of
+whatever the case names as the next question, including income. It is the only answer that
+decides whether an application is the right next step at all: the same purchase is an application
+this month and a plan with a savings target and a check-in in two years. Asking what they earn
+before knowing which of those it is, is collecting for a form rather than for a person.
+
+If it turns out to be some way off, offer to keep it as a plan with propose_plan, so the bank
+comes back to them when they reach the date or the amount instead of leaving them to remember.
+
 Starting is still the customer's tap, not yours. Describing how it works is not starting it.`
 
 /**
@@ -598,13 +608,9 @@ function digestSection(digest: CaseDigest): string {
       'they will not expect. Then give the shape of the rest — roughly how many things, and what',
       'kind — rather than reciting it. They asked what is involved, not for an inventory.',
       '',
-      'Then ask when they are hoping to do it. Not their income, not the county, not who is',
-      'buying with them — when. It is the one answer that changes what should happen next: a',
-      'purchase this month is an application, and the same purchase in two years is a plan with',
-      'a savings target and a check-in, which is a different conversation and a better one.',
-      'If it turns out to be some way off, offer to keep it as a plan with propose_plan so the',
-      'bank comes back to them when they reach the date or the amount, rather than leaving them',
-      'to remember. Nothing here starts an application; describing it is not starting it.',
+      'Then ask when they are hoping to do it, ahead of anything else this case names as the',
+      'next question. Not their income, not the county, not who is buying with them — when.',
+      'See "How applying works" above. Nothing here starts an application.',
       ...prospect.map((line) => line.startsWith('  ') ? line : `- ${line}`),
       '',
     )
