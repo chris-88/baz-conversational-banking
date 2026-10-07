@@ -97,6 +97,18 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
    */
   z.object({ action: z.literal('test_guardrail'), message: z.string().min(1).max(2000) }),
 
+  /**
+   * §56 — hear a persona before committing to it.
+   *
+   * Runs against the sliders on screen rather than the saved ones, so the preview is of the
+   * change being considered. Nothing is saved and no case is touched.
+   */
+  z.object({
+    action: z.literal('preview_persona'),
+    sliders: sliders,
+    message: z.string().min(1).max(500),
+  }),
+
   /** §41 — the bank checks what was sent in, so a document needing verification can pass. */
   z.object({ action: z.literal('verify_documents'), caseId: z.uuid() }),
 
@@ -420,6 +432,9 @@ export const guardrailTestSchema = z.object({
 })
 
 export type GuardrailTest = z.infer<typeof guardrailTestSchema>
+
+export const personaPreviewSchema = z.object({ reply: z.string() })
+export type PersonaPreview = z.infer<typeof personaPreviewSchema>
 
 export type AdminRequest = z.infer<typeof adminRequestSchema>
 export type AdminOverview = z.infer<typeof adminOverviewSchema>

@@ -13,6 +13,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
+import { composeSystemPrompt } from '../_shared/llm/prompt.ts'
+import { boiProducts } from '../_shared/tenants/boi/products.ts'
 import { caseStatus, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
@@ -255,6 +257,51 @@ Deno.serve(async (request: Request): Promise<Response> => {
         } satisfies GuardrailTest),
         200,
       )
+    }
+
+    /**
+     * §56 — what the persona on screen would sound like.
+     *
+     * The real prompt composer with the draft sliders, so the preview is the thing itself rather
+     * than an impression of it. Deliberately not wired to the sliders as they move: a model call
+     * per drag is both slow and expensive, and the point is to hear a setting, not to watch one.
+     */
+    case 'preview_persona': {
+      const anthropic = new Anthropic({
+        apiKey: env('ANTHROPIC_API_KEY'),
+        timeout: 30_000,
+        maxRetries: 1,
+      })
+
+      const stream = anthropic.messages.stream({
+        model: env('BAZ_MODEL'),
+        max_tokens: 400,
+        system: composeSystemPrompt({
+          domainConfig: boiDomainConfig,
+          products: boiProducts,
+          sliders: action.sliders,
+          digest: {
+            customerName: null,
+            authLevel: 'anonymous',
+            facts: [],
+            applications: [],
+            declinedProducts: [],
+            advisories: [],
+            partner: null,
+            eventsSinceLastSeen: [],
+          },
+        }),
+        messages: [{ role: 'user', content: action.message }],
+      })
+
+      const message = await stream.finalMessage()
+      const reply = message.content
+        .filter((block): block is { type: 'text'; text: string; citations: null } => block.type === 'text')
+        .map((block) => block.text)
+        .join('')
+        .trim()
+
+      return json(ok({ reply }), 200)
     }
 
     case 'set_kill_switch': {

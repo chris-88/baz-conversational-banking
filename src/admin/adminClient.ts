@@ -1,5 +1,11 @@
 import { callFunction } from '@/lib/callFunction'
-import { guardrailTestSchema, type GuardrailTest, type Period } from '@contracts/admin.ts'
+import {
+  guardrailTestSchema,
+  personaPreviewSchema,
+  type GuardrailTest,
+  type PersonaPreview,
+  type Period,
+} from '@contracts/admin.ts' 
 import {
   adminCaseSchema,
   adminOverviewSchema,
@@ -26,6 +32,11 @@ export const adminApi = {
   purgeCases: () => call({ action: 'purge_cases' }),
   testGuardrail: async (message: string): Promise<GuardrailTest> =>
     guardrailTestSchema.parse(await call({ action: 'test_guardrail', message })),
+  previewPersona: async (
+    sliders: Extract<AdminRequest, { action: 'preview_persona' }>['sliders'],
+    message: string,
+  ): Promise<PersonaPreview> =>
+    personaPreviewSchema.parse(await call({ action: 'preview_persona', sliders, message })),
   setSavingsBalance: (caseId: string, amount: number) =>
     call({ action: 'set_savings_balance', caseId, amount }) as Promise<{
       amount: number
