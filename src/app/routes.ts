@@ -23,5 +23,6 @@ export const routes = {
     persona: '/admin/persona',
     engine: '/admin/engine',
     analytics: '/admin/analytics',
+    profile: '/admin/profile',
   },
 } as const

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router-dom'
 import {
   CompassIcon,
-  LogOutIcon,
   ChartLineIcon,
   MessagesSquareIcon,
   ShieldAlertIcon,
@@ -33,6 +32,8 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useThemeApplied } from '@/lib/useTheme'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdminLogin } from '@/admin/AdminLogin'
 import { useAdminAuth } from '@/admin/useAdminAuth'
@@ -93,6 +94,7 @@ const SECTIONS = [
  */
 export function AdminConsole(): ReactNode {
   const auth = useAdminAuth()
+  useThemeApplied()
   const { pathname } = useLocation()
 
   if (auth.checking) {
@@ -174,14 +176,20 @@ export function AdminConsole(): ReactNode {
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => void auth.signOut()}
-                  tooltip={auth.email}
-                  className="text-muted-foreground"
-                >
-                  <LogOutIcon />
-                  <span className="truncate">Sign out</span>
-                </SidebarMenuButton>
+                <NavLink to={routes.admin.profile}>
+                  {({ isActive }) => (
+                    <SidebarMenuButton isActive={isActive} tooltip={auth.email ?? 'Account'} asChild>
+                      <span>
+                        <Avatar className="size-6">
+                          <AvatarFallback className="text-2xs">
+                            {(auth.email ?? '?').slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{auth.email ?? 'Account'}</span>
+                      </span>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
@@ -231,6 +239,10 @@ function Trail(): ReactNode {
     candidate.end ? pathname === candidate.to : pathname.startsWith(candidate.to),
   )
 
+  // Profile is reached from the footer rather than the nav, so it is not in SECTIONS and would
+  // otherwise fall through to "Cases" — a breadcrumb naming the wrong screen.
+  const title = pathname.startsWith(routes.admin.profile) ? 'Profile' : (section?.label ?? 'Cases')
+
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -248,7 +260,7 @@ function Trail(): ReactNode {
           </>
         ) : (
           <BreadcrumbItem>
-            <BreadcrumbPage>{section?.label ?? 'Cases'}</BreadcrumbPage>
+            <BreadcrumbPage>{title}</BreadcrumbPage>
           </BreadcrumbItem>
         )}
       </BreadcrumbList>

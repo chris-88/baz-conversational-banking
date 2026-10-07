@@ -9,6 +9,8 @@ import { CasesWorkspace } from '@/admin/CasesWorkspace'
 import { EngineScreen } from '@/admin/EngineScreen'
 import { AnalyticsScreen } from '@/admin/AnalyticsScreen'
 import { PeriodSelect } from '@/admin/parts'
+import { ProfileScreen } from '@/admin/ProfileScreen'
+import { useAdminAuth } from '@/admin/useAdminAuth'
 import { GuardrailsScreen } from '@/admin/GuardrailsScreen'
 import { PersonaControls } from '@/admin/PersonaControls'
 import { usePeriod } from '@/admin/usePeriod'
@@ -20,7 +22,7 @@ import { usePeriod } from '@/admin/usePeriod'
  * conversations under different headings, and the difference between them was a distinction
  * only the person who built it could hold.
  */
-type Section = 'cases' | 'case' | 'guardrails' | 'persona' | 'engine' | 'analytics'
+type Section = 'cases' | 'case' | 'guardrails' | 'persona' | 'engine' | 'analytics' | 'profile'
 
 /** The screens that read the shared overview. The others fetch their own. */
 type OverviewSection = Extract<Section, 'cases' | 'case' | 'guardrails' | 'persona'>
@@ -34,8 +36,18 @@ export function AdminOverview({ section }: { readonly section?: Section }): Reac
    */
   if (section === 'engine') return <EngineScreen />
   if (section === 'analytics') return <Analytics />
+  if (section === 'profile') return <Profile />
 
   return <WithOverview section={section ?? 'cases'} />
+}
+
+/** Signed-in identity comes from the auth hook, not from the overview. */
+function Profile(): ReactNode {
+  const auth = useAdminAuth()
+
+  if (auth.email === null) return <Skeleton className="h-40 w-full" />
+
+  return <ProfileScreen email={auth.email} onSignOut={() => void auth.signOut()} />
 }
 
 /** The one screen that wants the period but not the overview. */
