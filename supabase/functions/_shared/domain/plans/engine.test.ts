@@ -5,6 +5,7 @@ import {
   describeProjection,
   nextMilestone,
   planProgress,
+  reachesSavingsTarget,
   reached,
 } from './engine.ts'
 import type { Checkin, Milestone, Plan, PlanContext } from './types.ts'
@@ -263,5 +264,43 @@ describe('milestones bound to what the case knows', () => {
   it('is never reached when it is bound to nothing', () => {
     expect(reached(milestone({ kind: 'facts', targetAmount: null, targetFacts: [] }), context())).toBe(false)
     expect(reached(milestone({ kind: 'facts', targetAmount: null, targetFacts: null }), context())).toBe(false)
+  })
+})
+
+/**
+ * `savings_target_reached` used to be raised whenever any milestone was achieved, so defining a
+ * deposit target fired the check-in meant for reaching one — a customer €3,500 short had a
+ * "mortgage readiness review" come due the moment their plan was created.
+ */
+describe('reaching a savings target', () => {
+  const plan = (targetAmount: number | null): Plan =>
+    ({ targetAmount }) as unknown as Plan
+
+  const milestone = (
+    kind: Milestone['kind'],
+    targetAmount: number | null,
+  ): Milestone => ({ kind, targetAmount }) as unknown as Milestone
+
+  it('is true only when a numeric milestone meets the plan target', () => {
+    expect(reachesSavingsTarget(plan(38_500), milestone('numeric', 38_500))).toBe(true)
+  })
+
+  it('is false for part of the way there', () => {
+    expect(reachesSavingsTarget(plan(38_500), milestone('numeric', 19_250))).toBe(false)
+  })
+
+  it('is false for everything that is not money arriving', () => {
+    for (const kind of ['date', 'application', 'facts', 'manual'] as const) {
+      expect(reachesSavingsTarget(plan(38_500), milestone(kind, 38_500)), kind).toBe(false)
+    }
+  })
+
+  it('is false when the plan has no money target at all', () => {
+    // "Get ready for the baby" has milestones and no figure; nothing on it can be reached.
+    expect(reachesSavingsTarget(plan(null), milestone('numeric', 38_500))).toBe(false)
+  })
+
+  it('is true when they have overshot', () => {
+    expect(reachesSavingsTarget(plan(38_500), milestone('numeric', 40_000))).toBe(true)
   })
 })

@@ -314,7 +314,12 @@ async function handleTurn(request: Request): Promise<Response> {
    */
   const firedEvents = [
     ...loaded.eventsSinceLastSeen.map((event) => event.type),
-    ...(achievedMilestones.length > 0 ? ['savings_target_reached'] : []),
+    /*
+     * Only money actually arriving. This used to fire on any achieved milestone, so defining a
+     * deposit target raised the check-in meant for reaching one — a customer €3,500 short had a
+     * "mortgage readiness review" come due the moment their plan was created.
+     */
+    ...(achievedMilestones.some((entry) => entry.reachedTarget) ? ['savings_target_reached'] : []),
   ]
 
   const raised = await raiseDueCheckins(admin, turn.caseId, loaded, firedEvents)
@@ -792,7 +797,13 @@ async function handleTurn(request: Request): Promise<Response> {
                     }
                   }),
                 }
-                return { result: 'Status card shown, rendered from the case.', card }
+                return {
+                  result:
+                    'Status card shown, rendered from the case. Say one line about where things ' +
+                    'stand — what just moved, or what is next. A card on its own, with nothing ' +
+                    'said, reads as the conversation having dropped.',
+                  card,
+                }
               }
 
               case 'show_review': {
@@ -840,7 +851,12 @@ async function handleTurn(request: Request): Promise<Response> {
                   confirmLabel: `Submit ${journey.displayName.toLowerCase()}`,
                 }
 
-                return { result: 'Review shown. Nothing is submitted until the customer taps.', card }
+                return {
+                  result:
+                    'Review shown. Nothing is submitted until the customer taps. Say in a line ' +
+                    'what they are checking and that the tap is what sends it.',
+                  card,
+                }
               }
 
               case 'show_pause_prompt': {
@@ -983,7 +999,9 @@ async function handleTurn(request: Request): Promise<Response> {
                 }
 
                 return {
-                  result: 'Invite offered. Nothing is sent until the customer taps and shares it.',
+                  result:
+                    'Invite offered. Nothing is sent until the customer taps and shares it. Say ' +
+                    'in a line who it is for and why they are needed.',
                   card,
                 }
               }
@@ -1289,7 +1307,9 @@ async function handleTurn(request: Request): Promise<Response> {
                 }
 
                 return {
-                  result: `Upload card shown for ${outstanding.requirement.label}. Nothing arrives until they pick a file.`,
+                  result:
+                    `Upload card shown for ${outstanding.requirement.label}. Nothing arrives ` +
+                    'until they pick a file. Say in a line what it is for.',
                   card,
                 }
               }

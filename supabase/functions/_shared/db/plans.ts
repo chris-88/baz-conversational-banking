@@ -8,6 +8,7 @@ import {
   describeProjection,
   planProgress,
   reached,
+  reachesSavingsTarget,
 } from '../domain/plans/engine.ts'
 import type {
   Checkin,
@@ -171,11 +172,11 @@ export async function reconcilePlans(
   client: Db,
   caseId: string,
   loaded: LoadedCase,
-): Promise<readonly { planId: string; milestone: Milestone }[]> {
+): Promise<readonly { planId: string; milestone: Milestone; reachedTarget: boolean }[]> {
   const plans = await loadPlans(client, caseId, loaded)
 
   const context = planContextFor(loaded)
-  const achieved: { planId: string; milestone: Milestone }[] = []
+  const achieved: { planId: string; milestone: Milestone; reachedTarget: boolean }[] = []
 
   for (const { plan } of plans) {
     if (plan.status !== 'active') continue
@@ -189,7 +190,11 @@ export async function reconcilePlans(
         .update({ state: 'achieved', achieved_at: new Date().toISOString() })
         .eq('id', milestone.id)
 
-      achieved.push({ planId: plan.id, milestone })
+      achieved.push({
+        planId: plan.id,
+        milestone,
+        reachedTarget: reachesSavingsTarget(plan, milestone),
+      })
     }
   }
 

@@ -1043,3 +1043,17 @@ rendered "€60,000 of €32,000, 100%" on a goal two years away. `propose_plan`
 at or below what they already hold and tells the model to ask what they are actually aiming for.
 The figure was not wrong so much as beside the point: they had said they wanted to save more and
 nobody had asked what for.
+
+**2026-10-07 — Only money arriving counts as reaching a savings target.** §38.
+`savings_target_reached` was raised whenever *any* milestone was achieved, so defining a deposit
+target fired the check-in meant for reaching one — a customer €3,500 short had a "mortgage
+readiness review" come due the moment their plan was created. `reachesSavingsTarget` in the plans
+engine now requires a numeric milestone at or above the plan's target.
+
+**2026-10-07 — A card with nothing said reads as a dropped connection.** §14.
+`show_status`, `show_review`, `show_partner_invite` and `request_upload` returned a bare "card
+shown" with no instruction to speak, and the model duly shipped a status card with zero text —
+the customer had just given their address and PPS number, got silence, and had to type "What's
+next". Every card-producing tool result now says what to say. Also: anything said before a tool
+call is already on the customer's screen, and the model did not know that, so it restated its
+first paragraph in different words after the tool returned.

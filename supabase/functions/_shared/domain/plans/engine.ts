@@ -207,3 +207,23 @@ export function describeProjection(progress: PlanProgress): string | null {
 
   return `${where}, ${when} away at the rate they gave (${progress.projectedDate ?? 'unknown'}).${track}`
 }
+
+
+/**
+ * Whether reaching this milestone means the money actually arrived.
+ *
+ * `savings_target_reached` is what an event check-in on a savings goal waits for, and it used to
+ * be raised whenever *any* milestone was achieved. So defining a deposit target fired the
+ * check-in meant for reaching one: a customer €3,500 short had a "mortgage readiness review"
+ * come due the moment their plan was created.
+ *
+ * Only a numeric milestone at or above the plan's full target counts. A fractional one is
+ * progress — worth a milestone, not worth telling somebody they have arrived — and everything
+ * else on a plan is paperwork.
+ */
+export function reachesSavingsTarget(plan: Plan, milestone: Milestone): boolean {
+  if (milestone.kind !== 'numeric') return false
+  if (plan.targetAmount === null || milestone.targetAmount === null) return false
+
+  return milestone.targetAmount >= plan.targetAmount
+}
