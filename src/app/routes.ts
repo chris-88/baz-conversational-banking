@@ -12,6 +12,13 @@ export const routes = {
   /** Baz itself. The same screen in a browser tab and in the installed app. */
   baz: '/baz',
 
+  /**
+   * The explainer, for somebody evaluating the work rather than using it.
+   *
+   * Three sections under one address so a single one can be sent on its own.
+   */
+  howItWorks: '/how-it-works',
+
   /** §33 — a second applicant, arriving on a single-use link. */
   partnerJoin: (token = ':token') => `/join/${token}`,
 

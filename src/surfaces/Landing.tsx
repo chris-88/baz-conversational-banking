@@ -52,6 +52,9 @@ export function Landing(): ReactNode {
                 <ArrowRightIcon />
               </Link>
             </Button>
+            <Button asChild size="lg" variant="ghost">
+              <Link to={routes.howItWorks}>How it works</Link>
+            </Button>
           </div>
 
           <OpenOnPhone />

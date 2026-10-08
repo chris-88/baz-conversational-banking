@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate, type RouteObject } from 'react-router-dom'
 import { Landing } from '@/surfaces/Landing'
 import { BazScreen } from '@/surfaces/BazScreen'
+import { HowItWorks } from '@/surfaces/HowItWorks'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { LazyAdminConsole, LazyAdminOverview } from '@/app/lazyAdmin'
 import { NotFound } from '@/components/NotFound'
@@ -9,6 +10,9 @@ import { RouteError } from '@/app/RouteError'
 const routeObjects: RouteObject[] = [
   { path: '/', element: <Landing /> },
   { path: '/baz', element: <BazScreen /> },
+
+  { path: '/how-it-works', element: <HowItWorks /> },
+  { path: '/how-it-works/:section', element: <HowItWorks /> },
 
   { path: '/join/:token', element: <PartnerJoin /> },
 
