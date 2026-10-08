@@ -2,18 +2,18 @@ import type { ReactNode } from 'react'
 import { Figures, Panel, Prose, Section } from './parts'
 
 /**
- * What a conversation costs to run, and the four things we had wrong.
+ * What a conversation costs to run, and the six things we had wrong.
  *
  * The long form, kept current alongside the code, is
  * `docs/04-cost-of-running-a-conversational-assistant.md`. This is the version for somebody who
  * will read it once.
  */
 
+/** Measured from a live conversation. Every figure is one the API reported about itself. */
 const TURN: readonly { readonly part: string; readonly cost: string; readonly note?: string }[] = [
-  { part: '18k cached prefix, read', cost: '€0.0050' },
-  { part: '3.6k conversation history, uncached', cost: '€0.0099', note: 'the surprise' },
-  { part: '~350 output tokens', cost: '€0.0048' },
-  { part: 'Gate (small model)', cost: '€0.0004' },
+  { part: 'Turn 1 — writes the whole 26,974-token prefix', cost: '€0.174', note: 'once an hour, shared' },
+  { part: 'Turn 2 — writes 922 tokens, reads the rest', cost: '€0.031' },
+  { part: 'Turn 3 — writes 1,064 tokens, reads the rest', cost: '€0.036' },
 ]
 
 export function Cost(): ReactNode {
@@ -26,10 +26,10 @@ export function Cost(): ReactNode {
         </p>
         <Figures
           items={[
-            { value: '€0.59', label: 'per 12-turn conversation, before' },
-            { value: '€0.31', label: 'after, with no change to quality' },
-            { value: '17,285', label: 'tokens of system prompt' },
-            { value: '66%', label: 'of it the product catalogue' },
+            { value: '€0.94', label: 'per 12-turn conversation, before' },
+            { value: '€0.55', label: 'after, with no change to quality' },
+            { value: '26,974', label: 'tokens in the cached prefix' },
+            { value: '58%', label: 'of it the product catalogue' },
           ]}
         />
       </section>
@@ -37,7 +37,7 @@ export function Cost(): ReactNode {
       <Section
         eyebrow="The anatomy"
         title="Where a turn's money goes"
-        lede="Every customer message triggers two model calls: a small classifier that decides whether it is in scope, and the model that answers. A steady-state turn with a warm cache cost €0.021, split like this."
+        lede="Every customer message triggers two model calls: a small classifier that decides whether it is in scope, and the model that answers. A turn that renders a card takes two rounds, so everything is read twice."
       >
         <div className="mt-6 overflow-hidden rounded-md border">
           {TURN.map((line) => (
@@ -60,19 +60,20 @@ export function Cost(): ReactNode {
 
         <Prose className="mt-5">
           <p>
-            <strong>The conversation history cost twice what the entire 17,000-token system prompt
-            cost.</strong> The prompt was cached; the history was not. We had optimised the big
-            obvious block and left the one that actually grows at full price.
+            The whole saving is visible in one column. Turn one writes 26,974 tokens; every turn
+            after it writes <strong>fewer than 1,100</strong>, because the conversation now carries
+            its own cache breakpoint. Before, the entire history was re-read at full price on every
+            round of every turn.
           </p>
           <p>
-            Output tokens cost as much as the whole cached prompt, because output is priced at five
-            times input. A model that answers in three paragraphs where one would do is a cost
-            decision as much as a style one.
+            The first turn is the expensive one, and it is paid once an hour for everybody — the
+            cached prefix is byte-identical for every customer, so one write covers a whole demo
+            day rather than one visitor.
           </p>
         </Prose>
       </Section>
 
-      <Section eyebrow="Four findings" title="What we had wrong">
+      <Section eyebrow="Six findings" title="What we had wrong">
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Panel title="1 · Cache the conversation, not just the prompt">
             <Prose>
@@ -82,8 +83,9 @@ export function Cost(): ReactNode {
                 rounds, so it was paid for twice.
               </p>
               <p>
-                A second breakpoint on the last message fixed it. <strong>€0.021 → €0.012 per
-                turn</strong>, in about fifteen lines.
+                A second breakpoint on the last message fixed it. The measured result:{' '}
+                <strong>922 tokens written instead of 54,000 re-read</strong>, in about fifteen
+                lines.
               </p>
               <p className="text-foreground">
                 Everyone caches the system prompt, because it is the block you wrote and can see.
@@ -111,9 +113,9 @@ export function Cost(): ReactNode {
           <Panel title="3 · Volatile content belongs after the breakpoint">
             <Prose>
               <p>
-                The persona block — 149 tokens of style instructions — sat inside the cached prefix.
+                The persona block — 178 tokens of style instructions — sat inside the cached prefix.
                 On any turn the gate marks sensitive, the system zeroes humour, which rewrites that
-                block and invalidated all 17,285 tokens in front of it.
+                block and invalidated all 26,974 tokens in front of it.
               </p>
               <p>
                 The demo this was built for turns on life events. Sensitive turns are not an edge
@@ -142,19 +144,58 @@ export function Cost(): ReactNode {
               </p>
             </Prose>
           </Panel>
+
+          <Panel title="5 · The tool schemas are part of the prompt">
+            <Prose>
+              <p>
+                The eleven tools carry <strong>4,739 tokens</strong> of JSON schema — 18% of
+                everything sent, and more than the policy, the voice, the fact reference and the
+                tool guidance put together.
+              </p>
+              <p>
+                We had not counted them at all. The prompt was audited line by line; the schemas
+                were invisible because nobody writes them as prose. They are generated from
+                validators, they live in a different file, and they appear in no document called
+                &ldquo;the prompt&rdquo;.
+              </p>
+              <p className="text-foreground">
+                Count what is actually sent, not what you wrote.
+              </p>
+            </Prose>
+          </Panel>
+
+          <Panel title="6 · A cache instruction that silently did nothing">
+            <Prose>
+              <p>
+                The gate&rsquo;s prompt carries a cache marker. Every measured turn reports zero
+                cache reads and zero cache writes for it — the classifier prompt is around 1,200
+                tokens, below the minimum length that model will cache. The marker is accepted, no
+                error comes back, and nothing is cached.
+              </p>
+              <p>
+                It had been there since the gate was written, and we assumed it worked because the
+                code said so. We have left it uncached, because padding a prompt to reach a
+                threshold costs more than it saves.
+              </p>
+              <p className="text-foreground">
+                Caching fails open and silently. If you have not seen a non-zero cache read, you do
+                not know it is cached.
+              </p>
+            </Prose>
+          </Panel>
         </div>
       </Section>
 
       <Section
         eyebrow="Just as useful"
         title="What we deliberately did not do"
-        lede="The product catalogue is 66% of the prompt and the obvious target. Measurement said leave it alone."
+        lede="The product catalogue is 58% of the prompt and the obvious target. Measurement said leave it alone."
       >
         <Prose className="mt-5">
           <p>
-            Once caching works it costs about €0.003 a turn to carry all 61 products. The
+            Once caching works it costs about €0.004 a turn to carry all 61 products. The
             alternative — a compact index plus a lookup tool — adds a model round trip of roughly
-            €0.015 to every turn that needs detail. At any realistic hit rate it costs more than it
+            €0.02 to every turn that needs detail. At any realistic hit rate it costs more than it
             saves, and the product gets worse: the real rates are what make a savings comparison
             land.
           </p>
@@ -164,7 +205,7 @@ export function Cost(): ReactNode {
           <p>
             We also did not downgrade the model, because a cheaper model that answers worse fails
             the thing the POC exists to demonstrate. And we did not skip the gate on safe-looking
-            messages: domain restriction is enforcement, not a suggestion, and €0.0004 is not a
+            messages: domain restriction is enforcement, not a suggestion, and €0.0013 is not a
             reason to put a hole in it.
           </p>
         </Prose>

@@ -58,23 +58,30 @@ const CATEGORIES: readonly { readonly name: string; readonly reaches: boolean }[
   { name: 'unsupported', reaches: false },
 ]
 
-/** The system prompt, in the order it is assembled. Token counts are measured. */
+/**
+ * The system prompt, in the order it is assembled.
+ *
+ * Counted exactly through the token-counting API, not estimated from characters. The tool
+ * schemas are in the list because they are sent with every request and are 18% of it, which is
+ * not obvious from reading the prompt: nobody writes them as prose.
+ */
 const LAYERS: readonly {
   readonly name: string
   readonly gloss: string
   readonly tokens: string
   readonly cached: boolean
 }[] = [
-  { name: 'Policy', gloss: 'What Baz may never do. Nothing below can override it.', tokens: '511', cached: true },
-  { name: 'Voice', gloss: 'How Baz writes, independent of persona settings.', tokens: '951', cached: true },
-  { name: 'Domain', gloss: 'What counts as in scope.', tokens: '160', cached: true },
-  { name: 'Tool guidance', gloss: 'When to reach for which card.', tokens: '1,684', cached: true },
-  { name: 'How applying works', gloss: 'What the bank actually does with an application.', tokens: '558', cached: true },
-  { name: 'What we can do', gloss: 'The honest limits of the service.', tokens: '484', cached: true },
-  { name: 'Fact reference', gloss: 'The 54 things that can be known, and their shapes.', tokens: '1,360', cached: true },
-  { name: 'Product catalogue', gloss: '61 real products. Baz states product detail only from here.', tokens: '11,331', cached: true },
-  { name: 'Persona', gloss: 'Style sliders as prose. Cannot change scope, rules or protections.', tokens: '149', cached: false },
-  { name: 'Case digest', gloss: "This customer's facts and applications, from the database.", tokens: '~300', cached: false },
+  { name: 'Policy', gloss: "What Baz may never do. Nothing below can override it.", tokens: '570', cached: true },
+  { name: 'Voice', gloss: "How Baz writes, independent of persona settings.", tokens: '1,097', cached: true },
+  { name: 'Domain', gloss: "What counts as in scope.", tokens: '158', cached: true },
+  { name: 'Tool guidance', gloss: "When to reach for which card.", tokens: '1,806', cached: true },
+  { name: 'How applying works', gloss: "What the bank actually does with an application.", tokens: '598', cached: true },
+  { name: 'What we can do', gloss: "The honest limits of the service.", tokens: '522', cached: true },
+  { name: 'Fact reference', gloss: "The 54 things that can be known, and their shapes.", tokens: '1,711', cached: true },
+  { name: 'Tool definitions', gloss: "JSON schemas for the eleven tools. Sent every turn, and easy to forget.", tokens: '4,739', cached: true },
+  { name: 'Product catalogue', gloss: "61 real products. Baz states product detail only from here.", tokens: '15,595', cached: true },
+  { name: 'Persona', gloss: "Style sliders as prose. Cannot change scope, rules or protections.", tokens: '178', cached: false },
+  { name: 'Case digest', gloss: "This customer's facts and applications, from the database.", tokens: '~700', cached: false },
   { name: 'This turn', gloss: "Today's date, and any flags the gate raised.", tokens: '~30', cached: false },
 ]
 
@@ -321,11 +328,11 @@ export function Pipeline(): ReactNode {
         <div className="mt-7 space-y-0.5">
           {LAYERS.map((layer, index) => (
             <div key={layer.name}>
-              {index === 8 ? (
+              {index === 9 ? (
                 <div className="flex items-center gap-3 py-2.5">
                   <span className="bg-border h-px flex-1" />
                   <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.09em] whitespace-nowrap uppercase">
-                    cache breakpoint · 17,285 tokens above
+                    cache breakpoint · 26,974 tokens above
                   </span>
                   <span className="bg-border h-px flex-1" />
                 </div>

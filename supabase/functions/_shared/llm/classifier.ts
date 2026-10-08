@@ -98,7 +98,19 @@ export function createClassifier(options: ClassifierOptions) {
         model: options.model,
         max_tokens: 256,
         // Stable across every turn, so it caches.
-        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+        /*
+       * This marker does nothing, and that is recorded rather than removed.
+       *
+       * Measured over a live conversation, every gate call reports cache_read 0 and
+       * cache_creation 0: the classifier prompt is around 1,200 tokens, under the minimum length
+       * this model class will cache. The API accepts the marker and returns no error, so the only
+       * way to find out was to look at the usage.
+       *
+       * Left in place because it costs nothing and becomes correct the moment the prompt grows
+       * past the threshold. Padding it to get there would cost more than the €0.0013 a turn it
+       * would save.
+       */
+      system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
         output_config: { format: zodOutputFormat(classificationSchema) },
         messages: [
           {
