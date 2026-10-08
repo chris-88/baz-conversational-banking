@@ -112,10 +112,11 @@ function Feature({
  * is no encoder in the bundle and nothing to go wrong at runtime. The address and the copy
  * button stay, because a code is no use to somebody already holding the phone.
  *
- * Note that the two do not point to quite the same place. The link here goes straight into the
- * conversation; the code goes to this page, through a redirect at qr.codes. Both work — but the
- * code costs a tap and depends on a third party staying up, which is worth knowing before it is
- * printed on anything.
+ * The code and the copy button go to the same place, straight into the conversation. It encodes
+ * the address directly rather than a short link, so there is no third party between the scan and
+ * the site, nothing to expire, and no way for it to be quietly repointed. It is a picture of a
+ * URL though, so if the domain or the route moves it has to be regenerated —
+ * `docs/qr-code/README.md` has the command.
  */
 function OpenOnPhone(): ReactNode {
   const [copied, setCopied] = useState(false)
