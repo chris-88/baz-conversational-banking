@@ -1079,3 +1079,16 @@ never as a condition of being lent to.
 applicants can bank differently, and tenant-agnostic because `_shared/domain` does not know whose
 bank it is in. It decides two things worth asking for: income and outgoings readable from the
 account instead of asked for, and a standing order the day after payday.
+
+**2026-10-08 — Typed hints in the composer, not a row of chips.** §55.
+The opening suggestions were tappable, which cost a tap less, but five situations in a row read
+as a menu — and a menu quietly contradicts the one claim this product makes, that you do not
+have to pick from a list. The same openers now type themselves into the empty box: a suggestion
+without a constraint. Drawn as an `aria-hidden` element behind the field rather than in
+`placeholder`, so a string changing forty times a second is never announced or taken as the
+field's accessible name, and it holds still under `prefers-reduced-motion`.
+
+**2026-10-08 — The composer is a textarea that grows.** §55.
+One line hid the start of what somebody had written at the moment they were deciding whether to
+send it. Grows to six lines then scrolls. Enter sends, shift-enter breaks the line, and a
+composition in progress does neither.

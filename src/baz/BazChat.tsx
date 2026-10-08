@@ -24,7 +24,6 @@ import { cn } from '@/lib/utils'
  * it, which is the point of §32: Baz is the same capability wherever it is placed.
  */
 export function BazChat({
-  suggestions,
   openingMessage,
   greeting,
   mode = 'new',
@@ -32,7 +31,6 @@ export function BazChat({
   composerClassName,
   className,
 }: {
-  suggestions: readonly Suggestion[]
   /** A line typed elsewhere and carried in, sent automatically on arrival. */
   openingMessage?: string | null
   greeting: ReactNode
@@ -384,15 +382,6 @@ export function BazChat({
         })}
 
         {streaming && !lastIsBaz && <TypingBubble />}
-
-        {entries.length === 0 && ready && !openingMessage && (
-          <SuggestionList
-            suggestions={suggestions}
-            className="pt-1 pl-10"
-            disabled={streaming}
-            onSelect={(suggestion) => void send(suggestion.label)}
-          />
-        )}
 
         {/*
           Only after a turn has finished. Offering a choice while Baz is still mid-sentence

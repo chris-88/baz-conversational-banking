@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { BazAvatar } from '@/baz/BazAvatar'
 import { BazChat } from '@/baz/BazChat'
-import { OPENING_SUGGESTIONS } from '@/baz/suggestions'
 import { routes } from '@/app/routes'
 import { useViewportHeight } from '@/lib/useViewportHeight'
 
@@ -46,17 +45,22 @@ export function BazScreen(): ReactNode {
 
       <BazChat
         className="mx-auto flex w-full max-w-md min-h-0 flex-1 flex-col"
-        suggestions={OPENING_SUGGESTIONS}
         openingMessage={searchParams.get('say')}
         mode="new"
+        /*
+         * The old greeting opened by denying it was another useless bot, which is a strange
+         * thing to lead with: it raises the doubt before anyone had it, and then promises only
+         * to "see if I can actually help". This says the one thing that is actually different
+         * and asks for the thing it needs.
+         */
         greeting={
           <div className="space-y-2">
-            <p>Hi — I&rsquo;m Baz.</p>
+            <p>Hi, I&rsquo;m Baz.</p>
             <p>
-              Before you ask: no, I&rsquo;m not another bot whose greatest achievement is finding
-              the Contact Us page.
+              You don&rsquo;t have to know which product you need. Working that out is my job,
+              not yours.
             </p>
-            <p>Tell me what you&rsquo;re trying to do and I&rsquo;ll see if I can actually help.</p>
+            <p>So tell me what&rsquo;s going on — the way you&rsquo;d say it to a friend.</p>
           </div>
         }
       />
