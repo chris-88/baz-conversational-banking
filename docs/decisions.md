@@ -1092,3 +1092,9 @@ field's accessible name, and it holds still under `prefers-reduced-motion`.
 One line hid the start of what somebody had written at the moment they were deciding whether to
 send it. Grows to six lines then scrolls. Enter sends, shift-enter breaks the line, and a
 composition in progress does neither.
+
+**2026-10-08 — Hold the send, not the keyboard.** §55.
+The composer disabled the field itself while a turn streamed, and a browser answers a disabled
+field by blurring it — so every turn took the caret away mid-thought and dropped the phone
+keyboard with it. Only sending is held back now. Typing ahead while Baz answers is what every
+other chat allows, costs nothing, and the send button greys out to show why Enter does nothing.

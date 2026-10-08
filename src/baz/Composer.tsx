@@ -23,6 +23,14 @@ export function Composer({
   className,
 }: {
   onSend?: ((message: string) => void) | undefined
+  /**
+   * Whether a message can be *sent* — not whether one can be written.
+   *
+   * It used to disable the field itself, which the browser answers by blurring it. Every turn
+   * therefore took the caret away mid-thought and, on a phone, dropped the keyboard with it.
+   * Typing ahead while Baz is still answering is what every other chat allows and costs
+   * nothing; only the send is held back, and the button greys out to show it.
+   */
   disabled?: boolean | undefined
   /** Overrides the typed suggestions. Used where a fixed instruction is clearer than a hint. */
   placeholder?: string | undefined
@@ -53,6 +61,9 @@ export function Composer({
     if (!canSend) return
     onSend?.(draft.trim())
     setDraft('')
+    // Sending by tapping the button puts focus on the button, which then greys out and loses
+    // it. The caret belongs back where the next message is written.
+    box.current?.focus()
   }
 
   return (
@@ -92,7 +103,6 @@ export function Composer({
             event.preventDefault()
             submit()
           }}
-          disabled={disabled}
           placeholder={placeholder ?? ''}
           aria-label="Message Baz"
           /*
@@ -101,7 +111,7 @@ export function Composer({
            * which is why the reply and the options slid out of view rather than just looking big.
            * Scaled back down above the phone breakpoint, where nothing zooms.
            */
-          className="placeholder:text-muted-foreground block max-h-40 w-full resize-none bg-transparent text-base leading-6 outline-none disabled:opacity-60 sm:text-sm"
+          className="placeholder:text-muted-foreground block max-h-40 w-full resize-none bg-transparent text-base leading-6 outline-none sm:text-sm"
         />
       </div>
 
