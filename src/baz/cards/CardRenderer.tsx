@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Card } from '@contracts/cards.ts'
 import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
 import { QuoteCard } from '@/baz/cards/QuoteCard'
+import { ComparisonCard } from '@/baz/cards/ComparisonCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
 import { ReviewCard } from '@/baz/cards/ReviewCard'
 import { PausePromptCard } from '@/baz/cards/PausePromptCard'
@@ -22,6 +23,8 @@ export type CardActions = {
   readonly onDeclineProducts?: (products: readonly string[]) => Promise<void> | void
   /** A quote option the customer wants to go through. Explains; starts nothing. */
   readonly onDiscussQuote?: (option: { id: string; name: string }) => Promise<void> | void
+  /** A catalogue product they want to hear about. Also explains; also starts nothing. */
+  readonly onChooseComparison?: (option: { id: string; name: string }) => Promise<void> | void
   /** Resolves true only when the server accepted the submit. */
   readonly onSubmit?: (
     applicationId: string,
@@ -59,6 +62,15 @@ export function CardRenderer({
           card={card}
           {...(actions.onConfirmPlan ? { onConfirm: actions.onConfirmPlan } : {})}
           {...(actions.onDeclinePlan ? { onDecline: actions.onDeclinePlan } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'comparison':
+      return (
+        <ComparisonCard
+          card={card}
+          {...(actions.onChooseComparison ? { onChoose: actions.onChooseComparison } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )

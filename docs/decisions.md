@@ -1162,3 +1162,12 @@ protection premiums — both are in its own `not_authoritative_for` list — so 
 computes from illustrative variants, rendered under a heading that says so.
 
 Cost: the cached prefix goes 7,104 → 14,543 tokens, about €0.047 more per ten-turn conversation.
+
+**2026-10-08 — A comparison card, for choosing within a family.** §51.
+The catalogue holds nine savings accounts and six credit cards, and Baz could only describe them
+one after another — four descriptions to hold in your head while deciding between them.
+`show_comparison` puts two to four side by side. Distinct from `product_options`, whose tap
+starts an application, and from `quote`, which compares computed figures for one product: this
+compares different products and starts nothing. The model passes catalogue ids and one line on
+why each; everything else beside them is read from the knowledge base by the server, and an id
+that is missing or flagged for verification is refused rather than rendered.

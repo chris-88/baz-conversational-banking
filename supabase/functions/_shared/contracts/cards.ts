@@ -30,6 +30,43 @@ export const productOptionCardSchema = z.object({
 })
 
 /**
+ * Several named products side by side, to pick one to hear more about (§51).
+ *
+ * Distinct from `product_options`, which offers the handful of things Baz can actually start
+ * and whose tap begins an application. This offers what the catalogue holds within a family —
+ * nine savings accounts, six credit cards — so somebody can see them together and choose what
+ * to ask about. Nothing is started by tapping one.
+ *
+ * Distinct from `quote` too, which compares computed figures for the same product. This
+ * compares different products, and every word of it is read from the catalogue rather than
+ * written by the model: the model chooses which to show and says why, and the facts beside each
+ * one come from the knowledge base (Invariant 2).
+ */
+export const comparisonCardSchema = z.object({
+  type: z.literal('comparison'),
+  /** What is being compared, e.g. "Savings accounts". */
+  title: z.string(),
+  options: z
+    .array(
+      z.object({
+        /** The catalogue id, so the follow-up turn knows exactly which one was picked. */
+        id: z.string(),
+        name: z.string(),
+        /** The job it does, from the catalogue. */
+        oneLine: z.string(),
+        /** A few features, from the catalogue. Short enough to scan three of these at once. */
+        highlights: z.array(z.string()).max(4),
+        /** The model's words: why this one is in front of this customer (§49). */
+        reason: z.string(),
+        /** Where it ends, when that is not self-serve — advice, underwriting, a credit check. */
+        endsIn: z.string().nullable(),
+      }),
+    )
+    .min(2)
+    .max(4),
+})
+
+/**
  * Three or more ways to do the same thing, with the trade-off visible (§51).
  *
  * Every figure is computed by the quote engine from the catalogue, never by the model. The card
@@ -202,6 +239,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   consentCardSchema,
   healthFormCardSchema,
   productOptionCardSchema,
+  comparisonCardSchema,
   statusCardSchema,
   reviewCardSchema,
   pausePromptCardSchema,
@@ -214,6 +252,7 @@ export type CardType = Card['type']
 
 export const CARD_TYPES = [
   'quote',
+  'comparison',
   'plan_proposal',
   'product_options',
   'status',

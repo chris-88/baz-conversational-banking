@@ -271,6 +271,27 @@ export function BazChat({
      * card says not to ask a question in the turn that offers it: explaining and interrogating at
      * once reads as not listening.
      */
+    /**
+     * A catalogue product they want to hear about.
+     *
+     * Same shape as discussing a quote option and for the same reason: nothing is committed,
+     * and the turn ends on their move rather than on a question. The difference is only that
+     * these are different products rather than different terms for one.
+     */
+    onChooseComparison: async (option) => {
+      setFollowUps([])
+      await send(
+        `Asked about "${option.name}".`,
+        'action',
+        'Go through that one properly: what it is for, what is good about it and what is less ' +
+          'good, from the catalogue and nothing else. The others are still on screen, so do not ' +
+          'list them again. Then stop and let them steer — ask whether they want to go further ' +
+          'into this one or look at what opening it would involve. Ask nothing else in this ' +
+          'turn, and do not start anything.',
+      )
+      setFollowUps(QUOTE_FOLLOW_UPS)
+    },
+
     onDiscussQuote: async (option) => {
       setFollowUps([])
       await send(

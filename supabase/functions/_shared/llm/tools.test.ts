@@ -46,10 +46,15 @@ describe('the model has no tool that takes an action', () => {
     // `show_quote` is the tenth and computes nothing itself: it passes what the customer said
     // to the quote engine, which does the arithmetic from the catalogue. Choosing an option on
     // the card starts nothing either — it asks Baz to go through that one.
+    //
+    // `show_comparison` is the eleventh and passes only catalogue ids. Everything shown beside
+    // each product is read from the knowledge base by the server, so the model chooses what to
+    // compare and cannot describe a product into existence. Tapping one starts nothing.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
       'request_upload',
+      'show_comparison',
       'show_form',
       'show_partner_invite',
       'show_pause_prompt',

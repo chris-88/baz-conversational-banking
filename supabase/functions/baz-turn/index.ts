@@ -20,7 +20,7 @@ import { toneBucket } from '../_shared/llm/persona.ts'
 import type { ToolName } from '../_shared/llm/tools.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { boiProducts, productInfo } from '../_shared/tenants/boi/products.ts'
-import { knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
+import { SURFACEABLE_PRODUCTS, knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
 import {
   loadCase,
   recordFacts,
@@ -71,6 +71,7 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'request_upload',
   'propose_plan',
   'show_quote',
+  'show_comparison',
 ]
 
 /** How far back a card still counts as "on screen" rather than scrolled into history. */
@@ -1221,6 +1222,61 @@ async function handleTurn(request: Request): Promise<Response> {
                * show it and supplied what the customer said; it never sees a number it could
                * restate wrongly, which is the whole reason this tool exists.
                */
+              /**
+               * Several catalogue products side by side (§51).
+               *
+               * The model picks which and says why; everything else is read from the knowledge
+               * base here. An id that is not in the catalogue, or one the pack flags for
+               * internal verification, is refused rather than rendered — the filtering that
+               * keeps those four out of the prompt has to hold at the card too, or the one
+               * place a customer actually reads is the one place it does not apply.
+               */
+              case 'show_comparison': {
+                const ask = input as { title: string; options: { id: string; reason: string }[] }
+
+                const found = ask.options.map((option) => ({
+                  option,
+                  product: SURFACEABLE_PRODUCTS.find((candidate) => candidate.id === option.id),
+                }))
+
+                const missing = found.filter((entry) => entry.product === undefined)
+                if (missing.length > 0) {
+                  return {
+                    result:
+                      `Not in the catalogue, or not for showing: ${missing.map((entry) => entry.option.id).join(', ')}. ` +
+                      'Use ids exactly as they appear in the product list, and only ones listed there.',
+                  }
+                }
+
+                const card: Card = {
+                  type: 'comparison',
+                  title: ask.title,
+                  options: found.map(({ option, product }) => ({
+                    id: option.id,
+                    name: product?.name ?? option.id,
+                    oneLine: product?.customer_job ?? '',
+                    // Four is what fits beside three others on a phone before it stops being
+                    // something anybody compares and becomes something they scroll past.
+                    highlights: (product?.features ?? []).slice(0, 4).map((feature) => feature),
+                    reason: option.reason,
+                    endsIn:
+                      product === undefined ||
+                      product.advice_model === 'information_or_self_serve'
+                        ? null
+                        : product.advice_model.replaceAll('_', ' '),
+                  })),
+                }
+
+                return {
+                  result:
+                    `Comparing ${String(found.length)} products. They are on the card with what ` +
+                    'each one is for — do not read them back. Say in a sentence what separates ' +
+                    'them, and leave the choosing to them. Tapping one asks you to go through ' +
+                    'it; it starts nothing.',
+                  card,
+                }
+              }
+
               case 'show_quote': {
                 const ask = input as {
                   product: Product

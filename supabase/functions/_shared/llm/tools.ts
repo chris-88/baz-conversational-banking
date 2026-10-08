@@ -95,6 +95,28 @@ export const proposePlanInput = z.object({
  * computed by the server from the catalogue, so there is no number here for the model to get
  * wrong. Any two of the three is enough; the engine works out the third.
  */
+/**
+ * Several named products from the catalogue, side by side.
+ *
+ * Only ids: everything shown beside each one is read from the knowledge base by the server, so
+ * the model chooses what to compare and why, and cannot describe a product into existence.
+ */
+export const showComparisonInput = z.object({
+  /** What is being compared, in the customer's terms. */
+  title: z.string().min(1).max(60),
+  options: z
+    .array(
+      z.object({
+        /** A catalogue id, exactly as it appears in the product list. */
+        id: z.string().min(1).max(80),
+        /** Why this one, tied to something they actually said. */
+        reason: z.string().min(1).max(200),
+      }),
+    )
+    .min(2)
+    .max(4),
+})
+
 export const showQuoteInput = z.object({
   product: z.enum(PRODUCTS),
   /** Borrowed, owed, or saved towards. */
@@ -126,6 +148,7 @@ export const TOOL_INPUTS = {
   show_pause_prompt: showPausePromptInput,
   propose_plan: proposePlanInput,
   show_quote: showQuoteInput,
+  show_comparison: showComparisonInput,
   request_upload: requestUploadInput,
   show_partner_invite: showPartnerInviteInput,
   show_status: showStatusInput,
@@ -189,6 +212,18 @@ export const TOOLS: readonly ToolDefinition[] = [
       'card is how they accept; nothing is kept until they tap it. Do not propose a plan for ' +
       'something they can simply do today.',
     schema: proposePlanInput,
+  },
+  {
+    name: 'show_comparison',
+    description:
+      'Put two to four named products from the catalogue side by side, so the customer can see ' +
+      'them together and tap one to hear more. Use it when the catalogue holds several things ' +
+      'that could do the job — savings accounts, credit cards, loans — and listing them in a ' +
+      'sentence would make the customer hold four descriptions in their head. Pass catalogue ' +
+      'ids exactly as written, and one line each on why this one is in front of this person. ' +
+      'Everything else beside each option is read from the catalogue. Nothing is started by ' +
+      'tapping one, so this is not the card that begins an application.',
+    schema: showComparisonInput,
   },
   {
     name: 'show_quote',
