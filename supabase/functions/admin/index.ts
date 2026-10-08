@@ -1426,13 +1426,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
       if (rows.error) return errorResponse('conflict', 'Could not read the cases.')
 
       const ids = ((rows.data ?? []) as { id: string }[]).map((row) => row.id)
+      if (ids.length === 0) return json(ok({ purged: 0 }), 200)
 
-      for (const id of ids) {
-        const deleted = await admin.from('cases').delete().eq('id', id)
-        // Reported rather than swallowed: "purged 18" when three failed is a lie the console has
-        // no way to notice.
-        if (deleted.error) return errorResponse('conflict', `Could not delete ${id}.`)
-      }
+      /*
+       * One statement, not one per case.
+       *
+       * This used to loop, and each iteration was a round trip that cascaded across seven
+       * tables. Fifty-one cases took minutes, held locks the whole time, and every customer
+       * hitting the app during it sat on "Connecting…" because their history query could not
+       * get through. A purge is a demo convenience; it should not be able to take the product
+       * down while it runs.
+       */
+      const deleted = await admin.from('cases').delete().in('id', ids)
+      if (deleted.error) return errorResponse('conflict', deleted.error.message)
 
       return json(ok({ purged: ids.length }), 200)
     }

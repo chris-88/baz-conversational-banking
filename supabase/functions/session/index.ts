@@ -121,13 +121,23 @@ Deno.serve(async (request: Request): Promise<Response> => {
     )
   }
 
-  // §47 — a hard ceiling, so a room full of people cannot exhaust the project. Configured
-  // rather than hard-coded.
+  /*
+   * §47 — a ceiling on a burst, not on a lifetime.
+   *
+   * This counted every customer case ever created, so the fiftieth conversation the product
+   * ever had was the last one it would have until somebody purged. That is not what the cap is
+   * for: it exists so a room full of people cannot exhaust the project in an afternoon, and a
+   * room full of people is a rate, not a total.
+   *
+   * A day's window keeps the protection and cannot accumulate into a wall.
+   */
   const maxCases = Number((globalThis as any).Deno?.env?.get('AUDIENCE_MAX_CASES') ?? '50')
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const openCases = await admin
     .from('cases')
     .select('id', { count: 'exact', head: true })
     .eq('kind', 'customer')
+    .gte('created_at', since)
 
   if ((openCases.count ?? 0) >= maxCases) {
     return errorResponse(
