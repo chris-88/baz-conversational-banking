@@ -56,16 +56,14 @@ export function Composer({
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className={cn(
-        // Not a pill: at four lines a fully rounded border bows out around the text. At one
-        // line this is close enough to one that nobody notices the difference.
-        'border-input bg-card focus-within:ring-ring/40 flex items-end gap-1 rounded-3xl border py-1 pr-1 pl-4 focus-within:ring-2',
-        className,
-      )}
-    >
-      <div className="relative min-w-0 flex-1">
+    <form onSubmit={submit} className={cn('flex items-end gap-2', className)}>
+      {/*
+        The border is around the text and nothing else. It used to enclose the send button too,
+        which set a floor on how tight the box could be — a 36px target inside a 24px line of
+        text leaves padding that exists for the button's sake, not the text's. Outside, the box
+        can hug the line and the button keeps a size somebody can actually hit.
+      */}
+      <div className="border-input bg-card focus-within:ring-ring/40 relative min-w-0 flex-1 rounded-3xl border px-4 py-0.5 focus-within:ring-2">
         {/*
           The hint is drawn behind the box rather than put in `placeholder`, so that a string
           changing forty times a second is never read out, and never becomes the field's
@@ -74,7 +72,7 @@ export function Composer({
         {draft.length === 0 && ghost.length > 0 && (
           <p
             aria-hidden
-            className="text-muted-foreground pointer-events-none absolute inset-0 truncate py-2 text-base sm:text-sm"
+            className="text-muted-foreground pointer-events-none absolute inset-x-4 inset-y-0.5 truncate text-base leading-6 sm:text-sm"
           >
             {ghost}
             <span className="border-muted-foreground ml-px inline-block h-4 animate-pulse border-l align-middle" />
@@ -103,7 +101,7 @@ export function Composer({
            * which is why the reply and the options slid out of view rather than just looking big.
            * Scaled back down above the phone breakpoint, where nothing zooms.
            */
-          className="placeholder:text-muted-foreground block max-h-40 w-full resize-none bg-transparent py-2 text-base leading-6 outline-none disabled:opacity-60 sm:text-sm"
+          className="placeholder:text-muted-foreground block max-h-40 w-full resize-none bg-transparent text-base leading-6 outline-none disabled:opacity-60 sm:text-sm"
         />
       </div>
 
@@ -111,8 +109,7 @@ export function Composer({
         type="submit"
         disabled={!canSend}
         aria-label="Send"
-        /* `mb-1` keeps it off the bottom edge as the box grows past it. */
-        className="bg-primary text-primary-foreground focus-visible:ring-ring mb-1 grid size-9 shrink-0 place-items-center rounded-full transition-opacity focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+        className="bg-primary text-primary-foreground focus-visible:ring-ring grid size-8 shrink-0 place-items-center rounded-full transition-opacity focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
       >
         <ArrowUpIcon aria-hidden className="size-4" />
       </button>
