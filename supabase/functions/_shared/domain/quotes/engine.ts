@@ -22,6 +22,14 @@ export type QuoteRequest = {
   readonly months?: number | undefined
   /** What they can pay, or put away, each month. */
   readonly monthly?: number | undefined
+  /**
+   * What is already saved towards the target.
+   *
+   * Saving only. It comes from the case rather than from anything the model passes, because the
+   * bank knows it — and a customer with €32,000 towards €40,000 being told it will take two
+   * years and nine months is the right answer to a question nobody asked.
+   */
+  readonly opening?: number | undefined
 }
 
 export type QuoteFigure = {
@@ -200,23 +208,25 @@ function savingOption(
   base: OptionBase,
 ): QuoteOption | null {
   const { amount, monthly, months } = request
+  const opening = request.opening ?? 0
   if (monthly === undefined) return null
 
   if (months !== undefined) {
-    const saved = savedAfter(monthly, variant.annualRate, months)
+    const saved = savedAfter(monthly, variant.annualRate, months, opening)
     return {
       ...base,
       headline: { label: `After ${years(months)}`, value: euro(saved) },
       figures: [
         { label: 'Putting away', value: `${euro(monthly)} / month` },
         { label: 'Rate', value: percent(variant.annualRate) },
-        { label: 'Interest earned', value: euro(saved - monthly * months) },
+        // Interest only — what they put in and what they started with are both theirs already.
+        { label: 'Interest earned', value: euro(saved - monthly * months - opening) },
       ],
     }
   }
 
   if (amount !== undefined) {
-    const taken = monthsToSave(amount, monthly, variant.annualRate)
+    const taken = monthsToSave(amount, monthly, variant.annualRate, opening)
     if (taken === null) return null
 
     return {
@@ -264,6 +274,11 @@ function basisOf(shape: ProductVariant['shape'], request: QuoteRequest): string 
   }
   if (request.months !== undefined) parts.push(`over ${years(request.months)}`)
   if (request.monthly !== undefined) parts.push(`at ${euro(request.monthly)} a month`)
+  // Said out loud, because a figure that counts money they already have is only checkable if
+  // the card admits it counted it.
+  if (shape === 'saving' && request.opening !== undefined && request.opening > 0) {
+    parts.push(`counting the ${euro(request.opening)} already saved`)
+  }
 
   return parts.join(', ')
 }

@@ -1120,3 +1120,10 @@ as worth asking about is not ready to offer". That rule is about volunteering an
 said what year it was. So the clarifying question behind it stayed unanswered, one signal short
 of the threshold above. Today's date now goes in the volatile half of the prompt — not the cached
 prefix, where it would be stale within a day and break the cache nightly.
+
+**2026-10-08 — Money already saved counts towards the target.** §51.
+A customer with €32,000 towards a €40,000 deposit, putting away €1,200 a month, was quoted two
+years and nine months. That is how long €40,000 takes from nothing — thirty-three payments — and
+they were seven months away. `monthsToSave` and `savedAfter` always took an opening balance and
+nothing ever passed one. The balance is read from the case rather than from the model's tool
+input, because the bank holds it (Invariant 2), and the card states that it counted it.

@@ -1227,10 +1227,28 @@ async function handleTurn(request: Request): Promise<Response> {
                 }
 
                 const info = productInfo(ask.product)
+
+                /*
+                 * What they have already put aside, from the case rather than from the model.
+                 *
+                 * Somebody with €32,000 towards a €40,000 deposit was told it would take two
+                 * years and nine months — which is how long €40,000 takes from nothing. The
+                 * arithmetic was right and it answered a question nobody asked. The balance is
+                 * a fact the bank holds, so it is read here and never passed in (Invariant 2).
+                 */
+                const facts = goalContext?.facts
+                const opening =
+                  ask.product === 'savings'
+                    ? (facts?.number('assets.depositAmount', 'household') ??
+                      facts?.number('assets.savingsBalance', 'household') ??
+                      undefined)
+                    : undefined
+
                 const quote = buildQuote(info.variants ?? [], {
                   amount: ask.amount,
                   months: ask.months,
                   monthly: ask.monthly,
+                  ...(opening === undefined || opening <= 0 ? {} : { opening }),
                 })
 
                 if (quote.problem !== null) {

@@ -137,3 +137,51 @@ describe('a question about money becomes options', () => {
     expect(buildQuote(variants('joint_account'), { amount: 100 }).problem).toMatch(/no figures/i)
   })
 })
+
+/**
+ * Money they already have counts towards the target.
+ *
+ * A customer with €32,000 saved, putting away €1,200 a month towards €40,000, was told it would
+ * take two years and nine months. That is how long €40,000 takes from nothing — thirty-three
+ * payments of €1,200 — and they were seven months away. The arithmetic was right and it was
+ * answering a question nobody asked.
+ */
+describe('a savings quote with money already saved', () => {
+  const savings: readonly ProductVariant[] = [
+    { id: 'regular', name: 'Regular saver', shape: 'saving', annualRate: 0.03 },
+  ]
+
+  it('counts what they have towards the target', () => {
+    const quote = buildQuote(savings, { amount: 40_000, monthly: 1_200, opening: 32_000 })
+    const headline = quote.options[0]?.headline.value ?? ''
+
+    // Eight thousand short at twelve hundred a month, so seven payments.
+    expect(headline).toBe('7 months')
+  })
+
+  it('still answers from nothing when nothing is saved', () => {
+    const quote = buildQuote(savings, { amount: 40_000, monthly: 1_200 })
+
+    expect(quote.options[0]?.headline.value).toBe('2y 9m')
+  })
+
+  it('says it is already done when the target has been passed', () => {
+    const quote = buildQuote(savings, { amount: 40_000, monthly: 1_200, opening: 45_000 })
+
+    expect(quote.options[0]?.headline.value).toBe('0 months')
+  })
+
+  it('adds what they have to a projection forwards', () => {
+    const from0 = buildQuote(savings, { months: 12, monthly: 1_200 })
+    const from32k = buildQuote(savings, { months: 12, monthly: 1_200, opening: 32_000 })
+
+    const value = (q: typeof from0) => Number((q.options[0]?.headline.value ?? '').replace(/\D/g, ''))
+    expect(value(from32k)).toBeGreaterThan(value(from0) + 32_000)
+  })
+
+  it('says what it counted, so the figure can be checked', () => {
+    const quote = buildQuote(savings, { amount: 40_000, monthly: 1_200, opening: 32_000 })
+
+    expect(quote.basis).toContain('32,000')
+  })
+})
