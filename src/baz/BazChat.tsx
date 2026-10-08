@@ -112,8 +112,11 @@ export function BazChat({
 
   // The header quietens itself on the opening screen and settles once there is a conversation.
   useEffect(() => {
-    onStarted?.(!zeroState)
-  }, [zeroState, onStarted])
+    // Whether anything has been said, not the inverse of the opening screen: the opening screen
+    // is also absent while history loads, which had the subtitle fading in before there was a
+    // conversation to describe.
+    onStarted?.(entries.length > 0)
+  }, [entries.length, onStarted])
 
   /**
    * Send, wrapped in the shared-element transition for the first message only (§5, §13).

@@ -64,6 +64,9 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+          // Each deploy renames every hashed file, so without this the precache keeps every
+          // build it has ever seen and grows until the browser evicts the lot.
+          cleanupOutdatedCaches: true,
           navigateFallback: `${base}index.html`,
           // Never cache API responses (CLAUDE.md > GitHub Pages).
           runtimeCaching: [

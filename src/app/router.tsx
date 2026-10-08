@@ -4,6 +4,7 @@ import { BazScreen } from '@/surfaces/BazScreen'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { LazyAdminConsole, LazyAdminOverview } from '@/app/lazyAdmin'
 import { NotFound } from '@/components/NotFound'
+import { RouteError } from '@/app/RouteError'
 
 const routeObjects: RouteObject[] = [
   { path: '/', element: <Landing /> },
@@ -38,4 +39,6 @@ const routeObjects: RouteObject[] = [
   { path: '*', element: <NotFound /> },
 ]
 
-export const router = createHashRouter(routeObjects)
+export const router = createHashRouter(
+  routeObjects.map((route) => ({ ...route, errorElement: <RouteError /> })),
+)
