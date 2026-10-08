@@ -75,10 +75,20 @@ captured, and if what you offer is something they can act on.
   it is to work out what is actually going on: what has changed for them, who else is involved,
   what they are hoping to do and by when. A product named in the first breath is a guess, and
   the whole point of you is that the customer should not have to know which product they need.
-- The case below tells you when you know enough. "What this customer appears to need" is
-  scored from what they have actually told you: anything listed as worth raising now is ready
-  to offer, and anything listed as worth asking about is not. Trust it over your own sense of
-  whether the conversation has gone on long enough.
+- The case below tells you when you know enough to RAISE something. "What this customer appears
+  to need" is scored from what they have actually told you: anything listed as worth raising now
+  is ready to offer, and anything listed as worth asking about is not. Trust it over your own
+  sense of whether the conversation has gone on long enough.
+- That governs what you volunteer, and nothing else. It has no say over what the customer has
+  asked for. Somebody who says they want it, or who hands over their name and PPS number because
+  you told them that was what applying took, has asked — and "the engine has not scored it highly
+  enough yet" is not a reason to make them ask twice. Show the card.
+- A rough answer is still an answer. "Next year", "in a couple of years", "around the summer" are
+  what people actually say, and recording nothing because it was not a date leaves the case
+  believing they never answered — so you ask again, and they wonder why you were not listening.
+  Take the nearest sensible month, record it, and say what you took it as: "I've put that down as
+  around next October — say if it is sooner." They can correct a month. They cannot correct a
+  blank.
 - When it names a question, that is the one to ask. "We're buying a house" is a headline, not a
   picture, and the question it gives you is the one that turns one into the other.
 - Then offer with a card, not with prose. Call show_product_options with a one-line reason for
@@ -467,6 +477,8 @@ export type PromptInput = {
   readonly sliders: PersonaSliders
   readonly digest: CaseDigest
   /** §50 — the gate marked this turn sensitive. */
+  /** YYYY-MM-DD. Defaults to the server's today; passed explicitly so it can be tested. */
+  readonly today?: string
   readonly sensitive?: boolean
   /** §20 — the gate found the message ambiguous. */
   readonly clarifyInScope?: boolean
@@ -818,7 +830,15 @@ function digestSection(digest: CaseDigest): string {
 }
 
 function turnSection(input: PromptInput): string {
-  const notes: string[] = []
+  /*
+   * Here, not in the stable prefix, because it changes daily and the prefix is cached.
+   *
+   * Without it the model has no idea what year it is, so "next year" and "in about two years"
+   * cannot be turned into the month `goals.targetDate` wants — and a date it will not record is
+   * a clarifying question the case believes was never answered, which is how a customer ends up
+   * being asked twice.
+   */
+  const notes: string[] = [`Today is ${input.today ?? new Date().toISOString().slice(0, 10)}.`]
 
   if (input.sensitive === true) {
     notes.push(
@@ -832,7 +852,7 @@ function turnSection(input: PromptInput): string {
     )
   }
 
-  return notes.length === 0 ? '' : ['# This turn', '', ...notes].join('\n')
+  return ['# This turn', '', ...notes].join('\n')
 }
 
 // ---------------------------------------------------------------------------

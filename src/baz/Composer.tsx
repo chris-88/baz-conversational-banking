@@ -20,6 +20,7 @@ export function Composer({
   onSend,
   disabled,
   placeholder,
+  hint = true,
   className,
 }: {
   onSend?: ((message: string) => void) | undefined
@@ -34,6 +35,14 @@ export function Composer({
   disabled?: boolean | undefined
   /** Overrides the typed suggestions. Used where a fixed instruction is clearer than a hint. */
   placeholder?: string | undefined
+  /**
+   * Whether to type the sample openers.
+   *
+   * Only before anything has been said. Once there is a conversation the suggestions are not
+   * suggestions any more — they are a loop of someone else's sentences under the one the
+   * customer is trying to write.
+   */
+  hint?: boolean | undefined
   className?: string | undefined
 }): ReactNode {
   const [draft, setDraft] = useState('')
@@ -41,7 +50,7 @@ export function Composer({
   const canSend = draft.trim().length > 0 && !disabled
 
   // Only while there is nothing to read. An animation under live text is a distraction.
-  const ghost = useGhostPrompt(draft.length === 0 && placeholder === undefined)
+  const ghost = useGhostPrompt(hint && draft.length === 0 && placeholder === undefined)
 
   /*
    * Measured, not calculated. Reset to `auto` first so the box can shrink again when text is

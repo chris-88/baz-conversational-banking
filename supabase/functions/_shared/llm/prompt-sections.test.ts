@@ -133,6 +133,48 @@ describe('what happens after what-is-involved', () => {
 })
 
 /**
+ * The model cannot reason about "next year" without knowing what year it is.
+ *
+ * `goals.targetDate` wants a month. Somebody said "next year", nothing was recorded, so the
+ * clarifying question behind it stayed unanswered, the need sat a hair under its threshold, and
+ * the card was never offered. The whole chain started with a date the model could not compute.
+ */
+describe("today's date", () => {
+  it('is in the prompt', () => {
+    expect(compose()).toMatch(/Today is \d{4}-\d{2}-\d{2}/)
+  })
+
+  it('is in the volatile half, not the cached prefix', () => {
+    const parts = composeSystemPrompt.withBreakpoint({
+      domainConfig: boiDomainConfig,
+      products: boiProducts,
+      sliders: SLIDERS,
+      digest: digest(),
+      sensitive: false,
+      clarifyInScope: false,
+    })
+
+    // In the prefix it would be stale within a day and break the cache every night.
+    expect(parts.stablePrefix).not.toMatch(/Today is/)
+    expect(parts.caseSuffix).toMatch(/Today is/)
+  })
+})
+
+describe('what the engine governs', () => {
+  const prompt = compose()
+
+  it('scopes the need scores to what Baz volunteers', () => {
+    expect(prompt).toMatch(/governs what you volunteer, and nothing else/i)
+    expect(prompt).toMatch(/has asked — and "the engine has not scored it highly enough yet"/i)
+  })
+
+  it('says a rough timeframe is still an answer', () => {
+    expect(prompt).toMatch(/A rough answer is still an answer/i)
+    expect(prompt).toMatch(/They can correct a month\. They cannot correct a blank/i)
+  })
+})
+
+/**
  * A turn is sent as it is written, so none of it can be taken back.
  *
  * Baz told somebody "Tap the card to start it", asked a question, then wrote "Actually, hold off

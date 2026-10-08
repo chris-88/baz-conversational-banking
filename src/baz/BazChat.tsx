@@ -434,6 +434,7 @@ export function BazChat({
         )}
       >
         <Composer
+          hint={entries.length === 0}
           disabled={!ready || streaming}
           onSend={(message) => {
             setFollowUps([])

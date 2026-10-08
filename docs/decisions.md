@@ -1108,3 +1108,15 @@ mention a card the tool was not called for, and discovery is not a reason to sta
 has just handed over their name and PPS number in order to proceed. `card_promised_not_shown` is
 written when a reply points at a card that was never drawn — it cannot be fixed after the fact,
 but it can stop being invisible.
+
+**2026-10-08 — The need scores govern what Baz volunteers, not what the customer asked for.** §15.
+A customer who had given their name, date of birth, address and PPS number — because Baz had
+just said that was what applying took — got three more questions instead of a card. The need was
+at `clarify` (0.70 against a 0.75 threshold) and the model was correctly obeying "anything listed
+as worth asking about is not ready to offer". That rule is about volunteering and now says so.
+
+**2026-10-08 — A rough timeframe is still an answer, and the prompt needs today's date.** §9.
+"Next year" was never recorded, because `goals.targetDate` wants a month and the prompt never
+said what year it was. So the clarifying question behind it stayed unanswered, one signal short
+of the threshold above. Today's date now goes in the volatile half of the prompt — not the cached
+prefix, where it would be stale within a day and break the cache nightly.
