@@ -300,8 +300,24 @@ async function handleTurn(request: Request): Promise<Response> {
          * record of what was turned away, which is the opposite of answering it.
          */
         request: customerMessage.slice(0, 200),
+        /**
+         * Present only when the classifier is why this was blocked.
+         *
+         * A gate that fails closed looks identical from the outside whatever went wrong behind
+         * it, which is correct for the customer and useless for whoever has to fix it. This is
+         * the one place the difference is recorded.
+         */
+        ...(gate.classifierFailure ? { classifierFailure: gate.classifierFailure } : {}),
       },
     })
+
+    if (gate.classifierFailure) {
+      // Also to the function log, because a gate that is down is an incident, not a data point
+      // waiting to be queried.
+      console.error(
+        `gate classifier ${gate.classifierFailure.kind}: ${gate.classifierFailure.detail}`,
+      )
+    }
     const messageId = await saveMessage(admin, {
       caseId: turn.caseId,
       participantId: null,

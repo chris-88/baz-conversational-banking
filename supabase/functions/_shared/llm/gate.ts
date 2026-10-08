@@ -97,6 +97,22 @@ export type GateBlocked = {
   /** The canned reply. Never contains the prohibited answer (§26). */
   readonly response: string
   readonly injectionFlagged: boolean
+  /**
+   * Why the classifier did not answer, when that is the reason for the block.
+   *
+   * The customer still gets the same short retry message — failing closed is the point, and
+   * what went wrong upstream is not their problem. But it was being discarded here as well,
+   * which meant an outage, an expired key and a slow response were indistinguishable from
+   * each other in the one place anybody would look. Carried out so the block is auditable
+   * (§39) and so the cause is in Sentry rather than inferred.
+   */
+  readonly classifierFailure?: ClassifierFailure
+}
+
+export type ClassifierFailure = {
+  /** `timeout` means the deadline won the race; the request may still have been in flight. */
+  readonly kind: 'timeout' | 'error' | 'unparseable'
+  readonly detail: string
 }
 
 export type GateResult = GateAllowed | GateBlocked
@@ -167,25 +183,47 @@ function blocked(
   }
 }
 
-async function classifyWithin(
-  input: string,
-  deps: GateDeps,
-): Promise<Classification | null> {
+type ClassifyOutcome =
+  | { readonly ok: true; readonly classification: Classification }
+  | { readonly ok: false; readonly failure: ClassifierFailure }
+
+const TIMED_OUT = Symbol('timed out')
+
+async function classifyWithin(input: string, deps: GateDeps): Promise<ClassifyOutcome> {
   const timeoutMs = deps.timeoutMs ?? DEFAULT_TIMEOUT_MS
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), timeoutMs)
+  // A symbol rather than null: a classifier that resolves null is a different fault from one
+  // that never resolves, and the two were arriving here as the same value.
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), timeoutMs)
   })
 
   try {
     const raw = await Promise.race([deps.classify(input), timeout])
-    if (raw === null) return null
+
+    if (raw === TIMED_OUT) {
+      return { ok: false, failure: { kind: 'timeout', detail: `no answer within ${timeoutMs}ms` } }
+    }
+
     const parsed = classificationSchema.safeParse(raw)
-    return parsed.success ? parsed.data : null
-  } catch {
-    // Classifier error fails closed, like a timeout.
-    return null
+    if (!parsed.success) {
+      return {
+        ok: false,
+        failure: { kind: 'unparseable', detail: parsed.error.issues[0]?.message ?? 'invalid shape' },
+      }
+    }
+
+    return { ok: true, classification: parsed.data }
+  } catch (error) {
+    // Fails closed exactly as before. The difference is that it now says what happened.
+    return {
+      ok: false,
+      failure: {
+        kind: 'error',
+        detail: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+      },
+    }
   } finally {
     if (timer !== undefined) clearTimeout(timer)
   }
@@ -209,12 +247,17 @@ export async function runGate(input: string, deps: GateDeps): Promise<GateResult
 
   const injectionFlagged = looksLikeInjection(input)
 
-  const classification = await classifyWithin(input, deps)
+  const outcome = await classifyWithin(input, deps)
 
   // Timeout, error or unparseable output all fail closed with a short retry message.
-  if (classification === null) {
-    return blocked('unsupported', 'classifier_unavailable', tone, injectionFlagged)
+  if (!outcome.ok) {
+    return {
+      ...blocked('unsupported', 'classifier_unavailable', tone, injectionFlagged),
+      classifierFailure: outcome.failure,
+    }
   }
+
+  const classification = outcome.classification
 
   // A confident deterministic match wins over the classifier. The classifier still ran, so
   // the admin view records what it thought, but a regex-certain injection never reaches the
