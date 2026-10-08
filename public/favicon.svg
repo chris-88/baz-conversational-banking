@@ -1,5 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="225" fill="#065BEA"/>
-<rect x="250" y="300" width="524" height="420" rx="150" fill="white"/>
-<rect x="465" y="180" width="94" height="145" rx="47" fill="white"/>
-<circle cx="410" cy="500" r="48" fill="#065BEA"/><circle cx="614" cy="500" r="48" fill="#065BEA"/>
-<path d="M400 605c70 55 154 55 224 0" fill="none" stroke="#065BEA" stroke-width="42" stroke-linecap="round"/></svg>
+<!--
+  The Baz mark as an app icon.
+
+  Standalone rather than the BazMark component, because an icon cannot inherit anything: a
+  favicon has no page colour to take `currentColor` from, and iOS composites a home-screen icon
+  on whatever it likes, so the tile and both ink colours are written out. The geometry is the
+  same mark, scaled from the component's own 256 viewBox — if that changes, this changes with it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Baz">
+  <rect width="1024" height="1024" rx="225" fill="#065BEA"/>
+  <g transform="translate(122,116) scale(3)">
+    <circle cx="120" cy="132" r="78" fill="none" stroke="#FFFFFF" stroke-width="24"/>
+    <circle cx="120" cy="132" r="48" fill="#065BEA"/>
+    <circle cx="102" cy="132" r="7.5" fill="#FFFFFF"/>
+    <circle cx="138" cy="132" r="7.5" fill="#FFFFFF"/>
+    <circle cx="188" cy="58" r="16" fill="#FFFFFF"/>
+  </g>
+</svg>
