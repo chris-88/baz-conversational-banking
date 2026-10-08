@@ -15,6 +15,7 @@ import { createClassifier } from '../_shared/llm/classifier.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { composeSystemPrompt } from '../_shared/llm/prompt.ts'
 import { boiProducts } from '../_shared/tenants/boi/products.ts'
+import { knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
 import { caseStatus, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
@@ -321,7 +322,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         max_tokens: 400,
         system: composeSystemPrompt({
           domainConfig: boiDomainConfig,
-          products: boiProducts,
+          productCatalogue: knowledgeBaseSection(),
           sliders: action.sliders,
           digest: {
             customerName: null,

@@ -20,6 +20,7 @@ import { toneBucket } from '../_shared/llm/persona.ts'
 import type { ToolName } from '../_shared/llm/tools.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { boiProducts, productInfo } from '../_shared/tenants/boi/products.ts'
+import { knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
 import {
   loadCase,
   recordFacts,
@@ -601,7 +602,7 @@ async function handleTurn(request: Request): Promise<Response> {
           onUsage: recordModel,
           prompt: {
             domainConfig: boiDomainConfig,
-            products: boiProducts,
+            productCatalogue: knowledgeBaseSection(),
             sliders: loaded.persona,
             digest,
             sensitive: gate.suppressHumour,

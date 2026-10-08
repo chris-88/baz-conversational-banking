@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type Anthropic from '@anthropic-ai/sdk'
 import { boiDomainConfig } from '../tenants/boi/domain-config.ts'
-import { boiProducts } from '../tenants/boi/products.ts'
+import { knowledgeBaseSection } from '../tenants/boi/kb-prompt.ts'
 import { runBazTurn, type BazTurnOptions } from './baz.ts'
 import { slidersFor } from './persona.ts'
 import type { PromptInput } from './prompt.ts'
@@ -66,7 +66,7 @@ function clientReturning(rounds: readonly Round[]): Anthropic {
 
 const prompt: PromptInput = {
   domainConfig: boiDomainConfig,
-  products: boiProducts,
+  productCatalogue: knowledgeBaseSection(),
   sliders: slidersFor('default'),
   digest: {
     customerName: 'Aoife',

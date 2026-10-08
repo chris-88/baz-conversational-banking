@@ -2,12 +2,17 @@ import type { Product } from '../../domain/journey.ts'
 import type { ProductVariant } from '../../domain/quotes/types.ts'
 
 /**
- * §51 — product information integrity.
+ * §51 — the seven products Baz can actually start, and the rates it calculates with.
  *
- * Baz states product details ONLY from this catalogue. Anything not here, Baz does not know:
- * no invented rates, eligibility criteria, fees or application requirements. Every figure
- * below is illustrative and marked as such, and the disclaimer travels with it into the
- * prompt so the model cannot present these as real terms.
+ * This used to be the whole catalogue, invented. The descriptions, eligibility and cautions
+ * Baz speaks from now come from `knowledge-base.ts`, which is Bank of Ireland's real public
+ * offering; what is left here is the part that pack deliberately does not carry.
+ *
+ * `variants` are still illustrative and still invented. The pack holds no mortgage rate table
+ * and no protection premiums — it lists both under `not_authoritative_for` — so a card that
+ * works out a repayment has to work it out from something. `kb-prompt.ts` renders them under a
+ * heading that says so, separately from the real catalogue, because the two are not the same
+ * kind of claim and putting them in one list would make them look it.
  */
 
 export type IllustrativeTerm = {
@@ -30,13 +35,6 @@ export type ProductInfo = {
   /** Anything Baz should be careful about when explaining this product. */
   readonly cautions: readonly string[]
 }
-
-/** Travels with the catalogue into every prompt. */
-export const SYNTHETIC_TERMS_DISCLAIMER =
-  'Every rate, fee, limit and term in this catalogue is ILLUSTRATIVE and invented for a ' +
-  'prototype. Never present these as real Bank of Ireland terms. If a customer asks for exact ' +
-  'pricing, say the figures here are illustrative for the demonstration and that real terms ' +
-  'would come from the live product pages.'
 
 export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
   mortgage: {

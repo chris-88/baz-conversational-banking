@@ -9,7 +9,6 @@ import {
 import type { Product } from '../domain/journey.ts'
 import type { ApplicationState } from '../domain/state-machine.ts'
 import type { DomainConfig } from '../tenants/boi/domain-config.ts'
-import { SYNTHETIC_TERMS_DISCLAIMER, type ProductInfo } from '../tenants/boi/products.ts'
 import { applySensitivity, composePersona, type PersonaSliders } from './persona.ts'
 
 /**
@@ -473,7 +472,14 @@ export type CaseDigest = {
 
 export type PromptInput = {
   readonly domainConfig: DomainConfig
-  readonly products: Readonly<Record<Product, ProductInfo>>
+  /**
+   * The product catalogue, rendered by the tenant.
+   *
+   * A string rather than a structure because what a bank says about its own products is its
+   * business: Bank of Ireland's is sixty-one real objects read from their site, another
+   * tenant's might be seven. This file composes a prompt and should not know which.
+   */
+  readonly productCatalogue: string
   readonly sliders: PersonaSliders
   readonly digest: CaseDigest
   /** §50 — the gate marked this turn sensitive. */
@@ -499,56 +505,6 @@ function domainSection(config: DomainConfig): string {
     'will not normally see an out-of-scope message. If one slips through, decline briefly and',
     'return to banking — never answer it and then add a disclaimer.',
   ].join('\n')
-}
-
-/**
- * The rates, from the variants the quote card is built from.
- *
- * Written out here rather than kept by hand in `illustrativeTerms`, because the two drifted the
- * moment variants were added: the mortgage advertised "3.85% for 3 years" in prose while the
- * card offered 3.1%, 3.3%, 3.4% and 3.9% over different terms. Baz read both, quoted the prose,
- * and then told the customer to go by the card — which is the model doing its best with a
- * catalogue that contradicted itself.
- *
- * One source of truth. `catalogue.test.ts` holds the other half of this: a hand-written term
- * carrying a percentage is a second source, and fails.
- */
-function describeVariants(product: ProductInfo): readonly string[] {
-  const variants = product.variants ?? []
-  if (variants.length === 0) return []
-
-  return [
-    `- Rates (these are what the quote card shows, and the only ones to quote):`,
-    ...variants.map((variant) => {
-      const rate = `${(variant.annualRate * 100).toFixed(2).replace(/\.?0+$/, '')}%`
-      const term =
-        variant.fixedYears === undefined
-          ? ''
-          : ` fixed for ${String(variant.fixedYears)} year${variant.fixedYears === 1 ? '' : 's'}`
-      return `  - ${variant.name}: ${rate}${term}`
-    }),
-  ]
-}
-
-function productSection(products: Readonly<Record<Product, ProductInfo>>): string {
-  const entries = Object.values(products).map((product) =>
-    [
-      `## ${product.name}`,
-      product.description,
-      '',
-      'Relevant when:',
-      ...product.relevantWhen.map((item) => `- ${item}`),
-      'Eligibility:',
-      ...product.eligibility.map((item) => `- ${item}`),
-      'Illustrative terms:',
-      ...describeVariants(product),
-      ...product.illustrativeTerms.map((term) => `- ${term.label}: ${term.value}`),
-      'Care:',
-      ...product.cautions.map((item) => `- ${item}`),
-    ].join('\n'),
-  )
-
-  return ['# Products', '', SYNTHETIC_TERMS_DISCLAIMER, '', ...entries].join('\n\n')
 }
 
 function factLine(fact: DigestFact): string {
@@ -870,7 +826,7 @@ function stableSections(input: PromptInput): readonly string[] {
     HOW_APPLYING_WORKS,
     WHAT_WE_CAN_DO,
     factReference(),
-    productSection(input.products),
+    input.productCatalogue,
     composePersona(sliders),
   ]
 }

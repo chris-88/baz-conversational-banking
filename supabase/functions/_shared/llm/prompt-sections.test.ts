@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { composeSystemPrompt } from './prompt.ts'
 import { boiDomainConfig } from '../tenants/boi/domain-config.ts'
 import { boiProducts } from '../tenants/boi/products.ts'
+import { knowledgeBaseSection } from '../tenants/boi/kb-prompt.ts'
 import type { CaseDigest } from './prompt.ts'
 
 const SLIDERS = {
@@ -37,7 +38,7 @@ const compose = (extra: Partial<CaseDigest> = {}): string => raw(extra).replaceA
 const raw = (extra: Partial<CaseDigest> = {}): string =>
   composeSystemPrompt({
     domainConfig: boiDomainConfig,
-    products: boiProducts,
+    productCatalogue: knowledgeBaseSection(),
     sliders: SLIDERS,
     digest: digest(extra),
     sensitive: false,
@@ -147,7 +148,7 @@ describe("today's date", () => {
   it('is in the volatile half, not the cached prefix', () => {
     const parts = composeSystemPrompt.withBreakpoint({
       domainConfig: boiDomainConfig,
-      products: boiProducts,
+      productCatalogue: knowledgeBaseSection(),
       sliders: SLIDERS,
       digest: digest(),
       sensitive: false,

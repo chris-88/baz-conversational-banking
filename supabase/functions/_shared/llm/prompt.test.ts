@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { asApplicationId, asParticipantId } from '@domain/facts.ts'
 import { boiDomainConfig } from '../tenants/boi/domain-config.ts'
-import { boiProducts } from '../tenants/boi/products.ts'
+import { knowledgeBaseSection } from '../tenants/boi/kb-prompt.ts'
 import { slidersFor } from './persona.ts'
 import { POLICY, composeSystemPrompt, type PromptInput } from './prompt.ts'
 
 const baseInput = (): PromptInput => ({
   domainConfig: boiDomainConfig,
-  products: boiProducts,
+  productCatalogue: knowledgeBaseSection(),
   sliders: slidersFor('default'),
   digest: {
     customerName: 'Aoife',

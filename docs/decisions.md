@@ -1144,3 +1144,21 @@ current account with you please" was answered with "before I set that up, what s
 you looking at". The gate now stands aside when the message in front of it names one of the
 products being offered, matched on the catalogue name rather than the recorded objective: the
 objective is what they came in for, this is what they just said.
+
+**2026-10-08 — The product catalogue is Bank of Ireland's real one.** §51, Invariant 10.
+`docs/baz-boi-retail-product-kb.zip` — 61 objects read from their public site, verified
+2026-10-08 — replaces seven invented products. Generated to `knowledge-base.ts` rather than
+imported as JSON, because the folder compiles under both Deno and Vite. Four objects the pack
+flags for internal verification are filtered out and never reach a prompt.
+
+Invariant 10 still holds: it covers customer data and credentials, and this is published product
+information. What changed is the disclaimer, which said every figure was "invented for a
+prototype" — true of the old catalogue and a lie about this one, in the unusual direction of
+telling somebody real published terms were made up. It now says descriptions and eligibility are
+fact, and that rates are snapshots that cannot be given as current.
+
+Rates stay invented, separately and labelled. The pack carries no mortgage rate table and no
+protection premiums — both are in its own `not_authoritative_for` list — so the quote card still
+computes from illustrative variants, rendered under a heading that says so.
+
+Cost: the cached prefix goes 7,104 → 14,543 tokens, about €0.047 more per ten-turn conversation.

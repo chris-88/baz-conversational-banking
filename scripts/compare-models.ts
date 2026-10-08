@@ -15,7 +15,7 @@ import { runBazTurn } from '../supabase/functions/_shared/llm/baz.ts'
 import type { PromptInput } from '../supabase/functions/_shared/llm/prompt.ts'
 import { slidersFor } from '../supabase/functions/_shared/llm/persona.ts'
 import { boiDomainConfig } from '../supabase/functions/_shared/tenants/boi/domain-config.ts'
-import { boiProducts } from '../supabase/functions/_shared/tenants/boi/products.ts'
+import { knowledgeBaseSection } from '../supabase/functions/_shared/tenants/boi/kb-prompt.ts'
 import { bankHeldFacts, canonicalCustomer } from '../supabase/functions/_shared/domain/seed/canonical.ts'
 import { factCatalogue } from '../supabase/functions/_shared/domain/facts.ts'
 
@@ -33,7 +33,7 @@ const models =
 /** The canonical case as it stands at reset: signed in, bank-held facts, nothing else. */
 const prompt: PromptInput = {
   domainConfig: boiDomainConfig,
-  products: boiProducts,
+  productCatalogue: knowledgeBaseSection(),
   sliders: slidersFor('default'),
   digest: {
     customerName: canonicalCustomer.firstName,
