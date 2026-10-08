@@ -1365,11 +1365,32 @@ async function handleTurn(request: Request): Promise<Response> {
           send(event)
         }
 
+        /*
+         * A reply that sends the customer to a card nobody drew.
+         *
+         * Baz once told somebody "tap the card to start it" without ever calling the tool, and
+         * then retracted it two paragraphs later. Nothing failed, so nothing was recorded and
+         * the only trace was a screenshot. This cannot be fixed after the fact — the words are
+         * already sent — but it can stop being invisible.
+         *
+         * Deliberately narrow. Only phrases that point at something on screen right now, so an
+         * ordinary mention of a card in passing does not trip it.
+         */
+        const text = spoken.join('')
+        if (shown.length === 0 && /\btap (the|that) (card|option)|\bcard (below|above)\b/i.test(text)) {
+          await writeEvent(admin, {
+            caseId: turn.caseId,
+            type: 'card_promised_not_shown',
+            actor: 'model',
+            payload: { said: text.slice(0, 200) },
+          })
+        }
+
         const messageId = await saveMessage(admin, {
           caseId: turn.caseId,
           participantId: null,
           role: 'baz',
-          content: spoken.join(''),
+          content: text,
           cards: shown,
           usage: spend,
         })

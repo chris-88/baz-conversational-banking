@@ -133,6 +133,31 @@ describe('what happens after what-is-involved', () => {
 })
 
 /**
+ * A turn is sent as it is written, so none of it can be taken back.
+ *
+ * Baz told somebody "Tap the card to start it", asked a question, then wrote "Actually, hold off
+ * on that card for a moment" — and no card was ever drawn, because the tool was never called. It
+ * composes across rounds and had changed its mind between two of them.
+ */
+describe('committing to what has been said', () => {
+  const prompt = compose()
+
+  it('says a sentence already written cannot be withdrawn', () => {
+    expect(prompt).toMatch(/You cannot take it back/i)
+    expect(prompt).toMatch(/hold off on that/i)
+  })
+
+  it('forbids mentioning a card the tool was not called for', () => {
+    expect(prompt).toMatch(/Never mention a card you have not called the tool for/i)
+  })
+
+  it('stops discovery being a reason to stall somebody who is ready', () => {
+    expect(prompt).toMatch(/not a reason to keep them waiting/i)
+    expect(prompt).toMatch(/they are ready. Offer the card/i)
+  })
+})
+
+/**
  * What the bank can do depends on where the customer banks, and that has to be said.
  *
  * Baz promised "we'll come back to you when your savings reach €32,000" to somebody holding no

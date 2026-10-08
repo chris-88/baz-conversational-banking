@@ -1098,3 +1098,13 @@ The composer disabled the field itself while a turn streamed, and a browser answ
 field by blurring it — so every turn took the caret away mid-thought and dropped the phone
 keyboard with it. Only sending is held back now. Typing ahead while Baz answers is what every
 other chat allows, costs nothing, and the send button greys out to show why Enter does nothing.
+
+**2026-10-08 — A turn cannot be taken back.** §14.
+Baz wrote "Tap the card to start it", asked a question, then wrote "Actually, hold off on that
+card for a moment" — and no card was ever drawn, because the tool was never called. It composes
+across rounds and had changed its mind between two of them, with the first half already on the
+customer's screen. Three rules added: a sentence already written has been delivered, never
+mention a card the tool was not called for, and discovery is not a reason to stall somebody who
+has just handed over their name and PPS number in order to proceed. `card_promised_not_shown` is
+written when a reply points at a card that was never drawn — it cannot be fixed after the fact,
+but it can stop being invisible.

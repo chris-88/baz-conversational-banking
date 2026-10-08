@@ -23,6 +23,7 @@ const SIGNALS = new Set([
   'context_reused',
   'goal_identified',
   'product_quoted',
+  'card_promised_not_shown',
   'application_created',
   'application_submitted',
   'partner_joined',
@@ -70,6 +71,8 @@ export function describeAdminEvent(
         return 'A question that did not have to be asked'
       case 'goal_identified':
         return `Worked out a goal: ${text(payload, 'goal')?.replaceAll('_', ' ') ?? 'something they are after'}`
+      case 'card_promised_not_shown':
+        return 'Said there was a card, and there was not'
       case 'product_quoted':
         return `Showed figures for ${text(payload, 'product')?.replaceAll('_', ' ') ?? 'a product'}`
       case 'context_captured':
