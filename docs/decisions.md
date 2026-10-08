@@ -1203,3 +1203,15 @@ Also: "Jarvis, but for banking" is gone from the header per §8, the typing dots
 bounce with a 400ms floor so they cannot flash, "Baz is responding" is announced once from a
 stable region rather than from a node that unmounts, and a failed first send keeps the message
 with a Retry.
+
+## 2026-10-08 — A stale page reloads itself (§57)
+
+A hashed-asset host and a long-lived page are in tension: Pages swaps every
+filename at once, and any tab open across the deploy is holding names that no
+longer resolve. `vite:preloadError` is the signal, a guarded reload is the
+answer, and `errorElement` is the floor underneath it so a customer never
+reads advice addressed to a developer.
+
+Noted because it presents as a dead screen on a green deploy — the build
+passed, the site is correct, and the only broken thing is the copy of it
+somebody already had open.
