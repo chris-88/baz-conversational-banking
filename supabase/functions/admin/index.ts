@@ -1443,6 +1443,31 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json(ok({ purged: ids.length }), 200)
     }
 
+    case 'delete_case': {
+      /*
+       * Deletes cascade, exactly as a purge does: participants, facts, applications, messages,
+       * plans and events all go with the case. Nothing is archived and nothing is recoverable,
+       * which is the point — the reason to reach for this is that a conversation contains
+       * something that should not be sitting in a prototype's database.
+       *
+       * Read first so the response can say what went, and so a wrong id is a clear "not found"
+       * rather than a silent success. Postgres is happy to delete nothing.
+       */
+      const existing = await admin
+        .from('cases')
+        .select('id')
+        .eq('id', action.caseId)
+        .maybeSingle()
+
+      if (existing.error) return errorResponse('conflict', existing.error.message)
+      if (!existing.data) return errorResponse('not_found', 'No case with that id.')
+
+      const deleted = await admin.from('cases').delete().eq('id', action.caseId)
+      if (deleted.error) return errorResponse('conflict', deleted.error.message)
+
+      return json(ok({ deleted: action.caseId }), 200)
+    }
+
     case 'inspect_case': {
       const loaded = await loadCase(admin, action.caseId)
       if (!loaded) return errorResponse('not_found', 'No such case.')

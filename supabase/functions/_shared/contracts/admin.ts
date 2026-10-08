@@ -88,6 +88,14 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   /** §44 — clears the room's conversations. Never touches the presenter case. */
   /** §47 — delete every conversation. No exceptions; the sample customer is one click to rebuild. */
   z.object({ action: z.literal('purge_cases') }),
+  /**
+   * One case, by id.
+   *
+   * Separate from `purge_cases` because the reasons are different. A purge clears the decks
+   * between run-throughs; this removes a single conversation, which is what you need when
+   * somebody has typed a real name and date of birth into a prototype.
+   */
+  z.object({ action: z.literal('delete_case'), caseId: z.uuid() }),
 
   /**
    * §39 — put a request through the gate and report what happened to it.

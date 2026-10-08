@@ -34,6 +34,7 @@ export const adminApi = {
     adminCaseSchema.parse(await call({ action: 'inspect_case', caseId })),
   resetCase: () => call({ action: 'reset_case' }),
   purgeCases: () => call({ action: 'purge_cases' }),
+  deleteCase: (caseId: string) => call({ action: 'delete_case', caseId }),
   testGuardrail: async (message: string): Promise<GuardrailTest> =>
     guardrailTestSchema.parse(await call({ action: 'test_guardrail', message })),
   analytics: async (period: Period): Promise<Analytics> =>
