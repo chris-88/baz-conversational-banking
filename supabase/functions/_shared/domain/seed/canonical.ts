@@ -117,6 +117,11 @@ export const canonicalProductInterests: readonly {
     reason: 'Recently married and still managing money separately.',
   },
   {
+    product: 'current_account',
+    discovered: true,
+    reason: 'Salary paid elsewhere, so nothing here can automate the saving.',
+  },
+  {
     product: 'protection',
     discovered: true,
     reason: 'A new child and a first mortgage between them.',

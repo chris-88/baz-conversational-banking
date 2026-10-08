@@ -1127,3 +1127,12 @@ years and nine months. That is how long €40,000 takes from nothing — thirty-
 they were seven months away. `monthsToSave` and `savedAfter` always took an opening balance and
 nothing ever passed one. The balance is read from the case rather than from the model's tool
 input, because the bank holds it (Invariant 2), and the card states that it counted it.
+
+**2026-10-08 — A current account in one name.** §7.2.
+The joint account was built first because it demonstrates invitation and partner completion,
+which left somebody banking on their own being told the only current account on offer was a
+joint one — a gap in the catalogue reading as a gap in the bank. Shortest journey in the set:
+identity, two documents, one declaration, nothing about income, because nothing is being lent.
+The `everyday_banking` need reaches it, and fires only when somebody is saving monthly from an
+account held elsewhere — the one case where an account here does something nothing else can.
+Suppressed entirely when their salary is already paid to us.

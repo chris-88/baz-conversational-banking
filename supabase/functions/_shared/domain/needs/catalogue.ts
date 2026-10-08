@@ -431,6 +431,55 @@ export const needCatalogue: readonly NeedDefinition[] = [
   },
 
   {
+    id: 'everyday_banking',
+    name: 'Somewhere for the salary to land',
+    family: 'current_accounts',
+    sensitive: false,
+    priority: 'low',
+    signals: [
+      {
+        id: 'asked-for-it',
+        strength: 'explicit',
+        describe: 'they asked about a current account or about switching',
+        when: (context) => /current account|switch(ing)? (my )?(bank|account)/i.test(objective(context)),
+      },
+      {
+        /*
+         * Not "they bank elsewhere", which is true of most people and is nobody's business.
+         * This fires when they have told us about money they mean to move every month AND the
+         * account it would move from is somewhere else — the one case where an account here
+         * does something for them that nothing else can.
+         */
+        id: 'saving-from-another-bank',
+        strength: 'soft_inferred',
+        describe: 'they are saving monthly from an account held somewhere else',
+        when: (context) =>
+          context.facts.get('banking.salaryPaidTo', 'primary') === 'another_bank' &&
+          context.facts.has('goals.monthlySaving', 'household'),
+      },
+    ],
+    clarifying: [
+      {
+        question: 'Where does your salary get paid at the moment?',
+        answeredWhen: (context) => context.facts.has('banking.salaryPaidTo', 'primary'),
+      },
+    ],
+    products: ['current_account'],
+    framing:
+      'A current account here is what makes a standing order possible on payday, and lets income ' +
+      'and outgoings be read from records rather than asked for. It is never a condition of ' +
+      'anything else.',
+    suppressions: [
+      {
+        id: 'already_banks_here',
+        describe: 'their salary is already paid to us, so they have the account this would be',
+        when: (context) => context.facts.get('banking.salaryPaidTo', 'primary') === 'this_bank',
+      },
+    ],
+    deferrals: [],
+  },
+
+  {
     id: 'everyday_card_credit',
     name: 'A card for flexibility',
     family: 'credit_cards',

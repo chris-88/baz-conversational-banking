@@ -87,6 +87,7 @@
 
   /* Product accents, so each product reads as itself on the cards. */
   --product-mortgage: oklch(0.65 0.16 162);
+  --product-current-account: oklch(0.72 0.15 70);
   --product-joint-account: oklch(0.49 0.2 264);
   --product-credit-card: oklch(0.49 0.2 264);
   --product-personal-loan: oklch(0.63 0.21 25);
@@ -213,6 +214,7 @@
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-product-mortgage: var(--product-mortgage);
+  --color-product-current-account: var(--product-current-account);
   --color-product-joint-account: var(--product-joint-account);
   --color-product-credit-card: var(--product-credit-card);
   --color-product-personal-loan: var(--product-personal-loan);

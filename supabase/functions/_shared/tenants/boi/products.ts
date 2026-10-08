@@ -106,6 +106,36 @@ export const boiProducts: Readonly<Record<Product, ProductInfo>> = {
     ],
   },
 
+  current_account: {
+    product: 'current_account',
+    name: 'Current account',
+    oneLine: 'A day-to-day account in your own name.',
+    description:
+      'An everyday account for a salary to be paid into and bills to be paid out of. It is what ' +
+      'makes a standing order possible, and what lets income and outgoings be read from records ' +
+      'rather than asked for when somebody applies for something else.',
+    relevantWhen: [
+      'The customer is paid somewhere else and wants their day-to-day banking in one place.',
+      'The customer wants saving or bills automated out of the account their salary lands in.',
+      'The customer is starting out, or starting again, and has no everyday account.',
+    ],
+    eligibility: [
+      'Applicants must be 18 or over and resident in the Republic of Ireland.',
+      'Identity and address must be verified.',
+    ],
+    illustrativeTerms: [
+      { label: 'Illustrative monthly maintenance fee', value: '€6' },
+      { label: 'Illustrative overdraft', value: 'Subject to application' },
+      { label: 'Switching', value: 'Your existing payments and direct debits can be moved across' },
+    ],
+    cautions: [
+      'Never say a switch is instant or guaranteed. It is a process, and how long it takes is ' +
+        'not something this catalogue states.',
+      'Opening one is never a condition of anything else. Say what it makes possible, and leave ' +
+        'it there.',
+    ],
+  },
+
   joint_account: {
     product: 'joint_account',
     name: 'Joint current account',

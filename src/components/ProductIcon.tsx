@@ -1,12 +1,19 @@
 import type { ReactNode } from 'react'
-import { CreditCardIcon, HomeIcon, PiggyBankIcon, ShieldCheckIcon, UsersIcon } from 'lucide-react'
+import {
+  CreditCardIcon,
+  HomeIcon,
+  PiggyBankIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+  WalletIcon,
+} from 'lucide-react'
 import type { Product } from '@domain/journey.ts'
 import { cn } from '@/lib/utils'
 
 /**
  * A product in a tinted tile, as every board renders them.
  *
- * Each product carries its own colour so a list of them reads as five things rather than five
+ * Each product carries its own colour so a list of them reads as distinct things rather than
  * rows of the same blue. The mapping is keyed by the domain's `Product` union, so a new
  * product cannot be added without choosing how it looks.
  */
@@ -15,6 +22,11 @@ const PRODUCTS: Record<Product, { icon: ReactNode; tint: string; ink: string }> 
     icon: <HomeIcon />,
     tint: 'bg-product-mortgage/10',
     ink: 'text-product-mortgage',
+  },
+  current_account: {
+    icon: <WalletIcon />,
+    tint: 'bg-product-current-account/10',
+    ink: 'text-product-current-account',
   },
   joint_account: {
     icon: <UsersIcon />,

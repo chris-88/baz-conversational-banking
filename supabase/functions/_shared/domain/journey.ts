@@ -11,6 +11,7 @@ import type { FactKey, ParticipantRole, ReusePolicy } from './facts.ts'
 
 export const PRODUCTS = [
   'mortgage',
+  'current_account',
   'joint_account',
   'credit_card',
   'personal_loan',

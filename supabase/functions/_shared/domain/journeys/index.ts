@@ -1,5 +1,6 @@
 import type { Journey, Product } from '../journey.ts'
 import { mortgage } from './mortgage.ts'
+import { currentAccount } from './current-account.ts'
 import { jointAccount } from './joint-account.ts'
 import { creditCard } from './credit-card.ts'
 import { personalLoan } from './personal-loan.ts'
@@ -12,6 +13,7 @@ import { savings } from './savings.ts'
  */
 export const journeys = {
   mortgage,
+  current_account: currentAccount,
   joint_account: jointAccount,
   credit_card: creditCard,
   personal_loan: personalLoan,
@@ -25,4 +27,12 @@ export function journeyFor(product: Product): Journey {
 
 export const ALL_JOURNEYS: readonly Journey[] = Object.values(journeys)
 
-export { mortgage, jointAccount, creditCard, personalLoan, protection, savings }
+export {
+  mortgage,
+  currentAccount,
+  jointAccount,
+  creditCard,
+  personalLoan,
+  protection,
+  savings,
+}
