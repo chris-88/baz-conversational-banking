@@ -1,20 +1,22 @@
-import { useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { ArrowUpIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGhostPrompt } from '@/baz/useGhostPrompt'
 
-/** Roughly six lines. Past that it scrolls, so the composer can never eat the conversation. */
-const MAX_HEIGHT = 160
-
 /**
  * The message composer.
  *
- * A textarea rather than an input, because people write more than one line and a single-line
- * box hides the start of what they typed just as they are deciding whether to send it. It grows
- * with the text and stops at six lines.
+ * A `contenteditable` rather than a textarea, for one reason: iOS puts a previous/next/Done
+ * strip above the keyboard whenever a real form control has focus, and it does not do that for
+ * an editable region. That strip is about fifty pixels of system chrome sitting between the
+ * conversation and the keys, and on a phone that is the most expensive space on the screen.
  *
- * Enter sends, shift-enter breaks the line — the convention everywhere this is modelled on, and
- * the one thing it would be annoying to get wrong.
+ * It costs the things a native field gives away — paste arrives as HTML and has to be flattened,
+ * the accessible name has to be declared rather than inferred — and buys back the growth logic,
+ * since an editable region is already the size of its content.
+ *
+ * Enter sends, shift-enter breaks the line, which is the convention everywhere this is modelled
+ * on and the one thing it would be annoying to get wrong.
  */
 export function Composer({
   onSend,
@@ -48,31 +50,31 @@ export function Composer({
   onFocusChange?: ((focused: boolean) => void) | undefined
   className?: string | undefined
 }): ReactNode {
-  const [draft, setDraft] = useState('')
-  const box = useRef<HTMLTextAreaElement>(null)
-  const canSend = draft.trim().length > 0 && !disabled
-
-  // Only while there is nothing to read. An animation under live text is a distraction.
-  const ghost = useGhostPrompt(hint && draft.length === 0 && placeholder === undefined)
-
+  const box = useRef<HTMLDivElement>(null)
   /*
-   * Measured, not calculated. Reset to `auto` first so the box can shrink again when text is
-   * deleted — without that it only ever grows, and a line removed leaves a gap behind it.
+   * Mirrored rather than controlled. Writing React's value back into a `contenteditable` on
+   * every keystroke moves the caret to the end, which makes it impossible to correct a word in
+   * the middle of a sentence. The element owns its text; this only tracks enough of it to know
+   * whether there is anything to send.
    */
-  useLayoutEffect(() => {
-    const el = box.current
-    if (el === null) return
+  const [length, setLength] = useState(0)
 
-    el.style.height = 'auto'
-    el.style.height = `${String(Math.min(el.scrollHeight, MAX_HEIGHT))}px`
-    el.style.overflowY = el.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
-  }, [draft])
+  const canSend = length > 0 && disabled !== true
+  const ghost = useGhostPrompt(hint && length === 0 && placeholder === undefined)
+
+  const read = (): string => (box.current?.textContent ?? '').trim()
+
+  const clear = (): void => {
+    if (box.current !== null) box.current.textContent = ''
+    setLength(0)
+  }
 
   function submit(event?: FormEvent): void {
     event?.preventDefault()
     if (!canSend) return
-    onSend?.(draft.trim())
-    setDraft('')
+
+    onSend?.(read())
+    clear()
     // Sending by tapping the button puts focus on the button, which then greys out and loses
     // it. The caret belongs back where the next message is written.
     box.current?.focus()
@@ -80,33 +82,44 @@ export function Composer({
 
   return (
     <form onSubmit={submit} className={cn('flex items-end gap-2', className)}>
-      {/*
-        The border is around the text and nothing else. It used to enclose the send button too,
-        which set a floor on how tight the box could be — a 36px target inside a 24px line of
-        text leaves padding that exists for the button's sake, not the text's. Outside, the box
-        can hug the line and the button keeps a size somebody can actually hit.
-      */}
       <div className="border-input bg-card focus-within:ring-ring/40 relative min-w-0 flex-1 rounded-3xl border px-4 py-0.5 focus-within:ring-2">
         {/*
           The hint is drawn behind the box rather than put in `placeholder`, so that a string
           changing forty times a second is never read out, and never becomes the field's
           accessible name. `aria-label` below is the stable one.
         */}
-        {draft.length === 0 && ghost.length > 0 && (
+        {length === 0 && (ghost.length > 0 || placeholder !== undefined) && (
           <p
             aria-hidden
             className="text-muted-foreground pointer-events-none absolute inset-x-4 inset-y-0.5 truncate text-base leading-6 sm:text-sm"
           >
-            {ghost}
-            <span className="border-muted-foreground ml-px inline-block h-4 animate-pulse border-l align-middle" />
+            {placeholder ?? ghost}
+            {placeholder === undefined && (
+              <span className="border-muted-foreground ml-px inline-block h-4 animate-pulse border-l align-middle" />
+            )}
           </p>
         )}
 
-        <textarea
+        <div
           ref={box}
-          rows={1}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Message Baz"
+          onInput={() => setLength(read().length)}
+          onFocus={() => onFocusChange?.(true)}
+          onBlur={() => onFocusChange?.(false)}
+          onPaste={(event) => {
+            /*
+             * Plain text only. An editable region accepts whatever the clipboard holds, so a
+             * paste from a web page arrives with its fonts, colours and links attached — and
+             * then gets sent to a model as markup.
+             */
+            event.preventDefault()
+            const text = event.clipboardData.getData('text/plain')
+            document.execCommand('insertText', false, text)
+          }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' || event.shiftKey) return
             // A composition is a half-typed character in another script; Enter commits it
@@ -115,17 +128,15 @@ export function Composer({
             event.preventDefault()
             submit()
           }}
-          placeholder={placeholder ?? ''}
-          aria-label="Message Baz"
-          onFocus={() => onFocusChange?.(true)}
-          onBlur={() => onFocusChange?.(false)}
           /*
+           * `max-h-40` with scrolling is the six-line cap. No measuring: an editable region is
+           * already the height of its text, which is the one thing this is simpler at.
+           *
            * 16px, not 14. iOS zooms the whole page the moment a focused field computes smaller
-           * than that, and once it has zoomed the layout viewport no longer matches the screen —
-           * which is why the reply and the options slid out of view rather than just looking big.
+           * than that, and once it has zoomed the layout viewport no longer matches the screen.
            * Scaled back down above the phone breakpoint, where nothing zooms.
            */
-          className="placeholder:text-muted-foreground block max-h-40 w-full resize-none bg-transparent text-base leading-6 outline-none sm:text-sm"
+          className="max-h-40 w-full overflow-y-auto text-base leading-6 break-words whitespace-pre-wrap outline-none sm:text-sm"
         />
       </div>
 
