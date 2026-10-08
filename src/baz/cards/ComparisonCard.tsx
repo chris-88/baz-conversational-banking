@@ -71,7 +71,17 @@ export function ComparisonCard({
                 {option.highlights.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {option.highlights.map((highlight) => (
-                      <Badge key={highlight} variant="secondary" className="text-2xs font-normal">
+                      <Badge
+                        key={highlight}
+                        variant="secondary"
+                        /*
+                         * Badges default to `whitespace-nowrap shrink-0`, which is right for a
+                         * word and wrong for a sentence: "Branch access and next-working-day
+                         * 365 withdrawal" is a real feature string and it ran off the card.
+                         * Wrapping keeps the fact whole rather than truncating a product term.
+                         */
+                        className="text-2xs max-w-full shrink text-left font-normal whitespace-normal"
+                      >
                         {highlight}
                       </Badge>
                     ))}
