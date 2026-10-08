@@ -352,6 +352,12 @@ Each milestone ends deployed.
 - Where the spec is silent, choose the fastest credible option (§68) and add one line to `docs/decisions.md`: date, decision, §.
 - Ask before adding any dependency outside the stack.
 - When a journey is matched against its recording, set `status: 'final'` and fill `source`.
+- Any change that moves what a turn costs — prompt size, cache breakpoints or TTLs, model
+  choice, tool rounds, reply length — updates `docs/04-cost-of-running-a-conversational-assistant.md`,
+  including its changelog. The numbers in it are measured; do not revise them from memory.
+- Verify with `LLM_PROVIDER=fixture` by default. A live model is for checking what the model
+  does. Layout, card ordering and copy placement are not that, and running a full conversation
+  to check them is how an API budget disappears.
 
 ## Open items
 

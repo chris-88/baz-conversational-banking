@@ -1215,3 +1215,13 @@ reads advice addressed to a developer.
 Noted because it presents as a dead screen on a green deploy — the build
 passed, the site is correct, and the only broken thing is the copy of it
 somebody already had open.
+
+## 2026-10-08 — Cost is a tracked output, not an afterthought (§53)
+
+Measured the prompt rather than guessing at it, and the obvious target — the
+61-product catalogue at 66% of the system prompt — turned out to be the wrong
+one. The uncached conversation history cost twice what the cached prompt did.
+
+Findings and method are in
+`docs/04-cost-of-running-a-conversational-assistant.md`, which is kept current
+as part of the POC's lessons learned rather than written once.
