@@ -1184,3 +1184,22 @@ SuperSaver. Checking it against the pack changed it — a lump sum in MortgageSa
 "other balance" rate of 0.5%, not the 2% headline, which applies only to monthly contributions
 up to a €15,000 tier. The arrangement still holds; the reason is the €2,000 first-time-buyer
 bonus rather than the rate, and the bonus needs €200 a month for six consecutive months.
+
+**2026-10-08 — The opening transition.** Opening-transition spec, all sections.
+The scripted greeting is gone: a new conversation opens on the mark and "What are you trying to
+do?" and waits. The claim the product makes is better made by asking the question than by
+asserting it.
+
+Shared element done with the View Transitions API rather than a library — `view-transition-name`
+on the hero mark and on the first Baz avatar, and the browser tweens between them. Zero bundle,
+native in Safari 18+, and the documented fallback where it is missing is that the update happens
+at once.
+
+`chatUiState` derives the surface from facts that already exist rather than from `messages.length`:
+between pressing send and the first token the count has changed but the conversation has not
+started, and reading the count alone tears the opening screen down a frame early.
+
+Also: "Jarvis, but for banking" is gone from the header per §8, the typing dots pulse rather than
+bounce with a 400ms floor so they cannot flash, "Baz is responding" is announced once from a
+stable region rather than from a node that unmounts, and a failed first send keeps the message
+with a Retry.

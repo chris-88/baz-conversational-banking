@@ -21,6 +21,7 @@ export function Composer({
   disabled,
   placeholder,
   hint = true,
+  onFocusChange,
   className,
 }: {
   onSend?: ((message: string) => void) | undefined
@@ -43,6 +44,8 @@ export function Composer({
    * customer is trying to write.
    */
   hint?: boolean | undefined
+  /** The opening screen dims itself while somebody is typing into it (spec §4). */
+  onFocusChange?: ((focused: boolean) => void) | undefined
   className?: string | undefined
 }): ReactNode {
   const [draft, setDraft] = useState('')
@@ -114,6 +117,8 @@ export function Composer({
           }}
           placeholder={placeholder ?? ''}
           aria-label="Message Baz"
+          onFocus={() => onFocusChange?.(true)}
+          onBlur={() => onFocusChange?.(false)}
           /*
            * 16px, not 14. iOS zooms the whole page the moment a focused field computes smaller
            * than that, and once it has zoomed the layout viewport no longer matches the screen —

@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TriangleAlertIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { ChatBubble } from '@/baz/ChatBubble'
 import { TypingBubble } from '@/baz/TypingBubble'
 import { Composer } from '@/baz/Composer'
 import { SuggestionList, type Suggestion } from '@/baz/SuggestionList'
+import { ZeroState } from '@/baz/ZeroState'
+import { chatUiState, showsZeroState } from '@/baz/chatUiState'
+import { useMinimumDuration } from '@/baz/useMinimumDuration'
+import { withViewTransition } from '@/lib/viewTransition'
 import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { useConversation } from '@/baz/useConversation'
@@ -25,7 +30,7 @@ import { cn } from '@/lib/utils'
  */
 export function BazChat({
   openingMessage,
-  greeting,
+  onStarted,
   mode = 'new',
   footer,
   composerClassName,
@@ -33,7 +38,8 @@ export function BazChat({
 }: {
   /** A line typed elsewhere and carried in, sent automatically on arrival. */
   openingMessage?: string | null
-  greeting: ReactNode
+  /** Whether a conversation has started, so the chrome around this can settle with it (§8). */
+  onStarted?: ((started: boolean) => void) | undefined
   /** `fresh` knows nothing about the visitor; `demo` joins the seeded customer (§46). */
   mode?: 'new' | 'known'
   /** Shown once there is something worth carrying into the app (§29). */
@@ -63,6 +69,76 @@ export function BazChat({
   const returnSent = useRef(false)
   const [hasUpdates, setHasUpdates] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  /**
+   * The opening, as a state rather than a message count (spec §10).
+   *
+   * `transitioning` is held true from the first send until the browser's view transition has
+   * finished, because between pressing send and the first token the count has changed but the
+   * conversation has not started — and keying off the count alone tears the opening screen
+   * down a frame early, which is exactly the tear the transition exists to avoid.
+   */
+  const [composerFocused, setComposerFocused] = useState(false)
+  const [transitioning, setTransitioning] = useState(false)
+  /** What they wrote, kept so a failed first send does not cost them the message (§12). */
+  const [failedDraft, setFailedDraft] = useState<string | null>(null)
+  const lastSent = useRef<string | null>(null)
+
+  const lastEntry = entries.at(-1)
+
+  const uiState = chatUiState({
+    entries: entries.length,
+    streaming,
+    spoken: lastEntry?.kind === 'message' && lastEntry.author === 'baz',
+    composerFocused,
+    failed: failedDraft !== null,
+    transitioning,
+  })
+
+  /*
+   * Not while history is still arriving (§13).
+   *
+   * A returning conversation has no entries for the moment it takes to load them, so reading
+   * the state alone would put the opening screen up and tear it down again — replaying an
+   * animation that is only ever meant for a genuinely new conversation.
+   */
+  const zeroState = showsZeroState(uiState) && !loadingHistory && (openingMessage ?? null) === null
+
+  /*
+   * Four hundred milliseconds minimum. Turns come back in about a second and sometimes much
+   * less, and a thinking state that appears and vanishes inside a frame reads as a flicker.
+   */
+  const thinking = useMinimumDuration(uiState === 'baz_thinking', 400)
+
+  // The header quietens itself on the opening screen and settles once there is a conversation.
+  useEffect(() => {
+    onStarted?.(!zeroState)
+  }, [zeroState, onStarted])
+
+  /**
+   * Send, wrapped in the shared-element transition for the first message only (§5, §13).
+   *
+   * Afterwards there is nothing to move: the mark is already in the avatar position, and a
+   * transition on every turn would animate the whole transcript on each send.
+   */
+  const sendFromComposer = (message: string): void => {
+    setFollowUps([])
+    setFailedDraft(null)
+    lastSent.current = message
+
+    if (entries.length > 0) {
+      void send(message)
+      return
+    }
+
+    setTransitioning(true)
+    withViewTransition(() => {
+      void send(message)
+    })
+    // Long enough for the transition to land; the state machine only uses it to hold the
+    // opening screen in place while it does.
+    window.setTimeout(() => setTransitioning(false), 500)
+  }
 
   /**
    * Runs an action, then tells Baz what happened so it can react. The follow-up is phrased as
@@ -237,12 +313,29 @@ export function BazChat({
     }
   }, [])
 
-  // Once Baz's own bubble exists the dots would sit beneath it saying the same thing.
-  const last = entries.at(-1)
-  const lastIsBaz = last !== undefined && last.kind === 'message' && last.author === 'baz'
-
   const ready = caseId !== null && !joining && !loadingHistory
   const problem = joinError ?? error ?? actionError
+
+  /*
+   * A failed turn keeps the message and offers to send it again (§12).
+   *
+   * The customer should never have to retype what they wrote, and the screen should never go
+   * back to the opening question with their words gone — which is what happened, because the
+   * composer clears its draft the moment it hands the message over.
+   */
+  useEffect(() => {
+    if (error === null || lastSent.current === null) return
+    setFailedDraft(lastSent.current)
+    lastSent.current = null
+  }, [error])
+
+  const retry = (): void => {
+    const message = failedDraft
+    if (message === null) return
+    setFailedDraft(null)
+    reset()
+    sendFromComposer(message)
+  }
 
   /**
    * The customer's taps. Each one goes to `case-action`, which re-validates everything, and
@@ -379,8 +472,15 @@ export function BazChat({
 
   return (
     <div className={className}>
-      <div ref={transcript} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
-        <ChatBubble author="baz">{greeting}</ChatBubble>
+      <div
+        ref={transcript}
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4',
+          // The opening screen centres in the space; a transcript stacks from the top.
+          zeroState ? 'flex flex-col' : 'space-y-3',
+        )}
+      >
+        {zeroState && <ZeroState focused={composerFocused} />}
 
         {entries.map((entry, index) => {
           if (entry.kind === 'card') {
@@ -396,13 +496,27 @@ export function BazChat({
           const endsRun = next === undefined || next.kind !== 'message' || next.author !== entry.author
 
           return (
-            <ChatBubble key={entry.id} author={entry.author} showAvatar={endsRun}>
+            <ChatBubble
+              key={entry.id}
+              author={entry.author}
+              showAvatar={endsRun}
+              first={entry.author === 'baz' && entries.findIndex((e) => e.kind === 'message' && e.author === 'baz') === index}
+            >
               <span className="whitespace-pre-wrap">{entry.text}</span>
             </ChatBubble>
           )
         })}
 
-        {streaming && !lastIsBaz && <TypingBubble />}
+        {thinking && <TypingBubble />}
+
+        {/*
+          One region, always mounted, so the announcement is made once rather than every time
+          a node appears. Announcing each streamed token would read the whole answer aloud a
+          word at a time (§16).
+        */}
+        <p aria-live="polite" className="sr-only">
+          {uiState === 'baz_thinking' || uiState === 'baz_streaming' ? 'Baz is responding' : ''}
+        </p>
 
         {/*
           Only after a turn has finished. Offering a choice while Baz is still mid-sentence
@@ -420,7 +534,21 @@ export function BazChat({
           />
         )}
 
-        {problem !== null && (
+        {failedDraft !== null && (
+          <Alert>
+            <TriangleAlertIcon />
+            <AlertDescription className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="min-w-0 flex-1">
+                I couldn&rsquo;t get that through just now. Try again?
+              </span>
+              <Button variant="outline" size="sm" onClick={retry}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {problem !== null && failedDraft === null && (
           <Alert variant="destructive">
             <TriangleAlertIcon />
             <AlertDescription>{problem}</AlertDescription>
@@ -455,12 +583,10 @@ export function BazChat({
         )}
       >
         <Composer
-          hint={entries.length === 0}
+          hint={zeroState}
           disabled={!ready || streaming}
-          onSend={(message) => {
-            setFollowUps([])
-            void send(message)
-          }}
+          onSend={sendFromComposer}
+          onFocusChange={setComposerFocused}
           {...(joining ? { placeholder: 'Connecting…' } : {})}
         />
       </div>
