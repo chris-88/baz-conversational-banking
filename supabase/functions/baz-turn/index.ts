@@ -21,6 +21,7 @@ import type { ToolName } from '../_shared/llm/tools.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { boiProducts, productInfo } from '../_shared/tenants/boi/products.ts'
 import { SURFACEABLE_PRODUCTS, knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
+import { rateOf } from '../_shared/tenants/boi/rates.ts'
 import {
   loadCase,
   recordFacts,
@@ -1251,10 +1252,15 @@ async function handleTurn(request: Request): Promise<Response> {
                 const card: Card = {
                   type: 'comparison',
                   title: ask.title,
-                  options: found.map(({ option, product }) => ({
+                  options: found.map(({ option, product }) => {
+                    const rate = product === undefined ? null : rateOf(product)
+
+                    return {
                     id: option.id,
                     name: product?.name ?? option.id,
                     oneLine: product?.customer_job ?? '',
+                    rate: rate?.headline ?? null,
+                    rateNote: rate?.note ?? null,
                     // Four is what fits beside three others on a phone before it stops being
                     // something anybody compares and becomes something they scroll past.
                     highlights: (product?.features ?? []).slice(0, 4).map((feature) => feature),
@@ -1264,7 +1270,8 @@ async function handleTurn(request: Request): Promise<Response> {
                       product.advice_model === 'information_or_self_serve'
                         ? null
                         : product.advice_model.replaceAll('_', ' '),
-                  })),
+                    }
+                  }),
                 }
 
                 return {

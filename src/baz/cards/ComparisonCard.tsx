@@ -64,6 +64,21 @@ export function ComparisonCard({
 
                 <p className="text-muted-foreground mt-1 text-xs">{option.oneLine}</p>
 
+                {/*
+                  Above the reason and in the largest type on the row. "How much are you giving
+                  me for saving with you" is the question a deposit account is answering, and a
+                  card that put features first made three accounts look interchangeable when one
+                  of them pays a full percentage point more.
+                */}
+                {option.rate !== null && (
+                  <div className="mt-2">
+                    <p className="text-lg leading-tight font-semibold">{option.rate}</p>
+                    {option.rateNote !== null && (
+                      <p className="text-muted-foreground text-xs">{option.rateNote}</p>
+                    )}
+                  </div>
+                )}
+
                 {/* The reason is the model's and sits apart from the catalogue's own words, so
                     nobody reads "because you said you were saving monthly" as a product fact. */}
                 <p className="mt-2 text-sm">{option.reason}</p>

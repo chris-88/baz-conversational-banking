@@ -1171,3 +1171,16 @@ starts an application, and from `quote`, which compares computed figures for one
 compares different products and starts nothing. The model passes catalogue ids and one line on
 why each; everything else beside them is read from the knowledge base by the server, and an id
 that is missing or flagged for verification is refused rather than rendered.
+
+**2026-10-08 — Rates on the comparison card, and products that work together.** §51.
+For a deposit account the rate is the whole question, and the card was showing features — which
+made three savings accounts look interchangeable when one pays a full point more. `rates.ts`
+reads the pack's pricing shapes and returns null rather than inventing a figure for the ones it
+cannot read; the card shows nothing there, which is the honest outcome.
+
+`combinations.ts` is new: how two products work together, which no product page says and which
+is the reason to talk to somebody rather than read a site. The first is MortgageSaver alongside
+SuperSaver. Checking it against the pack changed it — a lump sum in MortgageSaver earns the
+"other balance" rate of 0.5%, not the 2% headline, which applies only to monthly contributions
+up to a €15,000 tier. The arrangement still holds; the reason is the €2,000 first-time-buyer
+bonus rather than the rate, and the bonus needs €200 a month for six consecutive months.

@@ -1,6 +1,8 @@
 import { boiKnowledgeBase } from './knowledge-base.ts'
 import type { KnowledgeProduct } from './kb-types.ts'
 import { boiProducts } from './products.ts'
+import { rateAsOf, rateOf } from './rates.ts'
+import { combinationsSection } from './combinations.ts'
 
 /**
  * Bank of Ireland's actual retail offering, as the prompt sees it.
@@ -49,9 +51,22 @@ function line(label: string, values: readonly string[] | undefined): readonly st
 function describe(product: KnowledgeProduct): string {
   const usage = product.baz_usage
 
+  const rate = rateOf(product)
+  const asOf = rateAsOf(product)
+
   return [
     `## ${product.name} [${product.id}]`,
     product.customer_job,
+    /*
+     * The rate, where the pack holds one. For a deposit account it is the entire question, and
+     * leaving it out of the prompt meant Baz compared savings accounts on their features.
+     */
+    ...(rate === null
+      ? []
+      : [
+          `Rate: ${rate.headline}${rate.note === null ? '' : ` (${rate.note})`}` +
+            `${asOf === null ? '' : ` — last published ${asOf}`}`,
+        ]),
     ...line('Suits', product.best_for),
     ...line('Features', product.features),
     ...line('Eligibility', product.eligibility),
@@ -114,6 +129,8 @@ export function knowledgeBaseSection(): string {
     ...boiKnowledgeBase.knowledge_policy.baz_rules.map((rule) => `- ${rule}`),
     '',
     ...SURFACEABLE_PRODUCTS.map(describe),
+    '',
+    combinationsSection(),
     '',
     illustrativeRates(),
   ].join('\n\n')

@@ -56,6 +56,15 @@ export const comparisonCardSchema = z.object({
         oneLine: z.string(),
         /** A few features, from the catalogue. Short enough to scan three of these at once. */
         highlights: z.array(z.string()).max(4),
+        /**
+         * The headline figure, read from the catalogue. Null where the catalogue holds none.
+         *
+         * For a deposit account this is the whole question. Three savings accounts without
+         * their rates look interchangeable when one of them pays a full point more.
+         */
+        rate: z.string().nullable(),
+        /** The catch beside the rate — what it drops to, what the tier is. */
+        rateNote: z.string().nullable(),
         /** The model's words: why this one is in front of this customer (§49). */
         reason: z.string(),
         /** Where it ends, when that is not self-serve — advice, underwriting, a credit check. */
