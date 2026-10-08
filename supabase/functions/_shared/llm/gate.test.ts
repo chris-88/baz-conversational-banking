@@ -204,3 +204,36 @@ describe('the model never sees blocked input (Invariant 4)', () => {
     expect('clarifyInScope' in result).toBe(false)
   })
 })
+
+describe('a classifier that does not answer', () => {
+  it('cancels the request rather than just stopping waiting', async () => {
+    let signal: AbortSignal | undefined
+
+    const result = await runGate('anything', {
+      classify: (_input, incoming) => {
+        signal = incoming
+        return new Promise(() => undefined)
+      },
+      domainConfig: boiDomainConfig,
+      killSwitch: false,
+      timeoutMs: 10,
+    })
+
+    // An answer nobody reads is still billed, and maxRetries means a slow one is billed twice.
+    expect(signal?.aborted).toBe(true)
+    expect(result.allowed).toBe(false)
+  })
+
+  it('says why it failed, rather than only that it did', async () => {
+    const result = await runGate('anything', {
+      classify: () => Promise.reject(new Error('credit balance is too low')),
+      domainConfig: boiDomainConfig,
+      killSwitch: false,
+    })
+
+    expect(result.allowed).toBe(false)
+    if (result.allowed) return
+    expect(result.classifierFailure?.kind).toBe('error')
+    expect(result.classifierFailure?.detail).toContain('credit balance')
+  })
+})

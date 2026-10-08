@@ -104,6 +104,66 @@ async function textOf(rounds: readonly Round[], withCard = false): Promise<strin
   return text
 }
 
+/**
+ * Caching is invisible until the bill arrives, so it is asserted on the request rather than
+ * inferred from behaviour. Every one of these is a line item.
+ */
+describe('prompt caching', () => {
+  const paramsOf = async (history: BazTurnOptions['history']) => {
+    const seen: Record<string, unknown>[] = []
+    const base = options([{ text: 'Right.' }])
+    const client = {
+      messages: {
+        stream: (params: Record<string, unknown>) => {
+          seen.push(params)
+          return (base.client as unknown as { messages: { stream: () => unknown } }).messages.stream()
+        },
+      },
+    } as unknown as Anthropic
+
+    for await (const _ of runBazTurn({ ...base, client, history })) { /* drain */ }
+    return seen[0] ?? {}
+  }
+
+  it('caches the stable prefix for an hour, and nothing after it', async () => {
+    const params = await paramsOf([{ role: 'user', content: 'hello' }])
+    const system = params.system as { text: string; cache_control?: { ttl?: string } }[]
+
+    expect(system).toHaveLength(2)
+    // An hour because the prefix is shared by every case: one write covers a whole session.
+    expect(system[0]?.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' })
+    expect(system[1]?.cache_control).toBeUndefined()
+    expect(system[0]?.text).toContain('# Products')
+  })
+
+  it('caches the conversation so far, at the last message', async () => {
+    const params = await paramsOf([
+      { role: 'user', content: 'first' },
+      { role: 'assistant', content: 'second' },
+      { role: 'user', content: 'third' },
+    ])
+    const messages = params.messages as { content: unknown }[]
+
+    // Everything before the marker is read at a tenth of the price; only the newest message
+    // is written. Without it the whole window was re-read at full price, every round.
+    expect(messages[0]?.content).toBe('first')
+    expect(messages[1]?.content).toBe('second')
+    expect(messages[2]?.content).toEqual([
+      { type: 'text', text: 'third', cache_control: { type: 'ephemeral' } },
+    ])
+  })
+
+  it('leaves a history of one alone rather than breaking on nothing', async () => {
+    const params = await paramsOf([{ role: 'user', content: 'only' }])
+    const messages = params.messages as { content: unknown }[]
+
+    expect(messages).toHaveLength(1)
+    expect(messages[0]?.content).toEqual([
+      { type: 'text', text: 'only', cache_control: { type: 'ephemeral' } },
+    ])
+  })
+})
+
 describe('runBazTurn', () => {
   it('breaks between what the model said before a tool ran and what it said after', async () => {
     const text = await textOf([

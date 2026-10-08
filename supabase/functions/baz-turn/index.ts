@@ -236,9 +236,13 @@ async function handleTurn(request: Request): Promise<Response> {
 
   const gate = isCustomerTurn
     ? await runGate(customerMessage, {
-        classify: (message) => {
+        classify: (message, signal) => {
           const previous = previousAssistantTurn(loaded)
-          return classify({ message, ...(previous === undefined ? {} : { previousAssistantTurn: previous }) })
+          return classify({
+            message,
+            ...(previous === undefined ? {} : { previousAssistantTurn: previous }),
+            ...(signal === undefined ? {} : { signal }),
+          })
         },
         domainConfig: boiDomainConfig,
         killSwitch: loaded.killSwitch,

@@ -158,7 +158,7 @@ export function routeClassification(
 
 export type GateDeps = {
   /** Injected so routing can be tested against fixed classifier output. */
-  readonly classify: (input: string) => Promise<Classification>
+  readonly classify: (input: string, signal?: AbortSignal) => Promise<Classification>
   readonly domainConfig: DomainConfig
   /** §43 — turns every request away without reaching the classifier or the model. */
   readonly killSwitch: boolean
@@ -199,10 +199,21 @@ async function classifyWithin(input: string, deps: GateDeps): Promise<ClassifyOu
     timer = setTimeout(() => resolve(TIMED_OUT), timeoutMs)
   })
 
+  const controller = new AbortController()
+
   try {
-    const raw = await Promise.race([deps.classify(input), timeout])
+    const pending = deps.classify(input, controller.signal)
+    // The losing side of a race still settles. Without this, aborting it surfaces as an
+    // unhandled rejection in the function, which is a crash report for something working
+    // exactly as intended.
+    pending.catch(() => undefined)
+
+    const raw = await Promise.race([pending, timeout])
 
     if (raw === TIMED_OUT) {
+      // Stop the request rather than just stop waiting for it: an answer nobody reads is still
+      // billed, and the retry behind it would be billed too.
+      controller.abort()
       return { ok: false, failure: { kind: 'timeout', detail: `no answer within ${timeoutMs}ms` } }
     }
 

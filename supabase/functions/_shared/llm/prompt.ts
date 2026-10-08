@@ -821,9 +821,14 @@ function turnSection(input: PromptInput): string {
 // Composition
 // ---------------------------------------------------------------------------
 
-/** The parts before the case digest, which are stable turn to turn and so cacheable. */
-function stableSections(input: PromptInput): readonly string[] {
-  const sliders = applySensitivity(input.sliders, input.sensitive === true)
+/**
+ * Everything that does not vary: the same bytes for every customer, every case and every turn.
+ *
+ * Which is the point. The prompt cache is keyed on content, so one cache entry serves the
+ * presenter's run-through and every audience session at the same time, and only the first
+ * request of the hour pays to write it.
+ */
+function cacheableSections(input: PromptInput): readonly string[] {
   return [
     POLICY,
     VOICE,
@@ -833,26 +838,40 @@ function stableSections(input: PromptInput): readonly string[] {
     WHAT_WE_CAN_DO,
     factReference(),
     input.productCatalogue,
-    composePersona(sliders),
   ]
 }
 
-function compose(input: PromptInput): string {
-  const volatile = [digestSection(input.digest), turnSection(input)].filter(
+/**
+ * The parts that change, in the order the prompt wants them: persona, then the case, then
+ * this turn.
+ *
+ * Persona belongs here and not in the block above, which is not where it reads like it should
+ * be. It is 149 tokens at the end of a 17,000-token prefix, and `applySensitivity` rewrites it
+ * whenever the gate marks a turn sensitive — so with the breakpoint after it, somebody
+ * mentioning a bereavement invalidated the entire catalogue and paid to write all of it back.
+ * On §67's demo, which is built on life events, that is not an edge case. Its position in the
+ * prompt is unchanged (§16 to §18); only the breakpoint moved.
+ */
+function volatileSections(input: PromptInput): readonly string[] {
+  const sliders = applySensitivity(input.sliders, input.sensitive === true)
+  return [composePersona(sliders), digestSection(input.digest), turnSection(input)].filter(
     (section) => section.length > 0,
   )
-  return [...stableSections(input), ...volatile].join('\n\n')
+}
+
+function compose(input: PromptInput): string {
+  return [...cacheableSections(input), ...volatileSections(input)].join('\n\n')
 }
 
 /**
- * Splits the prompt at the cache breakpoint: everything up to and including the persona block
- * is stable across turns, so it goes in a cached system block and the digest follows it.
+ * Splits the prompt at the cache breakpoint: everything through the product catalogue is
+ * identical turn to turn, so it goes in a cached system block and the rest follows it.
  */
 function withBreakpoint(input: PromptInput): {
   readonly stablePrefix: string
   readonly caseSuffix: string
 } {
-  const stablePrefix = stableSections(input).join('\n\n')
+  const stablePrefix = cacheableSections(input).join('\n\n')
   const full = compose(input)
   return { stablePrefix, caseSuffix: full.slice(stablePrefix.length).trimStart() }
 }

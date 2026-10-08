@@ -77,6 +77,33 @@ describe('prompt caching', () => {
     expect(stablePrefix).toContain('# Products')
     expect(stablePrefix).not.toContain('# Case')
   })
+
+  /*
+   * The expensive one.
+   *
+   * A sensitive turn zeroes humour, which rewrites the persona block. While that block sat
+   * inside the cached prefix, every such turn invalidated the whole 17,000-token prefix and
+   * paid to write it again — and then the next ordinary turn paid to write it back. The demo
+   * in §67 is built on life events, so this fired constantly.
+   */
+  it('keeps the cached prefix identical when a turn is sensitive', () => {
+    const calm = composeSystemPrompt.withBreakpoint(baseInput()).stablePrefix
+    const sensitive = composeSystemPrompt.withBreakpoint({
+      ...baseInput(),
+      sensitive: true,
+    }).stablePrefix
+
+    expect(sensitive).toBe(calm)
+  })
+
+  it('still composes persona before the case, and only once', () => {
+    const prompt = composeSystemPrompt(baseInput())
+    const persona = prompt.indexOf('# Style')
+
+    expect(persona).toBeGreaterThan(prompt.indexOf('# Products'))
+    expect(persona).toBeLessThan(prompt.indexOf('# Case'))
+    expect(prompt.split('# Style')).toHaveLength(2)
+  })
 })
 
 describe('policy', () => {

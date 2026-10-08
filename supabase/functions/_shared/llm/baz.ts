@@ -61,16 +61,49 @@ function toolDefinitions(enabled?: readonly ToolName[]): Anthropic.Tool[] {
 }
 
 /**
- * The system prompt is split at the cache breakpoint: everything through the persona block is
- * identical turn to turn, so it is cached; the case digest follows it uncached.
+ * The system prompt is split at the cache breakpoint: everything through the product catalogue
+ * is identical turn to turn, so it is cached; persona and the case digest follow it uncached.
+ *
+ * An hour rather than the default five minutes. The write costs 2x input instead of 1.25x, so
+ * it is only worth it if it saves a second write — and it saves far more than one. The prefix
+ * does not depend on the case, which means every customer, every audience session and every
+ * run-through share one entry, and a presenter who talks for six minutes between questions no
+ * longer pays 17,000 tokens to resume. One write an hour, for everybody.
  */
 function systemBlocks(prompt: PromptInput): Anthropic.TextBlockParam[] {
   const { stablePrefix, caseSuffix } = composeSystemPrompt.withBreakpoint(prompt)
 
   return [
-    { type: 'text', text: stablePrefix, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: stablePrefix, cache_control: { type: 'ephemeral', ttl: '1h' } },
     { type: 'text', text: caseSuffix },
   ]
+}
+
+/**
+ * A second breakpoint, at the end of the conversation so far.
+ *
+ * The system prompt was the only thing cached, so the message history — the largest block
+ * after the catalogue, and the one thing that genuinely grows — was re-read at full price on
+ * every round of every turn. A card turn is two rounds, so it was paid for twice.
+ *
+ * Marking the last message extends the cache by exactly what is new: the turns before it are
+ * read at a tenth of the price, and only the newest message is written. Five minutes, not an
+ * hour: this entry is specific to one case and is superseded by the next turn anyway, so
+ * paying 2x to keep it for an hour would be buying something nobody collects. The longer TTL
+ * has to come first in the prompt, and it does — the system block is above.
+ */
+function withHistoryBreakpoint(
+  messages: readonly Anthropic.MessageParam[],
+): Anthropic.MessageParam[] {
+  const copy = messages.map((message) => ({ ...message }))
+  const last = copy[copy.length - 1]
+  if (!last || typeof last.content !== 'string') return copy
+
+  copy[copy.length - 1] = {
+    ...last,
+    content: [{ type: 'text', text: last.content, cache_control: { type: 'ephemeral' } }],
+  }
+  return copy
 }
 
 /**
@@ -84,10 +117,9 @@ function systemBlocks(prompt: PromptInput): Anthropic.TextBlockParam[] {
  * persisted message id and the gate category.
  */
 export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<StreamEvent> {
-  const messages: Anthropic.MessageParam[] = options.history.map((turn) => ({
-    role: turn.role,
-    content: turn.content,
-  }))
+  const messages: Anthropic.MessageParam[] = withHistoryBreakpoint(
+    options.history.map((turn) => ({ role: turn.role, content: turn.content })),
+  )
 
   const system = systemBlocks(options.prompt)
   const tools = toolDefinitions(options.enabledTools)
