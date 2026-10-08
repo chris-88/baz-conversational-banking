@@ -14,6 +14,7 @@ import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/comp
 import { BazAvatar } from '@/baz/BazAvatar'
 import { InstallButton } from '@/surfaces/InstallButton'
 import { routes } from '@/app/routes'
+import qrCode from '@/assets/qr/open-baz.svg'
 
 /**
  * The way in.
@@ -107,9 +108,14 @@ function Feature({
 /**
  * Getting Baz onto a phone from a laptop.
  *
- * The design asks for a QR code here. Rendering one needs an encoder, and this repo does not
- * add a dependency without being asked, so for now it is the address and a button that copies
- * it — which is the part that actually has to work.
+ * The QR is a static asset rather than something rendered here: it was generated once, so there
+ * is no encoder in the bundle and nothing to go wrong at runtime. The address and the copy
+ * button stay, because a code is no use to somebody already holding the phone.
+ *
+ * Note that the two do not point to quite the same place. The link here goes straight into the
+ * conversation; the code goes to this page, through a redirect at qr.codes. Both work — but the
+ * code costs a tap and depends on a third party staying up, which is worth knowing before it is
+ * printed on anything.
  */
 function OpenOnPhone(): ReactNode {
   const [copied, setCopied] = useState(false)
@@ -127,21 +133,37 @@ function OpenOnPhone(): ReactNode {
 
   return (
     <Card className="mt-10 max-w-lg">
-      <CardContent className="space-y-3">
-        <div className="space-y-1">
-          <p className="font-medium">Open Baz on your phone</p>
-          <p className="text-muted-foreground text-sm">
-            Install it to your home screen, or just try it in the browser.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <code className="bg-muted min-w-0 flex-1 truncate rounded-md px-3 py-2 text-sm">
-            {url}
-          </code>
-          <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
-            {copied ? <CheckIcon /> : <CopyIcon />}
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
+      <CardContent className="flex gap-5">
+        {/*
+          Hidden on phones, where it is useless: somebody reading this on the device they would
+          scan it with is already where the code would send them. It earns its space on a laptop
+          or a projector, which is the only time "open this on your phone" is a real problem.
+        */}
+        <img
+          src={qrCode}
+          alt="QR code linking to Baz"
+          width={120}
+          height={120}
+          className="hidden size-30 shrink-0 self-start rounded-md sm:block"
+        />
+
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="space-y-1">
+            <p className="font-medium">Open Baz on your phone</p>
+            <p className="text-muted-foreground text-sm">
+              <span className="hidden sm:inline">Scan the code, or copy the link. </span>
+              Install it to your home screen, or just try it in the browser.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="bg-muted min-w-0 flex-1 truncate rounded-md px-3 py-2 text-sm">
+              {url}
+            </code>
+            <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
+              {copied ? <CheckIcon /> : <CopyIcon />}
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
