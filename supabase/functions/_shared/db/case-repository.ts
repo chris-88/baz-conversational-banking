@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { effectiveGoals, effectiveNeeds } from '../domain/catalogue/overlay.ts'
+import type { TurnUsage } from '../domain/cost.ts'
 import { goalCatalogue } from '../domain/goals/catalogue.ts'
 import { needCatalogue } from '../domain/needs/catalogue.ts'
 import type { Database, Json } from './database.types.ts'
@@ -273,6 +274,8 @@ export async function saveMessage(
     gateCategory?: string | null
     /** Rendered alongside this turn, so a reload restores the whole thing. */
     cards?: readonly unknown[]
+    /** What the whole turn consumed. Omitted when nothing was measured. */
+    usage?: TurnUsage
   },
 ): Promise<string> {
   const result = (await client
@@ -284,6 +287,8 @@ export async function saveMessage(
       content: message.content,
       gate_category: message.gateCategory ?? null,
       cards: (message.cards ?? []) as Json,
+      // Null rather than zero when unmeasured: a turn nobody counted is not a free turn.
+      usage: (message.usage ?? null) as Json,
     })
     .select('id')
     .single()) as Query

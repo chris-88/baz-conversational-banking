@@ -30,6 +30,7 @@ import { MessagesSquareIcon } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { PeriodSelect, PageHeader, MetricCard } from '@/admin/parts'
+import { euro, tokens } from '@/lib/utils'
 import { CaseList } from '@/admin/CaseList'
 import { CaseDetail } from '@/admin/CaseDetail'
 import { ActivityFeed, ActivityPlaceholder } from '@/admin/ActivityFeed'
@@ -83,7 +84,7 @@ export function CasesWorkspace({
   const inspected = inspection.data ?? null
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="@container flex h-full min-h-0 flex-col gap-4">
       <PageHeader
         title="Cases"
         description="Every live conversation, what Baz understood, and what you can do about it."
@@ -95,7 +96,7 @@ export function CasesWorkspace({
         }
       />
 
-      <Metrics metrics={data.metrics} previous={data.previous} />
+      <Metrics metrics={data.metrics} previous={data.previous} cost={data.cost} />
 
       {/*
         react-resizable-panels v4: horizontal is the default orientation, and sizes are strings
@@ -246,9 +247,11 @@ function NothingSelected(): ReactNode {
 function Metrics({
   metrics,
   previous,
+  cost,
 }: {
   readonly metrics: AdminOverview['metrics']
   readonly previous: AdminOverview['previous']
+  readonly cost: AdminOverview['cost']
 }): ReactNode {
   const tiles = [
     {
@@ -275,10 +278,22 @@ function Metrics({
       was: previous?.requestsBlocked,
       note: 'Turned away before the model saw them. §25',
     },
+    {
+      /*
+       * The tokens are measured; the euro is those multiplied by prices held in
+       * `domain/cost.ts`. Shown together because one of them is a fact and the other depends
+       * on a rate that will be out of date before this is.
+       */
+      label: 'Cost to run',
+      value: cost.euro,
+      was: undefined,
+      note: `${tokens(cost.tokens)} tokens across ${String(cost.turns)} turns, at today's prices.`,
+      display: euro(cost.euro),
+    },
   ]
 
   return (
-    <div className="grid shrink-0 grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="@3xl:grid-cols-3 @6xl:grid-cols-5 grid shrink-0 grid-cols-2 gap-4">
       {tiles.map((tile) => (
         <MetricCard
           key={tile.label}
@@ -286,6 +301,7 @@ function Metrics({
           value={tile.value}
           previous={previous === null ? null : tile.was}
           note={tile.note}
+          {...(tile.display === undefined ? {} : { display: tile.display })}
         />
       ))}
     </div>

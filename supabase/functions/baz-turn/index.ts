@@ -14,6 +14,7 @@ import { factCatalogue } from '../_shared/domain/facts.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
+import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
 import { runBazTurn } from '../_shared/llm/baz.ts'
 import { toneBucket } from '../_shared/llm/persona.ts'
 import type { ToolName } from '../_shared/llm/tools.ts'
@@ -203,11 +204,28 @@ async function handleTurn(request: Request): Promise<Response> {
     timeout: 90_000,
     maxRetries: 1,
   })
+  /*
+   * What this turn consumed, accumulated as it happens.
+   *
+   * Mutable and local to the turn: the gate and every model round add to it, and whatever it
+   * holds when the reply is saved goes on the row. Measured, not modelled — the estimating is
+   * all in the prices, which live in `domain/cost.ts`.
+   */
+  let spend: TurnUsage = EMPTY_USAGE
+
+  const recordModel = (used: ModelUsage): void => {
+    spend = addUsage(spend, { model: used, gate: EMPTY_USAGE.gate })
+  }
+  const recordGate = (used: ModelUsage): void => {
+    spend = addUsage(spend, { model: EMPTY_USAGE.model, gate: used })
+  }
+
   const classify = createClassifier({
     apiKey: env('ANTHROPIC_API_KEY'),
     model: env('GATE_MODEL'),
     domainConfig: boiDomainConfig,
     client: anthropic,
+    onUsage: recordGate,
   })
 
   const customerMessage = turn.message ?? ''
@@ -286,6 +304,7 @@ async function handleTurn(request: Request): Promise<Response> {
       participantId: null,
       role: 'baz',
       content: gate.response,
+      usage: spend,
     })
 
     return streamOf([
@@ -579,6 +598,7 @@ async function handleTurn(request: Request): Promise<Response> {
           client: anthropic,
           model: env('BAZ_MODEL'),
           enabledTools: ENABLED_TOOLS,
+          onUsage: recordModel,
           prompt: {
             domainConfig: boiDomainConfig,
             products: boiProducts,
@@ -1332,6 +1352,7 @@ async function handleTurn(request: Request): Promise<Response> {
           role: 'baz',
           content: spoken.join(''),
           cards: shown,
+          usage: spend,
         })
 
         // Everything up to now has been seen, so the next return summarises only what is

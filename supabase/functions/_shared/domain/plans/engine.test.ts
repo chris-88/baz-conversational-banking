@@ -290,7 +290,7 @@ describe('reaching a savings target', () => {
   })
 
   it('is false for everything that is not money arriving', () => {
-    for (const kind of ['date', 'application', 'facts', 'manual'] as const) {
+    for (const kind of ['date', 'application', 'facts', 'customer', 'external'] as const) {
       expect(reachesSavingsTarget(plan(38_500), milestone(kind, 38_500)), kind).toBe(false)
     }
   })

@@ -27,7 +27,15 @@ import { loadCase, recordFacts, type Insert, writeEvent } from '../_shared/db/ca
 import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor, revivableNeeds } from '../_shared/db/needs.ts'
 import { describeAdminEvent } from '../_shared/db/admin-events.ts'
-import { catalogueOverrideRow, toOverride } from '../_shared/db/rows.ts'
+import { catalogueOverrideRow, toOverride, toUsage } from '../_shared/db/rows.ts'
+import {
+  TYPICAL_TURN,
+  costIn,
+  sumUsage,
+  tokensIn,
+  type TurnUsage,
+} from '../_shared/domain/cost.ts'
+import type { Cost } from '../_shared/contracts/admin.ts'
 import {
   CASE_OUTCOMES,
   CASE_OUTCOME_LABELS,
@@ -154,6 +162,31 @@ function movesFor(
       note: possible ? move.note : `Not possible from "${application.state}".`,
     }
   })
+}
+
+/**
+ * What a set of turns cost, from what was measured and an average for the rest.
+ *
+ * Turns recorded before cost tracking existed have no usage, and dropping them would make an
+ * old conversation look free. So they are filled with `TYPICAL_TURN` — which was measured from
+ * this system rather than guessed — and the result says how many of each there were, so the
+ * console can be straight about which is which.
+ */
+function costOf(rows: readonly { usage: unknown }[]): Cost {
+  const measured = rows.map((row) => toUsage(row.usage)).filter((u): u is TurnUsage => u !== null)
+  const unmeasured = rows.length - measured.length
+
+  const total = sumUsage([
+    ...measured,
+    ...Array.from({ length: unmeasured }, () => TYPICAL_TURN),
+  ])
+
+  return {
+    tokens: tokensIn(total),
+    euro: costIn(total),
+    turns: rows.length,
+    measuredTurns: measured.length,
+  }
 }
 
 /** The five headline counts, from a tally of event types. */
@@ -832,7 +865,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         // only what the customer said rather than everything in the transcript.
         admin
           .from('messages')
-          .select('case_id, role, content, created_at')
+          .select('case_id, role, content, created_at, usage')
           .in('case_id', caseIds)
           .order('created_at', { ascending: true }),
         // Whoever the case is actually about. One query for every case, same as the others.
@@ -980,8 +1013,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
         ...describeAdminEvent(row.type, row.payload ?? {}),
       }))
 
+      /* Only Baz's turns carry usage: a customer message costs nothing to store. */
+      const bazTurns = ((allMessages.data ?? []) as { role: string; usage: unknown }[]).filter(
+        (row) => row.role === 'baz',
+      )
+
       const overview: AdminOverview = {
         activity,
+        cost: costOf(bazTurns),
         killSwitch: (config.data as { kill_switch?: boolean } | null)?.kill_switch ?? false,
         demoActions: [...demoActions],
         focusCaseId: focus?.id ?? null,
@@ -1462,6 +1501,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
        * sign-in: distinct days on which they said something. One day is a first visit, more
        * than one means they came back.
        */
+      /*
+       * Its own query rather than `loaded.messages`, which is capped at the model's context
+       * window — a long conversation would otherwise report the cost of its last two dozen
+       * turns as the cost of the whole thing.
+       */
+      const turnRows = await admin
+        .from('messages')
+        .select('usage')
+        .eq('case_id', action.caseId)
+        .eq('role', 'baz')
+
+      if (turnRows.error !== null) return errorResponse('conflict', turnRows.error.message)
+
       const spoken = loaded.messages.filter((message) => message.role === 'customer')
       const days = new Set(spoken.map((message) => message.createdAt.slice(0, 10)))
 
@@ -1475,6 +1527,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           daysActive: days.size,
           messages: spoken.length,
         },
+        cost: costOf(turnRows.data as { usage: unknown }[]),
         needs: candidates
           .filter((candidate) => candidate.confidence > 0 || candidate.state !== 'latent')
           .map((candidate) => ({

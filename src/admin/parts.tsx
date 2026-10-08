@@ -70,19 +70,27 @@ export function MetricCard({
   previous,
   note,
   chart,
+  display,
 }: {
   readonly label: string
   readonly value: number
   readonly previous?: number | null | undefined
   readonly note?: string
   readonly chart?: ReactNode
+  /**
+   * What to print instead of the number.
+   *
+   * The value still drives the comparison, because a percentage change works the same whether
+   * the thing is a count or an amount of money. Only the rendering differs.
+   */
+  readonly display?: string
 }): ReactNode {
   return (
     <Card className="gap-2">
       <CardHeader>
         <CardDescription>{label}</CardDescription>
         <CardTitle className="tabular flex items-baseline gap-2 text-3xl">
-          {value.toLocaleString('en-IE')}
+          {display ?? value.toLocaleString('en-IE')}
           <Comparison value={value} previous={previous} />
         </CardTitle>
       </CardHeader>

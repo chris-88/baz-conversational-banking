@@ -1057,3 +1057,11 @@ the customer had just given their address and PPS number, got silence, and had t
 next". Every card-producing tool result now says what to say. Also: anything said before a tool
 call is already on the customer's screen, and the model did not know that, so it restated its
 first paragraph in different words after the tool returned.
+
+**2026-10-08 — Cost is measured tokens at assumed prices.** Console §4.
+Every Anthropic response reports exactly what it consumed, so `messages.usage` holds the real
+figure for each turn — all model rounds plus the gate in front of them. The estimate is entirely
+in `domain/cost.ts`, where the euro prices live, and the console says "about" for that reason
+rather than because the tokens are uncertain. Turns written before this existed have null usage
+and fall back to `TYPICAL_TURN`, measured from this system; the card says how many of each.
+USD→EUR is a constant in the same file.

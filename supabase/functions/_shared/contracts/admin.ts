@@ -297,6 +297,22 @@ export const analyticsSchema = z.object({
 
 export type Analytics = z.infer<typeof analyticsSchema>
 
+/**
+ * What a conversation cost to run (console §4).
+ *
+ * `tokens` is measured — every Anthropic response reports exactly what it consumed. `euro` is
+ * that multiplied by the prices in `domain/cost.ts`, which are the only estimated part.
+ * `measuredTurns` against `turns` says how much of it was counted rather than averaged.
+ */
+export const costSchema = z.object({
+  tokens: z.number().int().nonnegative(),
+  euro: z.number().nonnegative(),
+  turns: z.number().int().nonnegative(),
+  measuredTurns: z.number().int().nonnegative(),
+})
+
+export type Cost = z.infer<typeof costSchema>
+
 export const adminOverviewSchema = z.object({
   killSwitch: z.boolean(),
   /** The one-click moves, with whether each is possible from where the case currently is. */
@@ -344,6 +360,8 @@ export const adminOverviewSchema = z.object({
     applicationsStarted: z.number().int(),
     requestsBlocked: z.number().int(),
   }),
+  /** Across every conversation in the window. */
+  cost: costSchema,
   /**
    * The same counts for the window before this one, and the window asked for.
    *
@@ -394,6 +412,7 @@ export const adminCaseSchema = z.object({
     daysActive: z.number().int(),
     messages: z.number().int(),
   }),
+  cost: costSchema,
   facts: z.array(
     z.object({
       key: z.string(),

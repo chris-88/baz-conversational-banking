@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { StatusDot } from '@/components/StatusDot'
 import { KeyValueList } from '@/admin/parts'
+import { euro, tokens } from '@/lib/utils'
 import type { ApplicationState } from '@domain/state-machine.ts'
 import type { AdminCase } from '@contracts/admin.ts'
 
@@ -77,6 +78,27 @@ function Customer({ data }: { readonly data: AdminCase }): ReactNode {
                     : `${String(customer.daysActive)}${customer.daysActive > 1 ? ' — came back' : ''}`,
               },
               { key: 'Messages sent', value: customer.messages },
+              {
+                /*
+                 * The tokens are measured — every response reports what it used. The euro is
+                 * those multiplied by prices held in `domain/cost.ts`, which is the estimated
+                 * part and the reason this says "about".
+                 */
+                key: 'Tokens used',
+                value: tokens(data.cost.tokens),
+              },
+              {
+                key: 'Cost to run',
+                value: `about ${euro(data.cost.euro)}`,
+              },
+              ...(data.cost.measuredTurns < data.cost.turns
+                ? [
+                    {
+                      key: 'Counted',
+                      value: `${String(data.cost.measuredTurns)} of ${String(data.cost.turns)} turns — the rest averaged`,
+                    },
+                  ]
+                : []),
             ]}
           />
         </CardContent>

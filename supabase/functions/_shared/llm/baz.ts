@@ -2,6 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import type { Card } from '../contracts/cards.ts'
 import type { StreamEvent } from '../contracts/stream.ts'
+import type { ModelUsage } from '../domain/cost.ts'
 import { composeSystemPrompt, type PromptInput } from './prompt.ts'
 import { TOOLS, validateToolCall, type ToolName } from './tools.ts'
 
@@ -41,6 +42,13 @@ export type BazTurnOptions = {
    */
   readonly enabledTools?: readonly ToolName[]
   readonly maxTokens?: number
+  /**
+   * Called once per model round with what that round consumed.
+   *
+   * A callback rather than a stream event: the customer's browser has no use for this, and the
+   * only thing that reads it is the console, which reads it back out of the database.
+   */
+  readonly onUsage?: (usage: ModelUsage) => void
 }
 
 function toolDefinitions(enabled?: readonly ToolName[]): Anthropic.Tool[] {
@@ -127,6 +135,18 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
     }
 
     const message = await stream.finalMessage()
+
+    /*
+     * Charged per round, not per turn. The cached prefix is re-read every time the model is
+     * called back with a tool result, which is what makes the number of rounds the thing that
+     * actually drives cost rather than the size of the prompt.
+     */
+    options.onUsage?.({
+      input: message.usage.input_tokens,
+      output: message.usage.output_tokens,
+      cacheRead: message.usage.cache_read_input_tokens ?? 0,
+      cacheWrite: message.usage.cache_creation_input_tokens ?? 0,
+    })
 
     const toolUses = message.content.filter(
       (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',

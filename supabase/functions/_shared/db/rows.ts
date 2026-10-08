@@ -5,6 +5,7 @@ import { PRODUCTS } from '../domain/journey.ts'
 import { APPLICATION_STATES } from '../domain/state-machine.ts'
 import { NEED_PRIORITIES } from '../domain/needs/types.ts'
 import type { CatalogueOverride } from '../domain/catalogue/overlay.ts'
+import type { TurnUsage } from '../domain/cost.ts'
 
 /**
  * Row schemas.
@@ -145,4 +146,27 @@ export function toOverride(row: z.infer<typeof catalogueOverrideRow>): Catalogue
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+
+/**
+ * Measured token usage on a message row.
+ *
+ * Nullable: every message written before cost tracking existed has none, and a zero there would
+ * read as a turn that cost nothing rather than one nobody measured. Parsed rather than cast
+ * because it is jsonb, and a half-written shape would otherwise reach the arithmetic.
+ */
+const modelUsageRow = z.object({
+  input: z.number().nonnegative(),
+  output: z.number().nonnegative(),
+  cacheRead: z.number().nonnegative(),
+  cacheWrite: z.number().nonnegative(),
+})
+
+export const usageRow = z.object({ model: modelUsageRow, gate: modelUsageRow })
+
+/** Null, absent, or malformed all mean the same thing here: nobody measured this turn. */
+export function toUsage(value: unknown): TurnUsage | null {
+  const parsed = usageRow.safeParse(value)
+  return parsed.success ? parsed.data : null
 }

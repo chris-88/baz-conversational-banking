@@ -567,6 +567,7 @@ export type Database = {
           id: string
           participant_id: string | null
           role: string
+          usage: Json | null
         }
         Insert: {
           cards?: Json
@@ -577,6 +578,7 @@ export type Database = {
           id?: string
           participant_id?: string | null
           role: string
+          usage?: Json | null
         }
         Update: {
           cards?: Json
@@ -587,6 +589,7 @@ export type Database = {
           id?: string
           participant_id?: string | null
           role?: string
+          usage?: Json | null
         }
         Relationships: [
           {
