@@ -133,6 +133,42 @@ describe('what happens after what-is-involved', () => {
 })
 
 /**
+ * What the bank can do depends on where the customer banks, and that has to be said.
+ *
+ * Baz promised "we'll come back to you when your savings reach €32,000" to somebody holding no
+ * account here. The watch is only ever created once a savings account exists, so the promise was
+ * conditional on something the customer could not see.
+ */
+describe('what the bank can do', () => {
+  const prompt = compose()
+
+  it('says a balance can only be watched where the bank can see it', () => {
+    expect(prompt).toMatch(/only see accounts it holds/i)
+    expect(prompt).toMatch(/come back to you when you get there/i)
+  })
+
+  it('asks where the salary is paid, not who they bank with', () => {
+    expect(prompt).toMatch(/where their salary is paid/i)
+    expect(prompt).toContain('Not "who do you bank with"')
+  })
+
+  it('gives both reasons the salary matters', () => {
+    expect(prompt).toMatch(/read from the account instead of asked for/i)
+    expect(prompt).toMatch(/standing order/i)
+  })
+
+  it('is explicit that none of it is a condition of being lent to', () => {
+    expect(prompt).toMatch(/None of them is a condition of being lent to/i)
+    expect(prompt).toMatch(/nobody has to move their banking/i)
+  })
+
+  it('says what to do when the answer is another bank', () => {
+    expect(prompt).toMatch(/the plan still stands/i)
+    expect(prompt).toMatch(/Do not repeat the offer after they have declined/i)
+  })
+})
+
+/**
  * The rates in the prompt are the rates on the card.
  *
  * `illustrativeTerms` used to carry its own, and they had drifted: the mortgage advertised

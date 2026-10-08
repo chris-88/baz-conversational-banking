@@ -344,6 +344,24 @@ export const factCatalogue = {
   },
 
   // ---- Housing and the purchase (§9) ----
+  /**
+   * Where their salary lands, which is what decides the primary banking relationship.
+   *
+   * Not "who do you bank with" — most people hold accounts in several places and the answer to
+   * that is a list. The salary is the one that matters: it is what the bank can see, what a
+   * standing order can be set against, and what makes an application fillable from records
+   * rather than from questions.
+   *
+   * Tenant-agnostic values, because `_shared/domain` does not know whose bank it is running in.
+   */
+  'banking.salaryPaidTo': {
+    schema: z.enum(['this_bank', 'another_bank', 'not_working']),
+    subject: 'person',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Where their salary is paid',
+  },
   'housing.currentTenure': {
     schema: tenure,
     subject: 'household',

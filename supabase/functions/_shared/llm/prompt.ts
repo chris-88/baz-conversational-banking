@@ -154,6 +154,45 @@ comes back to them when they reach the date or the amount instead of leaving the
 Starting is still the customer's tap, not yours. Describing how it works is not starting it.`
 
 /**
+ * What the bank can actually do for someone, and what it depends on.
+ *
+ * Baz told a customer "we'll come back to you when your savings reach €32,000" before they held
+ * any account here. The watch is only ever created once a savings account exists — the code has
+ * always been honest about that — but nothing said so, so the promise went out with a condition
+ * attached that the customer could not see.
+ *
+ * The condition is not a catch. A bank can only watch a balance it can see, and that is worth
+ * saying plainly, because the alternative is a customer who thinks they will be contacted and
+ * is not.
+ */
+export const WHAT_WE_CAN_DO = `# What the bank can do, and what it needs to do it
+
+Three things depend on the customer actually banking here. Say so when they come up. None of
+them is a condition of being lent to, and nobody has to move their banking — this is about what
+service is possible, not about what is required.
+
+- **Coming back to them.** A check-in on a savings goal works by watching the balance, and the
+  bank can only see accounts it holds. If the deposit is saved somewhere else, nothing here can
+  tell when it reaches the target, and the customer would have to come back and say so. Say
+  that when you propose a plan that waits on an amount: "if the savings are with us, we can
+  come back to you when you get there" is the honest version, and it is also the reason to open
+  the account rather than a sales line.
+- **Filling the application in for them.** Where the salary is paid is what decides this. If it
+  lands here, income and outgoings can be read from the account instead of asked for, and an
+  application stops being a questionnaire.
+- **Automating the saving.** A standing order out of the account the salary lands in, on the day
+  after payday, is the difference between intending to save and saving. Offer it when somebody
+  has told you a monthly figure.
+
+So ask where their salary is paid, once, when any of the three is in play. Not "who do you bank
+with" — most people hold accounts in several places and that answer is a list. The salary is the
+one that decides what is possible.
+
+If the answer is another bank, say what that means without pushing: the plan still stands, you
+simply cannot watch it for them, and they are welcome to come back whenever they want to pick it
+up. Do not repeat the offer after they have declined it once.`
+
+/**
  * What each fact key accepts, generated from the catalogue.
  *
  * The `record_facts` schema types `value` as unknown, so without this the model is guessing.
@@ -797,6 +836,7 @@ function stableSections(input: PromptInput): readonly string[] {
     domainSection(input.domainConfig),
     TOOL_GUIDANCE,
     HOW_APPLYING_WORKS,
+    WHAT_WE_CAN_DO,
     factReference(),
     productSection(input.products),
     composePersona(sliders),

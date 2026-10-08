@@ -1065,3 +1065,17 @@ in `domain/cost.ts`, where the euro prices live, and the console says "about" fo
 rather than because the tokens are uncertain. Turns written before this existed have null usage
 and fall back to `TYPICAL_TURN`, measured from this system; the card says how many of each.
 USD→EUR is a constant in the same file.
+
+**2026-10-08 — Say what the proactive callback depends on.** §38, Invariant 2.
+Baz promised "we'll come back to you when your savings reach €32,000" to somebody holding no
+account here. `plan_watches` is only ever written once a savings account exists — the code was
+always honest — but nothing said so, so the promise went out with a condition the customer could
+not see. `WHAT_WE_CAN_DO` now states it, and `propose_plan` adds it to the tool result when the
+plan waits on an amount and there is no savings account. Framed as what service is possible,
+never as a condition of being lent to.
+
+**2026-10-08 — The primary relationship is where the salary is paid.** §9.
+`banking.salaryPaidTo` (`this_bank | another_bank | not_working`), person-level because two
+applicants can bank differently, and tenant-agnostic because `_shared/domain` does not know whose
+bank it is in. It decides two things worth asking for: income and outgoings readable from the
+account instead of asked for, and a standing order the day after payday.

@@ -1084,6 +1084,17 @@ async function handleTurn(request: Request): Promise<Response> {
                   }
                 }
 
+                /*
+                 * Whether this plan can actually be watched.
+                 *
+                 * A savings goal is watched by looking at the balance, and the bank can only see
+                 * accounts it holds — `plan_watches` is deliberately only written once a savings
+                 * account exists. That has always been true and nothing ever said it, so Baz
+                 * promised to come back to somebody who banked elsewhere.
+                 */
+                const watchesAnAmount = target !== null
+                const holdsSavings = loaded.applications.some((a) => a.product === 'savings')
+
                 const existing = await admin
                   .from('plans')
                   .select('id, goal')
@@ -1167,7 +1178,15 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 return {
                   result:
-                    'Plan proposed. It is a draft and belongs to nobody until they tap it. Explain what it does for them in a sentence; do not list the milestones back.',
+                    'Plan proposed. It is a draft and belongs to nobody until they tap it. ' +
+                    'Explain what it does for them in a sentence; do not list the milestones ' +
+                    'back.' +
+                    (watchesAnAmount && !holdsSavings
+                      ? ' This one waits on an amount, and they have no savings account here, ' +
+                        'so nothing can see the balance and nobody will be able to come back to ' +
+                        'them. Say so plainly — the plan still stands, it just cannot be watched ' +
+                        'unless the saving happens here. Do not oversell it.'
+                      : ''),
                   card,
                 }
               }
