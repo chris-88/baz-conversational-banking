@@ -1136,3 +1136,11 @@ identity, two documents, one declaration, nothing about income, because nothing 
 The `everyday_banking` need reaches it, and fires only when somebody is saving monthly from an
 account held elsewhere — the one case where an account here does something nothing else can.
 Suppressed entirely when their salary is already paid to us.
+
+**2026-10-08 — The discovery gate does not apply to what the customer asked for.** §5, §6.
+`show_product_options` is refused for the first seven turns unless Baz understands the customer's
+position — right for anything it volunteers, wrong for a product they just named. "Can I open a
+current account with you please" was answered with "before I set that up, what sort of price are
+you looking at". The gate now stands aside when the message in front of it names one of the
+products being offered, matched on the catalogue name rather than the recorded objective: the
+objective is what they came in for, this is what they just said.

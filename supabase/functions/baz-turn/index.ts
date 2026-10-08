@@ -694,7 +694,29 @@ async function handleTurn(request: Request): Promise<Response> {
                  * and past a certain point continuing to ask is its own failure. But four turns
                  * is two exchanges, which is nowhere near enough to have understood anybody.
                  */
-                if ((!established || !understood) && customerTurns < DISCOVERY_PATIENCE) {
+                /**
+                 * Did they ask for this, in so many words?
+                 *
+                 * The gate below decides whether Baz understands somebody well enough to raise
+                 * something. It has nothing to say about a product they have just named: "can I
+                 * open a current account with you please" answered with "before I set that up,
+                 * what sort of price are you looking at" is not discovery, it is not listening.
+                 *
+                 * Matched against the message in front of us rather than the recorded objective,
+                 * because the objective is what they came for and this is what they just said.
+                 */
+                const asked = ((): boolean => {
+                  const said = customerMessage.toLowerCase()
+                  if (said === '') return false
+
+                  return products.some((option) => {
+                    const product = option.product as Product
+                    const name = productInfo(product).name.toLowerCase()
+                    return said.includes(name) || said.includes(product.replaceAll('_', ' '))
+                  })
+                })()
+
+                if (!asked && (!established || !understood) && customerTurns < DISCOVERY_PATIENCE) {
                   const ask =
                     leading === null || leading.missing.length === 0
                       ? 'what has changed for them, who else is involved and what they are hoping to do'
