@@ -14,7 +14,12 @@ import { ChatBubble } from '@/baz/ChatBubble'
 export function TypingBubble(): ReactNode {
   return (
     <ChatBubble author="baz">
-      <span aria-hidden className="flex items-center gap-1 py-1">
+      {/*
+        Exactly one line of text tall (§7). The dots used to sit in a shorter bubble, so when
+        the answer replaced them it arrived fourteen pixels higher — the hard gap the spec asks
+        to avoid. At the same height the text simply appears where the dots were.
+      */}
+      <span aria-hidden className="flex h-6 items-center gap-1">
         {[0, 1, 2].map((dot) => (
           <span
             key={dot}
