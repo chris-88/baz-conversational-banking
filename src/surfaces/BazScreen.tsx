@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { BazChat } from '@/baz/BazChat'
+import { BazWordmark } from '@/baz/BazWordmark'
 import { routes } from '@/app/routes'
 import { cn } from '@/lib/utils'
 import { useViewportHeight } from '@/lib/useViewportHeight'
@@ -30,9 +31,12 @@ export function BazScreen(): ReactNode {
     <div className="bg-background flex h-[var(--viewport-height)] flex-col overflow-hidden overscroll-none">
       {/*
         Quiet while the screen is still asking the question, and settled once it is a
-        conversation (spec §8). The mark is deliberately absent here on the opening screen:
-        there is already one in the middle of the page, and two would make the one that is
-        about to move look like a copy.
+        conversation (spec §8).
+
+        Centred, and the mark is set inside the word rather than beside it. A separate avatar up
+        here would be a second copy of the thing sitting in the middle of the opening screen,
+        waiting to move — and the whole point of that transition is that there is only one of it.
+        As the `a` it is present without competing.
       */}
       <header
         className={cn(
@@ -40,11 +44,11 @@ export function BazScreen(): ReactNode {
           started ? 'opacity-100' : 'opacity-75',
         )}
       >
-        <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">
-          <Button asChild variant="ghost" className="-ml-2 h-auto gap-2.5 px-2 py-1.5">
+        <div className="mx-auto flex w-full max-w-md items-center justify-center px-4 py-2.5">
+          <Button asChild variant="ghost" className="h-auto px-3 py-1.5">
             <Link to={routes.landing}>
-              <span className="text-left leading-tight">
-                <span className="block text-sm font-semibold">Baz</span>
+              <span className="text-center leading-tight">
+                <BazWordmark className="text-base font-semibold" />
                 <span
                   className={cn(
                     'text-muted-foreground block text-2xs font-normal transition-opacity duration-200',
