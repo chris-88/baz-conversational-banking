@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Card } from '@contracts/cards.ts'
 import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
 import { QuoteCard } from '@/baz/cards/QuoteCard'
+import type { SubscribeResult } from '@/lib/push'
 import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
@@ -43,6 +44,14 @@ export type CardActions = {
   ) => Promise<void> | void
   readonly onInvitePartner?: (name: string) => Promise<string | undefined> | string | undefined
   readonly onUpload?: (requestId: string, file: File, documentType: string) => Promise<void>
+  /**
+   * Ask the browser to allow notifications and register this device.
+   *
+   * Offered from the status card rather than on arrival: "let me tell you when this moves" is
+   * a reasonable thing to ask somebody who has something in progress, and an odd thing to ask
+   * somebody who has just said hello.
+   */
+  readonly onEnableNotifications?: () => Promise<SubscribeResult>
   /** Resolves true only when the server accepted the plan. */
   readonly onConfirmPlan?: (planId: string) => Promise<boolean> | boolean
   readonly onDeclinePlan?: (planId: string) => Promise<void> | void
@@ -103,7 +112,14 @@ export function CardRenderer({
       )
 
     case 'status':
-      return <StatusCard card={card} />
+      return (
+        <StatusCard
+          card={card}
+          {...(actions.onEnableNotifications === undefined
+            ? {}
+            : { onEnableNotifications: actions.onEnableNotifications })}
+        />
+      )
 
     case 'review':
       return (

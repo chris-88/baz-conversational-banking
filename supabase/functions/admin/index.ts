@@ -10,6 +10,7 @@ import {
   type GuardrailTest,
 } from '../_shared/contracts/admin.ts'
 import Anthropic from '@anthropic-ai/sdk'
+import { sendPush } from '../_shared/push/webpush.ts'
 import { conversationTiming } from '../_shared/domain/conversation-time.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
@@ -1353,24 +1354,81 @@ Deno.serve(async (request: Request): Promise<Response> => {
         expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       })
 
+      const base = (globalThis as any).Deno?.env?.get('APP_BASE_URL') ?? ''
+      const url = `${base}/#/baz?n=${code}`
+
+      /*
+       * §35 — the copy says nothing about the application.
+       *
+       * It is fixed, and it is fixed for a reason: a notification sits on a lock screen where
+       * anybody can read it. "Your mortgage has been approved" on a shared phone is the bank
+       * telling somebody else's news.
+       */
+      const message =
+        'Bank of Ireland: Baz has an update about something you’re working on with us. ' +
+        'Open Baz to pick it up.'
+
+      /*
+       * Push to every browser this case has subscribed. A phone, an installed app and a laptop
+       * are three subscriptions to one person and all three should light up.
+       */
+      const subscriptions = await admin
+        .from('push_subscriptions')
+        .select('id, endpoint, p256dh, auth')
+        .eq('case_id', action.caseId)
+        .is('expired_at', null)
+
+      const targets = (subscriptions.data ?? []) as {
+        id: string
+        endpoint: string
+        p256dh: string
+        auth: string
+      }[]
+
+      let delivered = 0
+      for (const target of targets) {
+        const result = await sendPush(
+          target,
+          { title: 'Bank of Ireland', body: message, url },
+          {
+            privateD: env('VAPID_PRIVATE_D'),
+            publicKey: env('VAPID_PUBLIC_KEY'),
+            subject: env('VAPID_SUBJECT'),
+          },
+        )
+
+        if (result.ok) delivered += 1
+        // A push service saying the subscription is gone is the only reliable signal that a
+        // browser has been uninstalled or cleared. Retrying it forever is how a sender ends up
+        // rate-limited for talking to the dead.
+        if (result.gone) {
+          await admin
+            .from('push_subscriptions')
+            .update({ expired_at: new Date().toISOString() })
+            .eq('id', target.id)
+        }
+      }
+
       await writeEvent(admin, {
         caseId: action.caseId,
         type: 'notification_sent',
         actor: 'admin',
-        payload: { channel: 'in_app' },
+        payload: { channel: 'push', subscriptions: targets.length, delivered },
       })
-
-      const base = (globalThis as any).Deno?.env?.get('APP_BASE_URL') ?? ''
 
       return json(
         ok({
-          // Fixed copy, saying nothing about the application itself (§35).
-          message:
-            'Bank of Ireland: Baz has an update about something you’re working on with us. ' +
-            'Open Baz to pick it up.',
+          message,
           // The link used to go through a simulated login, which no longer exists. The token
           // still travels, still opaque and still single-use (§29, §58).
-          url: `${base}/#/baz?n=${code}`,
+          url,
+          /*
+           * So the console can say what actually happened rather than "sent". Nobody
+           * subscribed means nothing was delivered, and a presenter should find that out here
+           * rather than by watching a phone stay dark.
+           */
+          subscriptions: targets.length,
+          delivered,
         }),
         200,
       )

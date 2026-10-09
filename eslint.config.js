@@ -35,6 +35,9 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       'src/components/ui/**', // shadcn-generated
+      // Shipped from public/ as-is, so nothing compiles it and there is no project to
+      // typecheck it against. It is two event listeners, kept small for that reason.
+      'public/push-sw.js',
       ...DENO_ENTRYPOINTS,
       // Generated from the linked project by `npm run db:types`.
       'supabase/functions/_shared/db/database.types.ts',

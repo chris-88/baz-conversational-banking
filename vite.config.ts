@@ -63,6 +63,14 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          /*
+           * The push handlers, added to the generated worker rather than replacing it.
+           *
+           * `injectManifest` would mean hand-writing the whole service worker, and this one
+           * already precaches the shell, falls back for navigations, never caches the API and
+           * cleans up after a deploy. Two event listeners are not worth putting that at risk.
+           */
+          importScripts: ['push-sw.js'],
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
           // Each deploy renames every hashed file, so without this the precache keeps every
           // build it has ever seen and grows until the browser evicts the lot.

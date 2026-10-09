@@ -1,4 +1,8 @@
 import type { ReactNode } from 'react'
+import { useState } from 'react'
+import { BellIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { pushPermission, type SubscribeResult } from '@/lib/push'
 import { CheckIcon, ClockIcon, UsersIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
@@ -16,7 +20,13 @@ const VISIBLE_STEPS = 5
  * §14, §59 — rendered entirely from the case. Whatever Baz wrote alongside it, this is what is
  * actually true, and the state's own label always accompanies the colour.
  */
-export function StatusCard({ card }: { card: Payload }): ReactNode {
+export function StatusCard({
+  card,
+  onEnableNotifications,
+}: {
+  card: Payload
+  onEnableNotifications?: () => Promise<SubscribeResult>
+}): ReactNode {
   if (card.applications.length === 0) {
     return (
       <Card className="p-4">
@@ -30,7 +40,57 @@ export function StatusCard({ card }: { card: Payload }): ReactNode {
       {card.applications.map((application) => (
         <ApplicationRow key={application.id} application={application} />
       ))}
+      {onEnableNotifications === undefined ? null : <NotifyRow onEnable={onEnableNotifications} />}
     </Card>
+  )
+}
+
+/**
+ * "Tell me when this moves."
+ *
+ * Only here, under things that are actually in progress, because that is the only point at
+ * which it is a sensible question. It disappears once allowed, and says something useful when
+ * it cannot work rather than failing quietly — on an iPhone in a tab the Push API simply does
+ * not exist, and "nothing happened" is the worst possible answer to a tap.
+ */
+function NotifyRow({ onEnable }: { onEnable: () => Promise<SubscribeResult> }): ReactNode {
+  const [state, setState] = useState<SubscribeResult | { state: 'idle' } | { state: 'asking' }>(
+    () => (pushPermission() === 'granted' ? { state: 'subscribed' } : { state: 'idle' }),
+  )
+
+  if (state.state === 'subscribed') {
+    return (
+      <p className="text-muted-foreground flex items-center gap-1.5 p-3 text-xs">
+        <BellIcon className="size-3" />
+        You will get a notification when something changes.
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5 p-3">
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        disabled={state.state === 'asking'}
+        onClick={() => {
+          setState({ state: 'asking' })
+          void onEnable().then(setState)
+        }}
+      >
+        <BellIcon />
+        {state.state === 'asking' ? 'Asking…' : 'Tell me when something changes'}
+      </Button>
+      {state.state === 'denied' ? (
+        <p className="text-muted-foreground text-xs">
+          Notifications are blocked for this site. Your browser settings can turn them back on.
+        </p>
+      ) : null}
+      {state.state === 'unsupported' || state.state === 'failed' ? (
+        <p className="text-muted-foreground text-xs">{state.reason}</p>
+      ) : null}
+    </div>
   )
 }
 

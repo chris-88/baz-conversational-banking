@@ -35,6 +35,9 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          # The public half of the Web Push key pair. Public by design — it is handed to
+          # every browser that subscribes, and the private half is an Edge Function secret.
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
 
       - name: No secrets in the published bundle
         run: npm run check:bundle

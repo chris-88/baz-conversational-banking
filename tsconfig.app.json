@@ -22,6 +22,7 @@
     "supabase/functions/_shared/contracts",
     "supabase/functions/_shared/tenants",
     "supabase/functions/_shared/llm",
-    "supabase/functions/_shared/db"
+    "supabase/functions/_shared/db",
+    "supabase/functions/_shared/push"
   ]
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { subscribeToPush } from '@/lib/push'
 import { TriangleAlertIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -449,6 +450,14 @@ export function BazChat({
         { action: 'decide_plan', caseId: caseId ?? '', planId, decision: 'not_now' },
         'Confirm it is parked and say what would bring it back.',
       )
+    },
+    onEnableNotifications: async () => {
+      // The case is what a notification is about, so there is nothing to subscribe to before
+      // there is one.
+      if (caseId === null) {
+        return { state: 'failed' as const, reason: 'Nothing to be notified about yet.' }
+      }
+      return await subscribeToPush(caseId)
     },
     onUpload: async (requestId, file, documentType) => {
       setActionError(null)

@@ -976,6 +976,54 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          case_id: string
+          created_at: string
+          endpoint: string
+          expired_at: string | null
+          id: string
+          p256dh: string
+          participant_id: string | null
+        }
+        Insert: {
+          auth: string
+          case_id: string
+          created_at?: string
+          endpoint: string
+          expired_at?: string | null
+          id?: string
+          p256dh: string
+          participant_id?: string | null
+        }
+        Update: {
+          auth?: string
+          case_id?: string
+          created_at?: string
+          endpoint?: string
+          expired_at?: string | null
+          id?: string
+          p256dh?: string
+          participant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tokens: {
         Row: {
           case_id: string

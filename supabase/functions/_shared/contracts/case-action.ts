@@ -82,6 +82,22 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
     name: z.string().min(1).max(80),
   }),
 
+  /**
+   * §42 — this browser would like to be told when something moves.
+   *
+   * The values come from the browser's own Push API subscription and are only useful for
+   * sending to it: the endpoint is the push service's URL for this browser, and the two keys
+   * are what let a payload be encrypted so only it can open them. Stored, never read back to
+   * a client.
+   */
+  z.object({
+    action: z.literal('subscribe_push'),
+    caseId,
+    endpoint: z.url().max(2000),
+    p256dh: z.string().min(1).max(200),
+    auth: z.string().min(1).max(100),
+  }),
+
   /** §7.5 — explicit consent, recorded, before any sensitive question is asked. */
   z.object({
     action: z.literal('grant_consent'),

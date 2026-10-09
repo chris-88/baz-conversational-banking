@@ -385,6 +385,36 @@ Deno.serve(async (request: Request): Promise<Response> => {
       break
     }
 
+    case 'subscribe_push': {
+      /*
+       * Keyed on the endpoint, which the push service makes unique per browser. Upserting
+       * rather than inserting is what stops a phone that re-subscribes — which browsers do on
+       * their own schedule — collecting rows that would each deliver another copy of the same
+       * notification.
+       */
+      const stored = await admin.from('push_subscriptions').upsert(
+        {
+          case_id: loaded.caseId,
+          participant_id: session.participant_id,
+          endpoint: action.endpoint,
+          p256dh: action.p256dh,
+          auth: action.auth,
+          expired_at: null,
+        },
+        { onConflict: 'endpoint' },
+      )
+      if (stored.error) return errorResponse('conflict', stored.error.message)
+
+      await writeEvent(admin, {
+        caseId: loaded.caseId,
+        type: 'push_subscribed',
+        actor: 'customer',
+        payload: {},
+      })
+
+      return json(ok({ subscribed: true }), 200)
+    }
+
     case 'grant_consent': {
       const application = findApplication(loaded, action.applicationId)
       if (!application) return errorResponse('not_found', 'That application does not exist.')
