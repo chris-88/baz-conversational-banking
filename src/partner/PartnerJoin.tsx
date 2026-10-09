@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconTile } from '@/components/IconTile'
 import { StatusBadge } from '@/components/StatusBadge'
-import { BazAvatar } from '@/baz/BazAvatar'
+import { BazWordmark } from '@/baz/BazWordmark'
 import { callPartner } from '@/partner/partnerClient'
 import { isBackendConfigured } from '@/lib/env'
 
@@ -99,9 +99,8 @@ export function PartnerJoin(): ReactNode {
     <div className="bg-background min-h-dvh">
       <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-30 border-b backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">
-          <BazAvatar />
           <span className="leading-tight">
-            <span className="block text-sm font-semibold">Baz</span>
+            <BazWordmark className="text-lg" />
             <span className="text-muted-foreground block text-2xs">Second applicant</span>
           </span>
         </div>

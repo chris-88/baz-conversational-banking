@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 180" role="img" aria-labelledby="title desc">
+  <title id="title">Baz wordmark</title>
+  <desc id="desc">Baz wordmark with b icon and bold az lettering</desc>
+  <rect width="560" height="180" fill="none"/>
+  <g transform="translate(30,20)">
+    <rect x="0" y="4" width="28" height="80" rx="14" fill="#0F172A"/>
+    <circle cx="44" cy="86" r="44" fill="#0F172A"/>
+    <circle cx="44" cy="86" r="25" fill="#FFFFFF"/>
+    <circle cx="35" cy="86" r="5.5" fill="#0F172A"/>
+    <circle cx="51" cy="86" r="5.5" fill="#0F172A"/>
+  </g>
+  <text x="120" y="122" fill="#0F172A" font-size="118" font-weight="800"
+        font-family="DejaVu Sans, Arial, sans-serif" letter-spacing="-6">az</text>
+</svg>

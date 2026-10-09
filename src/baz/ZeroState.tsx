@@ -20,7 +20,7 @@ export function ZeroState({ focused }: { readonly focused: boolean }): ReactNode
         /* The named element. The same name is on the chat avatar; the browser does the rest. */
         style={{ viewTransitionName: 'baz-avatar' }}
         className={cn(
-          'text-primary size-20 transition-transform duration-200 ease-out sm:size-24',
+          'text-baz-primary size-20 transition-transform duration-200 ease-out sm:size-24',
           // A small acknowledgement that they have begun, and nothing more (§4).
           focused && 'scale-[0.96]',
         )}

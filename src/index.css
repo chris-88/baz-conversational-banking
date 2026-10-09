@@ -104,6 +104,17 @@
   --decides-code: oklch(0.52 0.1 178);
   --decides-model: oklch(0.58 0.12 62);
 
+  /*
+   * Baz's own brand, from the supplied dev kit (tokens/brand-tokens.css).
+   *
+   * Separate from `--primary` on purpose. `--primary` is the tenant's blue — Bank of Ireland's
+   * — and Baz is meant to be portable to another one (Invariant 11, §32); a logo that changes
+   * colour with the bank it is sitting inside is not a logo. The two happen to be within a
+   * couple of points of each other today, which is a coincidence and not something to build on.
+   */
+  --baz-primary: #1d4ed8;
+  --baz-ink: #0f172a;
+
   --border: var(--slate-300);
   --input: var(--slate-300);
   --ring: var(--boi-blue);
@@ -115,10 +126,6 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
-
-  /* Lifted off the dark ground, where the light pair reads as mud. */
-  --decides-code: oklch(0.74 0.12 178);
-  --decides-model: oklch(0.78 0.12 70);
 }
 
 /*
@@ -131,6 +138,18 @@
   --foreground: oklch(0.985 0 0);
 
   --card: oklch(0.21 0.006 286);
+
+  /* Lifted off the dark ground, where the light pair reads as mud. */
+  --decides-code: oklch(0.74 0.12 178);
+  --decides-model: oklch(0.78 0.12 70);
+
+  /*
+   * The kit specifies one blue, for a white ground. Carried onto a dark one unchanged it is
+   * nearly unreadable, so this is the same hue and chroma lifted until it holds — the lightest
+   * thing that is still recognisably that blue rather than a different brand.
+   */
+  --baz-primary: oklch(0.68 0.16 264);
+  --baz-ink: oklch(0.97 0.004 286);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 286);
   --popover-foreground: oklch(0.985 0 0);
@@ -236,6 +255,8 @@
   --color-product-protection: var(--product-protection);
   --color-decides-code: var(--decides-code);
   --color-decides-model: var(--decides-model);
+  --color-baz-primary: var(--baz-primary);
+  --color-baz-ink: var(--baz-ink);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

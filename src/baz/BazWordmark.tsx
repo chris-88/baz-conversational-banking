@@ -1,40 +1,58 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { BazMark } from '@/baz/BazMark'
 
 /**
- * The name, with the mark set as its own letter.
+ * The Baz wordmark, from the supplied dev kit (`svg/baz-wordmark-horizontal.svg`).
  *
- * Baz's mark is a ring with two eyes, which is already very nearly a lowercase `a` — so it
- * becomes one. The header then carries the mark without carrying a second floating avatar
- * beside the word, which is what it would otherwise take to have both.
+ * A stylised lowercase `b` whose counter is Baz's face, followed by `az`. The kit's own note is
+ * that the `az` ships "as a clean starter asset using SVG text", to be outlined properly later
+ * — so it is set here in the application's own typeface rather than in the kit's DejaVu, which
+ * is not installed on a phone and would silently become something else.
  *
- * The mark is the one coloured thing. The letters stay in the surrounding ink so the word reads
- * as a word first and a logo second.
+ * ## The `b`
  *
- * Accessibility: the whole thing is one image named "Baz". Spelling it out as B, a picture, and
- * z is how a screen reader ends up announcing a logo as two letters and an unlabelled graphic.
+ * Drawn to the kit's measurements exactly: stem 28 wide and 80 tall with fully rounded ends,
+ * bowl of radius 44 centred at (44, 86), counter 25, eyes 5.5 at ±9. The stem's bottom finishes
+ * inside the bowl rather than meeting its edge, which is what gives the letter a continuous
+ * silhouette with no seam at the join.
+ *
+ * ## Fitting the two halves together
+ *
+ * Every measurement below is a ratio taken off the kit file, so the lockup holds at any size.
+ * Against its 118px `az`, the glyph is 88 wide and 126 tall and its baseline sits 28 up from
+ * the bottom — meaning the bowl deliberately hangs below the baseline of the letters beside it,
+ * which is the detail that makes the mark read as drawn rather than typed. `items-baseline`
+ * puts the element's bottom on the baseline and the translate pushes it back down by that
+ * overhang.
+ *
+ * The one substitution is the typeface, so the `az` carries the kit's weight (800) and its
+ * tracking (-6 on 118, or -0.051em) rather than Inter's defaults.
  */
 export function BazWordmark({ className }: { readonly className?: string }): ReactNode {
   return (
-    <span role="img" aria-label="Baz" className={cn('inline-flex items-baseline', className)}>
-      <span aria-hidden>B</span>
-      {/*
-        Sized against the x-height rather than the font size, with a little over for the optical
-        correction every round letter needs — a circle set to the exact x-height reads small
-        beside flat-topped letters. `items-baseline` puts its bottom edge on the baseline, and
-        the nudge carries it the rest of the way down to where a round glyph's overshoot sits.
-
-        The side bearing is wider than a letter's would be. The mark is an outline where B and z
-        are solid, so it needs air around it or the three run together into one dark shape.
-      */}
+    <span
+      role="img"
+      aria-label="Baz"
+      className={cn('text-baz-ink inline-flex items-baseline', className)}
+    >
       <span
         aria-hidden
-        className="text-primary mx-[0.075em] inline-block h-[0.7em] w-[0.7em] translate-y-[0.07em]"
+        className="text-baz-primary mr-[0.017em] inline-block h-[1.068em] w-[0.746em] translate-y-[0.237em]"
       >
-        <BazMark tight faceClassName="fill-transparent" />
+        <svg viewBox="0 0 88 126" className="size-full">
+          {/* The kit's own coordinates, shifted up by its 4-unit top margin. */}
+          <g transform="translate(0,-4)">
+            <rect x="0" y="4" width="28" height="80" rx="14" fill="currentColor" />
+            <circle cx="44" cy="86" r="44" fill="currentColor" />
+            <circle cx="44" cy="86" r="25" fill="#ffffff" />
+            <circle cx="35" cy="86" r="5.5" fill="currentColor" />
+            <circle cx="51" cy="86" r="5.5" fill="currentColor" />
+          </g>
+        </svg>
       </span>
-      <span aria-hidden>z</span>
+      <span aria-hidden className="font-extrabold tracking-[-0.051em]">
+        az
+      </span>
     </span>
   )
 }

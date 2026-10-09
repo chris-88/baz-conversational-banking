@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BazAvatar } from '@/baz/BazAvatar'
+import { BazWordmark } from '@/baz/BazWordmark'
 import { routes } from '@/app/routes'
 import { Pipeline } from './how-it-works/Pipeline'
 import { Story } from './how-it-works/Story'
@@ -34,8 +34,7 @@ export function HowItWorks(): ReactNode {
       <header className="border-border/60 border-b">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-5">
           <Link to={routes.landing} className="flex items-center gap-3">
-            <BazAvatar />
-            <span className="text-lg font-bold tracking-tight">Baz</span>
+            <BazWordmark className="text-xl" />
           </Link>
           <span className="bg-border hidden h-5 w-px sm:block" />
           <span className="text-muted-foreground hidden text-sm sm:block">How it works</span>

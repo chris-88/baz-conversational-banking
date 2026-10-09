@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
-import { BazAvatar } from '@/baz/BazAvatar'
+import { BazWordmark } from '@/baz/BazWordmark'
 import { InstallButton } from '@/surfaces/InstallButton'
 import { routes } from '@/app/routes'
 import qrCode from '@/assets/qr/open-baz.svg'
@@ -27,8 +27,7 @@ export function Landing(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
       <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-6">
-        <BazAvatar />
-        <span className="text-xl font-bold tracking-tight">Baz</span>
+        <BazWordmark className="text-2xl" />
         <span className="bg-border hidden h-5 w-px sm:block" />
         <span className="text-muted-foreground hidden text-sm sm:block">
           A personal banker for everyone.

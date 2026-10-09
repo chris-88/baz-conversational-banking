@@ -25,7 +25,7 @@ export function BazAvatar({
   return (
     <span
       className={cn(
-        'text-primary inline-grid shrink-0 place-items-center',
+        'text-baz-primary inline-grid shrink-0 place-items-center',
         size === 'sm' && 'size-7',
         size === 'md' && 'size-9',
         size === 'lg' && 'size-12',

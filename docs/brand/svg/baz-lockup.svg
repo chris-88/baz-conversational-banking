@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" role="img" aria-labelledby="title desc">
+  <title id="title">Baz lockup</title>
+  <desc id="desc">Baz face icon with wordmark</desc>
+  <circle cx="44" cy="62" r="28" fill="#1D4ED8"/>
+  <circle cx="44" cy="62" r="17" fill="#FFFFFF"/>
+  <circle cx="38" cy="62" r="2.8" fill="#1D4ED8"/>
+  <circle cx="50" cy="62" r="2.8" fill="#1D4ED8"/>
+  <circle cx="69" cy="34" r="6.2" fill="#1D4ED8"/>
+  <text x="92" y="74" fill="#0F172A" font-size="42" font-weight="700"
+        font-family="DejaVu Sans, Arial, sans-serif">Baz</text>
+</svg>

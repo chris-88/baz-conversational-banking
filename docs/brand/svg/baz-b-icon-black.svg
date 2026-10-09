@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Baz b icon</title>
+  <desc id="desc">Lowercase b icon containing the Baz face</desc>
+  <rect x="18" y="8" width="24" height="68" rx="12" fill="#0F172A"/>
+  <circle cx="55" cy="74" r="38" fill="#0F172A"/>
+  <circle cx="55" cy="74" r="22" fill="#FFFFFF"/>
+  <circle cx="48" cy="74" r="4.8" fill="#0F172A"/>
+  <circle cx="62" cy="74" r="4.8" fill="#0F172A"/>
+</svg>

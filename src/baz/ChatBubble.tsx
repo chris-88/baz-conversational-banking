@@ -38,7 +38,7 @@ export function ChatBubble({
              * and the browser would animate none of them.
              */
             {...(first === true ? { style: { viewTransitionName: 'baz-avatar' } } : {})}
-            className="text-primary size-8 shrink-0 self-start"
+            className="text-baz-primary size-8 shrink-0 self-start"
           >
             <BazMark />
           </span>

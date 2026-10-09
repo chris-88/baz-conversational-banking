@@ -1,0 +1,19 @@
+{
+  "brand": {
+    "name": "Baz",
+    "colors": {
+      "primary": "#1D4ED8",
+      "ink": "#0F172A",
+      "white": "#FFFFFF",
+      "muted": "#64748B",
+      "surface": "#F8FAFC"
+    },
+    "recommended_usage": {
+      "hero_logo": "baz-wordmark-horizontal.svg",
+      "header_lockup": "baz-lockup.svg",
+      "chat_mark": "baz-face-mark.svg",
+      "b_icon": "baz-b-icon.svg",
+      "app_icon": "baz-app-icon.svg"
+    }
+  }
+}
