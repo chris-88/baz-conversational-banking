@@ -419,6 +419,17 @@ export const adminCaseSchema = z.object({
     lastSeen: z.string().nullable(),
     daysActive: z.number().int(),
     messages: z.number().int(),
+    /**
+     * Time in the conversation, with time the customer was away taken out.
+     *
+     * The figure that sits beside the application count: four products in one sitting is only
+     * a claim until there is a number on how long the sitting was.
+     */
+    timing: z.object({
+      activeMinutes: z.number().int(),
+      elapsedMinutes: z.number().int(),
+      sittings: z.number().int(),
+    }),
   }),
   cost: costSchema,
   facts: z.array(

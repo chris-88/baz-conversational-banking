@@ -10,6 +10,7 @@ import {
   type GuardrailTest,
 } from '../_shared/contracts/admin.ts'
 import Anthropic from '@anthropic-ai/sdk'
+import { conversationTiming } from '../_shared/domain/conversation-time.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
@@ -188,6 +189,22 @@ function costOf(rows: readonly { usage: unknown }[]): Cost {
     turns: rows.length,
     measuredTurns: measured.length,
   }
+}
+
+/**
+ * Whoever the case is about, as they said it.
+ *
+ * Newest standing wins: a correction supersedes the row it replaced. The same rule the case
+ * list applies, so the two cannot disagree again.
+ */
+function statedName(
+  facts: readonly { key: string; value: unknown; supersededBy: unknown }[],
+): string | null {
+  const stated = facts.filter(
+    (fact) => fact.key === 'identity.fullName' && fact.supersededBy === null,
+  )
+  const latest = stated.at(-1)?.value
+  return typeof latest === 'string' && latest.trim().length > 0 ? latest : null
 }
 
 /** The five headline counts, from a tally of event types. */
@@ -1552,12 +1569,24 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const inspected: AdminCase = {
         caseId: action.caseId,
         customer: {
-          name: loaded.customerName,
+          /*
+           * The same source the case list uses, which it was not.
+           *
+           * The list names a case from the `identity.fullName` fact; this named it from the
+           * linked customer record, which only exists once somebody signs in. So a case could
+           * show "Chris Quinn" on the left and "Not yet named" on the right at the same time,
+           * about the same person, both reporting honestly from different places. The fact is
+           * the better of the two: it is what the customer actually said, it exists whether or
+           * not they signed in, and it is their whole name rather than the first name the
+           * customer record gets trimmed to.
+           */
+          name: statedName(loaded.facts) ?? loaded.customerName,
           authLevel: loaded.authLevel,
           firstSeen: loaded.messages[0]?.createdAt ?? null,
           lastSeen: loaded.messages.at(-1)?.createdAt ?? null,
           daysActive: days.size,
           messages: spoken.length,
+          timing: conversationTiming(loaded.messages.map((message) => message.createdAt)),
         },
         cost: costOf(turnRows.data as { usage: unknown }[]),
         needs: candidates

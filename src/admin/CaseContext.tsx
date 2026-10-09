@@ -78,6 +78,34 @@ function Customer({ data }: { readonly data: AdminCase }): ReactNode {
                     : `${String(customer.daysActive)}${customer.daysActive > 1 ? ' — came back' : ''}`,
               },
               { key: 'Messages sent', value: customer.messages },
+              /*
+               * The number the whole argument rests on.
+               *
+               * Four applications is only a claim until there is a time beside it, and the
+               * honest time is active rather than wall-clock: somebody who starts in the
+               * morning and finishes after lunch spent minutes in the conversation, not hours.
+               * When they did leave and come back, that is said rather than hidden, because a
+               * figure smaller than the clock needs to explain itself.
+               */
+              {
+                key: 'Time in conversation',
+                value:
+                  customer.timing.activeMinutes === 0
+                    ? '—'
+                    : `${minutes(customer.timing.activeMinutes)}${
+                        customer.timing.sittings > 1
+                          ? ` · ${String(customer.timing.sittings)} sittings`
+                          : ''
+                      }`,
+              },
+              ...(data.applications.length > 0
+                ? [
+                    {
+                      key: 'Applications started',
+                      value: `${String(data.applications.length)} — from the one conversation`,
+                    },
+                  ]
+                : []),
               {
                 /*
                  * The tokens are measured — every response reports what it used. The euro is
@@ -321,6 +349,14 @@ function Applications({
       )}
     </>
   )
+}
+
+/** Minutes as somebody would say them. */
+function minutes(value: number): string {
+  if (value < 60) return `${String(value)} min`
+  const hours = Math.floor(value / 60)
+  const rest = value % 60
+  return rest === 0 ? `${String(hours)} hr` : `${String(hours)} hr ${String(rest)} min`
 }
 
 function when(value: string | null): string {
