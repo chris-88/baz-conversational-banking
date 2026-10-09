@@ -12,6 +12,10 @@ import { cn } from '@/lib/utils'
  * logotype gets drawn rather than set. It also means there is no typeface to keep in step.
  *
  * Sized by height, like any logo: pass `h-7`, `h-9`. The width follows the artwork.
+ *
+ * Do not put it inside a shadcn `Button`. Button sets
+ * `[&_svg:not([class*='size-'])]:size-4` on its descendants, which overrides the height and
+ * squashes this to sixteen pixels square. Use a plain link styled as one.
  */
 export function BazWordmark({ className }: { readonly className?: string }): ReactNode {
   return (

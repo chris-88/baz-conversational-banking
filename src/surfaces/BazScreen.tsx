@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { BazChat } from '@/baz/BazChat'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { routes } from '@/app/routes'
@@ -33,10 +32,15 @@ export function BazScreen(): ReactNode {
         Quiet while the screen is still asking the question, and settled once it is a
         conversation (spec §8).
 
-        Centred, and the mark is set inside the word rather than beside it. A separate avatar up
-        here would be a second copy of the thing sitting in the middle of the opening screen,
-        waiting to move — and the whole point of that transition is that there is only one of it.
-        As the `a` it is present without competing.
+        The wordmark and nothing else. It used to carry "AI banking assistant" under it, which
+        was both too small to read and a label the product does not need up here: Baz says what
+        it is in the first reply, and a strapline in a header is the kind of thing that is
+        written for whoever commissioned the product rather than whoever is using it. Taking it
+        out is what leaves room for the logo to be a legible size.
+
+        No separate avatar either. There is already one in the middle of the opening screen
+        waiting to move, and the whole point of that transition is that there is only one of it
+        — here it is the `b` the wordmark opens with.
       */}
       <header
         className={cn(
@@ -44,22 +48,20 @@ export function BazScreen(): ReactNode {
           started ? 'opacity-100' : 'opacity-75',
         )}
       >
-        <div className="mx-auto flex w-full max-w-md items-center justify-center px-4 py-2.5">
-          <Button asChild variant="ghost" className="h-auto px-3 py-1.5">
-            <Link to={routes.landing}>
-              <span className="text-center leading-tight">
-                <BazWordmark className="mx-auto h-7" />
-                <span
-                  className={cn(
-                    'text-muted-foreground block text-2xs font-normal transition-opacity duration-200',
-                    started ? 'opacity-100' : 'opacity-0',
-                  )}
-                >
-                  AI banking assistant
-                </span>
-              </span>
-            </Link>
-          </Button>
+        <div className="mx-auto flex w-full max-w-md items-center justify-center px-4 py-2">
+          {/*
+            A plain link rather than a ghost Button. The Button sets
+            `[&_svg:not([class*='size-'])]:size-4` on everything inside it, which silently
+            squashed the wordmark to sixteen pixels square — it looked like a styling choice
+            rather than a rule firing, which is why it survived a redesign.
+          */}
+          <Link
+            to={routes.landing}
+            aria-label="Baz home"
+            className="hover:bg-accent focus-visible:ring-ring rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <BazWordmark className="h-9" />
+          </Link>
         </div>
       </header>
 
