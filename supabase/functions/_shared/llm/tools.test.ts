@@ -50,12 +50,20 @@ describe('the model has no tool that takes an action', () => {
     // `show_comparison` is the eleventh and passes only catalogue ids. Everything shown beside
     // each product is read from the knowledge base by the server, so the model chooses what to
     // compare and cannot describe a product into existence. Tapping one starts nothing.
+    //
+    // `show_mortgage_rates` is the twelfth and is the most tempting one to get wrong, because
+    // quoting a rate feels like an act. It passes four answers the customer gave — buyer type,
+    // BER, amount, term — and the server decides which of 133 published rows they are entitled
+    // to see and what the repayments are. The model never reads the table, cannot show a rate
+    // below its minimum, and cannot price a BER the bank has not published. The card is not
+    // tappable at all: a published rate is not an offer, and nothing should start from one.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
       'request_upload',
       'show_comparison',
       'show_form',
+      'show_mortgage_rates',
       'show_partner_invite',
       'show_pause_prompt',
       'show_product_options',

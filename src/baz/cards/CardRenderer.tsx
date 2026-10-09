@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Card } from '@contracts/cards.ts'
 import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
 import { QuoteCard } from '@/baz/cards/QuoteCard'
+import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
 import { ReviewCard } from '@/baz/cards/ReviewCard'
@@ -65,6 +66,9 @@ export function CardRenderer({
           {...(disabled === undefined ? {} : { disabled })}
         />
       )
+
+    case 'mortgage_rates':
+      return <MortgageRatesCard card={card} />
 
     case 'comparison':
       return (

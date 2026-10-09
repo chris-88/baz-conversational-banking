@@ -22,6 +22,11 @@ import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { boiProducts, productInfo } from '../_shared/tenants/boi/products.ts'
 import { SURFACEABLE_PRODUCTS, knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
 import { rateOf } from '../_shared/tenants/boi/rates.ts'
+import { mortgageRatesSection, selectRates } from '../_shared/tenants/boi/mortgage-rates-select.ts'
+import type {
+  BerAnswer,
+} from '../_shared/tenants/boi/mortgage-rates-select.ts'
+import type { MortgageCustomerType } from '../_shared/tenants/boi/mortgage-rate-types.ts'
 import {
   loadCase,
   recordFacts,
@@ -73,6 +78,7 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'propose_plan',
   'show_quote',
   'show_comparison',
+  'show_mortgage_rates',
 ]
 
 /** How far back a card still counts as "on screen" rather than scrolled into history. */
@@ -625,6 +631,7 @@ async function handleTurn(request: Request): Promise<Response> {
           prompt: {
             domainConfig: boiDomainConfig,
             productCatalogue: knowledgeBaseSection(),
+            rateGuidance: mortgageRatesSection(),
             sliders: loaded.persona,
             digest,
             sensitive: gate.suppressHumour,
@@ -1252,6 +1259,86 @@ async function handleTurn(request: Request): Promise<Response> {
                * keeps those four out of the prompt has to hold at the card too, or the one
                * place a customer actually reads is the one place it does not apply.
                */
+              case 'show_mortgage_rates': {
+                const ask = input as {
+                  customerType: MortgageCustomerType | 'buy_to_let_new'
+                  ber: BerAnswer
+                  amountEur?: number
+                  termYears?: number
+                }
+
+                const selection = selectRates({
+                  customerType: ask.customerType,
+                  ber: ask.ber,
+                  ...(ask.amountEur === undefined ? {} : { amountEur: ask.amountEur }),
+                  ...(ask.termYears === undefined ? {} : { termYears: ask.termYears }),
+                })
+
+                /*
+                 * Refusing to price something is an answer, not a failure. A0 is the live case:
+                 * the bank added it to the BER scale and has not published a rate for it, and
+                 * rounding it down to A would cost somebody money.
+                 */
+                if (selection.unavailable !== null) {
+                  return {
+                    result:
+                      `No rate can be quoted: ${selection.unavailable} Tell them that plainly, ` +
+                      'and offer to carry on with everything else.',
+                  }
+                }
+
+                if (selection.options.length === 0) {
+                  return {
+                    result:
+                      'No published rate matches those details. Check the buyer type and BER ' +
+                      'against what they actually told you before asking them again.',
+                  }
+                }
+
+                const card: Card = {
+                  type: 'mortgage_rates',
+                  title: 'Your mortgage rate options',
+                  basis: {
+                    buyerType: ask.customerType.replaceAll('_', ' '),
+                    ber: ask.ber,
+                    amountEur: ask.amountEur ?? null,
+                    termYears: ask.termYears ?? null,
+                  },
+                  asOf: selection.asOf,
+                  options: selection.options.map((option) => ({
+                    id: option.id,
+                    label: option.label,
+                    familyLabel: option.familyLabel,
+                    ratePct: option.ratePct,
+                    aprcPct: option.aprcPct,
+                    cashbackEur: option.cashbackEur,
+                    cashbackNote: option.cashbackNote,
+                    monthlyEur: option.monthlyEur,
+                    note: option.note,
+                  })),
+                }
+
+                const cheapest = selection.options.reduce((low, option) =>
+                  option.ratePct < low.ratePct ? option : low,
+                )
+                const withCashback = selection.options.find((option) => option.cashbackEur !== null)
+
+                return {
+                  result:
+                    `${String(selection.options.length)} rates are on the card with their APRCs ` +
+                    `and repayments, as published on ${selection.asOf}. Do not read them back. ` +
+                    'Say what separates them in a sentence or two' +
+                    (withCashback && withCashback.id !== cheapest.id
+                      ? `, and be straight that the lowest rate (${String(cheapest.ratePct)}%) pays no cashback while ` +
+                        `${withCashback.label} pays ${money(withCashback.cashbackEur ?? 0)} — which is cheaper ` +
+                        'depends on how long they stay on it, and it is their call.'
+                      : '.') +
+                    ' A published rate is not an offer: what they can borrow still goes through a ' +
+                    'full assessment.',
+                  card,
+                }
+              }
+
               case 'show_comparison': {
                 const ask = input as { title: string; options: { id: string; reason: string }[] }
 

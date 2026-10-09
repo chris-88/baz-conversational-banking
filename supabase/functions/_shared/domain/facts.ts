@@ -84,6 +84,29 @@ export type FactDefinition = {
 // ---------------------------------------------------------------------------
 
 const euro = z.number().int().nonnegative()
+
+/*
+ * What a published mortgage rate depends on.
+ *
+ * These four are the question behind "what rate could I get": the table prices every one of
+ * them separately, so a rate quoted without all four is a guess. Facts rather than something
+ * the model carries in its head, because they are asked once and then reused across the
+ * mortgage application and anything else that needs them.
+ */
+const mortgageCustomerType = z.enum([
+  'first_time_buyer',
+  'mover',
+  'switcher',
+  'existing_boi_mortgage',
+  'buy_to_let_new',
+])
+
+/*
+ * A0 is in the scale and not in the rate table — the bank added it in May 2026 and has not
+ * priced it. Accepted here so the customer's actual answer can be recorded, and refused at the
+ * point of quoting rather than quietly rounded down to A.
+ */
+const berBand = z.enum(['A0', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'BER Exempt'])
 const positiveEuro = z.number().int().positive()
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
 
@@ -509,6 +532,38 @@ export const factCatalogue = {
   },
 
   // ---- Borrowing intent ----
+  'mortgage.customerType': {
+    schema: mortgageCustomerType,
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Buyer type',
+  },
+  'mortgage.amountSought': {
+    schema: euro,
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Mortgage amount sought',
+  },
+  'mortgage.termYears': {
+    schema: z.number().int().min(5).max(35),
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Mortgage term',
+  },
+  'property.ber': {
+    schema: berBand,
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Property BER',
+  },
   'borrowing.requestedAmount': {
     schema: positiveEuro,
     subject: 'household',

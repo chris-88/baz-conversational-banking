@@ -101,6 +101,27 @@ export const proposePlanInput = z.object({
  * Only ids: everything shown beside each one is read from the knowledge base by the server, so
  * the model chooses what to compare and why, and cannot describe a product into existence.
  */
+/**
+ * The four answers a published mortgage rate depends on.
+ *
+ * Not a request for rates — a request to price these criteria. The server owns which rows they
+ * entitle somebody to, including refusing to price a BER the table does not cover.
+ */
+export const showMortgageRatesInput = z.object({
+  customerType: z.enum([
+    'first_time_buyer',
+    'mover',
+    'switcher',
+    'existing_boi_mortgage',
+    'buy_to_let_new',
+  ]),
+  ber: z.enum(['A0', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'BER Exempt']),
+  /** What they intend to borrow. Decides High Value eligibility and every monthly figure. */
+  amountEur: z.number().int().positive().max(5_000_000).optional(),
+  /** The mortgage term, not the fixed period. */
+  termYears: z.number().int().min(5).max(35).optional(),
+})
+
 export const showComparisonInput = z.object({
   /** What is being compared, in the customer's terms. */
   title: z.string().min(1).max(60),
@@ -149,6 +170,7 @@ export const TOOL_INPUTS = {
   propose_plan: proposePlanInput,
   show_quote: showQuoteInput,
   show_comparison: showComparisonInput,
+  show_mortgage_rates: showMortgageRatesInput,
   request_upload: requestUploadInput,
   show_partner_invite: showPartnerInviteInput,
   show_status: showStatusInput,
@@ -212,6 +234,20 @@ export const TOOLS: readonly ToolDefinition[] = [
       'card is how they accept; nothing is kept until they tap it. Do not propose a plan for ' +
       'something they can simply do today.',
     schema: proposePlanInput,
+  },
+  {
+    name: 'show_mortgage_rates',
+    description:
+      "Show Bank of Ireland's published mortgage rates for this customer. The bank's own rate " +
+      'table is available to you through this tool, so quote from it rather than saying you ' +
+      'cannot give a rate. It is indexed by four things and prices each separately, so all ' +
+      'four are required before it will return anything: who they are (first-time buyer, ' +
+      'mover, switcher, existing Bank of Ireland mortgage, or buy-to-let), the BER of the ' +
+      'property, what they intend to borrow, and over what term. Ask for whichever you are ' +
+      'missing — one question at a time — rather than guessing or quoting a range. The server ' +
+      'decides which rates they are entitled to see and works out the repayments; you explain ' +
+      'what separates them.',
+    schema: showMortgageRatesInput,
   },
   {
     name: 'show_comparison',

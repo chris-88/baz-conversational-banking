@@ -479,6 +479,14 @@ export type CaseDigest = {
 export type PromptInput = {
   readonly domainConfig: DomainConfig
   /**
+   * What this tenant can say about rates, rendered by the tenant.
+   *
+   * Separate from the catalogue because it is a different kind of thing: the catalogue says
+   * what the products are, this says what may be quoted and on what basis. A tenant that
+   * publishes no rates passes an empty string and the section disappears.
+   */
+  readonly rateGuidance?: string
+  /**
    * The product catalogue, rendered by the tenant.
    *
    * A string rather than a structure because what a bank says about its own products is its
@@ -838,6 +846,9 @@ function cacheableSections(input: PromptInput): readonly string[] {
     WHAT_WE_CAN_DO,
     factReference(),
     input.productCatalogue,
+    ...(input.rateGuidance === undefined || input.rateGuidance.length === 0
+      ? []
+      : [input.rateGuidance]),
   ]
 }
 

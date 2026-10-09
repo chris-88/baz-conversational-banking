@@ -242,6 +242,45 @@ export const planProposalCardSchema = z.object({
   confirmLabel: z.string(),
 })
 
+/**
+ * Published mortgage rates, for a specific customer and property.
+ *
+ * Every figure on it was selected by `selectRates` from the rate table, including which rows a
+ * customer is entitled to see at all — the model supplies the four answers the table is indexed
+ * by and nothing else (Invariant 3). `basis` is on the card so the assumptions are visible:
+ * a rate is meaningless without the buyer type, the BER and the amount it was priced for.
+ */
+export const mortgageRatesCardSchema = z.object({
+  type: z.literal('mortgage_rates'),
+  title: z.string(),
+  basis: z.object({
+    buyerType: z.string(),
+    ber: z.string(),
+    amountEur: z.number().nullable(),
+    termYears: z.number().nullable(),
+  }),
+  /** The date the bank's own table claims, not the date it was read. */
+  asOf: z.string(),
+  options: z
+    .array(
+      z.object({
+        id: z.string(),
+        /** "4 years fixed", "Variable". */
+        label: z.string(),
+        familyLabel: z.string(),
+        ratePct: z.number(),
+        aprcPct: z.number().nullable(),
+        /** 2% of drawdown in euro, where the rate carries cashback and the amount is known. */
+        cashbackEur: z.number().nullable(),
+        cashbackNote: z.string().nullable(),
+        monthlyEur: z.number().nullable(),
+        note: z.string().nullable(),
+      }),
+    )
+    .min(1)
+    .max(4),
+})
+
 export const cardSchema = z.discriminatedUnion('type', [
   quoteCardSchema,
   planProposalCardSchema,
@@ -254,6 +293,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   pausePromptCardSchema,
   partnerInviteCardSchema,
   uploadRequestCardSchema,
+  mortgageRatesCardSchema,
 ])
 
 export type Card = z.infer<typeof cardSchema>
@@ -271,4 +311,5 @@ export const CARD_TYPES = [
   'upload_request',
   'consent',
   'health_form',
+  'mortgage_rates',
 ] as const satisfies readonly CardType[]
