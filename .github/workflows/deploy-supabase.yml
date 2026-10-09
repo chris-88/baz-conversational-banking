@@ -36,10 +36,14 @@ jobs:
       - uses: actions/checkout@v5
         if: steps.check.outputs.configured == 'true'
 
+      # Pinned, not `latest`. Resolving "latest" asks the GitHub API for the newest release
+      # unauthenticated, and on a busy runner that comes back rate-limited — which failed a
+      # deploy silently enough that `admin` ran a day behind `baz-turn` and returned 500s for
+      # any case containing a fact the older build had never heard of.
       - uses: supabase/setup-cli@v1
         if: steps.check.outputs.configured == 'true'
         with:
-          version: latest
+          version: 2.108.0
 
       - name: Link project
         if: steps.check.outputs.configured == 'true'

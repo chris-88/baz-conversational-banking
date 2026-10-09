@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { z } from 'zod'
 import { effectiveGoals, effectiveNeeds } from '../domain/catalogue/overlay.ts'
 import type { TurnUsage } from '../domain/cost.ts'
 import { goalCatalogue } from '../domain/goals/catalogue.ts'
@@ -44,6 +45,13 @@ import * as rows from './rows.ts'
  */
 
 const MESSAGE_WINDOW = 24
+
+/** The key off an unparsed fact row, for the log line when it could not be read. */
+function keyOf(row: unknown): string {
+  return typeof row === 'object' && row !== null && 'key' in row && typeof row.key === 'string'
+    ? row.key
+    : '(no key)'
+}
 
 type Query = { data: unknown; error: { message: string } | null }
 
@@ -127,9 +135,31 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
       displayName: row.display_name,
     }))
 
-  const facts: Fact[] = rows.factRow
-    .array()
-    .parse(unwrap(factsData as Query, 'facts'))
+  /*
+   * A fact whose key this build does not know is skipped, not fatal.
+   *
+   * `factRow` refuses a key that is not in the catalogue, which is right for a write and wrong
+   * for a read: parsing the batch meant one unrecognised row took the whole case down with it.
+   * The functions deploy separately, so there is always a window where `baz-turn` is writing
+   * keys that `admin` has not learned yet — and during one of those windows the console
+   * returned a bare 500 for any case containing a new fact, which reaches the browser as a
+   * CORS error and looks like the database is down.
+   *
+   * This build cannot interpret such a fact, so leaving it out is the honest handling. It is
+   * logged rather than swallowed, because the other reason a key fails this check is that
+   * something wrote a bad one.
+   */
+  const factRows = z.array(z.unknown()).parse(unwrap(factsData, 'facts'))
+  const parsedFacts = factRows.map((row) => rows.factRow.safeParse(row))
+  const unknownKeys = parsedFacts.flatMap((result, index) =>
+    result.success ? [] : [keyOf(factRows[index])],
+  )
+  if (unknownKeys.length > 0) {
+    console.warn(`skipped ${String(unknownKeys.length)} fact(s) this build cannot read: ${unknownKeys.join(', ')}`)
+  }
+
+  const facts: Fact[] = parsedFacts
+    .flatMap((result) => (result.success ? [result.data] : []))
     .map((row) => ({
       id: asFactId(row.id),
       key: row.key,
