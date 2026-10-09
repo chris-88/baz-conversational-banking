@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Card } from '@contracts/cards.ts'
 import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
 import { QuoteCard } from '@/baz/cards/QuoteCard'
+import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
@@ -66,6 +67,9 @@ export function CardRenderer({
           {...(disabled === undefined ? {} : { disabled })}
         />
       )
+
+    case 'data_notice':
+      return <DataNoticeCard card={card} />
 
     case 'mortgage_rates':
       return <MortgageRatesCard card={card} />

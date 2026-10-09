@@ -76,6 +76,20 @@ export function Landing(): ReactNode {
             description="Plans, decisions and what you already told it carry across every conversation."
           />
         </section>
+
+        {/*
+          The one persistent way to the notice. Not in the chat header, which is the wordmark
+          and nothing else — a legal link there would be the first thing a new customer reads,
+          and the notice has a better moment: the first time Baz records anything.
+        */}
+        <footer className="text-muted-foreground mt-12 border-t pt-6 text-sm">
+          <p>
+            A prototype, not a banking service, and not operated by Bank of Ireland.{' '}
+            <Link className="underline" to={routes.privacy}>
+              How your data is used
+            </Link>
+          </p>
+        </footer>
       </main>
     </div>
   )

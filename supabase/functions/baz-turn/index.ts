@@ -12,6 +12,7 @@ import { evaluateFor, findApplication, recomputeApplications } from '../_shared/
 import { confirmationsForReview, readyForReview } from '../_shared/domain/requirements.ts'
 import { factCatalogue } from '../_shared/domain/facts.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
+import { DATA_NOTICE_EVENT, dataNoticeCard } from '../_shared/llm/data-notice.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
 import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
@@ -658,6 +659,36 @@ async function handleTurn(request: Request): Promise<Response> {
                   })
                 }
 
+                /*
+                 * The first time anything is written down, say so.
+                 *
+                 * Decided here rather than by the model, for the same reason the gate is: a
+                 * disclosure the model could choose to skip is not a disclosure. It fires on
+                 * the write itself, which is the moment it becomes true — not at the start of
+                 * the conversation, where it would be a wall of text before anybody has said
+                 * anything, and not at the end, where it is too late to matter.
+                 */
+                let noticeCard: Card | undefined
+                if (outcome.accepted.length > 0) {
+                  const shown = await admin
+                    .from('events')
+                    .select('id')
+                    .eq('case_id', turn.caseId)
+                    .eq('type', DATA_NOTICE_EVENT)
+                    .limit(1)
+                    .maybeSingle()
+
+                  if (!shown.data) {
+                    await writeEvent(admin, {
+                      caseId: turn.caseId,
+                      type: DATA_NOTICE_EVENT,
+                      actor: 'system',
+                      payload: {},
+                    })
+                    noticeCard = dataNoticeCard(`${env('APP_BASE_URL')}#/privacy`)
+                  }
+                }
+
                 const rejected = outcome.rejected
                   .map((item) => `${item.key}: ${item.reason}`)
                   .join('; ')
@@ -680,7 +711,14 @@ async function handleTurn(request: Request): Promise<Response> {
                   result:
                     `Recorded ${outcome.accepted.length}.` +
                     (rejected ? ` Not recorded — ${rejected}` : '') +
-                    progressed,
+                    progressed +
+                    (noticeCard === undefined
+                      ? ''
+                      : ' A notice about what is kept is on screen, shown automatically because' +
+                        ' this is the first thing written down. Do not read it out, do not' +
+                        ' apologise for it, and do not wait on it — carry on with what you were' +
+                        ' saying.'),
+                  ...(noticeCard === undefined ? {} : { card: noticeCard }),
                 }
               }
 

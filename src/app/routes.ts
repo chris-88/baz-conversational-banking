@@ -19,6 +19,9 @@ export const routes = {
    */
   howItWorks: '/how-it-works',
 
+  /** What happens to what somebody types. Linked from the notice card and the landing page. */
+  privacy: '/privacy',
+
   /** §33 — a second applicant, arriving on a single-use link. */
   partnerJoin: (token = ':token') => `/join/${token}`,
 

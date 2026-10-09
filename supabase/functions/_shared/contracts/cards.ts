@@ -281,6 +281,26 @@ export const mortgageRatesCardSchema = z.object({
     .max(4),
 })
 
+/**
+ * What happens to what the customer types, shown the first time Baz writes any of it down.
+ *
+ * A notice, not a consent. The basis for processing here is not the customer agreeing — it is
+ * running the service they asked for — so the card informs and does not gate. Blocking the
+ * conversation until somebody taps would be asking permission we do not need and have no way
+ * to honour a refusal of. Special-category data is the opposite and already has its own gate
+ * (§7.5, `consent`).
+ *
+ * The copy is fixed and built by the server. The model does not write it, cannot summarise it
+ * and cannot decide when it appears (Invariant 2).
+ */
+export const dataNoticeCardSchema = z.object({
+  type: z.literal('data_notice'),
+  title: z.string(),
+  points: z.array(z.string()).min(1).max(5),
+  /** Where the full notice lives. A hash route, so it opens in the same app. */
+  noticeHref: z.string(),
+})
+
 export const cardSchema = z.discriminatedUnion('type', [
   quoteCardSchema,
   planProposalCardSchema,
@@ -294,6 +314,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   partnerInviteCardSchema,
   uploadRequestCardSchema,
   mortgageRatesCardSchema,
+  dataNoticeCardSchema,
 ])
 
 export type Card = z.infer<typeof cardSchema>
@@ -312,4 +333,5 @@ export const CARD_TYPES = [
   'consent',
   'health_form',
   'mortgage_rates',
+  'data_notice',
 ] as const satisfies readonly CardType[]

@@ -85,9 +85,17 @@ export function HowItWorks(): ReactNode {
         <footer className="text-muted-foreground border-border mt-4 border-t pt-8 text-sm">
           <p className="max-w-[62ch]">
             <strong className="text-foreground font-semibold">A note on the data.</strong> Product
-            information is Bank of Ireland&rsquo;s real published catalogue. Customer records,
-            balances and the login are synthetic — the sign-in accepts anything and says so. No real
-            credentials and no real customer data exist anywhere in the system.
+            information is Bank of Ireland&rsquo;s real published catalogue. The bank side is
+            invented: customer records, balances and the simulated sign-in hold no real
+            credentials and no real customer data.{' '}
+            <strong className="text-foreground font-semibold">
+              What a visitor types is not synthetic.
+            </strong>{' '}
+            It is real, and it is stored, which is the thing being demonstrated —{' '}
+            <Link className="underline" to={routes.privacy}>
+              how your data is used
+            </Link>{' '}
+            says what happens to it.
           </p>
         </footer>
       </main>
