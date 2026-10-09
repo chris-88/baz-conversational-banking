@@ -1193,7 +1193,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return errorResponse('internal', `That balance was not written: ${why || 'unknown'}`)
       }
 
-      const loadedCase = await loadCase(admin, action.caseId)
+      const loadedCase = await loadCase(admin, action.caseId, { messages: 'all' })
       const seen = loadedCase === null ? null : planContextFor(loadedCase).savingsBalance
       const reached = loadedCase === null ? [] : await reconcilePlans(admin, action.caseId, loadedCase)
 
@@ -1486,7 +1486,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     case 'inspect_case': {
-      const loaded = await loadCase(admin, action.caseId)
+      const loaded = await loadCase(admin, action.caseId, { messages: 'all' })
       if (!loaded) return errorResponse('not_found', 'No such case.')
 
       const events = await admin
@@ -1563,6 +1563,18 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       if (turnRows.error !== null) return errorResponse('conflict', turnRows.error.message)
 
+      /*
+       * Uploads, which the transcript cannot show: a document arrives as a row and a storage
+       * object, never as a message. Counting only what was typed makes a conversation where
+       * somebody sent in three payslips look like a conversation where they sent nothing.
+       */
+      const documentRows = await admin
+        .from('documents')
+        .select('document_type, verified, uploaded_at')
+        .eq('case_id', action.caseId)
+        .order('uploaded_at', { ascending: true })
+      if (documentRows.error !== null) return errorResponse('conflict', documentRows.error.message)
+
       const spoken = loaded.messages.filter((message) => message.role === 'customer')
       const days = new Set(spoken.map((message) => message.createdAt.slice(0, 10)))
 
@@ -1588,6 +1600,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
           messages: spoken.length,
           timing: conversationTiming(loaded.messages.map((message) => message.createdAt)),
         },
+        documents: (
+          documentRows.data as { document_type: string; verified: boolean; uploaded_at: string }[]
+        ).map((row) => ({
+          type: row.document_type.replaceAll('_', ' '),
+          verified: row.verified,
+          uploadedAt: row.uploaded_at,
+        })),
         cost: costOf(turnRows.data as { usage: unknown }[]),
         needs: candidates
           .filter((candidate) => candidate.confidence > 0 || candidate.state !== 'latent')

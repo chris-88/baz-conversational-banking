@@ -431,6 +431,20 @@ export const adminCaseSchema = z.object({
       sittings: z.number().int(),
     }),
   }),
+  /**
+   * What the customer actually sent in.
+   *
+   * An upload is not a message, so it left no trace in the transcript — and a conversation
+   * where somebody photographed three payslips reads as a quiet one if you only count what was
+   * typed.
+   */
+  documents: z.array(
+    z.object({
+      type: z.string(),
+      verified: z.boolean(),
+      uploadedAt: z.string(),
+    }),
+  ),
   cost: costSchema,
   facts: z.array(
     z.object({

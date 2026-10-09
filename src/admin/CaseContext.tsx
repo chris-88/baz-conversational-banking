@@ -106,6 +106,20 @@ function Customer({ data }: { readonly data: AdminCase }): ReactNode {
                     },
                   ]
                 : []),
+              /*
+               * Uploads are not messages, so without this line a conversation where somebody
+               * photographed three payslips reads as a quiet one.
+               */
+              ...(data.documents.length > 0
+                ? [
+                    {
+                      key: 'Documents sent',
+                      value: `${String(data.documents.length)} — ${[
+                        ...new Set(data.documents.map((document) => document.type)),
+                      ].join(', ')}`,
+                    },
+                  ]
+                : []),
               {
                 /*
                  * The tokens are measured — every response reports what it used. The euro is

@@ -46,6 +46,13 @@ import * as rows from './rows.ts'
 
 const MESSAGE_WINDOW = 24
 
+/**
+ * The console's limit. High enough to be "everything" for any real conversation, and still a
+ * number — an unbounded query against a table somebody can write to is how one long case takes
+ * the console down.
+ */
+const ALL_MESSAGES = 2000
+
 /** The key off an unparsed fact row, for the log line when it could not be read. */
 function keyOf(row: unknown): string {
   return typeof row === 'object' && row !== null && 'key' in row && typeof row.key === 'string'
@@ -60,7 +67,25 @@ function unwrap(result: Query, what: string): unknown {
   return result.data
 }
 
-export async function loadCase(client: Db, caseId: string): Promise<LoadedCase | null> {
+/**
+ * How much of the conversation to load.
+ *
+ * `MESSAGE_WINDOW` is sized for the model: a turn only needs recent history, and sending all of
+ * it would be paying to re-read a conversation the model has already acted on. The console
+ * needs the opposite — it is the record somebody reads before phoning a customer, and a
+ * transcript that quietly stops twenty-four messages ago is worse than no transcript, because
+ * it looks complete.
+ */
+export type LoadOptions = {
+  /** Omitted, the model's window. `'all'` for anything that shows a human the case. */
+  readonly messages?: number | 'all'
+}
+
+export async function loadCase(
+  client: Db,
+  caseId: string,
+  options: LoadOptions = {},
+): Promise<LoadedCase | null> {
   const caseResult = (await client
     .from('cases')
     .select('id, kind, auth_level, last_seen_at, customer_id')
@@ -99,7 +124,7 @@ export async function loadCase(client: Db, caseId: string): Promise<LoadedCase |
       .select('role, content, cards, created_at')
       .eq('case_id', caseId)
       .order('created_at', { ascending: false })
-      .limit(MESSAGE_WINDOW),
+      .limit(options.messages === 'all' ? ALL_MESSAGES : (options.messages ?? MESSAGE_WINDOW)),
     client.from('persona_config').select('preset, sliders').eq('scope', 'global').maybeSingle(),
     client.from('domain_config').select('kill_switch').eq('scope', 'global').maybeSingle(),
     /*
