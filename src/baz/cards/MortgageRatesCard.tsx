@@ -44,7 +44,13 @@ export function MortgageRatesCard({ card }: { card: Payload }): ReactNode {
             <div className="flex items-baseline justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{option.label}</p>
-                <p className="text-muted-foreground truncate text-xs">{option.familyLabel}</p>
+                {/*
+                  A variable rate's term and its family are both just "Variable", and printing
+                  it twice reads as a mistake rather than as emphasis.
+                */}
+                {option.familyLabel === option.label ? null : (
+                  <p className="text-muted-foreground truncate text-xs">{option.familyLabel}</p>
+                )}
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-base leading-tight font-bold tabular-nums">
