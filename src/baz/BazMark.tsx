@@ -2,25 +2,18 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Baz's face mark, from the supplied dev kit (`svg/baz-face-mark.svg`).
+ * Baz's icon, from `docs/baz-icon.svg`.
  *
- * The kit's use for it is narrow and worth keeping to: the chat avatar and the zero state, and
- * not as a logo beside the name — that is the wordmark's job, and the kit is explicit that the
- * full wordmark is not a chat avatar either.
+ * A lowercase `b` — a stem and a ring for its bowl — with two eyes inside the bowl. It is the
+ * same letter that opens the wordmark, which is the point: the thing in the middle of the
+ * opening screen and the first letter of the name are one object.
  *
- * It is drawn here rather than imported as a file for two reasons. The orbit dot has to move on
- * its own, which a single `<img>` cannot do. And it has to be able to take a colour: the kit
- * supplies a blue and a black variant of the same artwork, which is `currentColor` wearing two
- * hats.
+ * Drawn here rather than imported as a file so it can take a colour. The artwork is a single
+ * blue; `currentColor` is what lets the same component sit in the brand blue, in a muted
+ * header, and on a dark ground without a second asset.
  *
- * Geometry is the kit's exactly — a solid disc with a white counter punched out of it, not a
- * stroked ring. The two look similar at a glance and are not the same: the kit's wall is 30
- * units on a 78 radius where a 24-unit stroke centred on 78 would be thinner and reach further
- * out, which also changes whether the orbit dot touches. It does not. It sits clear of the
- * disc by about six units, and that gap is the mark.
- *
- * Nothing here is a raster image and nothing animates but `transform` and `opacity`, which is
- * what keeps it at sixty frames on a phone (opening-transition spec §15).
+ * Not square — 64 by 72, because the stem rises above the bowl. `preserveAspectRatio` keeps it
+ * honest inside a square slot rather than stretching the ring into an oval.
  */
 export function BazMark({
   className,
@@ -29,9 +22,9 @@ export function BazMark({
 }: {
   readonly className?: string
   /**
-   * Idle motion, for the hero state only (spec §3).
+   * Idle motion, for the hero state only (opening-transition spec §3).
    *
-   * A slow scale and a drifting dot — no bounce, no halo, no spin. The spec is explicit about
+   * A slow scale, and nothing else. No bounce, no halo, no spin — the spec is explicit about
    * which of those reads as present and which reads as a gimmick.
    */
   readonly breathing?: boolean
@@ -45,27 +38,18 @@ export function BazMark({
 
   return (
     <svg
-      viewBox="0 0 256 256"
+      viewBox="0 0 64 72"
       className={cn('size-full', breathing && 'baz-mark-breathe', className)}
       {...(labelled
         ? { role: 'img' as const, 'aria-label': title }
         : { 'aria-hidden': true as const })}
     >
-      <circle cx="120" cy="132" r="78" fill="currentColor" />
-      {/*
-        White, not the page colour. The face is white in the kit on every ground it supplies,
-        including the dark one — it is part of the artwork rather than a hole for the background
-        to show through.
-      */}
-      <circle cx="120" cy="132" r="48" fill="#ffffff" />
-      <circle cx="102" cy="132" r="7.5" fill="currentColor" />
-      <circle cx="138" cy="132" r="7.5" fill="currentColor" />
-      <circle
-        cx="188"
-        cy="58"
-        r="16"
+      <circle cx="32" cy="40" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
+      <circle cx="26" cy="37" r="3" fill="currentColor" />
+      <circle cx="37" cy="37" r="3" fill="currentColor" />
+      <path
+        d="M0 7.5C0 3.35786 3.35786 0 7.5 0C11.6421 0 15 3.35786 15 7.5V40H0V7.5Z"
         fill="currentColor"
-        className={cn(breathing && 'baz-mark-orbit')}
       />
     </svg>
   )

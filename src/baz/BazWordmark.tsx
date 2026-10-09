@@ -2,57 +2,55 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * The Baz wordmark, from the supplied dev kit (`svg/baz-wordmark-horizontal.svg`).
+ * The Baz wordmark, from `docs/baz-name.svg`.
  *
- * A stylised lowercase `b` whose counter is Baz's face, followed by `az`. The kit's own note is
- * that the `az` ships "as a clean starter asset using SVG text", to be outlined properly later
- * — so it is set here in the application's own typeface rather than in the kit's DejaVu, which
- * is not installed on a phone and would silently become something else.
+ * Three drawn letters rather than type: a `b` built from a stem and a ring, an `a` from a ring
+ * and a stem the other way up, and a `z` from two bars and a diagonal. Only the `b` carries
+ * eyes, which is what makes the first letter the icon and the icon the first letter.
  *
- * ## The `b`
+ * Outlines, not text — so it renders identically on every device, which is the whole reason a
+ * logotype gets drawn rather than set. It also means there is no typeface to keep in step.
  *
- * Drawn to the kit's measurements exactly: stem 28 wide and 80 tall with fully rounded ends,
- * bowl of radius 44 centred at (44, 86), counter 25, eyes 5.5 at ±9. The stem's bottom finishes
- * inside the bowl rather than meeting its edge, which is what gives the letter a continuous
- * silhouette with no seam at the join.
- *
- * ## Fitting the two halves together
- *
- * Every measurement below is a ratio taken off the kit file, so the lockup holds at any size.
- * Against its 118px `az`, the glyph is 88 wide and 126 tall and its baseline sits 28 up from
- * the bottom — meaning the bowl deliberately hangs below the baseline of the letters beside it,
- * which is the detail that makes the mark read as drawn rather than typed. `items-baseline`
- * puts the element's bottom on the baseline and the translate pushes it back down by that
- * overhang.
- *
- * The one substitution is the typeface, so the `az` carries the kit's weight (800) and its
- * tracking (-6 on 118, or -0.051em) rather than Inter's defaults.
+ * Sized by height, like any logo: pass `h-7`, `h-9`. The width follows the artwork.
  */
 export function BazWordmark({ className }: { readonly className?: string }): ReactNode {
   return (
-    <span
+    <svg
+      viewBox="0 0 202 87"
       role="img"
       aria-label="Baz"
-      className={cn('text-baz-ink inline-flex items-baseline', className)}
+      className={cn('text-baz-primary h-7 w-auto', className)}
     >
-      <span
-        aria-hidden
-        className="text-baz-primary mr-[0.017em] inline-block h-[1.068em] w-[0.746em] translate-y-[0.237em]"
-      >
-        <svg viewBox="0 0 88 126" className="size-full">
-          {/* The kit's own coordinates, shifted up by its 4-unit top margin. */}
-          <g transform="translate(0,-4)">
-            <rect x="0" y="4" width="28" height="80" rx="14" fill="currentColor" />
-            <circle cx="44" cy="86" r="44" fill="currentColor" />
-            <circle cx="44" cy="86" r="25" fill="#ffffff" />
-            <circle cx="35" cy="86" r="5.5" fill="currentColor" />
-            <circle cx="51" cy="86" r="5.5" fill="currentColor" />
-          </g>
-        </svg>
-      </span>
-      <span aria-hidden className="font-extrabold tracking-[-0.051em]">
-        az
-      </span>
-    </span>
+      {/* b */}
+      <circle cx="32" cy="55" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
+      <circle cx="26" cy="52" r="3" fill="currentColor" />
+      <circle cx="37" cy="52" r="3" fill="currentColor" />
+      <path d="M34 52H40" stroke="currentColor" />
+      <path d="M23 52H29" stroke="currentColor" />
+      <path
+        d="M0 7.5C0 3.35786 3.35786 0 7.5 0V0C11.6421 0 15 3.35786 15 7.5V55H0V7.5Z"
+        fill="currentColor"
+      />
+
+      {/* a */}
+      <circle cx="101" cy="55" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
+      <path
+        d="M133 79.5C133 83.6421 129.642 87 125.5 87V87C121.358 87 118 83.6421 118 79.5L118 53L133 53L133 79.5Z"
+        fill="currentColor"
+      />
+
+      {/* z */}
+      <path
+        d="M145.5 38C141.358 38 138 34.6421 138 30.5V30.5C138 26.3579 141.358 23 145.5 23L194 23L194 38L145.5 38Z"
+        fill="currentColor"
+      />
+      <path d="M146 79L194 31" stroke="currentColor" strokeWidth="15" />
+      <path
+        d="M194.5 72C198.642 72 202 75.3579 202 79.5V79.5C202 83.6421 198.642 87 194.5 87L146 87L146 72L194.5 72Z"
+        fill="currentColor"
+      />
+      <circle cx="194.5" cy="30.5" r="7.5" fill="currentColor" />
+      <circle cx="145.5" cy="79.5" r="7.5" fill="currentColor" />
+    </svg>
   )
 }

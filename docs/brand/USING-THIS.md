@@ -1,33 +1,41 @@
-# The brand kit in this repo
+# The brand
 
-`svg/`, `tokens/`, `README.md` and `implementation-notes.md` are the supplied Baz dev kit,
-copied in unmodified. They are the source of truth for the artwork: if a component here and a
-file there disagree, the file is right.
+`baz-icon.svg` and `baz-name.svg` are the artwork. They are the source of truth: if a component
+here and one of those files disagree, the file is right.
 
-## Where each one lives in the code
-
-| Kit asset | In the app |
+| Artwork | In the app |
 |---|---|
-| `baz-face-mark.svg` | `src/baz/BazMark.tsx` — chat avatar, zero state |
-| `baz-wordmark-horizontal.svg` | `src/baz/BazWordmark.tsx` — every header |
-| `baz-app-icon.svg` | `public/favicon.svg`, used verbatim; `public/icons/*.png` rendered from it |
-| `tokens/brand-tokens.css` | `--baz-primary` and `--baz-ink` in `src/index.css` |
+| `baz-icon.svg` | `src/baz/BazMark.tsx` — chat avatar, zero state; `public/favicon.svg` and `public/icons/*.png` |
+| `baz-name.svg` | `src/baz/BazWordmark.tsx` — every header |
+| `#0029F8` | `--baz-primary` in `src/index.css` |
 
-## The two deliberate departures
+The icon is a lowercase `b` — a stem and a ring for its bowl — with two eyes inside the bowl.
+It is the same letter that opens the wordmark, which is the point: the thing waiting in the
+middle of the opening screen and the first letter of the name are one object, and the opening
+transition moves that object rather than swapping one picture for another.
 
-**The `az` is set in Inter, not the kit's DejaVu.** The kit says so itself: the wordmark's
-lettering ships "as a clean starter asset using SVG text", to be outlined later. SVG `<text>`
-renders in whatever font the device happens to have, so on a phone the kit file would quietly
-become something else. Setting it in the application's own typeface at the kit's weight and
-tracking is stable; outlining it properly is the real fix, and it is still outstanding.
+## How they are used
 
-**`--baz-primary` is not `--primary`.** The tenant's blue is Bank of Ireland's, and Baz is
-meant to be portable to another one (Invariant 11, §32) — a logo that changes colour with the
-bank it is sitting inside is not a logo. The two are within a couple of points of each other
-today; that is a coincidence.
+Both are drawn in the components rather than imported as files, so they can take a colour
+through `currentColor` — one component for the brand blue, a muted header and a dark ground,
+instead of three assets. The geometry is copied verbatim; only the fill is parameterised.
 
-## Keeping to it
+The app icon is the one place that keeps its own copy, because an icon cannot inherit anything:
+a favicon has no page to take a colour from, and a home screen composites it on whatever ground
+it likes, so the tile and the ink are both written out.
 
-The kit's own guidance, worth repeating because it is easy to drift from: the face mark is for
-chat, the wordmark is for brand and header contexts, and the full wordmark is never a chat
-avatar. The dark-mode blue is ours, not the kit's — it specifies one blue, for a white ground.
+Sizing differs by kind. The icon is square-ish artwork at 64 by 72 and is sized by its box
+(`size-8`, `size-20`), with the aspect preserved so the ring never becomes an oval. The wordmark
+is sized by height like any logo — `h-7`, `h-8` — and the width follows.
+
+## `--baz-primary` is not `--primary`
+
+The tenant's blue is Bank of Ireland's, and Baz is meant to be portable to another one
+(Invariant 11, §32). A logo that changes colour with the bank it is sitting inside is not a
+logo. The dark-mode value is ours: the artwork specifies one blue, for a white ground.
+
+## superseded/
+
+An earlier dev kit — a different face mark, a different wordmark and a different blue
+(`#1D4ED8`). Kept for reference and not in use anywhere. Nothing in `src/` should match it, and
+if something does, that is the bug.

@@ -48,7 +48,7 @@ export function BazScreen(): ReactNode {
           <Button asChild variant="ghost" className="h-auto px-3 py-1.5">
             <Link to={routes.landing}>
               <span className="text-center leading-tight">
-                <BazWordmark className="text-xl" />
+                <BazWordmark className="mx-auto h-7" />
                 <span
                   className={cn(
                     'text-muted-foreground block text-2xs font-normal transition-opacity duration-200',

@@ -34,7 +34,7 @@ export function HowItWorks(): ReactNode {
       <header className="border-border/60 border-b">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-5">
           <Link to={routes.landing} className="flex items-center gap-3">
-            <BazWordmark className="text-xl" />
+            <BazWordmark className="h-7" />
           </Link>
           <span className="bg-border hidden h-5 w-px sm:block" />
           <span className="text-muted-foreground hidden text-sm sm:block">How it works</span>

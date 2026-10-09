@@ -100,7 +100,7 @@ export function PartnerJoin(): ReactNode {
       <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-30 border-b backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-2.5">
           <span className="leading-tight">
-            <BazWordmark className="text-lg" />
+            <BazWordmark className="h-5" />
             <span className="text-muted-foreground block text-2xs">Second applicant</span>
           </span>
         </div>

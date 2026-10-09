@@ -27,7 +27,7 @@ export function Landing(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
       <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-6">
-        <BazWordmark className="text-2xl" />
+        <BazWordmark className="h-8" />
         <span className="bg-border hidden h-5 w-px sm:block" />
         <span className="text-muted-foreground hidden text-sm sm:block">
           A personal banker for everyone.
