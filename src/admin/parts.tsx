@@ -86,15 +86,23 @@ export function MetricCard({
   readonly display?: string
 }): ReactNode {
   return (
-    <Card className="gap-2">
-      <CardHeader>
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="tabular flex items-baseline gap-2 text-3xl">
+    /*
+     * Smaller below the stacking breakpoint, and the explanation goes.
+     *
+     * Five of these at full size filled an entire phone screen before the case list began, so
+     * the first thing anybody saw on a phone was the summary of a list they could not reach.
+     * The numbers are what a glance is for; the sentence under each one is for somebody with
+     * room to read it.
+     */
+    <Card className="gap-1 py-4 lg:gap-2 lg:py-6">
+      <CardHeader className="px-4 lg:px-6">
+        <CardDescription className="text-xs lg:text-sm">{label}</CardDescription>
+        <CardTitle className="tabular flex items-baseline gap-2 text-2xl lg:text-3xl">
           {display ?? value.toLocaleString('en-IE')}
           <Comparison value={value} previous={previous} />
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="hidden space-y-2 px-4 lg:block lg:px-6">
         {chart}
         {note !== undefined && <p className="text-muted-foreground text-xs">{note}</p>}
       </CardContent>

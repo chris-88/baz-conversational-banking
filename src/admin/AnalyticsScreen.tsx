@@ -99,7 +99,7 @@ function Panels({ data }: { readonly data: Analytics }): ReactNode {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         <MetricCard
           label="Conversations"
           value={data.totals.conversations}
@@ -512,7 +512,7 @@ function Nothing({ children }: { readonly children: ReactNode }): ReactNode {
 function Loading(): ReactNode {
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         {[0, 1, 2, 3].map((index) => (
           <Skeleton key={index} className="h-36" />
         ))}

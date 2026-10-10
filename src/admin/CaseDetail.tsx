@@ -42,14 +42,21 @@ export function CaseDetail({
   caseId,
   data,
   onChanged,
+  back,
+  aside,
 }: {
   readonly caseId: string
   readonly data: AdminCase
   readonly onChanged: () => void
+  /** A way out, when this is the whole screen rather than the middle column. */
+  readonly back?: ReactNode
+  /** The context pane's trigger, when there is no room for a third column. */
+  readonly aside?: ReactNode
 }): ReactNode {
   return (
     <Tabs defaultValue="conversation" className="flex h-full min-h-0 flex-col gap-0">
       <div className="space-y-3 border-b p-3">
+        {back === undefined ? null : <div className="-mb-1">{back}</div>}
         <div className="flex min-w-0 items-start gap-2">
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-semibold tracking-tight">{data.handoff.who}</h2>
@@ -59,10 +66,15 @@ export function CaseDetail({
                 ` · last spoke ${data.handoff.lastSeen.slice(0, 10)}`}
             </p>
           </div>
+          {aside}
           <DeleteCase caseId={caseId} who={data.handoff.who} />
         </div>
 
-        <TabsList>
+        {/*
+          Five tabs do not fit across a phone, and a tab you cannot see is a tab that does not
+          exist. Scrolling the strip keeps all five reachable rather than hiding the last two.
+        */}
+        <TabsList className="max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="conversation" className="text-xs">
             Conversation
           </TabsTrigger>

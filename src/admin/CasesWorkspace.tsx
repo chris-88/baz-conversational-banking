@@ -1,4 +1,10 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { routes } from '@/app/routes'
+import { ArrowLeftIcon, PanelRightIcon } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { useIsNarrow } from '@/lib/useIsNarrow'
+import type { AdminCase } from '@contracts/admin.ts'
 import { useCallback, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -55,6 +61,11 @@ export function CasesWorkspace({
   readonly period: Period
   readonly onPeriodChange: (next: Period) => void
 }): ReactNode {
+  /*
+   * 1024, not the phone breakpoint. Three panels stop being usable well before a screen is a
+   * phone — at 900 the middle column is still too narrow to read a conversation in.
+   */
+  const stacked = useIsNarrow(1024)
   const { caseId } = useParams<{ caseId: string }>()
   const queryClient = useQueryClient()
 
@@ -87,7 +98,12 @@ export function CasesWorkspace({
     <div className="@container flex h-full min-h-0 flex-col gap-4">
       <PageHeader
         title="Cases"
-        description="Every live conversation, what Baz understood, and what you can do about it."
+        {...(stacked && caseId !== undefined
+          ? {}
+          : {
+              description:
+                'Every live conversation, what Baz understood, and what you can do about it.',
+            })}
         actions={
           <>
             <PeriodSelect value={period} onChange={onPeriodChange} />
@@ -96,52 +112,132 @@ export function CasesWorkspace({
         }
       />
 
-      <Metrics metrics={data.metrics} previous={data.previous} cost={data.cost} />
+      {/*
+        The summary is for the list, not for a case.
+        
+        On a phone, five tiles and a page header pushed the conversation below the fold — so
+        opening a case showed numbers about every other case instead. They are still there on
+        the way in, and on any screen with room for both.
+      */}
+      {stacked && caseId !== undefined ? null : (
+        <Metrics metrics={data.metrics} previous={data.previous} cost={data.cost} />
+      )}
 
       {/*
-        react-resizable-panels v4: horizontal is the default orientation, and sizes are strings
-        read as percentages — a bare number would be pixels.
+        One thing at a time on a narrow screen.
+        
+        Three resizable panels in 390 points comes out at 89 / 177 / 89 — a case list too
+        narrow to read a name in, beside a conversation too narrow to read a sentence in. The
+        panels are a laptop layout and they stay one; on a phone the same screens are reached
+        by going into a case and coming back out, which is what the URL already does.
       */}
-      <ResizablePanelGroup className="min-h-0 flex-1 overflow-hidden rounded-xl border">
-        <ResizablePanel defaultSize="25" minSize="18" maxSize="40">
-          <CaseList cases={data.cases} selected={caseId} />
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        <ResizablePanel defaultSize="50" minSize="30">
+      {stacked ? (
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border">
           {caseId === undefined ? (
-            <NothingSelected />
+            <>
+              <CaseList cases={data.cases} selected={caseId} />
+              {data.activity.length > 0 ? (
+                <div className="border-t p-3">
+                  <ActivityFeed activity={data.activity} />
+                </div>
+              ) : null}
+            </>
           ) : inspected === null ? (
             <Loading />
           ) : (
-            // Keyed so switching case resets the tabs rather than keeping whichever one the
-            // previous conversation happened to be open on.
-            <CaseDetail key={caseId} caseId={caseId} data={inspected} onChanged={refresh} />
+            <CaseDetail
+              key={caseId}
+              caseId={caseId}
+              data={inspected}
+              onChanged={refresh}
+              back={
+                <Button asChild variant="ghost" size="sm" className="-ml-2 shrink-0">
+                  <Link to={routes.admin.root}>
+                    <ArrowLeftIcon />
+                    Cases
+                  </Link>
+                </Button>
+              }
+              aside={<ContextSheet data={inspected} caseId={caseId} />}
+            />
           )}
-        </ResizablePanel>
+        </div>
+      ) : (
+        <ResizablePanelGroup className="min-h-0 flex-1 overflow-hidden rounded-xl border">
+          <ResizablePanel defaultSize="25" minSize="18" maxSize="40">
+            <CaseList cases={data.cases} selected={caseId} />
+          </ResizablePanel>
 
-        <ResizableHandle withHandle />
+          <ResizableHandle withHandle />
 
-        {/*
+          <ResizablePanel defaultSize="50" minSize="30">
+            {caseId === undefined ? (
+              <NothingSelected />
+            ) : inspected === null ? (
+              <Loading />
+            ) : (
+              // Keyed so switching case resets the tabs rather than keeping whichever one the
+              // previous conversation happened to be open on.
+              <CaseDetail key={caseId} caseId={caseId} data={inspected} onChanged={refresh} />
+            )}
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/*
           The right pane answers "what do I need to know": about this customer when one is
           selected, about everything when none is. Two questions, one place to look.
         */}
-        <ResizablePanel defaultSize="25" minSize="18" maxSize="40">
-          {inspected === null ? (
-            <div className="h-full overflow-y-auto p-3">
-              {data.activity.length > 0 ? (
-                <ActivityFeed activity={data.activity} />
-              ) : (
-                <ActivityPlaceholder />
-              )}
-            </div>
-          ) : (
-            <CaseContext key={caseId} data={inspected} />
-          )}
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          <ResizablePanel defaultSize="25" minSize="18" maxSize="40">
+            {inspected === null ? (
+              <div className="h-full overflow-y-auto p-3">
+                {data.activity.length > 0 ? (
+                  <ActivityFeed activity={data.activity} />
+                ) : (
+                  <ActivityPlaceholder />
+                )}
+              </div>
+            ) : (
+              <CaseContext key={caseId} data={inspected} />
+            )}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </div>
+  )
+}
+
+/**
+ * The context pane, as a sheet, for when there is no room for a third column.
+ *
+ * The same component the wide layout puts on the right — not a cut-down version of it. A
+ * console that shows less on a phone is a console somebody has to go and find a laptop to
+ * finish using, which during a demonstration is the whole problem.
+ */
+function ContextSheet({
+  data,
+  caseId,
+}: {
+  readonly data: AdminCase
+  readonly caseId: string
+}): ReactNode {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="sm" className="shrink-0">
+          <PanelRightIcon />
+          Context
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
+        <SheetHeader className="border-b">
+          <SheetTitle>What Baz knows</SheetTitle>
+        </SheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <CaseContext key={caseId} data={data} />
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -293,7 +389,7 @@ function Metrics({
   ]
 
   return (
-    <div className="@3xl:grid-cols-3 @6xl:grid-cols-5 grid shrink-0 grid-cols-2 gap-4">
+    <div className="@3xl:grid-cols-3 @6xl:grid-cols-5 grid shrink-0 grid-cols-2 gap-2 lg:gap-4">
       {tiles.map((tile) => (
         <MetricCard
           key={tile.label}
