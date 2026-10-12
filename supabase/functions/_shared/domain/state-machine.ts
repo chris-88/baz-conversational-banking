@@ -28,6 +28,14 @@ export type ApplicationState = (typeof APPLICATION_STATES)[number]
 export type Application = {
   readonly id: ApplicationId
   readonly product: Product
+  /**
+   * Which catalogue product, where the kind alone does not say.
+   *
+   * `product` chooses the journey; nine savings products share one. Null for applications
+   * started before the catalogue was wired in, and for journeys with no specific product
+   * behind them.
+   */
+  readonly catalogueId?: string | null
   readonly state: ApplicationState
   /** Where `resumed` returns to. Non-null only while `paused`. */
   readonly resumeTo: ApplicationState | null

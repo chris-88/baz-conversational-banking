@@ -153,6 +153,7 @@ export type Database = {
       applications: {
         Row: {
           case_id: string
+          catalogue_id: string | null
           created_at: string
           id: string
           plan_id: string | null
@@ -164,6 +165,7 @@ export type Database = {
         }
         Insert: {
           case_id: string
+          catalogue_id?: string | null
           created_at?: string
           id?: string
           plan_id?: string | null
@@ -175,6 +177,7 @@ export type Database = {
         }
         Update: {
           case_id?: string
+          catalogue_id?: string | null
           created_at?: string
           id?: string
           plan_id?: string | null

@@ -18,6 +18,14 @@ export const productOptionCardSchema = z.object({
     .array(
       z.object({
         product: z.enum(PRODUCTS),
+        /**
+         * Which catalogue product this is, when the kind alone is not enough.
+         *
+         * Nine savings products share one `savings` journey. Without this, SuperSaver and the
+         * 365 31-Day Notice Account are the same row offered twice and the same application
+         * started once.
+         */
+        catalogueId: z.string().min(1).max(80).optional(),
         displayName: z.string(),
         oneLine: z.string(),
         /** The model's words, tied to what the customer said (§49). */

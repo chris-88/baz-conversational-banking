@@ -9,6 +9,17 @@ import { ProductIcon } from '@/components/ProductIcon'
 import { cn } from '@/lib/utils'
 
 type Payload = Extract<CardPayload, { type: 'product_options' }>
+type Option = Payload['options'][number]
+export type ProductChoice = { product: string; catalogueId?: string }
+
+/**
+ * What identifies a row.
+ *
+ * It used to be the product kind, which was fine until two rows shared one. SuperSaver and the
+ * 365 31-Day Notice Account are both `savings`: they collided on the React key, and ticking
+ * either box ticked both, because the selection was a list of kinds.
+ */
+const identify = (option: Option): string => option.catalogueId ?? option.product
 
 /**
  * §8, §49 — Baz explains why something might fit; the customer chooses.
@@ -24,21 +35,29 @@ export function ProductOptionsCard({
   disabled,
 }: {
   card: Payload
-  onSelect?: (products: readonly string[]) => Promise<void> | void
-  onDecline?: (products: readonly string[]) => Promise<void> | void
+  onSelect?: (products: readonly ProductChoice[]) => Promise<void> | void
+  onDecline?: (products: readonly ProductChoice[]) => Promise<void> | void
   disabled?: boolean
 }): ReactNode {
   const [chosen, setChosen] = useState<readonly string[]>([])
   const [busy, setBusy] = useState(false)
 
-  const toggle = (product: string) =>
+  const toggle = (key: string) =>
     setChosen((current) =>
-      current.includes(product) ? current.filter((item) => item !== product) : [...current, product],
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
     )
 
+  const choices = (keys: readonly string[]): readonly ProductChoice[] =>
+    card.options
+      .filter((option) => keys.includes(identify(option)))
+      .map((option) => ({
+        product: option.product,
+        ...(option.catalogueId === undefined ? {} : { catalogueId: option.catalogueId }),
+      }))
+
   const run = (
-    fn: ((products: readonly string[]) => Promise<void> | void) | undefined,
-    products: readonly string[],
+    fn: ((products: readonly ProductChoice[]) => Promise<void> | void) | undefined,
+    products: readonly ProductChoice[],
   ) => {
     if (!fn || products.length === 0 || busy) return
     setBusy(true)
@@ -60,10 +79,11 @@ export function ProductOptionsCard({
     <Card className="gap-0 overflow-hidden p-0">
       <ul className="divide-y">
         {card.options.map((option) => {
-          const selected = chosen.includes(option.product)
+          const key = identify(option)
+          const selected = chosen.includes(key)
 
           return (
-            <li key={option.product}>
+            <li key={key}>
               <label
                 className={cn(
                   'flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors',
@@ -88,7 +108,7 @@ export function ProductOptionsCard({
                 <Checkbox
                   className="mt-1"
                   checked={selected}
-                  onCheckedChange={() => toggle(option.product)}
+                  onCheckedChange={() => toggle(key)}
                   disabled={disabled ?? busy}
                   aria-label={`Choose ${option.displayName}`}
                 />
@@ -103,7 +123,7 @@ export function ProductOptionsCard({
           size="sm"
           className="w-full"
           disabled={(disabled ?? busy) || chosen.length === 0}
-          onClick={() => run(onSelect, chosen)}
+          onClick={() => run(onSelect, choices(chosen))}
         >
           {chosen.length === 0
             ? 'Choose what to look at'
@@ -117,7 +137,7 @@ export function ProductOptionsCard({
             variant="ghost"
             className="text-muted-foreground w-full"
             disabled={disabled ?? busy}
-            onClick={() => run(onDecline, card.options.map((option) => option.product))}
+            onClick={() => run(onDecline, choices(card.options.map(identify)))}
           >
             Not right now
           </Button>

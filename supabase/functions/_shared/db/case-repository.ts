@@ -114,7 +114,10 @@ export async function loadCase(
       .from('facts')
       .select('id, key, participant_id, subject_kind, value, source, verified, captured_for, superseded_by, captured_at')
       .eq('case_id', caseId),
-    client.from('applications').select('id, product, state, resume_to').eq('case_id', caseId),
+    client
+      .from('applications')
+      .select('id, product, state, resume_to, catalogue_id')
+      .eq('case_id', caseId),
     client.from('application_confirmations').select('application_id, requirement_id'),
     client.from('documents').select('application_id, requirement_id, verified').eq('case_id', caseId),
     client.from('application_requests').select('id, application_id, requirement_id, status, detail'),
@@ -203,6 +206,7 @@ export async function loadCase(
     .map((row) => ({
       id: asApplicationId(row.id),
       product: row.product,
+      catalogueId: row.catalogue_id ?? null,
       state: row.state,
       resumeTo: row.resume_to,
     }))

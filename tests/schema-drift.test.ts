@@ -71,6 +71,20 @@ describe('the database agrees with the TypeScript unions', () => {
     expect([...checkConstraintLiterals('cases', 'kind')].sort()).toEqual([...CASE_KINDS].sort())
   })
 
+  /**
+   * The column this test did not know about.
+   *
+   * `savings` and `current_account` were added to applications.product in two migrations and
+   * to neither this column nor this file. Every interest written for them violated the
+   * constraint and failed silently for a week, which showed up as §49 not working: a declined
+   * product had no row to be declined in, so Baz offered it back.
+   */
+  it('agrees with applications about what a product is', () => {
+    expect([...checkConstraintLiterals('product_interests', 'product')].sort()).toEqual(
+      [...PRODUCTS].sort(),
+    )
+  })
+
   it('accepts exactly the five products (§7)', () => {
     expect([...checkConstraintLiterals('applications', 'product')].sort()).toEqual([...PRODUCTS].sort())
   })

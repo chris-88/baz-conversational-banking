@@ -26,6 +26,21 @@ export function surfaceable(product: KnowledgeProduct): boolean {
 export const SURFACEABLE_PRODUCTS: readonly KnowledgeProduct[] =
   boiKnowledgeBase.products.filter(surfaceable)
 
+const BY_ID: ReadonlyMap<string, KnowledgeProduct> = new Map(
+  boiKnowledgeBase.products.map((product) => [product.id, product]),
+)
+
+/**
+ * One catalogue product by its id, e.g. `savings.supersaver`.
+ *
+ * The journey knows an application is `savings`; only this knows which of the nine savings
+ * products the customer actually chose. Undefined for an id that is not in the pack, which is
+ * the model offering something that does not exist and must not become a name on a card.
+ */
+export function knowledgeProduct(id: string): KnowledgeProduct | undefined {
+  return BY_ID.get(id)
+}
+
 /**
  * What a figure in this pack is worth.
  *

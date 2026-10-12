@@ -13,6 +13,7 @@ import { loadCase, recordFacts, writeEvent, type Db, type Insert } from '../_sha
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import { deferNeed } from '../_shared/db/needs.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
+import { knowledgeProduct } from '../_shared/tenants/boi/kb-prompt.ts'
 import {
   createApplications,
   evaluateFor,
@@ -99,17 +100,35 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   switch (action.action) {
     case 'select_products': {
-      const created = await createApplications(admin, loaded, action.products)
+      const created = await createApplications(
+        admin,
+        loaded,
+        action.products,
+        // The catalogue knows SuperSaver from the 365 31-Day Notice Account; the journey only
+        // knows they are both savings. Two applications called "Savings account" tell the
+        // customer nothing about which is which.
+        (product, catalogueId) =>
+          (catalogueId === null ? undefined : knowledgeProduct(catalogueId)?.name) ??
+          journeyFor(product).displayName,
+      )
       loaded = (await loadCase(admin, caseId))!
 
       // §53 — count what each new application never had to ask for.
+      const startedNow = new Set(
+        created.map((choice) => `${choice.product}:${choice.catalogueId ?? ''}`),
+      )
       let reused = 0
       for (const application of loaded.applications) {
-        if (!created.includes(application.product)) continue
+        if (!startedNow.has(`${application.product}:${application.catalogueId ?? ''}`)) continue
         reused += await recordReuse(admin, loaded, application, evaluateFor(loaded, application))
       }
 
-      const names = created.map((product) => journeyFor(product).displayName)
+      const names = created.map(
+        (choice) =>
+          (choice.catalogueId === undefined
+            ? undefined
+            : knowledgeProduct(choice.catalogueId)?.name) ?? journeyFor(choice.product).displayName,
+      )
       summary =
         created.length === 0
           ? 'Those were already started.'

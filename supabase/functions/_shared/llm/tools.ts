@@ -54,6 +54,14 @@ export const showProductOptionsInput = z.object({
   products: z
     .array(
       z.object({
+        /**
+         * Which catalogue product this is, when the kind alone is not enough.
+         *
+         * Nine savings products share one `savings` journey. Without this, SuperSaver and the
+         * 365 31-Day Notice Account are the same row offered twice and the same application
+         * started once.
+         */
+        catalogueId: z.string().min(1).max(80).optional(),
         product: productEnum,
         /** Must tie back to something the customer actually said (§49). */
         reason: z.string().min(10).max(200),
@@ -211,7 +219,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     description:
       'Offer products for the customer to choose from. Give a one-line reason for each, tied ' +
       'to something they told you. The customer chooses in the card; you do not create ' +
-      'anything by calling this.',
+      'anything by calling this. When you mean a particular product from the catalogue, set ' +
+      'catalogueId to its id (for example savings.supersaver) — several products share one ' +
+      'kind, and without the id two different savings accounts are one row offered twice and ' +
+      'one application started.',
     schema: showProductOptionsInput,
   },
   {

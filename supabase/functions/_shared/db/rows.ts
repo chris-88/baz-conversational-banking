@@ -47,6 +47,7 @@ export const applicationRow = z.object({
   product: z.enum(PRODUCTS),
   state: z.enum(APPLICATION_STATES),
   resume_to: z.enum(APPLICATION_STATES).nullable(),
+  catalogue_id: z.string().nullable().optional(),
 })
 
 export const confirmationRow = z.object({

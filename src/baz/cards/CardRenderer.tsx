@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Card } from '@contracts/cards.ts'
-import { ProductOptionsCard } from '@/baz/cards/ProductOptionsCard'
+import { ProductOptionsCard, type ProductChoice } from '@/baz/cards/ProductOptionsCard'
 import { QuoteCard } from '@/baz/cards/QuoteCard'
 import type { SubscribeResult } from '@/lib/push'
 import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
@@ -22,8 +22,8 @@ import { PlanProposalCard } from '@/baz/cards/PlanProposalCard'
  * fails the typecheck rather than rendering nothing at the customer.
  */
 export type CardActions = {
-  readonly onSelectProducts?: (products: readonly string[]) => Promise<void> | void
-  readonly onDeclineProducts?: (products: readonly string[]) => Promise<void> | void
+  readonly onSelectProducts?: (products: readonly ProductChoice[]) => Promise<void> | void
+  readonly onDeclineProducts?: (products: readonly ProductChoice[]) => Promise<void> | void
   /** A quote option the customer wants to go through. Explains; starts nothing. */
   readonly onDiscussQuote?: (option: { id: string; name: string }) => Promise<void> | void
   /** A catalogue product they want to hear about. Also explains; also starts nothing. */

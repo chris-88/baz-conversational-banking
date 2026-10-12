@@ -18,7 +18,21 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('select_products'),
     caseId,
-    products: z.array(z.enum(PRODUCTS)).min(1).max(5),
+    /**
+     * A kind, and optionally which product of that kind.
+     *
+     * Was a bare list of kinds, which could not express "SuperSaver and the notice account":
+     * both are `savings`, so two choices arrived as one and one application was started.
+     */
+    products: z
+      .array(
+        z.object({
+          product: z.enum(PRODUCTS),
+          catalogueId: z.string().min(1).max(80).optional(),
+        }),
+      )
+      .min(1)
+      .max(5),
   }),
 
   /** §49 — declining must stick, so it is recorded rather than merely not chosen. */

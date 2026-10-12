@@ -21,7 +21,11 @@ import { toneBucket } from '../_shared/llm/persona.ts'
 import type { ToolName } from '../_shared/llm/tools.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { boiProducts, productInfo } from '../_shared/tenants/boi/products.ts'
-import { SURFACEABLE_PRODUCTS, knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
+import {
+  SURFACEABLE_PRODUCTS,
+  knowledgeBaseSection,
+  knowledgeProduct,
+} from '../_shared/tenants/boi/kb-prompt.ts'
 import { rateOf } from '../_shared/tenants/boi/rates.ts'
 import { mortgageRatesSection, selectRates } from '../_shared/tenants/boi/mortgage-rates-select.ts'
 import type {
@@ -789,7 +793,9 @@ async function handleTurn(request: Request): Promise<Response> {
               }
 
               case 'show_product_options': {
-                const { products } = input as { products: { product: any; reason: string }[] }
+                const { products } = input as {
+                  products: { product: any; reason: string; catalogueId?: string }[]
+                }
 
                 /**
                  * §5, §6 — is there enough understanding of this person to be offering anything?
@@ -889,15 +895,29 @@ async function handleTurn(request: Request): Promise<Response> {
                   loaded.productInterests.filter((i) => i.status === 'declined').map((i) => i.product),
                 )
 
+                /*
+                 * The specific product's own name, where the model named one.
+                 *
+                 * Two savings accounts both labelled "Savings account" are two rows a customer
+                 * cannot tell apart, and they were the same row to the code as well.
+                 */
                 const card: Card = {
                   type: 'product_options',
-                  options: products.map((option) => ({
-                    product: option.product,
-                    displayName: productInfo(option.product).name,
-                    oneLine: productInfo(option.product).oneLine,
-                    reason: option.reason,
-                    previouslyDeclined: declined.has(option.product),
-                  })),
+                  options: products.map((option) => {
+                    const catalogue =
+                      option.catalogueId === undefined
+                        ? undefined
+                        : knowledgeProduct(option.catalogueId)
+
+                    return {
+                      product: option.product,
+                      ...(catalogue === undefined ? {} : { catalogueId: catalogue.id }),
+                      displayName: catalogue?.name ?? productInfo(option.product).name,
+                      oneLine: catalogue?.customer_job ?? productInfo(option.product).oneLine,
+                      reason: option.reason,
+                      previouslyDeclined: declined.has(option.product),
+                    }
+                  }),
                 }
 
                 for (const option of products) {
@@ -905,7 +925,13 @@ async function handleTurn(request: Request): Promise<Response> {
                     caseId: turn.caseId,
                     type: 'product_offered',
                     actor: 'model',
-                    payload: { product: option.product, reason: option.reason },
+                    payload: {
+                      product: option.product,
+                      reason: option.reason,
+                      ...(option.catalogueId === undefined
+                        ? {}
+                        : { catalogueId: option.catalogueId }),
+                    },
                   })
                 }
 

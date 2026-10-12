@@ -381,7 +381,14 @@ export function BazChat({
   const actions: CardActions = {
     onSelectProducts: async (products) => {
       await commit(
-        { action: 'select_products', caseId: caseId ?? '', products: products as Product[] },
+        {
+          action: 'select_products',
+          caseId: caseId ?? '',
+          products: products.map((choice) => ({
+            product: choice.product as Product,
+            ...(choice.catalogueId === undefined ? {} : { catalogueId: choice.catalogueId }),
+          })),
+        },
         'Say what is now in progress and what you need from them first.',
       )
     },
@@ -436,8 +443,10 @@ export function BazChat({
     },
 
     onDeclineProducts: async (products) => {
+      const first = products[0]
+      if (!first) return
       await commit(
-        { action: 'decline_product', caseId: caseId ?? '', product: products[0] as Product },
+        { action: 'decline_product', caseId: caseId ?? '', product: first.product as Product },
         'Acknowledge briefly and move on; do not raise those again.',
       )
     },
