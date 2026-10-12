@@ -667,18 +667,21 @@ export type Database = {
           auth_user_id: string
           created_at: string
           id: string
+          last_used_at: string
           participant_id: string
         }
         Insert: {
           auth_user_id: string
           created_at?: string
           id?: string
+          last_used_at?: string
           participant_id: string
         }
         Update: {
           auth_user_id?: string
           created_at?: string
           id?: string
+          last_used_at?: string
           participant_id?: string
         }
         Relationships: [

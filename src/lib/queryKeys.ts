@@ -5,6 +5,8 @@
 export const queryKeys = {
   session: {
     current: () => ['session', 'current'] as const,
+    /** The conversation switcher's list. Invalidated whenever a conversation is switched. */
+    cases: () => ['session', 'cases'] as const,
   },
 
   case: {

@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BazChat } from '@/baz/BazChat'
 import { BazWordmark } from '@/baz/BazWordmark'
+import { ConversationMenu } from '@/baz/ConversationMenu'
+import { rememberPresenterKey } from '@/lib/session'
 import { routes } from '@/app/routes'
 import { cn } from '@/lib/utils'
 import { useViewportHeight } from '@/lib/useViewportHeight'
@@ -15,8 +17,25 @@ import { useViewportHeight } from '@/lib/useViewportHeight'
  */
 export function BazScreen(): ReactNode {
   const [started, setStarted] = useState(false)
-  const [searchParams] = useSearchParams()
+  const [caseId, setCaseId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   useViewportHeight()
+
+  /**
+   * The presenter key arrives once in the address bar and is taken straight out of it.
+   *
+   * A key that stays in the URL is a key in every screenshot, every screen share and the
+   * browser history of whatever machine it was opened on. It is stored on the device instead,
+   * which is where the thing it unlocks is actually needed.
+   */
+  const presenter = searchParams.get('presenter')
+  useEffect(() => {
+    if (presenter === null || presenter === '') return
+    rememberPresenterKey(presenter)
+    const next = new URLSearchParams(searchParams)
+    next.delete('presenter')
+    setSearchParams(next, { replace: true })
+  }, [presenter, searchParams, setSearchParams])
 
   return (
     /*
@@ -48,7 +67,8 @@ export function BazScreen(): ReactNode {
           started ? 'opacity-100' : 'opacity-75',
         )}
       >
-        <div className="mx-auto flex w-full max-w-md items-center justify-center px-4 py-2">
+        <div className="mx-auto grid w-full max-w-md grid-cols-[2.25rem_1fr_2.25rem] items-center px-2 py-2">
+          <ConversationMenu caseId={caseId} />
           {/*
             A plain link rather than a ghost Button. The Button sets
             `[&_svg:not([class*='size-'])]:size-4` on everything inside it, which silently
@@ -58,15 +78,18 @@ export function BazScreen(): ReactNode {
           <Link
             to={routes.landing}
             aria-label="Baz home"
-            className="hover:bg-accent focus-visible:ring-ring rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            className="hover:bg-accent focus-visible:ring-ring justify-self-center rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <BazWordmark className="h-9" />
           </Link>
+          {/* Balances the hamburger so the wordmark stays centred on the screen, not beside it. */}
+          <span aria-hidden />
         </div>
       </header>
 
       <BazChat
         onStarted={setStarted}
+        onCase={setCaseId}
         className="mx-auto flex w-full max-w-md min-h-0 flex-1 flex-col"
         openingMessage={searchParams.get('say')}
         mode="new"

@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils'
 export function BazChat({
   openingMessage,
   onStarted,
+  onCase,
   mode = 'new',
   footer,
   composerClassName,
@@ -42,6 +43,14 @@ export function BazChat({
   openingMessage?: string | null
   /** Whether a conversation has started, so the chrome around this can settle with it (§8). */
   onStarted?: ((started: boolean) => void) | undefined
+  /**
+   * The case this joined, for chrome that needs it.
+   *
+   * Reported rather than looked up again. A second caller of `startSession` is a second
+   * request racing the first on a cold load, and two requests that both find no mapping both
+   * create a case — which is how one visitor ends up owning two conversations.
+   */
+  onCase?: ((caseId: string | null) => void) | undefined
   /** `fresh` knows nothing about the visitor; `demo` joins the seeded customer (§46). */
   mode?: 'new' | 'known'
   /** Shown once there is something worth carrying into the app (§29). */
@@ -242,6 +251,10 @@ export function BazChat({
     }
     // loadFrom is stable; listed to satisfy the exhaustive-deps rule honestly.
   }, [loadFrom, mode])
+
+  useEffect(() => {
+    onCase?.(caseId)
+  }, [caseId, onCase])
 
   useEffect(() => {
     if (caseId === null || loadingHistory || !openingMessage || openingSent.current) return

@@ -89,36 +89,207 @@ Deno.serve(async (request: Request): Promise<Response> => {
    * authenticated case it produced have all gone with it.
    */
 
-  const startMode = parsed.data.mode
+  /** The conversation this browser was last in. Ordered, because there can now be several. */
+  async function currentMapping(): Promise<
+    { participantId: string; caseId: string; role: string } | null
+  > {
+    const existing = await admin
+      .from('participant_sessions')
+      .select('participant_id, last_used_at, participants!inner(id, case_id, role)')
+      .eq('auth_user_id', authUserId)
+      .order('last_used_at', { ascending: false })
+      .limit(1)
 
-  // Already attached? Return the same case — this is what makes a PWA and a browser tab land
-  // on the same conversation rather than starting two.
-  const existing = await admin
-    .from('participant_sessions')
-    .select('participant_id, participants!inner(id, case_id, role)')
-    .eq('auth_user_id', authUserId)
-    .limit(1)
+    const found = (existing.data ?? [])[0] as any
+    if (!found?.participants) return null
+    return {
+      participantId: found.participants.id,
+      caseId: found.participants.case_id,
+      role: found.participants.role,
+    }
+  }
 
-  const found = (existing.data ?? [])[0] as any
-  if (found?.participants) {
+  /** The response every action that lands on a conversation returns. */
+  async function sessionFor(
+    participantId: string,
+    caseId: string,
+    role: string,
+    created: boolean,
+  ): Promise<Response> {
     const theCase = await admin
       .from('cases')
       .select('auth_level, customer_id')
-      .eq('id', found.participants.case_id)
+      .eq('id', caseId)
       .maybeSingle()
 
     return json(
       ok({
-        caseId: found.participants.case_id,
-        participantId: found.participants.id,
-        role: found.participants.role,
+        caseId,
+        participantId,
+        role: role === 'partner' ? 'partner' : 'primary',
         authLevel: theCase.data?.auth_level === 'authenticated' ? 'authenticated' : 'anonymous',
         customerFirstName: theCase.data?.customer_id ? canonicalCase.customer.firstName : null,
-        created: false,
-        hasUpdates: await updatesSince(found.participants.case_id),
+        created,
+        hasUpdates: await updatesSince(caseId),
       } satisfies SessionResponse),
       200,
     )
+  }
+
+  /**
+   * Whether this caller is running the demonstration.
+   *
+   * A key rather than nothing at all. The switcher lists every case in the system, which is
+   * what a presenter needs and precisely what a stranger must not have: the conversations hold
+   * what real people typed, which is the whole reason the data notice exists. Set
+   * PRESENTER_KEY and the menu opens up on the device that has it; leave it unset and nobody
+   * gets the wider list, including whoever guesses the parameter name.
+   */
+  function isPresenter(offered: string | undefined): boolean {
+    const expected = (globalThis as any).Deno?.env?.get('PRESENTER_KEY') ?? ''
+    return expected.length > 0 && offered === expected
+  }
+
+  if (parsed.data.action === 'list_cases') {
+    const presenter = isPresenter(parsed.data.presenterKey)
+    const current = await currentMapping()
+
+    const mine = await admin
+      .from('participant_sessions')
+      .select('participants!inner(case_id)')
+      .eq('auth_user_id', authUserId)
+
+    const myCaseIds = new Set(
+      ((mine.data ?? []) as any[]).map((row) => row.participants.case_id as string),
+    )
+
+    /*
+     * `test` cases are left out on purpose. They are the ones automated probes create, they
+     * are deleted without warning, and a switcher full of them is a switcher nobody can find
+     * anything in.
+     */
+    const rows = presenter
+      ? await admin
+          .from('cases')
+          .select('id, label, created_at, updated_at, kind')
+          .neq('kind', 'test')
+          .order('updated_at', { ascending: false })
+          .limit(60)
+      : await admin
+          .from('cases')
+          .select('id, label, created_at, updated_at, kind')
+          .in('id', [...myCaseIds, '00000000-0000-4000-8000-000000000000'])
+          .order('updated_at', { ascending: false })
+          .limit(60)
+
+    const cases = ((rows.data ?? []) as any[]).filter((row) => myCaseIds.has(row.id) || presenter)
+    const ids = cases.map((row) => row.id as string)
+
+    const [messages, applications] = await Promise.all([
+      admin.from('messages').select('case_id, role, content, created_at').in('case_id', ids),
+      admin.from('applications').select('case_id').in('case_id', ids),
+    ])
+
+    const summaries = cases.map((row) => {
+      const theirs = ((messages.data ?? []) as any[]).filter((m) => m.case_id === row.id)
+      const opening = theirs
+        .filter((m) => m.role === 'customer')
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))[0]
+      const latest = theirs
+        .map((m) => String(m.created_at))
+        .sort()
+        .pop()
+
+      return {
+        caseId: row.id as string,
+        label: (row.label as string | null) ?? null,
+        opening: opening ? String(opening.content).slice(0, 120) : null,
+        messages: theirs.length,
+        applications: ((applications.data ?? []) as any[]).filter((a) => a.case_id === row.id)
+          .length,
+        lastActivityAt: latest ?? (row.updated_at as string | null) ?? null,
+        current: row.id === current?.caseId,
+        mine: myCaseIds.has(row.id),
+      }
+    })
+
+    /*
+     * A conversation nobody has spoken in is not a conversation.
+     *
+     * Every visit creates a case before anybody types, so most of them are empty and they sort
+     * to the top by `updated_at` — the first build of this switcher listed forty-five rows,
+     * forty-four of them saying "nothing said yet". The one you are in stays regardless, because
+     * it is empty exactly when you have just started it.
+     */
+    const worthShowing = summaries.filter((row) => row.messages > 0 || row.current)
+
+    return json(ok({ cases: worthShowing, presenter }), 200)
+  }
+
+  if (parsed.data.action === 'switch_case') {
+    const target = parsed.data.caseId
+    const presenter = isPresenter(parsed.data.presenterKey)
+
+    /*
+     * Already a participant, or holding the key. Nothing else opens a conversation, because
+     * the id alone is not an authorisation — it travels in links and sits in the console.
+     */
+    const already = await admin
+      .from('participant_sessions')
+      .select('participant_id, participants!inner(id, case_id, role)')
+      .eq('auth_user_id', authUserId)
+
+    const existingHere = ((already.data ?? []) as any[]).find(
+      (row) => row.participants.case_id === target,
+    )
+
+    if (!existingHere && !presenter) return errorResponse('forbidden', 'Not your conversation.')
+
+    if (existingHere) {
+      await admin
+        .from('participant_sessions')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('auth_user_id', authUserId)
+        .eq('participant_id', existingHere.participants.id)
+
+      return await sessionFor(
+        existingHere.participants.id,
+        target,
+        existingHere.participants.role,
+        false,
+      )
+    }
+
+    // The presenter adopts the conversation's own primary participant rather than joining as a
+    // second person: they are driving it, not taking part in it.
+    const primary = await admin
+      .from('participants')
+      .select('id, role')
+      .eq('case_id', target)
+      .eq('role', 'primary')
+      .maybeSingle()
+
+    if (!primary.data) return errorResponse('not_found', 'That conversation has no one in it.')
+
+    await admin.from('participant_sessions').upsert(
+      {
+        participant_id: (primary.data as any).id,
+        auth_user_id: authUserId,
+        last_used_at: new Date().toISOString(),
+      },
+      { onConflict: 'participant_id,auth_user_id' },
+    )
+
+    return await sessionFor((primary.data as any).id, target, 'primary', false)
+  }
+
+  const startMode = parsed.data.action === 'start' ? parsed.data.mode : parsed.data.mode
+
+  // Already attached? Return the same case — this is what makes a PWA and a browser tab land
+  // on the same conversation rather than starting two.
+  const found = parsed.data.action === 'start' ? await currentMapping() : null
+  if (found) {
+    return await sessionFor(found.participantId, found.caseId, found.role, false)
   }
 
   /*

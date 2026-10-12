@@ -1445,7 +1445,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         caseId: action.caseId,
         type: 'notification_sent',
         actor: 'admin',
-        payload: { channel: 'push', subscriptions: targets.length, delivered },
+        payload: { channel: 'push', subscriptions: targets.length, delivered, title, body: message },
       })
 
       return json(
