@@ -1358,15 +1358,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const url = `${base}/#/baz?n=${code}`
 
       /*
-       * §35 — the copy says nothing about the application.
+       * §35 — the default says nothing about the application.
        *
-       * It is fixed, and it is fixed for a reason: a notification sits on a lock screen where
-       * anybody can read it. "Your mortgage has been approved" on a shared phone is the bank
-       * telling somebody else's news.
+       * It is the default for a reason: a notification sits on a lock screen where anybody can
+       * read it, and "your mortgage has been approved" on a shared phone is the bank telling
+       * somebody else's news. Nothing here ever reads the case to fill a message in.
+       *
+       * A presenter can override it, because a demonstration sometimes needs to show a
+       * particular thing arriving. That is a person typing a sentence and choosing to send it,
+       * which is a different act from a system deciding what to disclose — and the console
+       * says where it will be read before they do.
        */
+      const title = action.title ?? 'Baz'
       const message =
-        'Bank of Ireland: Baz has an update about something you’re working on with us. ' +
-        'Open Baz to pick it up.'
+        action.body ??
+        'Baz has an update about something you’re working on with us. Open Baz to pick it up.'
 
       /*
        * Push to every browser this case has subscribed. A phone, an installed app and a laptop
@@ -1389,7 +1395,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       for (const target of targets) {
         const result = await sendPush(
           target,
-          { title: 'Bank of Ireland', body: message, url },
+          { title, body: message, url },
           {
             privateD: env('VAPID_PRIVATE_D'),
             publicKey: env('VAPID_PUBLIC_KEY'),

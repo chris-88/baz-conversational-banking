@@ -83,7 +83,19 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
    * §35, §42 — a separate, deliberate action. Carries nothing about the application, and the
    * link requires signing in before anything is shown.
    */
-  z.object({ action: z.literal('send_notification'), caseId: z.uuid() }),
+  z.object({
+    action: z.literal('send_notification'),
+    caseId: z.uuid(),
+    /**
+     * The presenter's own words, where the fixed copy is not the point being made.
+     *
+     * Capped at a length a lock screen will actually show — iOS truncates somewhere around
+     * 150 characters with the screen locked, and a notification whose point is in the part
+     * that got cut is worse than a short one.
+     */
+    title: z.string().trim().min(1).max(40).optional(),
+    body: z.string().trim().min(1).max(150).optional(),
+  }),
 
   /** §44 — clears the room's conversations. Never touches the presenter case. */
   /** §47 — delete every conversation. No exceptions; the sample customer is one click to rebuild. */
@@ -399,9 +411,18 @@ export const adminOverviewSchema = z.object({
 })
 
 export const notificationSchema = z.object({
-  /** Fixed copy. It says nothing about what changed (§35). */
+  /** What was sent. The default says nothing about what changed (§35). */
   message: z.string(),
   url: z.string(),
+  /**
+   * How many devices this case has registered, and how many the push service took.
+   *
+   * Reported so the console can say what happened rather than "sent". Nobody subscribed means
+   * nothing was delivered, and a presenter should learn that here rather than by watching a
+   * phone stay dark.
+   */
+  subscriptions: z.number().int(),
+  delivered: z.number().int(),
 })
 
 export const adminCaseSchema = z.object({

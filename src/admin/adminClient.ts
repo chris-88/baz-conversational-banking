@@ -80,6 +80,8 @@ export const adminApi = {
     call({ action: 'set_persona', ...body }),
   simulate: (body: Omit<Extract<AdminRequest, { action: 'simulate_event' }>, 'action'>) =>
     call({ action: 'simulate_event', ...body }),
-  notify: async (caseId: string): Promise<{ message: string; url: string }> =>
-    notificationSchema.parse(await call({ action: 'send_notification', caseId })),
+  notify: async (caseId: string, custom?: { title: string; body: string }) =>
+    notificationSchema.parse(
+      await call({ action: 'send_notification', caseId, ...(custom ?? {}) }),
+    ),
 }

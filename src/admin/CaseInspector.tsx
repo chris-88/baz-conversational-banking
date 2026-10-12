@@ -1,4 +1,7 @@
 import { useState, type ReactNode } from 'react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BellIcon, CopyIcon, EyeOffIcon } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,7 +47,22 @@ export function CaseInspector({
   const [notification, setNotification] = useState<{
     message: string
     url: string
+    subscriptions: number
+    delivered: number
   } | null>(null)
+
+  /*
+   * The default copy, editable rather than fixed.
+   *
+   * §35 keeps what the system sends by itself deliberately uninformative, because a
+   * notification is read on a lock screen by whoever is holding the phone. A presenter typing
+   * a sentence and choosing to send it is a different act, so this starts from the safe
+   * wording and lets them change it — with the card saying where it will be read.
+   */
+  const [title, setTitle] = useState('Baz')
+  const [body, setBody] = useState(
+    'Baz has an update about something you\u2019re working on with us. Open Baz to pick it up.',
+  )
 
   const inspection = useQuery({
     queryKey: queryKeys.admin.caseInspection(caseId),
@@ -64,7 +82,7 @@ export function CaseInspector({
   })
 
   const notify = useMutation({
-    mutationFn: () => adminApi.notify(caseId),
+    mutationFn: () => adminApi.notify(caseId, { title: title.trim(), body: body.trim() }),
     onSuccess: (result) => {
       setNotification(result)
       refresh()
@@ -145,15 +163,45 @@ export function CaseInspector({
             <CardHeader>
               <CardTitle>Notify</CardTitle>
               <CardDescription>
-                A separate, deliberate action. The message says nothing about the application, and
-                the link needs a sign-in before anything is shown. §35, §42
+                A separate, deliberate action. The link needs a sign-in before anything is shown,
+                and carries nothing about the case. §35, §42
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="notify-title" className="text-xs">
+                  Title
+                </Label>
+                <Input
+                  id="notify-title"
+                  value={title}
+                  maxLength={40}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+                <Label htmlFor="notify-body" className="text-xs">
+                  Message
+                </Label>
+                <Textarea
+                  id="notify-body"
+                  value={body}
+                  maxLength={150}
+                  rows={3}
+                  onChange={(event) => setBody(event.target.value)}
+                />
+                {/*
+                  Said here rather than in a footnote, because this is the moment somebody is
+                  deciding what to write. A phone shows it to whoever is holding it.
+                */}
+                <p className="text-muted-foreground text-xs">
+                  This lands on a lock screen, where anyone holding the phone can read it.{' '}
+                  {String(body.trim().length)}/150.
+                </p>
+              </div>
+
               <Button
                 size="sm"
                 variant="outline"
-                disabled={notify.isPending}
+                disabled={notify.isPending || title.trim().length === 0 || body.trim().length === 0}
                 onClick={() => notify.mutate()}
               >
                 <BellIcon />
@@ -162,7 +210,16 @@ export function CaseInspector({
 
               {notification !== null && (
                 <div className="space-y-2 rounded-lg border p-3">
-                  <p className="text-sm">{notification.message}</p>
+                  {/*
+                    What actually happened, not "sent". Nobody subscribed means nothing was
+                    delivered, and that is worth learning here rather than from a dark phone.
+                  */}
+                  <p className="text-sm font-medium">
+                    {notification.subscriptions === 0
+                      ? 'Nobody on this case has notifications switched on.'
+                      : `Delivered to ${String(notification.delivered)} of ${String(notification.subscriptions)} ${notification.subscriptions === 1 ? 'device' : 'devices'}.`}
+                  </p>
+                  <p className="text-muted-foreground text-sm">{notification.message}</p>
                   <div className="flex gap-2">
                     <code className="bg-muted min-w-0 flex-1 truncate rounded px-2 py-1 text-2xs">
                       {notification.url}
