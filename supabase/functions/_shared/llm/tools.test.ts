@@ -115,16 +115,21 @@ describe('validateToolCall()', () => {
   })
 
   it('refuses an empty or oversized batch of facts', () => {
-    expect(validateToolCall('record_facts', { facts: [] }).ok).toBe(false)
-    expect(
+    const batch = (length: number) =>
       validateToolCall('record_facts', {
-        facts: Array.from({ length: 13 }, () => ({
+        facts: Array.from({ length }, () => ({
           key: 'income.annualBasic',
           subject: 'primary',
           value: 1,
         })),
-      }).ok,
-    ).toBe(false)
+      }).ok
+
+    expect(validateToolCall('record_facts', { facts: [] }).ok).toBe(false)
+    expect(batch(25)).toBe(false)
+
+    // An opening message that states fifteen things fits in one call. It did not, and the
+    // refusal cost an entire extra model round on the densest turns.
+    expect(batch(15)).toBe(true)
   })
 
   it('requires a real reason when offering products, not a bare list (§49)', () => {

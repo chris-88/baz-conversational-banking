@@ -35,7 +35,19 @@ export const recordFactsInput = z.object({
       }),
     )
     .min(1)
-    .max(12),
+    /*
+     * Was 12, which an opening message can exceed without trying.
+     *
+     * "I want a mortgage, I'm renting at 3,500, I've two kids, I save 2,500 a month, I'm
+     * employed by Revenue, I've no debt" carries fifteen facts, and the refusal cost a whole
+     * extra model round — every round re-reads the 28,000-token cached prefix, so the bound
+     * meant to keep one call small was buying a second call instead. The bound is still here
+     * because a tool input has to be finite; it is no longer tighter than the conversation.
+     *
+     * Nothing is admitted by raising it. Each fact is still checked against the catalogue one
+     * at a time, and anything marked `extractable: false` is still refused (Invariant 6).
+     */
+    .max(24),
 })
 
 export const showProductOptionsInput = z.object({

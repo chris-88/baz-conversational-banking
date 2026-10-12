@@ -201,6 +201,71 @@ intention.
 
 ---
 
+## Finding 7: an output ceiling is a cost, not a saving
+
+Baz had `max_tokens: 1_024`, set as a guardrail: a hard stop so that "count to 10,000" could
+not succeed even if it slipped past the gate. It read like a saving. It was the opposite.
+
+A customer opened with everything at once — a mortgage, a savings account, switching their
+banking, two children, their income, their rent, what they had saved and a twelve-month window
+— in one message. That turn needs prose, a dozen facts through `record_facts`, and a
+three-product card. It came to **exactly 1,024 output tokens**, every time, and was cut off
+inside the tool call. The result was an assistant message with no finished text and no usable
+tool block: no reply, no card, nothing recorded.
+
+What that cost, measured:
+
+| | Tokens | Cost |
+|---|---:|---:|
+| Gate | 1,412 in / 21 out | €0.0014 |
+| Cached prefix read | 28,633 | €0.0079 |
+| Output, all of it discarded | 1,024 | €0.0141 |
+| **Total, for "Sorry — I lost my thread there."** | | **€0.0234** |
+
+The customer sent the same message three times. Three turns, about €0.07, nothing delivered and
+nothing recorded. A truncated turn is the most expensive kind there is: it pays full price for
+output nobody reads, and then gets retried.
+
+The ceiling is now 3,072, and a round that produces nothing at all is retried once with double
+the room. Neither is a licence to ramble — the gate refuses long-output requests before the
+model sees them, which is where that rule belongs.
+
+> **Transferable lesson.** A token ceiling does not bound your bill, it bounds your answers.
+> Spending is bounded by what the model is asked to do and how many times it is asked. If a
+> ceiling is ever reached in normal use, you are paying for truncated output and a retry.
+
+---
+
+## Finding 8: a refused tool call buys an entire round
+
+`record_facts` accepted at most 12 facts per call. The opening message above states fifteen.
+
+The model asked to record all fifteen, the schema refused the call, and the model recovered the
+way it should — it split the batch and tried again. That recovery is a whole extra model round,
+and **every round re-reads the entire cached prefix**. The same turn, measured twice:
+
+| | Rounds | Cache read | Output | Cost |
+|---|---:|---:|---:|---:|
+| The batch fitted | 2 | 57,266 | 1,419 | €0.041 |
+| The batch was refused | 3 | 85,899 | 1,884 | **€0.061** |
+
+A bound meant to keep one tool call small was buying a second model call instead — 46% more for
+the same turn, on exactly the messages that make the product look best. The cap is now 24.
+Nothing is admitted by raising it: each fact is still checked against the catalogue one at a
+time, and anything marked `extractable: false` is still refused.
+
+Re-measured on the same message after the change, three runs: one `record_facts` call and one
+card, no refusals, two rounds, 57,266 cache read, **€0.037 to €0.043**. The fifteen facts that
+used to take three attempts now take one.
+
+> **Transferable lesson.** With a cached prefix, the round is the unit of cost, not the token.
+> Any validation limit tight enough for the model to hit regularly is a limit that silently
+> doubles the price of the turn. Set tool bounds by what the conversation actually contains,
+> and record what the server refuses — a refusal the model recovers from leaves no trace at
+> all, and looks exactly like an expensive turn.
+
+---
+
 ## What we deliberately did not do
 
 Just as useful as the list of changes.
@@ -287,6 +352,8 @@ nobody had a reason to check it. The figures were wrong by more than half.
 | Shorter replies (style configuration) | ~€0.004 per turn | configuration |
 | Cancel abandoned requests | Small, but pure waste | ~10 lines |
 | Pre-warm the cache before a demo | Turns every take's first turn into a hit | one throwaway request |
+| Raise a tool bound the model keeps hitting | ~€0.019 per dense turn | 1 line |
+| Raise an output ceiling that truncates real answers | ~€0.023 per failed turn, plus the retry | 1 line |
 
 ---
 
@@ -298,3 +365,5 @@ This document is updated whenever a change lands that moves the cost of a turn.
 |---|---|---|
 | 2026-10-08 | Baseline; history cache breakpoint, 1h prefix lifetime, persona moved behind the breakpoint, abort signal on the gate timeout | €0.94 → €0.55 per 12-turn conversation |
 | 2026-10-08 | Verified live and replaced every estimated token count with a measured one. Added findings 5 and 6 | No behaviour change; published figures rose ~70%, the saving held at ~42% |
+| 2026-10-12 | Output ceiling 1,024 → 3,072 with one retry on a round that produces nothing; `record_facts` batch cap 12 → 24. Added findings 7 and 8 | Removes a €0.023 turn that delivered nothing, and a €0.019 extra round on dense turns |
+| 2026-10-12 | Re-measured the prefix: 28,633 tokens read on the first round of a first turn, against 26,974 when this document was written | Prefix has grown ~6% as the catalogue, mortgage rates and the data notice landed. No action; recorded so the next reading has a baseline |
