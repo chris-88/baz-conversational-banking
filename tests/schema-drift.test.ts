@@ -67,7 +67,7 @@ describe('the database agrees with the TypeScript unions', () => {
    * case kind; the Zod row schema still accepted only `presenter` and `audience`, so every
    * case in the system failed to parse and every conversation died on load.
    */
-  it('accepts exactly the three case kinds', () => {
+  it('accepts exactly the four case kinds', () => {
     expect([...checkConstraintLiterals('cases', 'kind')].sort()).toEqual([...CASE_KINDS].sort())
   })
 
