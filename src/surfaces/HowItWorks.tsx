@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { routes } from '@/app/routes'
+import { WhatItDoes } from './how-it-works/WhatItDoes'
 import { Pipeline } from './how-it-works/Pipeline'
 import { Story } from './how-it-works/Story'
 import { Cost } from './how-it-works/Cost'
@@ -17,7 +18,7 @@ import { Cost } from './how-it-works/Cost'
  * addresses so one of them can be sent to somebody on its own.
  */
 
-const SECTIONS = ['pipeline', 'story', 'cost'] as const
+const SECTIONS = ['what', 'pipeline', 'story', 'cost'] as const
 type SectionId = (typeof SECTIONS)[number]
 
 function isSection(value: string | undefined): value is SectionId {
@@ -27,7 +28,7 @@ function isSection(value: string | undefined): value is SectionId {
 export function HowItWorks(): ReactNode {
   const { section } = useParams()
   const navigate = useNavigate()
-  const active: SectionId = isSection(section) ? section : 'pipeline'
+  const active: SectionId = isSection(section) ? section : 'what'
 
   return (
     <div className="bg-background min-h-dvh">
@@ -53,24 +54,29 @@ export function HowItWorks(): ReactNode {
             How Baz works
           </h1>
           <p className="text-muted-foreground mt-4 max-w-xl text-base text-pretty sm:text-lg">
-            What the AI is actually doing, what stops it doing the wrong thing, how it changed while
-            it was being built, and what it costs to run.
+            What it can do, what the AI is actually doing underneath, what stops it doing the
+            wrong thing, how it changed while it was being built, and what it costs to run.
           </p>
         </div>
 
         <Tabs
           value={active}
           onValueChange={(next) => {
-            void navigate(next === 'pipeline' ? routes.howItWorks : `${routes.howItWorks}/${next}`)
+            void navigate(next === 'what' ? routes.howItWorks : `${routes.howItWorks}/${next}`)
           }}
           className="mt-8"
         >
-          <TabsList>
+          {/* Scrolls rather than hiding the last tab on a phone. */}
+          <TabsList className="max-w-full justify-start overflow-x-auto">
+            <TabsTrigger value="what">What it does</TabsTrigger>
             <TabsTrigger value="pipeline">How it works</TabsTrigger>
             <TabsTrigger value="story">The story</TabsTrigger>
             <TabsTrigger value="cost">What it costs</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="what">
+            <WhatItDoes />
+          </TabsContent>
           <TabsContent value="pipeline">
             <Pipeline />
           </TabsContent>

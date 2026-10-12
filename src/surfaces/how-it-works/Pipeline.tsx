@@ -76,9 +76,10 @@ const LAYERS: readonly {
   { name: 'Domain', gloss: "What counts as in scope.", tokens: '158', cached: true },
   { name: 'Tool guidance', gloss: "When to reach for which card.", tokens: '1,806', cached: true },
   { name: 'How applying works', gloss: "What the bank actually does with an application.", tokens: '598', cached: true },
-  { name: 'What we can do', gloss: "The honest limits of the service.", tokens: '522', cached: true },
-  { name: 'Fact reference', gloss: "The 54 things that can be known, and their shapes.", tokens: '1,711', cached: true },
-  { name: 'Tool definitions', gloss: "JSON schemas for the eleven tools. Sent every turn, and easy to forget.", tokens: '4,739', cached: true },
+  { name: 'What we can do', gloss: "The honest limits of the service, and what depends on banking here.", tokens: '730', cached: true },
+  { name: 'Mortgage rates', gloss: "How to answer a rate question, and the rules that come with the rates.", tokens: '608', cached: true },
+  { name: 'Fact reference', gloss: "The 57 things that can be known, and their shapes.", tokens: '1,857', cached: true },
+  { name: 'Tool definitions', gloss: "JSON schemas for the twelve tools. Sent every turn, and easy to forget.", tokens: '5,068', cached: true },
   { name: 'Product catalogue', gloss: "61 real products. Baz states product detail only from here.", tokens: '15,595', cached: true },
   { name: 'Persona', gloss: "Style sliders as prose. Cannot change scope, rules or protections.", tokens: '178', cached: false },
   { name: 'Case digest', gloss: "This customer's facts and applications, from the database.", tokens: '~700', cached: false },
@@ -328,11 +329,11 @@ export function Pipeline(): ReactNode {
         <div className="mt-7 space-y-0.5">
           {LAYERS.map((layer, index) => (
             <div key={layer.name}>
-              {index === 9 ? (
+              {index === 10 ? (
                 <div className="flex items-center gap-3 py-2.5">
                   <span className="bg-border h-px flex-1" />
                   <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.09em] whitespace-nowrap uppercase">
-                    cache breakpoint · 26,974 tokens above
+                    cache breakpoint · 28,087 tokens above
                   </span>
                   <span className="bg-border h-px flex-1" />
                 </div>
@@ -374,8 +375,8 @@ export function Pipeline(): ReactNode {
 
       <Section
         eyebrow="Stage 03 — the boundary"
-        title="Eleven tools, none of which can do anything"
-        lede="The model has a fixed tool set. Ten of the eleven render something on screen. Exactly one writes data, and it is the most constrained of the lot."
+        title="Twelve tools, none of which can do anything"
+        lede="The model has a fixed tool set. Eleven of the twelve render something on screen. Exactly one writes data, and it is the most constrained of the lot."
       >
         <div className="mt-6 space-y-1.5">
           {TOOLS.map((tool) => (
@@ -523,9 +524,9 @@ export function Pipeline(): ReactNode {
           items={[
             { value: '8', label: 'categories the gate can return' },
             { value: '2', label: 'that reach the model' },
-            { value: '11', label: 'tools, 1 of which writes' },
+            { value: '12', label: 'tools, 1 of which writes' },
             { value: '0', label: 'tools that change state' },
-            { value: '54', label: 'fact keys in the catalogue' },
+            { value: '57', label: 'fact keys in the catalogue' },
             { value: '12', label: 'application states' },
             { value: '1,024', label: 'max tokens per reply' },
             { value: '3', label: 'tool rounds per turn, hard capped' },

@@ -51,7 +51,14 @@ export type BazTurnOptions = {
   readonly onUsage?: (usage: ModelUsage) => void
 }
 
-function toolDefinitions(enabled?: readonly ToolName[]): Anthropic.Tool[] {
+/**
+ * The tool schemas, as the API receives them.
+ *
+ * Exported so their size can be measured. They are 18% of everything sent and were invisible
+ * in every audit of the prompt, because nobody writes them as prose — they are generated from
+ * validators and live in another file.
+ */
+export function toolDefinitions(enabled?: readonly ToolName[]): Anthropic.Tool[] {
   const selected = enabled === undefined ? TOOLS : TOOLS.filter((tool) => enabled.includes(tool.name))
   return selected.map((tool) => ({
     name: tool.name,

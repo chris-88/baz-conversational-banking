@@ -11,7 +11,7 @@ import { Figures, Panel, Prose, Section } from './parts'
 
 /** Measured from a live conversation. Every figure is one the API reported about itself. */
 const TURN: readonly { readonly part: string; readonly cost: string; readonly note?: string }[] = [
-  { part: 'Turn 1 — writes the whole 26,974-token prefix', cost: '€0.174', note: 'once an hour, shared' },
+  { part: 'Turn 1 — writes the whole 28,087-token prefix', cost: '€0.174', note: 'once an hour, shared' },
   { part: 'Turn 2 — writes 922 tokens, reads the rest', cost: '€0.031' },
   { part: 'Turn 3 — writes 1,064 tokens, reads the rest', cost: '€0.036' },
 ]
@@ -28,8 +28,8 @@ export function Cost(): ReactNode {
           items={[
             { value: '€0.94', label: 'per 12-turn conversation, before' },
             { value: '€0.55', label: 'after, with no change to quality' },
-            { value: '26,974', label: 'tokens in the cached prefix' },
-            { value: '58%', label: 'of it the product catalogue' },
+            { value: '28,087', label: 'tokens in the cached prefix' },
+            { value: '56%', label: 'of it the product catalogue' },
           ]}
         />
       </section>
@@ -60,7 +60,7 @@ export function Cost(): ReactNode {
 
         <Prose className="mt-5">
           <p>
-            The whole saving is visible in one column. Turn one writes 26,974 tokens; every turn
+            The whole saving is visible in one column. Turn one writes the whole prefix; every turn
             after it writes <strong>fewer than 1,100</strong>, because the conversation now carries
             its own cache breakpoint. Before, the entire history was re-read at full price on every
             round of every turn.
@@ -115,7 +115,7 @@ export function Cost(): ReactNode {
               <p>
                 The persona block — 178 tokens of style instructions — sat inside the cached prefix.
                 On any turn the gate marks sensitive, the system zeroes humour, which rewrites that
-                block and invalidated all 26,974 tokens in front of it.
+                block and invalidated every token in front of it.
               </p>
               <p>
                 The demo this was built for turns on life events. Sensitive turns are not an edge
@@ -148,7 +148,7 @@ export function Cost(): ReactNode {
           <Panel title="5 · The tool schemas are part of the prompt">
             <Prose>
               <p>
-                The eleven tools carry <strong>4,739 tokens</strong> of JSON schema — 18% of
+                The twelve tools carry <strong>5,068 tokens</strong> of JSON schema — 18% of
                 everything sent, and more than the policy, the voice, the fact reference and the
                 tool guidance put together.
               </p>
@@ -189,7 +189,7 @@ export function Cost(): ReactNode {
       <Section
         eyebrow="Just as useful"
         title="What we deliberately did not do"
-        lede="The product catalogue is 58% of the prompt and the obvious target. Measurement said leave it alone."
+        lede="The product catalogue is 56% of the prompt and the obvious target. Measurement said leave it alone."
       >
         <Prose className="mt-5">
           <p>
