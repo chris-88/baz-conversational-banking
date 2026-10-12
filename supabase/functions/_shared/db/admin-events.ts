@@ -29,6 +29,7 @@ const SIGNALS = new Set([
   'partner_joined',
   'partner_completed',
   'request_blocked',
+  'tool_rejected',
 ])
 
 const text = (payload: Record<string, unknown>, key: string): string | null => {
@@ -73,6 +74,26 @@ export function describeAdminEvent(
         return `Worked out a goal: ${text(payload, 'goal')?.replaceAll('_', ' ') ?? 'something they are after'}`
       case 'card_promised_not_shown':
         return 'Said there was a card, and there was not'
+      /*
+       * The two that explain a turn that came to nothing.
+       *
+       * A tool the server refused used to leave no trace at all: the model spent its rounds
+       * retrying, the turn ended silent, and the customer got "I lost my thread" with nothing
+       * anywhere saying why. Finding that out took replaying one case twenty times.
+       */
+      case 'tool_rejected':
+        return `A tool call was refused: ${text(payload, 'tool') ?? 'a tool'} — ${
+          text(payload, 'error') ?? 'no reason given'
+        }`
+      case 'turn_tools': {
+        const called = Array.isArray(payload['called'])
+          ? (payload['called'] as unknown[]).filter((n): n is string => typeof n === 'string')
+          : []
+        const refused = typeof payload['refused'] === 'number' ? payload['refused'] : 0
+        return `Baz reached for ${called.length > 0 ? called.join(', ') : 'nothing'}${
+          refused > 0 ? ` (${String(refused)} refused)` : ''
+        }`
+      }
       case 'product_quoted':
         return `Showed figures for ${text(payload, 'product')?.replaceAll('_', ' ') ?? 'a product'}`
       case 'context_captured':

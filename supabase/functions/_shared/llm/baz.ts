@@ -18,10 +18,19 @@ import { TOOLS, validateToolCall, type ToolName } from './tools.ts'
 const MAX_TOOL_ROUNDS = 3
 
 /**
- * Low on purpose (§47). "Count to 10,000" cannot succeed even if it somehow reaches the model,
- * and a single banking answer never needs more than this.
+ * A backstop against runaway output (§47), not the enforcement — the gate is (Invariant 4).
+ *
+ * This was 1,024, which was wrong, and wrong in a way that only showed up on the best messages.
+ * A customer who opens with everything at once — a mortgage, a savings account, a switch, two
+ * children, income, rent, savings and a timeframe — is asking for prose, a record_facts call
+ * carrying a dozen facts and a product card, all in one turn. That came to exactly 1,024 output
+ * tokens, the ceiling cut it off mid-tool-call, and the turn ended with no text and no card.
+ *
+ * Three customers in a row got "Sorry — I lost my thread there" for giving Baz more to work
+ * with than a short question would have. "Count to 10,000" is still impossible at this ceiling,
+ * and it is refused before the model sees it regardless.
  */
-export const BAZ_MAX_TOKENS = 1_024
+export const BAZ_MAX_TOKENS = 3_072
 
 /** Executes a validated tool call. Returns what the model is told, and any card to render. */
 export type ToolExecutor = (
@@ -41,6 +50,10 @@ export type BazTurnOptions = {
    * entirely rather than offered and failed — the model cannot misuse what it cannot see.
    */
   readonly enabledTools?: readonly ToolName[]
+  /** Called when a tool call fails validation, so the turn can record what was refused. */
+  readonly onToolRejected?: (rejection: { name: string; error: string }) => void
+  /** Every tool the model reached for, before it is validated. */
+  readonly onToolCalled?: (name: string) => void
   readonly maxTokens?: number
   /**
    * Called once per model round with what that round consumed.
@@ -133,6 +146,18 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
   const cards: Card[] = []
 
   /**
+   * Room to answer in, and one chance at more of it.
+   *
+   * Raising the ceiling makes truncation rare rather than impossible, and the failure is total:
+   * a turn cut off before it says anything has nothing to show and nothing to retry from. So a
+   * round that produces nothing at all is run again with double the room, once. It costs one
+   * extra round on a turn that would otherwise have been lost outright.
+   */
+  const baseCeiling = options.maxTokens ?? BAZ_MAX_TOKENS
+  let ceiling = baseCeiling
+  let retriedTruncation = false
+
+  /**
    * The model usually speaks, calls a tool, then speaks again about what came back. Each round
    * is its own stream, so without a separator the last sentence of one round and the first of
    * the next arrive joined: "They're here now.Mortgage first is usually the sensible order."
@@ -145,7 +170,7 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
 
     const stream = options.client.messages.stream({
       model: options.model,
-      max_tokens: options.maxTokens ?? BAZ_MAX_TOKENS,
+      max_tokens: ceiling,
       system,
       messages,
       tools,
@@ -192,6 +217,28 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
     )
 
     if (message.stop_reason !== 'tool_use' || toolUses.length === 0) {
+      /*
+       * Hitting the token ceiling is a failure, and a silent one.
+       *
+       * A round that runs out of room mid-tool-call leaves an assistant message with no
+       * finished text and no usable tool block, so the loop ends with nothing to show and
+       * nothing refused — indistinguishable from a model that simply chose to say nothing.
+       */
+      if (message.stop_reason === 'max_tokens' && !spoken) {
+        options.onToolRejected?.({
+          name: 'model',
+          error: `Ran out of output tokens before finishing. Round ${String(round + 1)}.`,
+        })
+
+        // Nothing reached the customer, so nothing is duplicated by going again. Only once:
+        // a model that cannot answer inside twice the ceiling is not going to on a third try.
+        if (!retriedTruncation) {
+          retriedTruncation = true
+          ceiling = baseCeiling * 2
+          continue
+        }
+      }
+
       yield* cards.map((card): StreamEvent => ({ type: 'card', card }))
       yield* nothingSaid(spoken, cards)
       return
@@ -202,11 +249,20 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
     const results: Anthropic.ToolResultBlockParam[] = []
 
     for (const toolUse of toolUses) {
+      options.onToolCalled?.(toolUse.name)
       const validation = validateToolCall(toolUse.name, toolUse.input)
 
       if (!validation.ok) {
-        // An invalid call is a tool error the model can correct, never an error the customer
-        // sees (CLAUDE.md > Baz model tools).
+        /*
+         * An invalid call is a tool error the model can correct, never an error the customer
+         * sees (CLAUDE.md > Baz model tools). It is also reported, which it was not.
+         *
+         * A tool the server keeps refusing is invisible from outside: the model burns its
+         * rounds retrying, the turn ends with nothing said, and the customer gets "I lost my
+         * thread" with no way for anybody to find out why. The same mistake as a gate that
+         * failed closed without saying what failed.
+         */
+        options.onToolRejected?.({ name: toolUse.name, error: validation.error })
         results.push({
           type: 'tool_result',
           tool_use_id: toolUse.id,
@@ -221,6 +277,11 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
         results.push({ type: 'tool_result', tool_use_id: toolUse.id, content: outcome.result })
         if (outcome.card) cards.push(outcome.card)
       } catch (error) {
+        // The third way a tool call can come to nothing, and the last one that was invisible.
+        options.onToolRejected?.({
+          name: toolUse.name,
+          error: `threw: ${error instanceof Error ? error.message : String(error)}`,
+        })
         results.push({
           type: 'tool_result',
           tool_use_id: toolUse.id,

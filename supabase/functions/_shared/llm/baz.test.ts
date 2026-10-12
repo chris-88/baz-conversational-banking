@@ -10,7 +10,13 @@ import type { PromptInput } from './prompt.ts'
  * A scripted stand-in for the SDK's streaming client: each entry is one round's reply, as the
  * text it streams plus whatever tool it asks for.
  */
-type Round = { readonly text: string; readonly tool?: string; readonly input?: unknown }
+type Round = {
+  readonly text: string
+  readonly tool?: string
+  readonly input?: unknown
+  /** A round cut off by the output ceiling, which finishes neither its text nor its tool call. */
+  readonly truncated?: boolean
+}
 
 function clientReturning(rounds: readonly Round[]): Anthropic {
   let round = -1
@@ -55,8 +61,12 @@ function clientReturning(rounds: readonly Round[]): Anthropic {
           },
           finalMessage: () =>
             Promise.resolve({
-              content,
-              stop_reason: current.tool ? 'tool_use' : 'end_turn',
+              content: current.truncated ? [] : content,
+              stop_reason: current.truncated
+                ? 'max_tokens'
+                : current.tool
+                  ? 'tool_use'
+                  : 'end_turn',
             }),
         }
       },
@@ -220,5 +230,77 @@ describe('runBazTurn', () => {
     )
 
     expect(text).toBe('')
+  })
+})
+
+/**
+ * Running out of output tokens mid-answer (§47).
+ *
+ * The ceiling was 1,024, which was enough for a short question and not enough for a customer
+ * who arrives with everything at once — a mortgage, a savings account, a switch, two children,
+ * income, rent and a timeframe in one message. Baz would write prose, a dozen facts and a
+ * product card, hit the ceiling inside the tool call, and end the turn having said nothing and
+ * recorded nothing. Three customers in a row were told "Sorry — I lost my thread there" for
+ * giving it more to work with than a one-liner.
+ */
+describe('running out of room', () => {
+  const ceilingsUsed = async (rounds: readonly Round[]) => {
+    const ceilings: number[] = []
+    const base = options(rounds)
+    const inner = (base.client as unknown as { messages: { stream: () => unknown } }).messages
+    const client = {
+      messages: {
+        stream: (params: { max_tokens: number }) => {
+          ceilings.push(params.max_tokens)
+          return inner.stream()
+        },
+      },
+    } as unknown as Anthropic
+
+    const said: string[] = []
+    const rejected: { name: string; error: string }[] = []
+    for await (const event of runBazTurn({
+      ...base,
+      client,
+      onToolRejected: (rejection) => rejected.push(rejection),
+    })) {
+      if (event.type === 'text_delta') said.push(event.text)
+    }
+    return { ceilings, said: said.join(''), rejected }
+  }
+
+  it('goes again with double the room when a round produces nothing at all', async () => {
+    const run = await ceilingsUsed([{ text: '', truncated: true }, { text: 'Right, two kids.' }])
+
+    expect(run.ceilings).toEqual([3_072, 6_144])
+    // Nothing reached the customer from the truncated round, so nothing is said twice.
+    expect(run.said).toBe('Right, two kids.')
+  })
+
+  it('reports the truncation even when the retry rescues the turn', async () => {
+    const run = await ceilingsUsed([{ text: '', truncated: true }, { text: 'Right.' }])
+
+    expect(run.rejected).toHaveLength(1)
+    expect(run.rejected[0]?.name).toBe('model')
+    expect(run.rejected[0]?.error).toContain('output tokens')
+  })
+
+  it('gives up after one retry rather than spending a third round', async () => {
+    const run = await ceilingsUsed([
+      { text: '', truncated: true },
+      { text: '', truncated: true },
+      { text: 'Never reached.' },
+    ])
+
+    expect(run.ceilings).toEqual([3_072, 6_144])
+    expect(run.said).toContain('lost my thread')
+  })
+
+  it('does not retry once words are already on screen', async () => {
+    // Retrying here would repeat the sentence the customer has already read.
+    const run = await ceilingsUsed([{ text: 'Renting at €3,500 with two kids' }])
+
+    expect(run.ceilings).toEqual([3_072])
+    expect(run.said).toBe('Renting at €3,500 with two kids')
   })
 })

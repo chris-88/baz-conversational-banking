@@ -230,6 +230,15 @@ async function handleTurn(request: Request): Promise<Response> {
     spend = addUsage(spend, { model: EMPTY_USAGE.model, gate: used })
   }
 
+  /*
+   * Tool calls the server refused this turn, written as events once the stream is done.
+   *
+   * Collected rather than written as they happen because the stream is still open and an
+   * unawaited write can be cut off with it.
+   */
+  const rejections: { name: string; error: string }[] = []
+  const called: string[] = []
+
   const classify = createClassifier({
     apiKey: env('ANTHROPIC_API_KEY'),
     model: env('GATE_MODEL'),
@@ -628,6 +637,8 @@ async function handleTurn(request: Request): Promise<Response> {
           client: anthropic,
           model: env('BAZ_MODEL'),
           enabledTools: ENABLED_TOOLS,
+          onToolRejected: (rejection) => rejections.push(rejection),
+          onToolCalled: (name) => called.push(name),
           onUsage: recordModel,
           prompt: {
             domainConfig: boiDomainConfig,
@@ -692,6 +703,21 @@ async function handleTurn(request: Request): Promise<Response> {
                 const rejected = outcome.rejected
                   .map((item) => `${item.key}: ${item.reason}`)
                   .join('; ')
+
+                /*
+                 * A fact offered and refused, recorded as such.
+                 *
+                 * `recordFacts` returns its refusals rather than throwing, so nothing upstream
+                 * ever saw them: a turn where every single fact bounced looked, from the
+                 * outside, exactly like a turn where the model never tried. Which is what sent
+                 * the first investigation of this after the wrong cause.
+                 */
+                if (outcome.rejected.length > 0) {
+                  rejections.push({
+                    name: 'record_facts',
+                    error: rejected.slice(0, 300),
+                  })
+                }
 
                 // A fact can complete an application. What is outstanding is recomputed here,
                 // not remembered by the model (Invariant 3).
@@ -1624,9 +1650,21 @@ async function handleTurn(request: Request): Promise<Response> {
          *
          * Deliberately narrow. Only phrases that point at something on screen right now, so an
          * ordinary mention of a card in passing does not trip it.
+         *
+         * Narrow is not the same as right. The first real instance of this in front of a
+         * customer read "so here they are" and then, when they said they saw nothing, "sorry
+         * about that, they didn't come through. Here they are." Both were a promise of
+         * something on screen, neither said "card", and the detector built for this watched
+         * both go past. Baz does not use the word card when it is being natural, which is
+         * most of the time.
          */
         const text = spoken.join('')
-        if (shown.length === 0 && /\btap (the|that) (card|option)|\bcard (below|above)\b/i.test(text)) {
+        const promisedACard =
+          /\btap (the|that) (card|option)|\bcard (below|above)\b/i.test(text) ||
+          /\bhere (they|it|those) (are|is)\b|\bhere are (the|your|those|three|some|a few)\b/i.test(
+            text,
+          )
+        if (shown.length === 0 && promisedACard) {
           await writeEvent(admin, {
             caseId: turn.caseId,
             type: 'card_promised_not_shown',
@@ -1643,6 +1681,31 @@ async function handleTurn(request: Request): Promise<Response> {
           cards: shown,
           usage: spend,
         })
+
+        /*
+         * What the server refused, so a turn that went nowhere can be explained afterwards.
+         *
+         * The model sees these as tool errors and can correct itself, which is the point. But
+         * when it cannot — when the same call is refused three times and the turn ends with
+         * nothing said — this is the only record of why.
+         */
+        if (called.length > 0 || rejections.length > 0) {
+          await writeEvent(admin, {
+            caseId: turn.caseId,
+            type: 'turn_tools',
+            actor: 'model',
+            payload: { called, refused: rejections.length },
+          })
+        }
+
+        for (const rejection of rejections) {
+          await writeEvent(admin, {
+            caseId: turn.caseId,
+            type: 'tool_rejected',
+            actor: 'model',
+            payload: { tool: rejection.name, error: rejection.error.slice(0, 300) },
+          })
+        }
 
         // Everything up to now has been seen, so the next return summarises only what is
         // genuinely new (§36).
