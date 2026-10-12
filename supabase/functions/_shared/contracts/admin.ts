@@ -110,6 +110,19 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('delete_case'), caseId: z.uuid() }),
 
   /**
+   * Mark a case as created by an automated probe.
+   *
+   * The capacity cap counts customer cases from the last 24 hours. Diagnosing one bug took
+   * about twenty-five live replays, each its own anonymous session, and they used the day's
+   * allowance up — real visitors met "the demonstration is at capacity" because of test runs.
+   *
+   * Admin-only, and deliberately not something a client can ask for when its session starts: a
+   * kind that exempts a case from the rate limit is the last thing a rate limit should let
+   * anyone choose for themselves.
+   */
+  z.object({ action: z.literal('tag_test_case'), caseId: z.uuid() }),
+
+  /**
    * §39 — put a request through the gate and report what happened to it.
    *
    * The same classifier and the same deterministic checks a customer's message meets, with no

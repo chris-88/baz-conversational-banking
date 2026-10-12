@@ -1550,6 +1550,25 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json(ok({ purged: ids.length }), 200)
     }
 
+    case 'tag_test_case': {
+      /*
+       * Takes the case out of the capacity count by changing what it is, rather than by adding
+       * an exception to the counting. `session` already filters on kind = 'customer', so there
+       * is nothing to keep in step.
+       */
+      const tagged = await admin
+        .from('cases')
+        .update({ kind: 'test' })
+        .eq('id', action.caseId)
+        .select('id')
+        .maybeSingle()
+
+      if (tagged.error) return errorResponse('conflict', tagged.error.message)
+      if (!tagged.data) return errorResponse('not_found', 'No case with that id.')
+
+      return json(ok({ caseId: action.caseId, kind: 'test' }), 200)
+    }
+
     case 'delete_case': {
       /*
        * Deletes cascade, exactly as a purge does: participants, facts, applications, messages,

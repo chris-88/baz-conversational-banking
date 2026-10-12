@@ -246,7 +246,14 @@ Gate output:
 
 - `/#/try` creates an isolated anonymous session and a new case. Options: start fresh, or clone the canonical customer (authenticated, bank-held facts present).
 - Isolation is by case ownership under RLS. Audience cases can never touch the presenter case.
-- Caps via env: turns per session, concurrent audience cases. No SMS.
+- Cap via env: `AUDIENCE_MAX_CASES`, customer cases created in the last 24 hours. A rate, not a
+  lifetime total. No SMS.
+- `AUDIENCE_MAX_TURNS` is declared but nothing reads it: there is no per-conversation turn
+  limit. The cap limits how many people can start, not what any one of them can spend.
+- A case created by an automated probe is tagged `kind = 'test'` through the admin-only
+  `tag_test_case` action, which takes it out of the cap. Live probes go through
+  `scripts/live-probe.mjs`, which tags on create and deletes on exit — twenty-five replays
+  against the live model once used the day's allowance up and started refusing real visitors.
 
 ## Engineering standards
 
