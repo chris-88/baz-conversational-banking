@@ -1,3 +1,4 @@
+import { mustWrite } from '../_shared/db/case-repository.ts'
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../_shared/db/database.types.ts'
@@ -246,11 +247,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
     if (!existingHere && !presenter) return errorResponse('forbidden', 'Not your conversation.')
 
     if (existingHere) {
-      await admin
-        .from('participant_sessions')
-        .update({ last_used_at: new Date().toISOString() })
-        .eq('auth_user_id', authUserId)
-        .eq('participant_id', existingHere.participants.id)
+      mustWrite(
+        await admin
+          .from('participant_sessions')
+          .update({ last_used_at: new Date().toISOString() })
+          .eq('auth_user_id', authUserId)
+          .eq('participant_id', existingHere.participants.id),
+        'the session',
+      )
 
       return await sessionFor(
         existingHere.participants.id,
@@ -271,13 +275,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
     if (!primary.data) return errorResponse('not_found', 'That conversation has no one in it.')
 
-    await admin.from('participant_sessions').upsert(
-      {
-        participant_id: (primary.data as any).id,
-        auth_user_id: authUserId,
-        last_used_at: new Date().toISOString(),
-      },
-      { onConflict: 'participant_id,auth_user_id' },
+    mustWrite(
+      await admin.from('participant_sessions').upsert(
+        {
+          participant_id: (primary.data as any).id,
+          auth_user_id: authUserId,
+          last_used_at: new Date().toISOString(),
+        },
+        { onConflict: 'participant_id,auth_user_id' },
+      ),
+      'the session',
     )
 
     return await sessionFor((primary.data as any).id, target, 'primary', false)
@@ -342,9 +349,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return errorResponse('internal', 'Could not start a case.')
   }
 
-  await admin
-    .from('participant_sessions')
-    .insert({ participant_id: participant.data.id, auth_user_id: authUserId })
+  mustWrite(
+    await admin
+      .from('participant_sessions')
+      .insert({ participant_id: participant.data.id, auth_user_id: authUserId }),
+    'the session',
+  )
 
   /**
    * `known` starts them as somebody the bank already deals with: signed in, with the details
@@ -358,34 +368,43 @@ Deno.serve(async (request: Request): Promise<Response> => {
       .eq('bank_reference', canonicalCase.customer.bankReference)
       .maybeSingle()
 
-    await admin
-      .from('cases')
-      .update({
-        auth_level: 'authenticated',
-        customer_id: (customer.data as { id?: string } | null)?.id ?? null,
-        label: 'Audience · demo customer',
-      })
-      .eq('id', created.data.id)
+    mustWrite(
+      await admin
+        .from('cases')
+        .update({
+          auth_level: 'authenticated',
+          customer_id: (customer.data as { id?: string } | null)?.id ?? null,
+          label: 'Audience · demo customer',
+        })
+        .eq('id', created.data.id),
+      'the case',
+    )
 
-    await admin.from('facts').insert(
-      canonicalCase.bankHeldFacts.map((fact) => ({
-        case_id: created.data.id,
-        key: fact.key,
-        participant_id: fact.subject === 'household' ? null : participant.data.id,
-        subject_kind: fact.subject === 'household' ? 'household' : 'participant',
-        value: fact.value as Json,
-        source: fact.source,
-        verified: fact.verified,
-      })),
+    mustWrite(
+      await admin.from('facts').insert(
+        canonicalCase.bankHeldFacts.map((fact) => ({
+          case_id: created.data.id,
+          key: fact.key,
+          participant_id: fact.subject === 'household' ? null : participant.data.id,
+          subject_kind: fact.subject === 'household' ? 'household' : 'participant',
+          value: fact.value as Json,
+          source: fact.source,
+          verified: fact.verified,
+        })),
+      ),
+      'the facts',
     )
   }
 
-  await admin.from('events').insert({
-    case_id: created.data.id,
-    type: 'case_created',
-    actor: 'system',
-    payload: { mode: startMode },
-  })
+  mustWrite(
+    await admin.from('events').insert({
+      case_id: created.data.id,
+      type: 'case_created',
+      actor: 'system',
+      payload: { mode: startMode },
+    }),
+    'the event',
+  )
 
   return json(
     ok({
@@ -412,7 +431,10 @@ async function writeEventRow(
   type: string,
   payload: Record<string, unknown> = {},
 ): Promise<void> {
-  await admin
-    .from('events')
-    .insert({ case_id: caseId, type, actor: 'customer', payload: payload as Json })
+  mustWrite(
+    await admin
+      .from('events')
+      .insert({ case_id: caseId, type, actor: 'customer', payload: payload as Json }),
+    'the event',
+  )
 }

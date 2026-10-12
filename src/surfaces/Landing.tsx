@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import {
   ArrowRightIcon,
@@ -24,6 +25,7 @@ import qrCode from '@/assets/qr/open-baz.svg'
  * claim on this page and two ways to act on it.
  */
 export function Landing(): ReactNode {
+  useDocumentTitle(null)
   return (
     <div className="bg-background min-h-dvh">
       <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-6">

@@ -6,7 +6,10 @@ import { evaluateJourney, type JourneyEvaluation, type RequirementContext } from
 import { stateLabel, transition, type Application, type TransitionEvent } from '../domain/state-machine.ts'
 import type { ApplicationSummary } from '../contracts/case-action.ts'
 import { participantFor, type LoadedCase } from './loaded-case.ts'
-import { writeEvent } from './case-repository.ts'
+import {
+  mustWrite,
+  writeEvent,
+} from './case-repository.ts'
 
 /**
  * Applications: created by the customer's choice, and moved only by the state machine.
@@ -89,10 +92,13 @@ export async function recomputeApplications(
     const result = transition(application, event)
 
     if (result.ok && result.changed) {
-      await client
-        .from('applications')
-        .update({ state: result.application.state, resume_to: result.application.resumeTo })
-        .eq('id', application.id)
+      mustWrite(
+        await client
+          .from('applications')
+          .update({ state: result.application.state, resume_to: result.application.resumeTo })
+          .eq('id', application.id),
+        'the application',
+      )
 
       await writeEvent(client, {
         caseId: loaded.caseId,

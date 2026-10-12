@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useParams } from 'react-router-dom'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
+import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2Icon, UsersIcon } from 'lucide-react'
 import type { PartnerTask, PartnerView } from '@contracts/partner.ts'
 import { Card } from '@/components/ui/card'
@@ -22,6 +23,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { callPartner } from '@/partner/partnerClient'
 import { isBackendConfigured } from '@/lib/env'
+import { routes } from '@/app/routes'
 
 /**
  * §6 Stage 9, §33 — the second applicant's experience.
@@ -31,6 +33,7 @@ import { isBackendConfigured } from '@/lib/env'
  * details, not anything they were not asked for (Invariant 7).
  */
 export function PartnerJoin(): ReactNode {
+  useDocumentTitle('Second applicant')
   const { token } = useParams<{ token: string }>()
   const [view, setView] = useState<PartnerView | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -110,9 +113,24 @@ export function PartnerJoin(): ReactNode {
         {loading && <Skeleton className="h-40 w-full" />}
 
         {error !== null && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          /*
+           * A dead end used to be the whole page: the message, then half a screen of nothing.
+           * Somebody who followed an expired link is not at fault and has somewhere to go —
+           * the person who sent it, or Baz itself.
+           */
+          <section className="space-y-4">
+            <h1 className="text-h3 font-semibold">That link didn’t work</h1>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Invitations last a day and can only be used once. Whoever invited you can send a
+              fresh one from their own conversation.
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link to={routes.baz}>Talk to Baz yourself</Link>
+            </Button>
+          </section>
         )}
 
         {view !== null && (

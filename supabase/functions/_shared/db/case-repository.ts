@@ -68,6 +68,32 @@ function unwrap(result: Query, what: string): unknown {
 }
 
 /**
+ * A write whose failure must not pass unnoticed.
+ *
+ * Supabase returns errors rather than throwing them, so `await client.from(…).insert(…)` with
+ * nothing reading the result is a write that can fail in complete silence. Thirty-nine of those
+ * had accumulated.
+ *
+ * It is not hypothetical. `product_interests` spent a week rejecting every savings and current
+ * account against a check constraint nobody had widened, and the only symptom was §49 quietly
+ * not working: a declined product had no row to be declined in, so Baz offered it again. The
+ * same shape was one line away from losing a health consent (Invariant 6), a submission that
+ * Baz had already announced (Invariant 2), and the token behind an invitation link that had
+ * just been handed to somebody.
+ *
+ * Throwing is right here. Every caller sits inside a request that either worked or did not,
+ * and a customer told "that's started" when nothing was written is worse than an error.
+ */
+export function mustWrite<T extends { error: { message: string } | null }>(
+  result: T,
+  what: string,
+): T {
+  if (result.error) throw new Error(`Could not write ${what}: ${result.error.message}`)
+  // Returned rather than consumed, so a write whose id the caller needs can still be checked.
+  return result
+}
+
+/**
  * How much of the conversation to load.
  *
  * `MESSAGE_WINDOW` is sized for the model: a turn only needs recent history, and sending all of
@@ -514,7 +540,10 @@ export async function recordFacts(
       .map((e) => e.id)
 
     if (replaced.length > 0) {
-      await client.from('facts').update({ superseded_by: row.id }).in('id', replaced)
+      mustWrite(
+        await client.from('facts').update({ superseded_by: row.id }).in('id', replaced),
+        'the facts',
+      )
     }
   }
 

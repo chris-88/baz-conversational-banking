@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BazChat } from '@/baz/BazChat'
 import { BazWordmark } from '@/baz/BazWordmark'
@@ -16,6 +17,7 @@ import { useViewportHeight } from '@/lib/useViewportHeight'
  * it needs to know, the way they would tell a person.
  */
 export function BazScreen(): ReactNode {
+  useDocumentTitle('Baz')
   const [started, setStarted] = useState(false)
   const [caseId, setCaseId] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()

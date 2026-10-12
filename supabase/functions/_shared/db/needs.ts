@@ -1,3 +1,4 @@
+import { mustWrite } from './case-repository.ts'
 import { caseFactReader } from './fact-reader.ts'
 import { evaluateNeeds } from '../domain/needs/engine.ts'
 import type { NeedCandidate, NeedContext, RecordedNeedState } from '../domain/needs/types.ts'
@@ -56,12 +57,15 @@ export async function deferNeed(
   },
 ): Promise<void> {
   // One current decision per need; superseded ones keep their history.
-  await client
-    .from('need_decisions')
-    .update({ revisited_at: new Date().toISOString() })
-    .eq('case_id', caseId)
-    .eq('need_id', input.needId)
-    .is('revisited_at', null)
+  mustWrite(
+    await client
+      .from('need_decisions')
+      .update({ revisited_at: new Date().toISOString() })
+      .eq('case_id', caseId)
+      .eq('need_id', input.needId)
+      .is('revisited_at', null),
+    'the need decision',
+  )
 
   const written = await client.from('need_decisions').insert({
     case_id: caseId,

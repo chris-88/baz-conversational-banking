@@ -1,3 +1,4 @@
+import { mustWrite } from './case-repository.ts'
 import type { Db, Insert } from './case-repository.ts'
 import type { Json } from './database.types.ts'
 import type { LoadedCase } from './loaded-case.ts'
@@ -185,10 +186,13 @@ export async function reconcilePlans(
       if (milestone.state === 'achieved' || milestone.state === 'no_longer_relevant') continue
       if (!reached(milestone, context, [...plan.applications])) continue
 
-      await client
-        .from('plan_milestones')
-        .update({ state: 'achieved', achieved_at: new Date().toISOString() })
-        .eq('id', milestone.id)
+      mustWrite(
+        await client
+          .from('plan_milestones')
+          .update({ state: 'achieved', achieved_at: new Date().toISOString() })
+          .eq('id', milestone.id),
+        'the plan_milestones record',
+      )
 
       achieved.push({
         planId: plan.id,
@@ -220,7 +224,10 @@ export async function raiseDueCheckins(
   )
 
   for (const { checkin } of due) {
-    await client.from('plan_checkins').update({ state: 'due' }).eq('id', checkin.id)
+    mustWrite(
+      await client.from('plan_checkins').update({ state: 'due' }).eq('id', checkin.id),
+      'the check-in',
+    )
   }
 
   return due

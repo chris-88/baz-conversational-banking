@@ -26,7 +26,13 @@ import { asApplicationId } from '../_shared/domain/facts.ts'
 import { stateLabel, transition, type ApplicationState, type TransitionEvent } from '../_shared/domain/state-machine.ts'
 import { slidersFor } from '../_shared/llm/persona.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
-import { loadCase, recordFacts, type Insert, writeEvent } from '../_shared/db/case-repository.ts'
+import {
+  loadCase,
+  mustWrite,
+  recordFacts,
+  type Insert,
+  writeEvent,
+} from '../_shared/db/case-repository.ts'
 import { evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor, revivableNeeds } from '../_shared/db/needs.ts'
 import { describeAdminEvent } from '../_shared/db/admin-events.ts'
@@ -393,10 +399,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     case 'set_kill_switch': {
-      await admin
-        .from('domain_config')
-        .update({ kill_switch: action.enabled })
-        .eq('scope', 'global')
+      mustWrite(
+        await admin
+          .from('domain_config')
+          .update({ kill_switch: action.enabled })
+          .eq('scope', 'global'),
+        'the domain settings',
+      )
       return json(ok({ killSwitch: action.enabled }), 200)
     }
 
@@ -413,10 +422,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
       if (Object.keys(update).length === 0) return errorResponse('bad_request', 'Nothing to set.')
 
-      await admin
-        .from('persona_config')
-        .update(update as Insert<'persona_config'>)
-        .eq('scope', 'global')
+      mustWrite(
+        await admin
+          .from('persona_config')
+          .update(update as Insert<'persona_config'>)
+          .eq('scope', 'global'),
+        'the persona',
+      )
       return json(ok(update), 200)
     }
 
@@ -503,11 +515,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
     /** Plan §3.2 — drop the row and go back to what is compiled in. */
     case 'clear_catalogue_override': {
-      await admin
-        .from('catalogue_overrides')
-        .delete()
-        .eq('kind', action.kind)
-        .eq('entry_id', action.entryId)
+      mustWrite(
+        await admin
+          .from('catalogue_overrides')
+          .delete()
+          .eq('kind', action.kind)
+          .eq('entry_id', action.entryId),
+        'the catalogue override',
+      )
 
       return json(ok({ cleared: true }), 200)
     }
@@ -833,16 +848,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       const participantId = (participant.data as { id: string }).id
 
-      await admin.from('facts').insert(
-        canonicalCase.bankHeldFacts.map((fact) => ({
-          case_id: caseId,
-          key: fact.key,
-          participant_id: fact.subject === 'household' ? null : participantId,
-          subject_kind: fact.subject === 'household' ? 'household' : 'participant',
-          value: fact.value as Json,
-          source: fact.source,
-          verified: fact.verified,
-        })),
+      mustWrite(
+        await admin.from('facts').insert(
+          canonicalCase.bankHeldFacts.map((fact) => ({
+            case_id: caseId,
+            key: fact.key,
+            participant_id: fact.subject === 'household' ? null : participantId,
+            subject_kind: fact.subject === 'household' ? 'household' : 'participant',
+            value: fact.value as Json,
+            source: fact.source,
+            verified: fact.verified,
+          })),
+        ),
+        'the facts',
       )
 
       await writeEvent(admin, {
@@ -1111,10 +1129,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       if (!result.ok) return errorResponse('illegal_transition', result.error.message)
 
-      await admin
-        .from('applications')
-        .update({ state: result.application.state, resume_to: result.application.resumeTo })
-        .eq('id', action.applicationId)
+      mustWrite(
+        await admin
+          .from('applications')
+          .update({ state: result.application.state, resume_to: result.application.resumeTo })
+          .eq('id', action.applicationId),
+        'the application',
+      )
 
       const names: Record<typeof action.event, string> = {
         received_by_bank: 'application_received',
@@ -1179,10 +1200,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return errorResponse('internal', 'That balance could not be written.')
       }
 
-      await admin
-        .from('plan_watches')
-        .update({ met_at: new Date().toISOString() })
-        .eq('id', watch.id)
+      mustWrite(
+        await admin
+          .from('plan_watches')
+          .update({ met_at: new Date().toISOString() })
+          .eq('id', watch.id),
+        'the plan watch',
+      )
 
       await writeEvent(admin, {
         caseId: action.caseId,
@@ -1286,7 +1310,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
         const checkin = ((checkins.data ?? []) as { id: string; purpose: string }[])[0]
         if (!checkin) return errorResponse('conflict', 'Nothing is scheduled on that plan.')
 
-        await admin.from('plan_checkins').update({ state: 'due' }).eq('id', checkin.id)
+        mustWrite(
+          await admin.from('plan_checkins').update({ state: 'due' }).eq('id', checkin.id),
+          'the check-in',
+        )
         await writeEvent(admin, {
           caseId: action.caseId,
           type: 'checkin_due',
@@ -1311,14 +1338,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
 
       const now = new Date().toISOString()
-      await admin
-        .from('plans')
-        .update({
-          status: target,
-          ...(target === 'paused' ? { paused_at: now } : {}),
-          ...(target === 'completed' ? { completed_at: now } : {}),
-        })
-        .eq('id', plan.id)
+      mustWrite(
+        await admin
+          .from('plans')
+          .update({
+            status: target,
+            ...(target === 'paused' ? { paused_at: now } : {}),
+            ...(target === 'completed' ? { completed_at: now } : {}),
+          })
+          .eq('id', plan.id),
+        'the plan',
+      )
 
       await writeEvent(admin, {
         caseId: action.caseId,
@@ -1372,13 +1402,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
         .eq('role', 'primary')
         .maybeSingle()
 
-      await admin.from('tokens').insert({
-        case_id: action.caseId,
-        kind: 'notification',
-        token_hash: hash,
-        participant_id: (participant.data as { id?: string } | null)?.id ?? null,
-        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      })
+      mustWrite(
+        await admin.from('tokens').insert({
+          case_id: action.caseId,
+          kind: 'notification',
+          token_hash: hash,
+          participant_id: (participant.data as { id?: string } | null)?.id ?? null,
+          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        }),
+        'the link',
+      )
 
       const base = (globalThis as any).Deno?.env?.get('APP_BASE_URL') ?? ''
       const url = `${base}/#/baz?n=${code}`
@@ -1434,10 +1467,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
         // browser has been uninstalled or cleared. Retrying it forever is how a sender ends up
         // rate-limited for talking to the dead.
         if (result.gone) {
-          await admin
-            .from('push_subscriptions')
-            .update({ expired_at: new Date().toISOString() })
-            .eq('id', target.id)
+          mustWrite(
+            await admin
+              .from('push_subscriptions')
+              .update({ expired_at: new Date().toISOString() })
+              .eq('id', target.id),
+            'the push subscription',
+          )
         }
       }
 
@@ -1491,10 +1527,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
         if (!result.ok) break
         current = result.application
 
-        await admin
-          .from('applications')
-          .update({ state: current.state, resume_to: current.resumeTo })
-          .eq('id', row.id)
+        mustWrite(
+          await admin
+            .from('applications')
+            .update({ state: current.state, resume_to: current.resumeTo })
+            .eq('id', row.id),
+          'the application',
+        )
 
         const names: Record<string, string> = {
           received_by_bank: 'application_received',

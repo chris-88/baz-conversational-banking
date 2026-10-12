@@ -34,6 +34,7 @@ import type {
 import type { MortgageCustomerType } from '../_shared/tenants/boi/mortgage-rate-types.ts'
 import {
   loadCase,
+  mustWrite,
   recordFacts,
   saveMessage,
   touchLastSeen,
@@ -636,13 +637,16 @@ async function handleTurn(request: Request): Promise<Response> {
       .limit(1)
 
     if (((open.data ?? []) as unknown[]).length === 0) {
-      await admin.from('plan_watches').insert({
-        case_id: turn.caseId,
-        kind: planWatch.kind,
-        target: planWatch.kind === 'savings_target' ? planWatch.target : null,
-        on_date: planWatch.kind === 'date' ? planWatch.on : null,
-        describe: planWatch.describe,
-      })
+      mustWrite(
+        await admin.from('plan_watches').insert({
+          case_id: turn.caseId,
+          kind: planWatch.kind,
+          target: planWatch.kind === 'savings_target' ? planWatch.target : null,
+          on_date: planWatch.kind === 'date' ? planWatch.on : null,
+          describe: planWatch.describe,
+        }),
+        'the plan watch',
+      )
     }
   }
 

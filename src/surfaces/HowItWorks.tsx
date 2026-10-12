@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ function isSection(value: string | undefined): value is SectionId {
 }
 
 export function HowItWorks(): ReactNode {
+  useDocumentTitle('How Baz works')
   const { section } = useParams()
   const navigate = useNavigate()
   const active: SectionId = isSection(section) ? section : 'what'

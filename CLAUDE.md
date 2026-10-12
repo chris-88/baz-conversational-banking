@@ -37,9 +37,9 @@ Standard prototyping stack. Do not add frameworks or services outside it without
 | Backend | Supabase: Postgres, RLS, Auth (anonymous + email for admins), Realtime, Storage, Edge Functions (Deno) |
 | LLM | Anthropic API, called only from Edge Functions |
 | PWA | vite-plugin-pwa |
-| SMS | Twilio, from an Edge Function |
+| Notifications | Web Push (RFC 8291/8292), hand-written in an Edge Function. Twilio was never built — push needs no per-message charge and no sender registration |
 | Tests | Vitest, Playwright |
-| Monitoring | Sentry (browser and Edge Functions) |
+| Monitoring | Sentry in the browser. **Edge Functions have none**: failures there surface as `events` rows and function logs |
 | Hosting | GitHub Pages via GitHub Actions; hosted Supabase project |
 
 Models are env-configured. Defaults: `BAZ_MODEL=claude-sonnet-5-5`, `GATE_MODEL=claude-haiku-4-5-20251001`.
@@ -57,7 +57,7 @@ Browser: one SPA on GitHub Pages
     writes: Edge Functions only
     live:   Realtime -> TanStack Query invalidation
 
-Edge Functions (service role; hold ANTHROPIC_API_KEY, Twilio creds)
+Edge Functions (service role; hold ANTHROPIC_API_KEY, VAPID keys, PRESENTER_KEY)
   baz-turn      gate -> Baz model with tools -> SSE stream -> persist
   case-action   UI-committed actions: select products, submit, pause/resume,
                 consent, invite partner, upload complete
@@ -229,10 +229,12 @@ Gate output:
 ## Events, notifications, return (§6 Stages 11 to 13, §35, §36, §42)
 
 - Admin simulates downstream events through the state machine. No random timers.
-- Sending the SMS is a separate explicit admin action. Only for participants with an SMS consent. Disabled for audience sessions.
-- SMS copy is fixed and contains nothing about the application. Link: `/#/app?n=<code>`, which requires the simulated login before showing anything.
+- Sending a notification is a separate explicit admin action, over Web Push. The console can send the fixed copy or write its own.
+- The copy contains nothing about the application. Link: `/#/app?n=<code>`, carrying an opaque single-use token.
 - On return, `baz-turn` runs with a `return` trigger: the digest includes events since `last_seen_at`. Baz phrases the summary; the status card renders from DB beside it.
-- Fallback if SMS delivery is unreliable for filming: an in-app simulated lock-screen notification component, triggered from admin.
+- `src/components/NotificationCard.tsx` is a simulated lock-screen notification, kept as a
+  filming fallback. **Nothing renders it**: push has been confirmed arriving on a real phone,
+  so it has never been needed. Wire it to an admin trigger if that changes.
 
 ## Admin console (§37 to §44)
 
@@ -269,9 +271,11 @@ Gate output:
 
 **shadcn/ui**: add components with the CLI. Never hand-roll something shadcn provides. BOI look comes from theme tokens in `src/shells/boi/theme.css`, not per-component overrides. Mobile first at 390px wide.
 
-**Sentry**: initialised in `main.tsx` and in each Edge Function. Never send message content or fact values. Tag `case_id`, participant role, gate category.
+**Sentry**: initialised in `main.tsx`, browser only. Never send message content or fact values. Tag `case_id`, participant role, gate category.
 
-**Secrets**: nothing secret in `VITE_*`. Anthropic and Twilio keys exist only as Edge Function secrets.
+**Edge Function failures**: there is no Sentry on the server. A write that matters goes through `mustWrite`, which throws rather than failing silently, and anything worth explaining afterwards writes an `events` row (`tool_rejected`, `turn_tools`, `request_blocked`). This was learned the hard way: thirty-nine writes had no error check, and one of them broke §49 for a week without a symptom.
+
+**Secrets**: nothing secret in `VITE_*`. The Anthropic key, the VAPID private key and `PRESENTER_KEY` exist only as Edge Function secrets.
 
 **GitHub Pages**: Vite `base` from env (`/<repo>/` or `/` with a custom domain). PWA `start_url` and `scope` follow `base`. Service worker precaches the shell and uses network-only for the Supabase domain. Never cache API responses.
 
@@ -310,17 +314,26 @@ npx supabase functions serve --env-file supabase/.env.local
 npm run typecheck
 npm run lint
 npm run test                 # Vitest
-npm run e2e                  # Playwright against local stack, LLM_PROVIDER=fixture
+npm run e2e                  # Playwright: route and render checks only (see below)
 npm run eval:guardrails      # live gate against the adversarial set
 ```
 
-`LLM_PROVIDER=fixture` exists for tests only. It is never used for demos or filming.
+**There is no fixture LLM provider.** `LLM_PROVIDER` is listed in the environment and read
+nowhere. Nothing can drive a conversation in a test without calling the real model and paying
+for it, which is why the Playwright specs check routes and rendering rather than turns, and why
+the output-ceiling, data-notice and product-collapse bugs all reached a person before a test.
+Building it is the single change that would most improve what the suite can catch.
 
 ## Environment
 
 App (`.env`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SENTRY_DSN`, `VITE_BASE_PATH`.
 
-Edge Function secrets: `ANTHROPIC_API_KEY`, `BAZ_MODEL`, `GATE_MODEL`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, `SENTRY_DSN`, `APP_BASE_URL`, `AUDIENCE_MAX_TURNS`, `AUDIENCE_MAX_CASES`, `LLM_PROVIDER`.
+Edge Function secrets, as actually read: `ANTHROPIC_API_KEY`, `BAZ_MODEL`, `GATE_MODEL`,
+`APP_BASE_URL`, `AUDIENCE_MAX_CASES`, `PRESENTER_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_D`,
+`VAPID_SUBJECT`.
+
+Set on the project but read nowhere: `TWILIO_*` and `SENTRY_DSN` (never built),
+`AUDIENCE_MAX_TURNS` and `LLM_PROVIDER` (declared, never implemented).
 
 GitHub: repo vars for the `VITE_*` values; secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`.
 
@@ -334,20 +347,21 @@ GitHub: repo vars for the `VITE_*` values; secrets `SUPABASE_ACCESS_TOKEN`, `SUP
 ## Testing
 
 - **Vitest, required**: requirement engine, reuse policies, subject matching, state machine (every legal and illegal transition), advisories, questions-avoided, persona composer, gate routing given fixed classifier outputs, token issue and redeem.
-- **Playwright**: the §55 film sequence end to end with fixture LLM, at iPhone viewport, including partner in a second browser context and admin-triggered events.
+- **Playwright**: route, render and disclosure checks at iPhone viewport. It does not drive a
+  conversation, because there is no fixture provider to drive one against.
 - **Guardrail evals**: `evals/guardrails/cases.jsonl` holds a must-block set (§22, §24, §47: trivia, jokes, competitors, excessive output, injection, persona escape) and a must-allow set (profane banking questions, short contextual answers, sensitive but in-scope disclosures). 100% on both before any presentation.
 
 ## Build order
 
 Each milestone ends deployed.
 
-- **M0 Skeleton**: Vite, shadcn, routes for all five surfaces, Supabase project, CI, Pages deploy, Sentry.
+- **M0 Skeleton**: Vite, shadcn, routes for all five surfaces, Supabase project, CI, Pages deploy, browser Sentry.
 - **M1 Domain core**: fact catalogue, draft journeys, requirement engine, state machine, reuse, advisories, metrics, canonical seed, minimal reset. Tests first.
 - **M2 Baz turn**: gate, prompt composer, tools, SSE, chat UI, card registry, eval set.
 - **M3 Applications**: product selection, concurrent applications, review and submit, loan advisory and pause.
 - **M4 Continuity**: public site, handoff, simulated login, bank-held enrichment, PWA.
 - **M5 Partner**: invite, tasks, cross-application partner facts.
-- **M6 Return**: event simulation, SMS, return summary.
+- **M6 Return**: event simulation, Web Push, return summary.
 - **M7 Admin**: inspector, notify, persona, domain view, metrics, purge, kill switch.
 - **M8 Audience**: QR entry, clone, caps.
 - **M9 Polish**: BOI shell fidelity, film run-through.
@@ -362,14 +376,14 @@ Each milestone ends deployed.
 - Any change that moves what a turn costs — prompt size, cache breakpoints or TTLs, model
   choice, tool rounds, reply length — updates `docs/04-cost-of-running-a-conversational-assistant.md`,
   including its changelog. The numbers in it are measured; do not revise them from memory.
-- Verify with `LLM_PROVIDER=fixture` by default. A live model is for checking what the model
-  does. Layout, card ordering and copy placement are not that, and running a full conversation
-  to check them is how an API budget disappears.
+- A live model is for checking what the model does. Layout, card ordering and copy placement
+  are not that, and running a full conversation to check them is how an API budget disappears.
+  There is no fixture provider to fall back on, so the discipline has to come from the person.
 
 ## Open items
 
 - Journey recordings not yet translated. All journeys start as `draft`.
 - Partner name: the vision doc says Sarah, the requirements say Emma. Seed uses Emma.
 - Primary customer name and synthetic bank-held record: define in the seed.
-- SMS sender and Irish delivery: test in week one, not the week of filming.
+- Web Push is built and delivers to a real phone. No SMS, and no plan to add it.
 - Custom domain or github.io base path.

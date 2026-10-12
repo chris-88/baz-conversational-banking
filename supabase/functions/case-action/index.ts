@@ -9,7 +9,14 @@ import {
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { transition } from '../_shared/domain/state-machine.ts'
-import { loadCase, recordFacts, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
+import {
+  loadCase,
+  mustWrite,
+  recordFacts,
+  type Db,
+  type Insert,
+  writeEvent,
+} from '../_shared/db/case-repository.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import { deferNeed } from '../_shared/db/needs.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
@@ -189,14 +196,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       if (!known) return errorResponse('bad_request', 'That is not part of this application.')
 
-      await admin.from('application_confirmations').upsert(
-        {
-          application_id: action.applicationId,
-          requirement_id: action.requirementId,
-          participant_id: session.participant_id,
-          kind: 'confirmation',
-        },
-        { onConflict: 'application_id,requirement_id' },
+      mustWrite(
+        await admin.from('application_confirmations').upsert(
+          {
+            application_id: action.applicationId,
+            requirement_id: action.requirementId,
+            participant_id: session.participant_id,
+            kind: 'confirmation',
+          },
+          { onConflict: 'application_id,requirement_id' },
+        ),
+        'the confirmation',
       )
       summary = 'Confirmed.'
       break
@@ -222,14 +232,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
           return errorResponse('bad_request', 'Those are not part of this application.')
         }
 
-        await admin.from('application_confirmations').upsert(
-          action.confirmations.map((requirementId) => ({
-            application_id: action.applicationId,
-            requirement_id: requirementId,
-            participant_id: session.participant_id,
-            kind: 'confirmation',
-          })),
-          { onConflict: 'application_id,requirement_id' },
+        mustWrite(
+          await admin.from('application_confirmations').upsert(
+            action.confirmations.map((requirementId) => ({
+              application_id: action.applicationId,
+              requirement_id: requirementId,
+              participant_id: session.participant_id,
+              kind: 'confirmation',
+            })),
+            { onConflict: 'application_id,requirement_id' },
+          ),
+          'the confirmation',
         )
 
         // Recompute so the application reaches `ready` before submission is attempted.
@@ -249,10 +262,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
         )
       }
 
-      await admin
-        .from('applications')
-        .update({ state: result.application.state, submitted_at: new Date().toISOString() })
-        .eq('id', action.applicationId)
+      mustWrite(
+        await admin
+          .from('applications')
+          .update({ state: result.application.state, submitted_at: new Date().toISOString() })
+          .eq('id', action.applicationId),
+        'the application',
+      )
 
       await writeEvent(admin, {
         caseId,
@@ -300,14 +316,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
 
       const now = new Date().toISOString()
-      await admin
-        .from('plans')
-        .update({
-          status: target,
-          ...(action.decision === 'keep' ? { confirmed_at: now, last_confirmed_at: now } : {}),
-          ...(target === 'paused' ? { paused_at: now } : {}),
-        })
-        .eq('id', current.id)
+      mustWrite(
+        await admin
+          .from('plans')
+          .update({
+            status: target,
+            ...(action.decision === 'keep' ? { confirmed_at: now, last_confirmed_at: now } : {}),
+            ...(target === 'paused' ? { paused_at: now } : {}),
+          })
+          .eq('id', current.id),
+        'the plan',
+      )
 
       /**
        * Keeping a plan is agreeing its target, so the target becomes a fact about them.
@@ -366,15 +385,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const partnerId =
         existing?.id ??
         ((
-          await admin
-            .from('participants')
-            .insert({ case_id: caseId, role: 'partner', display_name: action.name })
-            .select('id')
-            .single()
+          mustWrite(
+            await admin
+              .from('participants')
+              .insert({ case_id: caseId, role: 'partner', display_name: action.name })
+              .select('id')
+              .single(),
+            'the participant',
+          )
         ).data as { id: string }).id
 
       if (existing) {
-        await admin.from('participants').update({ display_name: action.name }).eq('id', partnerId)
+        mustWrite(
+          await admin.from('participants').update({ display_name: action.name }).eq('id', partnerId),
+          'the participant',
+        )
       }
 
       // Opaque, hashed, single-use, and good for a day — longer than a handoff because the
@@ -383,13 +408,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
       const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 
-      await admin.from('tokens').insert({
-        case_id: caseId,
-        kind: 'partner_invite',
-        token_hash: hash,
-        participant_id: partnerId,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      })
+      mustWrite(
+        await admin.from('tokens').insert({
+          case_id: caseId,
+          kind: 'partner_invite',
+          token_hash: hash,
+          participant_id: partnerId,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        }),
+        'the link',
+      )
 
       await writeEvent(admin, {
         caseId,
@@ -449,25 +477,31 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return errorResponse('bad_request', 'That is not something to consent to here.')
       }
 
-      await admin.from('application_confirmations').upsert(
-        {
-          application_id: action.applicationId,
-          requirement_id: action.requirementId,
-          participant_id: session.participant_id,
-          kind: 'consent',
-        },
-        { onConflict: 'application_id,requirement_id' },
+      mustWrite(
+        await admin.from('application_confirmations').upsert(
+          {
+            application_id: action.applicationId,
+            requirement_id: action.requirementId,
+            participant_id: session.participant_id,
+            kind: 'consent',
+          },
+          { onConflict: 'application_id,requirement_id' },
+        ),
+        'the confirmation',
       )
 
       // Recorded as a consent in its own right, not only as a satisfied requirement (§9).
-      await admin.from('consents').upsert(
-        {
-          case_id: caseId,
-          participant_id: session.participant_id,
-          kind: 'health_questions',
-          granted: true,
-        },
-        { onConflict: 'participant_id,kind' },
+      mustWrite(
+        await admin.from('consents').upsert(
+          {
+            case_id: caseId,
+            participant_id: session.participant_id,
+            kind: 'health_questions',
+            granted: true,
+          },
+          { onConflict: 'participant_id,kind' },
+        ),
+        'the consent',
       )
 
       await writeEvent(admin, {
@@ -536,7 +570,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return errorResponse('bad_request', problems.join(' '))
       }
 
-      await admin.from('facts').insert(rows as Insert<'facts'>[])
+      mustWrite(
+        await admin.from('facts').insert(rows as Insert<'facts'>[]),
+        'the facts',
+      )
       await writeEvent(admin, {
         caseId,
         type: 'health_form_completed',
@@ -559,10 +596,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const result = transition(application, { type: pausing ? 'paused' : 'resumed' })
       if (!result.ok) return errorResponse('illegal_transition', result.error.message)
 
-      await admin
-        .from('applications')
-        .update({ state: result.application.state, resume_to: result.application.resumeTo })
-        .eq('id', action.applicationId)
+      mustWrite(
+        await admin
+          .from('applications')
+          .update({ state: result.application.state, resume_to: result.application.resumeTo })
+          .eq('id', action.applicationId),
+        'the application',
+      )
 
       /**
        * §27 — "leave it for now" is only kind if something remembers.

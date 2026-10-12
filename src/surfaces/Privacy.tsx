@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { routes } from '@/app/routes'
@@ -16,6 +17,7 @@ import { routes } from '@/app/routes'
  * else, and a legal link up there would be the first thing a new customer reads.
  */
 export function Privacy(): ReactNode {
+  useDocumentTitle('How your data is used')
   return (
     <div className="bg-background min-h-dvh">
       <header className="border-border/60 border-b">

@@ -10,7 +10,13 @@ import {
 import { factCatalogue, isFactKey, parseFactValue } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
-import { loadCase, writeEvent, type Db, type Insert } from '../_shared/db/case-repository.ts'
+import {
+  loadCase,
+  mustWrite,
+  type Db,
+  type Insert,
+  writeEvent,
+} from '../_shared/db/case-repository.ts'
 import { evaluateFor, recomputeApplications } from '../_shared/db/applications.ts'
 import type { LoadedCase } from '../_shared/db/loaded-case.ts'
 
@@ -182,13 +188,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return errorResponse('not_found', 'That invitation has expired. Ask for a new one.')
     }
 
-    await admin.from('tokens').update({ consumed_at: new Date().toISOString() }).eq('id', token.id)
-    await admin
-      .from('participant_sessions')
-      .upsert(
-        { participant_id: token.participant_id, auth_user_id: authUserId },
-        { onConflict: 'participant_id,auth_user_id' },
-      )
+    mustWrite(
+      await admin.from('tokens').update({ consumed_at: new Date().toISOString() }).eq('id', token.id),
+      'the link',
+    )
+    mustWrite(
+      await admin
+        .from('participant_sessions')
+        .upsert(
+          { participant_id: token.participant_id, auth_user_id: authUserId },
+          { onConflict: 'participant_id,auth_user_id' },
+        ),
+      'the session',
+    )
 
     await writeEvent(admin, {
       caseId: token.case_id,

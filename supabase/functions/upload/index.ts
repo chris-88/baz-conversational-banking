@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
-import { writeEvent } from '../_shared/db/case-repository.ts'
+import {
+  mustWrite,
+  writeEvent,
+} from '../_shared/db/case-repository.ts'
 
 /**
  * `upload` — the only way a document enters a case (§6 Stage 7, §10).
@@ -115,23 +118,29 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   if (stored.error) return errorResponse('internal', 'That upload did not complete.')
 
-  await admin.from('documents').insert({
-    case_id: caseId,
-    application_id: row.application_id,
-    requirement_id: row.requirement_id,
-    participant_id: attached.participant_id,
-    document_type: typeof documentType === 'string' ? documentType : 'bank_statement',
-    storage_path: storagePath,
-    file_name: file.name,
-    // Nothing has checked it. A requirement marked requiresVerification stays outstanding
-    // until the bank says otherwise, which is the truthful state (§14).
-    verified: false,
-  })
+  mustWrite(
+    await admin.from('documents').insert({
+      case_id: caseId,
+      application_id: row.application_id,
+      requirement_id: row.requirement_id,
+      participant_id: attached.participant_id,
+      document_type: typeof documentType === 'string' ? documentType : 'bank_statement',
+      storage_path: storagePath,
+      file_name: file.name,
+      // Nothing has checked it. A requirement marked requiresVerification stays outstanding
+      // until the bank says otherwise, which is the truthful state (§14).
+      verified: false,
+    }),
+    'the document',
+  )
 
-  await admin
-    .from('application_requests')
-    .update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() })
-    .eq('id', row.id)
+  mustWrite(
+    await admin
+      .from('application_requests')
+      .update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() })
+      .eq('id', row.id),
+    'the request',
+  )
 
   await writeEvent(admin, {
     caseId,
