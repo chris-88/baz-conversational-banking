@@ -1225,3 +1225,45 @@ one. The uncached conversation history cost twice what the cached prompt did.
 Findings and method are in
 `docs/04-cost-of-running-a-conversational-assistant.md`, which is kept current
 as part of the POC's lessons learned rather than written once.
+
+## 2026-10-12 — A turn that fails has to say why (§52)
+
+A customer sent an opening message carrying fifteen facts and three product
+requests, and got "Sorry — I lost my thread there." Three times. Nothing
+anywhere recorded a reason: no facts, no card, and one `case_created` event
+for the whole case.
+
+The cause was `max_tokens: 1_024` cutting the turn off inside its own tool
+call, but the cause is not the point. There were three separate ways a tool
+call could come to nothing — refused by validation, thrown by the executor,
+or truncated mid-call — and not one of them wrote anything down. Finding it
+meant replaying the same message twenty times against the live model, adding
+an instrument on each failed guess.
+
+`turn_tools` and `tool_rejected` now cover all three. Same reasoning as the
+gate that failed closed without saying what failed: a silent failure costs
+more to diagnose than it ever cost to record.
+
+## 2026-10-12 — Bounds are set by the conversation, not by instinct (§53)
+
+Two limits picked as safe defaults were both tighter than real use: an output
+ceiling of 1,024 tokens and a `record_facts` batch cap of 12. Each was reached
+by an ordinary customer message, and each cost real money when it was — a dead
+turn at €0.023, and an extra model round at €0.019, because with a cached
+prefix the round is the unit of cost rather than the token.
+
+Ceiling is 3,072 with one retry; batch cap is 24. Neither relaxes a
+protection: the gate still refuses long-output requests before the model sees
+them, and every fact is still validated against the catalogue one at a time.
+
+## 2026-10-12 — The stream says it is alive while it thinks (§34)
+
+The client abandons a stream that sends nothing for 45 seconds, written on the
+assumption that a working turn streams text throughout. A turn that calls a
+tool first streams nothing at all until its second round, which on a dense
+message was measured at over a minute.
+
+The server now sends an SSE comment every ten seconds. Chosen over raising the
+client's limit because a genuinely dead stream should still fail fast, and
+over a new stream event because a comment needs no change to the contract or
+the client.

@@ -101,6 +101,12 @@ const DISCOVERY_PATIENCE = 7
  * same card appearing twice in a row, which is what happens when the model reaches for it as
  * something to say.
  */
+/**
+ * Comfortably inside the client's 45-second silence limit, so a slow round never reads as a
+ * dead connection. Small enough to survive an intermediary that drops idle streams.
+ */
+const HEARTBEAT_MS = 10_000
+
 const STATUS_CARD_WINDOW = 2
 
 /** Short, so a genuinely different set of options can still follow a turn later. */
@@ -630,6 +636,32 @@ async function handleTurn(request: Request): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const encoder = new TextEncoder()
+
+      /**
+       * A turn that is thinking has to say so, even with nothing to say yet.
+       *
+       * The client gives up on a stream that sends nothing for 45 seconds, on the assumption
+       * that a working turn produces text the whole way through. That is not true of a turn
+       * that calls a tool first: the model spends its entire first round writing a
+       * `record_facts` call and a card request, emits no text at all, and the first byte the
+       * browser sees is the opening word of the second round. On a dense opening message that
+       * gap was measured at over a minute, and the customer got "that took too long" for a
+       * turn the server was still doing properly.
+       *
+       * An SSE comment costs two bytes a tick and keeps the connection honestly alive. The
+       * client skips any line that is not a `data:` line, so this needs nothing of it.
+       */
+      let beating = true
+      const heartbeat = setInterval(() => {
+        if (!beating) return
+        try {
+          controller.enqueue(encoder.encode(': \n\n'))
+        } catch {
+          // The customer closed the tab mid-turn. Nothing to keep alive.
+          beating = false
+        }
+      }, HEARTBEAT_MS)
+
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(toSseFrame(event)))
 
       try {
@@ -1722,6 +1754,8 @@ async function handleTurn(request: Request): Promise<Response> {
           },
         })
       } finally {
+        beating = false
+        clearInterval(heartbeat)
         controller.close()
       }
     },

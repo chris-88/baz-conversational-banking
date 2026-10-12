@@ -84,3 +84,43 @@ describe('a turn that stops answering', () => {
     expect(events.map((event) => event.type)).toEqual(['text_delta', 'done'])
   })
 })
+
+/**
+ * A tool-first turn sends no text at all during its first round.
+ *
+ * The silence limit was written on the assumption that a working turn produces text the whole
+ * way through. It does not: the model can spend an entire round writing a record_facts call
+ * and a card request, and the first byte the browser sees is the opening word of the round
+ * after that. On a dense opening message that gap ran past a minute, and the customer was told
+ * the turn had taken too long while the server was still doing it properly. The server now
+ * sends an SSE comment while it works.
+ */
+describe('a turn that is thinking', () => {
+  const withHeartbeats = (events: readonly StreamEvent[], beats: number): Response => {
+    const encoder = new TextEncoder()
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let beat = 0; beat < beats; beat += 1) controller.enqueue(encoder.encode(': \n\n'))
+        for (const event of events) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+        }
+        controller.close()
+      },
+    })
+    return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+  }
+
+  it('ignores heartbeat frames and still delivers the reply', async () => {
+    const reply: StreamEvent[] = [
+      { type: 'text_delta', text: 'Two kids and €2,500 a month.' },
+      { type: 'done', messageId: '11111111-2222-4333-8444-555555555555', gateCategory: 'banking' },
+    ]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(withHeartbeats(reply, 6)))
+
+    const seen: StreamEvent[] = []
+    await streamBazTurn({ caseId: 'c1', message: 'hello' }, (event) => seen.push(event))
+
+    // Six comment frames in front of it, and not one of them reaches the UI.
+    expect(seen).toEqual(reply)
+  })
+})
