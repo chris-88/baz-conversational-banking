@@ -459,6 +459,18 @@ export const adminCaseSchema = z.object({
    * where somebody photographed three payslips reads as a quiet one if you only count what was
    * typed.
    */
+  /**
+   * What reaching this customer has cost, as against what it is costing to talk to them.
+   *
+   * Zero, and that is the number worth showing: these are Web Push, sent from an Edge Function
+   * to the browser's own push service, so there is no per-message charge and nothing to
+   * register. An SMS would be billed each time.
+   */
+  notifications: z.object({
+    sent: z.number().int(),
+    delivered: z.number().int(),
+    euro: z.number(),
+  }),
   documents: z.array(
     z.object({
       type: z.string(),

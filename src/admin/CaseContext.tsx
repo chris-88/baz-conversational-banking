@@ -133,6 +133,22 @@ function Customer({ data }: { readonly data: AdminCase }): ReactNode {
                 key: 'Cost to run',
                 value: `about ${euro(data.cost.euro)}`,
               },
+              /*
+               * Shown even at zero — especially at zero.
+               *
+               * These are Web Push, sent from an Edge Function to the browser's own push
+               * service, so there is no per-message charge and no sender to register. An SMS
+               * would be billed every time. A cost line that only appeared when there was
+               * something to charge for would never make that point.
+               */
+              ...(data.notifications.sent > 0
+                ? [
+                    {
+                      key: 'Notifications',
+                      value: `${String(data.notifications.sent)} sent, ${String(data.notifications.delivered)} delivered — ${euro(data.notifications.euro)}`,
+                    },
+                  ]
+                : []),
               ...(data.cost.measuredTurns < data.cost.turns
                 ? [
                     {

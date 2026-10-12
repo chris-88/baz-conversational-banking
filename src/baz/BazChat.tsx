@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { MessageText } from '@/baz/MessageText'
 import { subscribeToPush } from '@/lib/push'
 import { TriangleAlertIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -65,6 +66,8 @@ export function BazChat({
 
   const transcript = useRef<HTMLDivElement>(null)
   /** Whether they were reading the newest turn, remembered from before the keyboard opens. */
+  /** Whether the first paint has already put the newest message on screen. */
+  const landed = useRef(false)
   const atBottom = useRef(true)
   const openingSent = useRef(false)
   const returnSent = useRef(false)
@@ -269,12 +272,28 @@ export function BazChat({
     const el = transcript.current
     if (el === null) return
 
+    /*
+     * Open on the newest message, not the oldest.
+     *
+     * The rule below is "follow only if they are already at the bottom", which is right while
+     * a conversation is running and wrong the moment it loads: a restored transcript starts at
+     * scrollTop zero, which is the furthest possible from the bottom, so the rule declined to
+     * move and left somebody reading the first thing they ever said to Baz. The first paint
+     * after history arrives jumps, once.
+     */
+    if (!landed.current && !loadingHistory && entries.length > 0) {
+      landed.current = true
+      el.scrollTop = el.scrollHeight
+      atBottom.current = true
+      return
+    }
+
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
     if (distanceFromBottom > 160) return
 
     el.scrollTop = el.scrollHeight
     atBottom.current = true
-  }, [entries, streaming])
+  }, [entries, streaming, loadingHistory])
 
   /**
    * And keep it in view when the keyboard opens.
@@ -514,7 +533,7 @@ export function BazChat({
               showAvatar={endsRun}
               first={entry.author === 'baz' && entries.findIndex((e) => e.kind === 'message' && e.author === 'baz') === index}
             >
-              <span className="whitespace-pre-wrap">{entry.text}</span>
+              <MessageText text={entry.text} />
             </ChatBubble>
           )
         })}

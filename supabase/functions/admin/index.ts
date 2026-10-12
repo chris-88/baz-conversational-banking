@@ -208,6 +208,32 @@ function statedName(
   return typeof latest === 'string' && latest.trim().length > 0 ? latest : null
 }
 
+/**
+ * What it has cost to reach this customer.
+ *
+ * Counted from the events rather than tracked separately, like everything else here. The euro
+ * is zero and is shown anyway: Web Push has no per-message charge, which is the whole reason
+ * there is no Twilio account behind this, and a cost line that only appears when there is
+ * something to charge for never makes that point.
+ */
+function notificationCost(events: readonly { type: string; payload: unknown }[]): {
+  sent: number
+  delivered: number
+  euro: number
+} {
+  const sent = events.filter((event) => event.type === 'notification_sent')
+  const delivered = sent.reduce((total, event) => {
+    const payload = event.payload
+    const count =
+      typeof payload === 'object' && payload !== null && 'delivered' in payload
+        ? (payload as { delivered?: unknown }).delivered
+        : undefined
+    return total + (typeof count === 'number' ? count : 0)
+  }, 0)
+
+  return { sent: sent.length, delivered, euro: 0 }
+}
+
 /** The five headline counts, from a tally of event types. */
 function headlineCounts(counts: ReadonlyMap<string, number>): {
   questionsAvoided: number
@@ -1664,6 +1690,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           messages: spoken.length,
           timing: conversationTiming(loaded.messages.map((message) => message.createdAt)),
         },
+        notifications: notificationCost(events.data ?? []),
         documents: (
           documentRows.data as { document_type: string; verified: boolean; uploaded_at: string }[]
         ).map((row) => ({
