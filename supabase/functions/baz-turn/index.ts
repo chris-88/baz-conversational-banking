@@ -273,6 +273,21 @@ async function handleTurn(request: Request): Promise<Response> {
     : ({ allowed: true, category: 'banking', clarifyInScope: false, suppressHumour: false,
         suppressProductOffers: false, profanity: false, injectionFlagged: false } as const)
 
+  /**
+   * The notice about what is kept, owed to anybody who has typed into the box.
+   *
+   * This used to fire on the first fact `record_facts` accepted, on the reasoning that a fact
+   * is the moment something starts being true. It is not: the message itself is stored, in
+   * full, before the gate has even decided whether the model may see it. Half of the cases
+   * that reached a customer never showed the notice — somebody who asked a question without
+   * stating anything recordable had their words written down and was told nothing, and so did
+   * everybody whose turn failed before it could record a fact.
+   *
+   * Tied to the write that actually happens first, so there is no conversation where the
+   * notice is owed and not given. Still once per case, still decided here rather than by the
+   * model: a disclosure the model could choose to skip is not a disclosure.
+   */
+  let pendingNotice: Card | undefined
   if (isCustomerTurn) {
     await saveMessage(admin, {
       caseId: turn.caseId,
@@ -281,6 +296,24 @@ async function handleTurn(request: Request): Promise<Response> {
       content: customerMessage,
       gateCategory: gate.category,
     })
+
+    const alreadyShown = await admin
+      .from('events')
+      .select('id')
+      .eq('case_id', turn.caseId)
+      .eq('type', DATA_NOTICE_EVENT)
+      .limit(1)
+      .maybeSingle()
+
+    if (!alreadyShown.data) {
+      await writeEvent(admin, {
+        caseId: turn.caseId,
+        type: DATA_NOTICE_EVENT,
+        actor: 'system',
+        payload: {},
+      })
+      pendingNotice = dataNoticeCard(`${env('APP_BASE_URL')}#/privacy`)
+    }
   }
 
   /**
@@ -344,16 +377,28 @@ async function handleTurn(request: Request): Promise<Response> {
         `gate classifier ${gate.classifierFailure.kind}: ${gate.classifierFailure.detail}`,
       )
     }
+    /*
+     * A blocked turn still owes the notice.
+     *
+     * The request never reaches the model, but it is stored in full — it has to be, because
+     * §39 wants the block auditable and the payload carries the first 200 characters of what
+     * was asked. Somebody who only ever asks out-of-scope questions is recorded exactly like
+     * anybody else, and used to be the one person guaranteed never to be told.
+     */
     const messageId = await saveMessage(admin, {
       caseId: turn.caseId,
       participantId: null,
       role: 'baz',
       content: gate.response,
       usage: spend,
+      ...(pendingNotice === undefined ? {} : { cards: [pendingNotice] }),
     })
 
     return streamOf([
       { type: 'text_delta', text: gate.response },
+      ...(pendingNotice === undefined
+        ? []
+        : [{ type: 'card', card: pendingNotice } as const]),
       { type: 'done', messageId, gateCategory: gate.category },
     ])
   }
@@ -702,36 +747,6 @@ async function handleTurn(request: Request): Promise<Response> {
                   })
                 }
 
-                /*
-                 * The first time anything is written down, say so.
-                 *
-                 * Decided here rather than by the model, for the same reason the gate is: a
-                 * disclosure the model could choose to skip is not a disclosure. It fires on
-                 * the write itself, which is the moment it becomes true — not at the start of
-                 * the conversation, where it would be a wall of text before anybody has said
-                 * anything, and not at the end, where it is too late to matter.
-                 */
-                let noticeCard: Card | undefined
-                if (outcome.accepted.length > 0) {
-                  const shown = await admin
-                    .from('events')
-                    .select('id')
-                    .eq('case_id', turn.caseId)
-                    .eq('type', DATA_NOTICE_EVENT)
-                    .limit(1)
-                    .maybeSingle()
-
-                  if (!shown.data) {
-                    await writeEvent(admin, {
-                      caseId: turn.caseId,
-                      type: DATA_NOTICE_EVENT,
-                      actor: 'system',
-                      payload: {},
-                    })
-                    noticeCard = dataNoticeCard(`${env('APP_BASE_URL')}#/privacy`)
-                  }
-                }
-
                 const rejected = outcome.rejected
                   .map((item) => `${item.key}: ${item.reason}`)
                   .join('; ')
@@ -769,14 +784,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   result:
                     `Recorded ${outcome.accepted.length}.` +
                     (rejected ? ` Not recorded — ${rejected}` : '') +
-                    progressed +
-                    (noticeCard === undefined
-                      ? ''
-                      : ' A notice about what is kept is on screen, shown automatically because' +
-                        ' this is the first thing written down. Do not read it out, do not' +
-                        ' apologise for it, and do not wait on it — carry on with what you were' +
-                        ' saying.'),
-                  ...(noticeCard === undefined ? {} : { card: noticeCard }),
+                    progressed,
                 }
               }
 
@@ -1670,6 +1678,12 @@ async function handleTurn(request: Request): Promise<Response> {
           if (event.type === 'text_delta') spoken.push(event.text)
           if (event.type === 'card') shown.push(event.card)
           send(event)
+        }
+
+        // Last, so it reads as a footnote to the answer rather than interrupting it.
+        if (pendingNotice !== undefined) {
+          shown.push(pendingNotice)
+          send({ type: 'card', card: pendingNotice })
         }
 
         /*
