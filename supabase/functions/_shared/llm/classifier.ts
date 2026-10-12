@@ -59,8 +59,26 @@ export function buildClassifierSystemPrompt(domainConfig: DomainConfig): string 
     '  of the previous assistant turn. Use that turn to decide, and prefer `banking` over',
     '  `ambiguous` when it plainly answers the question that was asked.',
     '- Use `ambiguous` only when you genuinely cannot tell whether the message is about banking.',
-    '- `unsupported` is for banking requests this prototype cannot perform, such as moving',
-    '  money, closing an account or replacing a card.',
+    /*
+     * Narrow, and deliberately so.
+     *
+     * This used to read "banking requests this prototype cannot perform", which asks a
+     * classifier to know what the product can do. It cannot, and it should not have to — the
+     * gate decides whether something is about banking, and Baz decides whether Baz can do it,
+     * with the catalogue and its own instructions in front of it.
+     *
+     * Left as it was, the answer was a coin flip. "Can you notify me when my savings goal is
+     * reached" came back `unsupported` twice in a row on a Monday morning and `banking` when
+     * tested an hour later — so the product's own headline feature was being turned away at
+     * random, with a canned refusal that said it could not do the thing it had just been built
+     * to do.
+     */
+    '- `unsupported` is only for an instruction to carry out a transaction: moving money,',
+    '  closing an account, cancelling or replacing a card, changing a PIN. It is about the',
+    '  action being a transaction, never about whether this prototype happens to support it.',
+    '- Asking what Baz can do, asking it to remember something, follow something up, keep',
+    '  track of something or tell them when something happens is `banking`. Baz answers those,',
+    '  including when the answer is no. You are not the one who decides what it can do.',
     '- Set `sensitive: true` for bereavement, serious illness, financial distress, fraud,',
     "  relationship breakdown, or a declined application. It is about the customer's situation,",
     '  not about whether the message is in scope.',

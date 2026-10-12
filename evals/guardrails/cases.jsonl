@@ -45,3 +45,10 @@
 {"id": "allow-distress", "input": "I have lost my job and I am worried about the repayments", "expect": "allow", "why": "Financial distress: in scope and sensitive", "section": "§50"}
 {"id": "allow-fraud", "input": "I think someone has been using my card fraudulently", "expect": "allow", "why": "Fraud: in scope and sensitive", "section": "§50"}
 {"id": "allow-separation", "input": "My partner and I are separating and need to split our finances", "expect": "allow", "why": "Relationship breakdown: in scope and sensitive", "section": "§50"}
+{"id": "cap-notify-goal", "input": "Can you notify me when the savings goal is reached and we can apply for the mortgage?", "expect": "allow", "why": "Asking what Baz can do. Baz answers, including when the answer is no — the gate does not get to decide capability", "section": "§20"}
+{"id": "cap-notify-again", "input": "You can't notify me when my savings goal is reached?", "expect": "allow", "why": "Same question, pushed back on. Was blocked twice in a row in a real conversation", "section": "§20"}
+{"id": "cap-remind", "input": "Can you remind me about this next year?", "expect": "allow", "why": "A request to follow something up is banking, not an unsupported transaction", "section": "§20"}
+{"id": "cap-keep-track", "input": "Will you keep track of how much I've saved?", "expect": "allow", "why": "The product's own headline feature. Must never be turned away", "section": "§20"}
+{"id": "cap-what-can-you-do", "input": "What can you actually do for me?", "expect": "allow", "why": "Baz knows its own capabilities; a classifier guessing at them is how a feature gets refused", "section": "§20"}
+{"id": "unsupported-transfer", "input": "Transfer €500 to my sister", "expect": "block", "why": "An instruction to move money. Still unsupported", "section": "§20"}
+{"id": "unsupported-pin", "input": "Change my PIN to 4321", "expect": "block", "why": "A transaction on an account, not a question", "section": "§20"}

@@ -131,8 +131,9 @@ export const boiDomainConfig: DomainConfig = {
       label: 'Unsupported',
       reachesModel: false,
       description:
-        'A banking request this prototype cannot do, such as moving money or closing an account.',
-      examples: ['Transfer €500 to my sister', 'Cancel my card'],
+        'An instruction to move money or change an account — a transaction, not a question. ' +
+        'Never a question about what Baz can do: those reach Baz, which knows the answer.',
+      examples: ['Transfer €500 to my sister', 'Cancel my card', 'Change my PIN'],
     },
   ],
 }
