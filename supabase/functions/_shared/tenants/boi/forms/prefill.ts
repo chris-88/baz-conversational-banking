@@ -1,4 +1,5 @@
 import type { FactKey } from '../../../domain/facts.ts'
+import type { FormDefinition } from '../../../domain/forms/definition.ts'
 
 /**
  * What Baz already knows, expressed in the form platform's own vocabulary.
@@ -92,4 +93,88 @@ export function addressPart(
     return first.replace(/^\d+[A-Za-z]?\s*/, '')
   }
   return parts.length > 2 ? (parts[1] ?? '') : ''
+}
+
+export type Resolved = {
+  /** Keyed by the definition's own field ids, which is what a packet is built from. */
+  readonly answers: Readonly<Record<string, unknown>>
+  /** Field ids whose value came from something Baz already held. */
+  readonly reused: readonly string[]
+  /**
+   * Mappings that found nothing, by their toscana name.
+   *
+   * Kept rather than discarded because this is the list of questions the customer still has to
+   * be asked, and the console shows it: the claim is about how few questions are left, which
+   * means being able to see which ones they are.
+   */
+  readonly unresolved: readonly string[]
+}
+
+/**
+ * Turns what Baz holds into answers against one form definition.
+ *
+ * `held` is the case's facts. `reused` decides whether a value counts towards the questions
+ * avoided: a fact stated while applying for this very form was asked for, so it does not,
+ * while one carried over from an earlier application or from the bank's own record does.
+ *
+ * Nothing is guessed. A fact that is absent, blank, or whose requested part is not in it (a
+ * one-word name has no surname) leaves the field unanswered and the customer asked.
+ */
+export function resolvePrefill(args: {
+  readonly definition: FormDefinition
+  readonly prefill: readonly Prefill[]
+  readonly held: (key: FactKey) => unknown
+  readonly reused: (key: FactKey) => boolean
+}): Resolved {
+  const byToscana = new Map(
+    args.definition.fields
+      .filter((field) => typeof field.toscana === 'string' && field.toscana.length > 0)
+      .map((field) => [field.toscana as string, field.id]),
+  )
+
+  const answers: Record<string, unknown> = {}
+  const reused: string[] = []
+  const unresolved: string[] = []
+
+  for (const mapping of args.prefill) {
+    const fieldId = byToscana.get(mapping.toscana)
+    // A mapping that names a field this revision does not have. `prefill.test.ts` keeps the
+    // table honest against the published definition, so this is belt and braces.
+    if (fieldId === undefined) {
+      unresolved.push(mapping.toscana)
+      continue
+    }
+
+    const value = valueFor(args.held(mapping.fact), mapping.take)
+    if (value === undefined) {
+      unresolved.push(mapping.toscana)
+      continue
+    }
+
+    answers[fieldId] = value
+    if (args.reused(mapping.fact)) reused.push(fieldId)
+  }
+
+  return { answers, reused, unresolved }
+}
+
+/** `undefined` for anything that is not an answer, which is the only way a field stays unasked. */
+function valueFor(fact: unknown, take: Prefill['take']): unknown {
+  if (fact === null || fact === undefined) return undefined
+
+  if (take === undefined) {
+    if (typeof fact === 'string') return fact.trim() === '' ? undefined : fact.trim()
+    if (typeof fact === 'number' || typeof fact === 'boolean') return fact
+    return undefined
+  }
+
+  // Every reshaping below is a string operation on something a person said.
+  if (typeof fact !== 'string' || fact.trim() === '') return undefined
+
+  const part =
+    take === 'firstName' || take === 'surname'
+      ? namePart(fact, take)
+      : addressPart(fact, take)
+
+  return part.trim() === '' ? undefined : part
 }

@@ -135,6 +135,15 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('list_form_applications') }),
 
   /**
+   * Rebuild every case's form applications from the facts it holds.
+   *
+   * Two jobs. A case that was in conversation before the mapping existed has answers in
+   * `facts` and no form row, and a change to the mapping table should be visible without
+   * waiting for each customer to say something else. Idempotent, so it is safe to press.
+   */
+  z.object({ action: z.literal('rebuild_form_applications') }),
+
+  /**
    * §39 — put a request through the gate and report what happened to it.
    *
    * The same classifier and the same deterministic checks a customer's message meets, with no

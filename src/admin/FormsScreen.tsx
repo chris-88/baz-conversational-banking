@@ -1,14 +1,16 @@
 import { type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon, FileJsonIcon, ShieldOffIcon } from 'lucide-react'
+import { ArrowLeftIcon, FileJsonIcon, RefreshCwIcon, ShieldOffIcon } from 'lucide-react'
 import { adminApi, type FormInspection, type SubmissionEntry } from '@/admin/adminClient'
 import { routes } from '@/app/routes'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 /**
  * What a real Bank of Ireland digital form looks like going through Baz.
@@ -185,6 +187,27 @@ export function FormsScreen(): ReactNode {
     enabled: formApplicationId !== undefined,
   })
 
+  const queryClient = useQueryClient()
+  /*
+   * For conversations that happened before the mapping existed, and after editing it.
+   * Idempotent, so pressing it twice is the same as pressing it once.
+   */
+  const rebuild = useMutation({
+    mutationFn: adminApi.rebuildFormApplications,
+    onSuccess: (result) => {
+      toast.success(
+        result.forms === 0
+          ? 'Nothing to build: no conversation has started a form yet'
+          : `${String(result.forms)} ${result.forms === 1 ? 'form' : 'forms'} rebuilt, ` +
+              `${String(result.answered)} answers mapped`,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'form-applications'] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message)
+    },
+  })
+
   if (formApplicationId !== undefined) {
     return (
       <div className="space-y-4">
@@ -209,13 +232,24 @@ export function FormsScreen(): ReactNode {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">Digital forms</h1>
-        <p className="text-muted-foreground mt-1 max-w-[62ch] text-sm leading-relaxed">
-          Applications collected against Bank of Ireland&rsquo;s own published form definitions.
-          Open any of them, finished or not, to see the definition, what Baz has gathered, and
-          the exact packet it would produce.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold">Digital forms</h1>
+          <p className="text-muted-foreground mt-1 max-w-[62ch] text-sm leading-relaxed">
+            Applications collected against Bank of Ireland&rsquo;s own published form
+            definitions. Open any of them, finished or not, to see the definition, what Baz has
+            gathered, and the exact packet it would produce.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={rebuild.isPending}
+          onClick={() => rebuild.mutate()}
+        >
+          <RefreshCwIcon className={rebuild.isPending ? 'animate-spin' : undefined} />
+          {rebuild.isPending ? 'Rebuilding…' : 'Rebuild from conversations'}
+        </Button>
       </div>
 
       {list.isPending && <Skeleton className="h-40 w-full" />}
@@ -239,11 +273,14 @@ export function FormsScreen(): ReactNode {
           <Link key={item.id} to={routes.admin.formApplication(item.id)} className="block">
             <Card className="hover:bg-accent/40 p-4 transition-colors">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold">{item.formVersion}</span>
+                <span className="text-sm font-semibold">
+                  {item.who ?? `Unnamed · ${item.caseId.slice(0, 8)}`}
+                </span>
                 <span className="text-muted-foreground font-mono text-2xs">
                   form {item.formId}
                 </span>
               </div>
+              <p className="text-muted-foreground mt-0.5 text-xs">{item.formVersion}</p>
               <p className="text-muted-foreground mt-1 text-xs">
                 {item.answered} answered
                 {item.reused > 0 && `, ${String(item.reused)} carried over`} · updated{' '}

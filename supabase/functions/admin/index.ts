@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { serveJson } from '../_shared/http/serve.ts'
 import type { Database, Json } from '../_shared/db/database.types.ts'
 import { sweepUsers } from '../_shared/db/purge-users.ts'
+import { syncFormApplications } from '../_shared/db/form-applications.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   adminRequestSchema,
@@ -1630,6 +1631,46 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       return json(ok({ purged: ids.length, usersRemoved }), 200)
     }
 
+    /*
+     * Rebuilds the form applications from what each case holds.
+     *
+     * The write path keeps these in step from here on, but the mapping arrived after several
+     * conversations had already happened: their answers were in `facts` with no form row to
+     * show them in. This is also the button to press after editing the mapping table, rather
+     * than waiting for every customer to say something else.
+     */
+    case 'rebuild_form_applications': {
+      const cases = await admin.from('cases').select('id').limit(500)
+      if (cases.error) return errorResponse('conflict', cases.error.message)
+
+      let built = 0
+      let answered = 0
+      const failures: string[] = []
+
+      for (const row of cases.data ?? []) {
+        try {
+          const synced = await syncFormApplications(admin, row.id)
+          if (synced.forms.length > 0) {
+            built += synced.forms.length
+            answered += synced.answered
+          }
+        } catch (error) {
+          // One bad case must not stop the rebuild; the console reports how many.
+          failures.push(error instanceof Error ? error.message : 'unknown')
+        }
+      }
+
+      return json(
+        ok({
+          cases: (cases.data ?? []).length,
+          forms: built,
+          answered,
+          failed: failures.length,
+        }),
+        200,
+      )
+    }
+
     case 'list_form_applications': {
       const rows = await admin
         .from('form_applications')
@@ -1639,13 +1680,52 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
       if (rows.error) return errorResponse('conflict', rows.error.message)
 
+      const listed = (rows.data ?? []) as any[]
+      const caseIds = [...new Set(listed.map((row) => row.case_id as string))]
+
+      /*
+       * Who each one belongs to.
+       *
+       * The list used to be headed by the form's version string, which is identical on every
+       * row: four applications all called "SuperSaver 2.1" and no way to tell whose was whose.
+       * The name on the form itself is the right label, with the participant's own as the
+       * fallback for a conversation that has not got to names yet.
+       */
+      const names = new Map<string, string>()
+      if (caseIds.length > 0) {
+        const people = await admin
+          .from('participants')
+          .select('case_id, display_name, role')
+          .in('case_id', caseIds)
+          .eq('role', 'primary')
+
+        for (const person of (people.data ?? []) as any[]) {
+          const name = person.display_name as string | null
+          if (name) names.set(person.case_id as string, name)
+        }
+
+        const stated = await admin
+          .from('facts')
+          .select('case_id, value')
+          .in('case_id', caseIds)
+          .eq('key', 'identity.fullName')
+          .is('superseded_by', null)
+
+        for (const fact of (stated.data ?? []) as any[]) {
+          if (typeof fact.value === 'string' && fact.value.trim() !== '') {
+            names.set(fact.case_id as string, fact.value as string)
+          }
+        }
+      }
+
       return json(
         ok({
-          applications: ((rows.data ?? []) as any[]).map((row) => ({
+          applications: listed.map((row) => ({
             id: row.id as string,
             caseId: row.case_id as string,
             formId: row.form_id as string,
             formVersion: row.form_version as string,
+            who: names.get(row.case_id as string) ?? null,
             // Enough to show progress in a list without building every packet.
             answered: Object.keys((row.answers ?? {}) as Record<string, unknown>).length,
             reused: ((row.reused_fields ?? []) as string[]).length,

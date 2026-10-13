@@ -102,6 +102,14 @@ export const adminApi = {
 
   inspectFormApplication: (formApplicationId: string) =>
     call({ action: 'inspect_form_application', formApplicationId }) as Promise<FormInspection>,
+
+  rebuildFormApplications: () =>
+    call({ action: 'rebuild_form_applications' }) as Promise<{
+      cases: number
+      forms: number
+      answered: number
+      failed: number
+    }>,
 }
 
 export type FormApplicationSummary = {
@@ -109,6 +117,8 @@ export type FormApplicationSummary = {
   readonly caseId: string
   readonly formId: string
   readonly formVersion: string
+  /** Whose application it is: the name on the form, or the participant's own. */
+  readonly who: string | null
   readonly answered: number
   readonly reused: number
   readonly updatedAt: string

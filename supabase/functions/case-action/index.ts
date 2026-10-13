@@ -20,6 +20,7 @@ import {
 } from '../_shared/db/case-repository.ts'
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import { deferNeed } from '../_shared/db/needs.ts'
+import { syncFormApplications } from '../_shared/db/form-applications.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { knowledgeProduct } from '../_shared/tenants/boi/kb-prompt.ts'
 import {
@@ -641,6 +642,24 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       (catalogueId === null ? undefined : knowledgeProduct(catalogueId)?.name) ??
       journeyFor(product).displayName,
   })
+
+  /*
+   * And the digital form applications, so selecting a product puts its form in the console
+   * immediately rather than on the next thing the customer happens to say.
+   *
+   * Caught: the action itself succeeded, and failing it now would roll a real state change
+   * back in the customer's face over a view they cannot see.
+   */
+  try {
+    await syncFormApplications(admin, caseId)
+  } catch (error) {
+    await writeEvent(admin, {
+      caseId,
+      type: 'form_sync_failed',
+      actor: 'system',
+      payload: { error: (error instanceof Error ? error.message : 'unknown').slice(0, 300) },
+    })
+  }
 
   return json(
     ok({

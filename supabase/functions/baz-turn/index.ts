@@ -20,6 +20,7 @@ import {
   worthSigningInFor,
 } from '../_shared/llm/sign-in-prompt.ts'
 import { runGate } from '../_shared/llm/gate.ts'
+import { syncFormApplications } from '../_shared/db/form-applications.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
 import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
 import { runBazTurn } from '../_shared/llm/baz.ts'
@@ -1865,6 +1866,34 @@ async function handleTurn(request: Request): Promise<Response> {
             type: 'tool_rejected',
             actor: 'model',
             payload: { tool: rejection.name, error: rejection.error.slice(0, 300) },
+          })
+        }
+
+        /*
+         * The digital form applications, brought up to date with whatever was collected.
+         *
+         * Caught rather than thrown: the reply has already streamed, and a turn that ends in
+         * an error because a console view could not be refreshed would be a worse failure than
+         * the one it is reporting. The event row is how it gets noticed.
+         */
+        try {
+          const synced = await syncFormApplications(admin, turn.caseId)
+          if (synced.forms.length > 0) {
+            await writeEvent(admin, {
+              caseId: turn.caseId,
+              type: 'form_application_updated',
+              actor: 'system',
+              payload: { forms: synced.forms, answered: synced.answered, reused: synced.reused },
+            })
+          }
+        } catch (error) {
+          await writeEvent(admin, {
+            caseId: turn.caseId,
+            type: 'form_sync_failed',
+            actor: 'system',
+            payload: {
+              error: (error instanceof Error ? error.message : 'unknown').slice(0, 300),
+            },
           })
         }
 
