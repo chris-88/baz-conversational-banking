@@ -657,12 +657,6 @@ async function handleTurn(request: Request): Promise<Response> {
     }
   }
 
-  const history = loaded.messages
-    .filter((message) => message.role !== 'system')
-    .map((message) => ({ role: message.role === 'customer' ? 'user' as const : 'assistant' as const, content: message.content }))
-
-  if (isCustomerTurn) history.push({ role: 'user', content: customerMessage })
-
   /*
    * Whether the offer to sign in is about to appear under this reply.
    *
@@ -674,6 +668,36 @@ async function handleTurn(request: Request): Promise<Response> {
   const offeringSignIn =
     !(await caseHasEvent(admin, turn.caseId, SIGN_IN_PROMPT_EVENT)) && worthSigningInFor(loaded)
 
+  /**
+   * What the reply has to do when the offer is about to appear beneath it.
+   *
+   * Applied to every kind of turn, not only a tap. The first version only reached `action`
+   * turns, so when the offer landed on an ordinary message the card appeared under "what's
+   * your home address, and how long have you lived there?" — a question with nothing to do
+   * with it, from a Baz that did not know it was coming.
+   */
+  const SIGN_IN_INSTRUCTION =
+    ' An offer to sign in is on screen directly under your reply, and your reply is what has ' +
+    'to lead into it. Put it to them in your own words: there is now something here worth ' +
+    'keeping, and signing in means they can stop and pick it up later or on another device. ' +
+    'Ask whether they would like to, and end there. Do not ask for their name, date of birth, ' +
+    'address or anything else personal in this turn — signing in supplies some of it, and ' +
+    'asking them to type what is about to be filled in is the wrong way round. Do not describe ' +
+    'the card or name the button.'
+
+  const history = loaded.messages
+    .filter((message) => message.role !== 'system')
+    .map((message) => ({ role: message.role === 'customer' ? 'user' as const : 'assistant' as const, content: message.content }))
+
+  if (isCustomerTurn) {
+    history.push({
+      role: 'user',
+      content: offeringSignIn
+        ? `${customerMessage}\n\n(${SIGN_IN_INSTRUCTION.trim()})`
+        : customerMessage,
+    })
+  }
+
   if (turn.trigger === 'action') {
     // Told as an event, not quoted as speech, so Baz does not answer a question nobody asked.
     history.push({
@@ -682,16 +706,7 @@ async function handleTurn(request: Request): Promise<Response> {
         `(The customer did this in the app: ${customerMessage} They did not type anything, so ` +
         'do not reply as though they had and do not thank them for a message. ' +
         `${turn.note ?? 'Say what it means for them and what you need next.'} Keep it brief.` +
-        (offeringSignIn
-          ? ' An offer to sign in is on screen under your reply, and the reply is what has to ' +
-            'make the case for it. Say briefly what is now in progress, then put it to them in ' +
-            'your own words: this is the point where there is something worth keeping, and ' +
-            'signing in means they can stop here and pick it up later or on another device. ' +
-            'Ask whether they would like to. Do not ask for their name, date of birth, ' +
-            'address or anything else personal this turn — signing in may supply it, and ' +
-            'asking them to type what is about to be filled in is the wrong way round. Do not ' +
-            'describe the card or name the button.'
-          : '') +
+        (offeringSignIn ? SIGN_IN_INSTRUCTION : '') +
         ')',
     })
   }
