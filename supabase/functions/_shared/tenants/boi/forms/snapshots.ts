@@ -38,7 +38,7 @@ const PAGE_LOCATIONS: Readonly<Record<string, string>> = {
   '1833': 'https://digital.bankofireland.com/personal-banking/supersaver/',
 }
 
-const RAW: readonly RawSnapshot[] = [form1833 as RawSnapshot]
+const RAW: readonly RawSnapshot[] = [form1833]
 
 /** Parsed once. The definition is large and does not change between requests. */
 const SNAPSHOTS: ReadonlyMap<string, FormSnapshot> = new Map(
