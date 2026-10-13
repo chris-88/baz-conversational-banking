@@ -288,3 +288,41 @@ export async function signOutIdentity(): Promise<void> {
   await client.auth.signOut()
   await client.auth.signInAnonymously()
 }
+
+/**
+ * The same thing by email, for somebody who does not want to involve Google.
+ *
+ * Structured exactly like the Google path and for the same reason: an anonymous visitor is
+ * CONVERTED rather than replaced, so the conversation they are in the middle of survives.
+ * `updateUser` attaches the address to the user that already exists and keeps `auth.uid()`;
+ * `signInWithOtp` creates or finds a separate one, which is right only when they already have
+ * an account somewhere else.
+ *
+ * Slower than Google by the length of time it takes an email to arrive, and it supplies no
+ * name — so Baz cannot promise to fill anything in. It is offered second for both reasons.
+ */
+export async function startEmailSignIn(
+  email: string,
+): Promise<{ ok: boolean; message?: string; checkInbox?: boolean }> {
+  const client = requireSupabase()
+  const trimmed = email.trim()
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+    return { ok: false, message: 'That does not look like an email address.' }
+  }
+
+  rememberRoute()
+  const { data: userData } = await client.auth.getUser()
+
+  if (userData.user?.is_anonymous === true) {
+    // Keeps the conversation: same user, now with an address on it.
+    const { error } = await client.auth.updateUser({ email: trimmed })
+    if (!error) return { ok: true, checkInbox: true }
+    console.warn('could not attach the address, sending a sign-in link instead:', error.message)
+  }
+
+  const { error } = await client.auth.signInWithOtp({
+    email: trimmed,
+    options: { emailRedirectTo: returnTo() },
+  })
+  return error ? { ok: false, message: error.message } : { ok: true, checkInbox: true }
+}

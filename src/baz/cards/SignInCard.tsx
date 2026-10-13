@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, LockIcon } from 'lucide-react'
+import { CheckIcon, LockIcon, MailIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { clearSignInError, lastSignInError } from '@/lib/identity'
+import { clearSignInError, lastSignInError, startEmailSignIn } from '@/lib/identity'
+import { Input } from '@/components/ui/input'
 
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
 
@@ -68,6 +69,30 @@ export function SignInCard({
    */
   const [error, setError] = useState<string | null>(() => lastSignInError())
 
+  /*
+   * Email is offered underneath rather than beside.
+   *
+   * Google is two taps and supplies a name, which is what lets Baz say it will fill some of
+   * this in. Email means leaving the conversation, finding a message and coming back, and
+   * supplies nothing but an address. Both are real options; they are not equal ones, and a
+   * card that presents them as equal sends people down the slower path for no reason.
+   */
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [email, setEmail] = useState('')
+  const [sent, setSent] = useState(false)
+
+  const sendLink = () => {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    clearSignInError()
+    void startEmailSignIn(email).then((result) => {
+      setBusy(false)
+      if (result.ok) setSent(true)
+      else setError(result.message ?? 'That did not work.')
+    })
+  }
+
   const run = () => {
     if (!onSignIn || busy) return
     setBusy(true)
@@ -116,6 +141,46 @@ export function SignInCard({
         </p>
 
         {error !== null && <p className="text-destructive text-center text-xs">{error}</p>}
+
+        {sent ? (
+          <p className="text-center text-sm font-medium">
+            Check your email — there is a link in it that brings you straight back here.
+          </p>
+        ) : emailOpen ? (
+          <div className="space-y-2">
+            <Input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              disabled={busy}
+              onChange={(event) => setEmail(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') sendLink()
+              }}
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={busy || email.trim().length === 0}
+              onClick={sendLink}
+            >
+              Send me a link
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground w-full"
+            disabled={(disabled ?? false) || busy}
+            onClick={() => setEmailOpen(true)}
+          >
+            <MailIcon className="size-4" />
+            Use my email instead
+          </Button>
+        )}
 
         <p className="text-center">
           <a
