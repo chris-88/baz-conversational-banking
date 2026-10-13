@@ -5,6 +5,7 @@ import { activeFields } from '../_shared/domain/forms/logic.ts'
 import { createClient } from '@supabase/supabase-js'
 import { serveJson } from '../_shared/http/serve.ts'
 import type { Database, Json } from '../_shared/db/database.types.ts'
+import { sweepUsers } from '../_shared/db/purge-users.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   adminRequestSchema,
@@ -1609,42 +1610,22 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         ((admins.data ?? []) as { auth_user_id: string }[]).map((row) => row.auth_user_id),
       )
 
-      let usersRemoved = 0
-      /*
-       * Always page one, never page two.
-       *
-       * Deleting shortens the list under us, so walking pages forward steps over whoever moved
-       * up into the page just emptied. Reading the first page again after each sweep is the
-       * only way that terminates on the right set: eventually it holds nothing but admins.
-       *
-       * A pass that removes nobody ends it, so a user the API refuses to delete cannot spin
-       * here, and the outer bound covers the rest.
-       */
-      for (let pass = 0; pass < 40; pass += 1) {
-        const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
-        if (listed.error) return errorResponse('conflict', listed.error.message)
-
-        const doomed = listed.data.users.filter((user) => !keep.has(user.id))
-        if (doomed.length === 0) break
-
-        /* Ten at a time: serial was a round trip per visitor, which a demo day's worth of
-         * anonymous users turned into a function timeout. */
-        let progressed = false
-        for (let at = 0; at < doomed.length; at += 10) {
-          const batch = doomed.slice(at, at + 10)
-          const results = await Promise.all(
-            batch.map(async (user) => await admin.auth.admin.deleteUser(user.id)),
-          )
-          for (const result of results) {
-            if (!result.error) {
-              usersRemoved += 1
-              progressed = true
-            }
-          }
-        }
-
-        if (!progressed) break
-      }
+      const sweep = await sweepUsers(
+        {
+          list: async () => {
+            const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
+            if (listed.error) return { users: [], error: { message: listed.error.message } }
+            return { users: listed.data.users.map((user) => ({ id: user.id })), error: null }
+          },
+          remove: async (id) => {
+            const removed = await admin.auth.admin.deleteUser(id)
+            return { error: removed.error ? { message: removed.error.message } : null }
+          },
+        },
+        keep,
+      )
+      if (sweep.error) return errorResponse('conflict', sweep.error)
+      const usersRemoved = sweep.removed
 
       return json(ok({ purged: ids.length, usersRemoved }), 200)
     }
