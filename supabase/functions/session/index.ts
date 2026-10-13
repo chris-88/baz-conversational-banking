@@ -472,18 +472,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
     'the event',
   )
 
-  return json(
-    ok({
-      caseId: created.data.id,
-      participantId: participant.data.id,
-      role: 'primary',
-      authLevel: startMode === 'known' ? 'authenticated' : 'anonymous',
-      customerFirstName: startMode === 'known' ? canonicalCase.customer.firstName : null,
-      created: true,
-      hasUpdates: false,
-    } satisfies SessionResponse),
-    200,
-  )
+  /*
+   * Through the same responder as every other path, so a case created by somebody who is
+   * already signed in is marked authenticated and carries their name.
+   *
+   * It used to build its own reply here and skip `adoptIdentity` entirely, which is how a
+   * signed-in customer ended up on a case still recorded as anonymous with no name on it: the
+   * one branch that could not benefit from signing in was the branch somebody signing in for
+   * the first time on a new device actually takes.
+   */
+  return await sessionFor(participant.data.id, created.data.id, 'primary', true)
 })
 
 async function sha256(value: string): Promise<string> {

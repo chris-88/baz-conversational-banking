@@ -67,6 +67,34 @@ function returnTo(): string {
 }
 
 /**
+ * The route to put them back on afterwards.
+ *
+ * `returnTo` has to be a bare origin, because Supabase appends `?code=` and a URL that already
+ * ends in `#/baz` cannot take a query string. That lost the route: signing in from the middle
+ * of a conversation returned them to the front page, which reads exactly like being logged out.
+ * The route is kept here across the redirect and restored once the code is redeemed.
+ */
+const ROUTE_KEY = 'baz.signInReturnRoute'
+
+function rememberRoute(): void {
+  try {
+    window.localStorage.setItem(ROUTE_KEY, window.location.hash || '#/baz')
+  } catch {
+    // Storage blocked. They land on the front page, which is the old behaviour, not a failure.
+  }
+}
+
+function restoreRoute(): void {
+  try {
+    const route = window.localStorage.getItem(ROUTE_KEY)
+    window.localStorage.removeItem(ROUTE_KEY)
+    if (route && route.startsWith('#/')) window.location.hash = route
+  } catch {
+    // Nothing to restore.
+  }
+}
+
+/**
  * Begin signing in. Redirects away, so nothing after this runs.
  *
  * Linking is tried first, because that is the case that keeps the conversation. It fails when
@@ -77,6 +105,7 @@ function returnTo(): string {
 export async function startGoogleSignIn(): Promise<{ ok: boolean; message?: string }> {
   const client = requireSupabase()
   const redirectTo = returnTo()
+  rememberRoute()
 
   const { data: userData } = await client.auth.getUser()
   if (userData.user?.is_anonymous === true) {
@@ -121,11 +150,13 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
 
   if (code === null) {
     clean()
+    restoreRoute()
     return { signedIn: false, ...(oauthError === null ? {} : { error: oauthError }) }
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   clean()
+  restoreRoute()
   return error ? { signedIn: false, error: error.message } : { signedIn: true }
 }
 
