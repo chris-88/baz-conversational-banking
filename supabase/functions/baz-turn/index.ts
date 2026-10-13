@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import Anthropic from '@anthropic-ai/sdk'
-import { serveJson } from '../_shared/contracts/serve.ts'
+import { serveJson } from '../_shared/http/serve.ts'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../_shared/db/database.types.ts'
 import { bazTurnRequestSchema } from '../_shared/contracts/baz-turn.ts'

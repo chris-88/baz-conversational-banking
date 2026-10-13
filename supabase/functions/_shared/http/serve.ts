@@ -1,4 +1,4 @@
-import { fail } from './common.ts'
+import { fail } from '../contracts/common.ts'
 
 /**
  * `Deno.serve`, with a floor under it.
@@ -16,6 +16,12 @@ import { fail } from './common.ts'
  *
  * The message is returned rather than swallowed. This is a prototype with synthetic data, and
  * an opaque 500 is precisely what cost an afternoon.
+ *
+ * Lives in `_shared/http` rather than `_shared/contracts` because it touches `Deno.serve`, and
+ * the app's tsconfig compiles every file under `contracts`. Put here, it broke `npm run build`
+ * — so CI and the Pages deploy failed while the Supabase deploy succeeded, which left the live
+ * site running an old frontend against new Edge Functions. `_shared` compiling under both Deno
+ * and Vite is written down in CLAUDE.md; this is what ignoring it looks like.
  */
 export function serveJson(
   cors: Record<string, string>,

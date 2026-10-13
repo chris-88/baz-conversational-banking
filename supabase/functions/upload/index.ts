@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { serveJson } from '../_shared/contracts/serve.ts'
+import { serveJson } from '../_shared/http/serve.ts'
 import type { Database } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {

@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { CheckIcon, LockIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { lastSignInError } from '@/lib/identity'
 
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
 
@@ -54,6 +55,18 @@ export function SignInCard({
 }): ReactNode {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /*
+   * A sign-in that failed on the way back has nowhere else to appear.
+   *
+   * `completeSignIn` runs before React mounts, so it leaves the reason behind and this is the
+   * one component guaranteed to be on screen afterwards — the card they tapped. Without this
+   * the screen simply jumped to Google and came back, with nothing said.
+   */
+  useEffect(() => {
+    const failed = lastSignInError()
+    if (failed !== null) setError(failed)
+  }, [])
 
   const run = () => {
     if (!onSignIn || busy) return

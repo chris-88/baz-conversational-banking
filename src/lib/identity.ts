@@ -114,6 +114,14 @@ export async function startGoogleSignIn(): Promise<{ ok: boolean; message?: stri
       options: { redirectTo },
     })
     if (!linked.error) return { ok: true }
+
+    /*
+     * Falling through to `signInWithOAuth` is right on a second device, where the account
+     * already exists and holds their case. It is wrong everywhere else, because it creates a
+     * new user and leaves this conversation behind — which is what happened when manual
+     * linking was switched off at the project. Worth knowing it happened.
+     */
+    console.warn('could not link identity, signing in instead:', linked.error.message)
   }
 
   const { error } = await client.auth.signInWithOAuth({
@@ -129,6 +137,34 @@ export async function startGoogleSignIn(): Promise<{ ok: boolean; message?: stri
  * Called once on boot. Does nothing unless there is a `?code=` to redeem, and clears it from
  * the address bar either way so a refresh cannot try to redeem it twice.
  */
+/**
+ * Where the last sign-in attempt's failure is left for the UI to find.
+ *
+ * `completeSignIn` runs before React mounts, so it has nothing to render into. The first
+ * version discarded the result entirely, which turned every OAuth failure into the screen
+ * jumping away and coming back with no explanation — the single least debuggable outcome
+ * available, and exactly what it did in front of somebody.
+ */
+const FAILURE_KEY = 'baz.signInError'
+
+export function lastSignInError(): string | null {
+  try {
+    const error = window.sessionStorage.getItem(FAILURE_KEY)
+    if (error) window.sessionStorage.removeItem(FAILURE_KEY)
+    return error
+  } catch {
+    return null
+  }
+}
+
+function rememberFailure(message: string): void {
+  try {
+    window.sessionStorage.setItem(FAILURE_KEY, message)
+  } catch {
+    // Nothing to remember it with. The console still has it.
+  }
+}
+
 export async function completeSignIn(): Promise<{ signedIn: boolean; error?: string }> {
   if (!supabase) return { signedIn: false }
 
@@ -151,12 +187,20 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
   if (code === null) {
     clean()
     restoreRoute()
+    if (oauthError !== null) {
+      console.error('sign-in refused:', oauthError)
+      rememberFailure(oauthError)
+    }
     return { signedIn: false, ...(oauthError === null ? {} : { error: oauthError }) }
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   clean()
   restoreRoute()
+  if (error) {
+    console.error('sign-in exchange failed:', error.message)
+    rememberFailure(error.message)
+  }
   return error ? { signedIn: false, error: error.message } : { signedIn: true }
 }
 

@@ -1,5 +1,5 @@
 import { mustWrite } from '../_shared/db/case-repository.ts'
-import { serveJson } from '../_shared/contracts/serve.ts'
+import { serveJson } from '../_shared/http/serve.ts'
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../_shared/db/database.types.ts'
