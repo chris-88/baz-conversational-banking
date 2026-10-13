@@ -84,14 +84,25 @@ function rememberRoute(): void {
   }
 }
 
+/**
+ * Where to land after signing in.
+ *
+ * The remembered route when there is one, and the conversation otherwise. The fallback is not
+ * a nicety: a magic link is opened from an email client, frequently in a different browser or
+ * an in-app webview, so the tab that stored the route is not the tab that comes back. Without
+ * a default that lands somebody on the front page — which, having just signed in, reads as
+ * having been signed out.
+ */
 function restoreRoute(): void {
+  let route: string | null = null
   try {
-    const route = window.localStorage.getItem(ROUTE_KEY)
+    route = window.localStorage.getItem(ROUTE_KEY)
     window.localStorage.removeItem(ROUTE_KEY)
-    if (route && route.startsWith('#/')) window.location.hash = route
   } catch {
-    // Nothing to restore.
+    // No storage; the fallback below is the whole point.
   }
+
+  window.location.hash = route?.startsWith('#/') === true ? route : '#/baz'
 }
 
 /**
