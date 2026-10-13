@@ -6,6 +6,7 @@ import {
   MessagesSquareIcon,
   ShieldAlertIcon,
   SlidersHorizontalIcon,
+  FileJsonIcon,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -66,6 +67,13 @@ const SECTIONS = [
     label: 'Analytics',
     hint: 'What has happened',
     icon: ChartLineIcon,
+    end: false,
+  },
+  {
+    to: routes.admin.forms,
+    label: 'Digital forms',
+    hint: 'Definition, answers, packet',
+    icon: FileJsonIcon,
     end: false,
   },
   {

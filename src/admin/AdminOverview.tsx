@@ -1,4 +1,5 @@
 import { useCallback, type ReactNode } from 'react'
+import { FormsScreen } from '@/admin/FormsScreen'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,7 +23,15 @@ import { usePeriod } from '@/admin/usePeriod'
  * conversations under different headings, and the difference between them was a distinction
  * only the person who built it could hold.
  */
-type Section = 'cases' | 'case' | 'guardrails' | 'persona' | 'engine' | 'analytics' | 'profile'
+type Section =
+  | 'cases'
+  | 'case'
+  | 'guardrails'
+  | 'persona'
+  | 'engine'
+  | 'analytics'
+  | 'forms'
+  | 'profile'
 
 /** The screens that read the shared overview. The others fetch their own. */
 type OverviewSection = Extract<Section, 'cases' | 'case' | 'guardrails' | 'persona'>
@@ -35,6 +44,7 @@ export function AdminOverview({ section }: { readonly section?: Section }): Reac
    * neither should sit behind a spinner waiting for a case list it will never read.
    */
   if (section === 'engine') return <EngineScreen />
+  if (section === 'forms') return <FormsScreen />
   if (section === 'analytics') return <Analytics />
   if (section === 'profile') return <Profile />
 

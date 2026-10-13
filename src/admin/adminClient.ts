@@ -84,4 +84,80 @@ export const adminApi = {
     notificationSchema.parse(
       await call({ action: 'send_notification', caseId, ...(custom ?? {}) }),
     ),
+
+  /**
+   * Applications against the bank's own digital form definitions.
+   *
+   * Typed loosely on purpose. The inspector renders whatever the definition contains, and a
+   * schema here would be a second description of a document the bank publishes, kept in step
+   * by hand. The server has already validated it against the real definition.
+   */
+  listFormApplications: () =>
+    call({ action: 'list_form_applications' }) as Promise<{
+      applications: readonly FormApplicationSummary[]
+    }>,
+
+  inspectFormApplication: (formApplicationId: string) =>
+    call({ action: 'inspect_form_application', formApplicationId }) as Promise<FormInspection>,
+}
+
+export type FormApplicationSummary = {
+  readonly id: string
+  readonly caseId: string
+  readonly formId: string
+  readonly formVersion: string
+  readonly answered: number
+  readonly reused: number
+  readonly updatedAt: string
+}
+
+export type SubmissionEntry = {
+  readonly key: string
+  readonly value: string
+  readonly source: 'answer' | 'reused' | 'default' | 'consent' | 'runtime'
+  readonly fieldId: string | null
+  readonly label: string
+  readonly toscana: string | null
+  readonly sensitive: boolean
+}
+
+export type FormInspection = {
+  readonly id: string
+  readonly caseId: string
+  readonly updatedAt: string
+  readonly definition: {
+    readonly formId: string
+    readonly version: string
+    readonly source: string
+    readonly retrievedAt: string
+    readonly sourceHash: string
+    readonly fieldCount: number
+    readonly activeCount: number
+    readonly questionCount: number
+    readonly requiredCount: number
+  }
+  readonly collected: readonly {
+    readonly fieldId: string
+    readonly label: string
+    readonly type: string
+    readonly toscana: string | null
+    readonly value: unknown
+    readonly reused: boolean
+  }[]
+  readonly outstanding: readonly {
+    readonly fieldId: string
+    readonly label: string
+    readonly type: string
+  }[]
+  readonly submission: {
+    readonly target: string
+    readonly method: string
+    readonly encoding: string
+    readonly formId: string
+    readonly formVersion: string
+    readonly entries: readonly SubmissionEntry[]
+    readonly generatedAt: string
+    readonly status: 'GENERATED_NOT_SENT'
+    readonly externalRequestMade: false
+  }
 }

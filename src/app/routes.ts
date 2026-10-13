@@ -33,6 +33,8 @@ export const routes = {
     persona: '/admin/persona',
     engine: '/admin/engine',
     analytics: '/admin/analytics',
+    forms: '/admin/forms',
+    formApplication: (id: string) => `/admin/forms/${id}`,
     profile: '/admin/profile',
   },
 } as const
