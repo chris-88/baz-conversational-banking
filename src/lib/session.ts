@@ -25,9 +25,38 @@ export async function ensureAnonymousUser(): Promise<string> {
   return created.data.session.access_token
 }
 
+/**
+ * Whether the server is telling us this browser's user no longer exists.
+ *
+ * A JWT outlives the user it was minted for. Purging the project's auth users leaves every
+ * open tab holding a token that parses, passes every local check, and is refused by the
+ * server — and `getSession()` reads storage rather than asking, so the client has no idea.
+ */
+function sessionIsStale(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /no session|unauthoris|unauthoriz|user.*not found|jwt|invalid token/i.test(message)
+}
+
 async function invoke(body: Record<string, unknown>): Promise<unknown> {
   await ensureAnonymousUser()
-  return callFunction('session', body)
+  try {
+    return await callFunction('session', body)
+  } catch (error) {
+    if (!sessionIsStale(error)) throw error
+
+    /*
+     * Start again as somebody new rather than leaving them on a dead session.
+     *
+     * Without this, a purge — or a user deleted for any other reason — leaves anybody with the
+     * tab still open on a screen that can never recover, because every call fails and nothing
+     * clears the token that is causing it. Once only: if a fresh anonymous user is also
+     * refused, the problem is not the token.
+     */
+    const supabase = requireSupabase()
+    await supabase.auth.signOut().catch(() => undefined)
+    await ensureAnonymousUser()
+    return await callFunction('session', body)
+  }
 }
 
 export async function startSession(mode: 'new' | 'known' = 'new'): Promise<SessionResponse> {
