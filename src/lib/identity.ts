@@ -232,8 +232,55 @@ function rememberFailure(message: string): void {
   }
 }
 
+/**
+ * A session handed back in the URL fragment rather than as a code.
+ *
+ * `updateUser` is not an OAuth flow and creates no PKCE verifier, so the link in a
+ * confirmation email comes back the old way: `#access_token=…&refresh_token=…`. That is also
+ * exactly where this app keeps its route, so without this the router is handed a pile of token
+ * parameters, nothing reads the session, and somebody who just clicked "Open Baz" lands on the
+ * front page signed out. Which is what happened.
+ */
+async function sessionFromFragment(): Promise<'none' | 'ok' | 'failed'> {
+  if (!supabase) return 'none'
+
+  const raw = window.location.hash.replace(/^#/, '')
+  // A route, not a token payload. `#/baz` has no `=` in it.
+  if (!raw.includes('access_token=')) return 'none'
+
+  const fragment = new URLSearchParams(raw)
+  const access_token = fragment.get('access_token')
+  const refresh_token = fragment.get('refresh_token')
+  if (access_token === null || refresh_token === null) return 'failed'
+
+  const { error } = await supabase.auth.setSession({ access_token, refresh_token })
+
+  // Out of the address bar and out of the history either way: these are credentials.
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  if (error) {
+    console.error('sign-in from the email link failed:', error.message)
+    rememberFailure(error.message)
+    return 'failed'
+  }
+  return 'ok'
+}
+
 export async function completeSignIn(): Promise<{ signedIn: boolean; error?: string }> {
   if (!supabase) return { signedIn: false }
+
+  /*
+   * The email link arrives this way; the Google redirect arrives as `?code=`.
+   *
+   * Routed on either outcome. Somebody who followed a link from their inbox should end up in
+   * the conversation whether or not the token in it was still good, because the alternative is
+   * the front page, which is indistinguishable from having been signed out.
+   */
+  const fromFragment = await sessionFromFragment()
+  if (fromFragment !== 'none') {
+    if (fromFragment === 'ok') clearRetried()
+    restoreRoute()
+    return { signedIn: fromFragment === 'ok' }
+  }
 
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
@@ -326,7 +373,12 @@ export async function startEmailSignIn(
 
   if (userData.user?.is_anonymous === true) {
     // Keeps the conversation: same user, now with an address on it.
-    const { error } = await client.auth.updateUser({ email: trimmed })
+    const { error } = await client.auth.updateUser(
+      { email: trimmed },
+      // A second argument, not an attribute. Without it Supabase falls back to the project's
+      // Site URL, which is the front page, and the customer lands there instead of the chat.
+      { emailRedirectTo: returnTo() },
+    )
     if (!error) return { ok: true, checkInbox: true }
     console.warn('could not attach the address, sending a sign-in link instead:', error.message)
   }
