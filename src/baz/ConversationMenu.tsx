@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, BellRing, Check, Menu, MessageSquare, Plus } from 'lucide-react'
+import { Bell, BellRing, Check, LogIn, LogOut, Menu, MessageSquare, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -14,6 +14,12 @@ import { Separator } from '@/components/ui/separator'
 import { queryKeys } from '@/lib/queryKeys'
 import { listCases, startNewCase, switchCase } from '@/lib/session'
 import { pushPermission, subscribeToPush } from '@/lib/push'
+import {
+  ANONYMOUS,
+  currentIdentity,
+  signOutIdentity,
+  startGoogleSignIn,
+} from '@/lib/identity'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -99,6 +105,24 @@ export function ConversationMenu({
   })
 
   const [permission, setPermission] = useState(() => pushPermission())
+
+  /**
+   * Who is signed in. Read when the menu opens rather than held in a store: it changes exactly
+   * once per visit, through a full page redirect, so there is nothing to keep in step.
+   */
+  const identity = useQuery({
+    queryKey: ['identity'],
+    enabled: open,
+    queryFn: () => currentIdentity(),
+    initialData: ANONYMOUS,
+  })
+
+  const signIn = useMutation({ mutationFn: () => startGoogleSignIn() })
+  const signOut = useMutation({
+    mutationFn: () => signOutIdentity(),
+    // A different person now, so every case-shaped thing on screen belongs to somebody else.
+    onSuccess: () => window.location.reload(),
+  })
 
   /**
    * Switching and starting both reload the page.
@@ -256,6 +280,54 @@ export function ConversationMenu({
             )}
           </section>
         </div>
+
+        <Separator />
+
+        <section className="p-4">
+          <h3 className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <LogIn className="size-3.5" />
+            You
+          </h3>
+
+          {identity.data.anonymous ? (
+            <>
+              <p className="text-muted-foreground mb-2.5 text-xs leading-relaxed">
+                Sign in and this conversation follows you — the same one on your phone, your
+                laptop and anywhere else you open Baz.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={signIn.isPending}
+                onClick={() => signIn.mutate()}
+              >
+                <LogIn className="size-4" />
+                Continue with Google
+              </Button>
+              {signIn.data?.ok === false && (
+                <p className="text-destructive mt-2 text-xs">{signIn.data.message}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium">{identity.data.name ?? 'Signed in'}</p>
+              {identity.data.email !== null && (
+                <p className="text-muted-foreground truncate text-xs">{identity.data.email}</p>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground mt-2 w-full"
+                disabled={signOut.isPending}
+                onClick={() => signOut.mutate()}
+              >
+                <LogOut className="size-4" />
+                Sign out
+              </Button>
+            </>
+          )}
+        </section>
 
         <Separator />
 

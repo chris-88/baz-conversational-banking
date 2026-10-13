@@ -168,8 +168,6 @@ export async function loadCase(
       ),
   ])
 
-  const customerName = await loadCustomerName(client, theCase.customer_id)
-
   /*
    * Applied here rather than at each call site. The engines take a catalogue and evaluate
    * everything in it; if the overlay were applied by each caller, one caller forgetting would be
@@ -188,6 +186,18 @@ export async function loadCase(
       role: row.role satisfies ParticipantRole,
       displayName: row.display_name,
     }))
+
+  /*
+   * The synthetic bank record first, then whatever the person is actually called.
+   *
+   * `customers` only holds the seeded demonstration customer. Somebody who signed in with
+   * Google has a real name on their participant and no customer row at all, and Baz greeting
+   * them as nobody would be the one obvious hole in "it knows who you are".
+   */
+  const customerName =
+    (await loadCustomerName(client, theCase.customer_id)) ??
+    (participants.find((participant) => participant.role === 'primary')?.displayName?.split(' ')[0] ??
+      null)
 
   /*
    * A fact whose key this build does not know is skipped, not fatal.

@@ -12,6 +12,21 @@ export const supabase: SupabaseClient | null = env
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        /**
+         * The OAuth return must not land in the fragment.
+         *
+         * The default flow is `implicit`, which comes back as `#access_token=…`. This app is
+         * hash-routed, so that fragment is also where the route lives: the router would see a
+         * pile of token parameters instead of `/baz`, and the tokens would sit in the address
+         * bar and the browser history. PKCE returns `?code=…` in the query string instead,
+         * which the router ignores and `completeSignIn` clears.
+         */
+        flowType: 'pkce',
+        /**
+         * Still false: the redemption is explicit, in `completeSignIn`, so a page load cannot
+         * quietly consume a parameter meant for something else (`?n=` carries a notification
+         * token).
+         */
         detectSessionInUrl: false,
       },
     })

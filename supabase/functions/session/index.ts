@@ -110,6 +110,60 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
   }
 
+  /**
+   * Somebody who has signed in since they last called.
+   *
+   * Signing in attaches a Google identity to the anonymous user that is already here, so the
+   * auth id never changes and there is nothing to migrate — but the case still says
+   * `anonymous` and the participant is still called nobody. This is where that catches up, on
+   * the first call after the redirect, rather than through an action the client has to
+   * remember to send.
+   *
+   * The name goes on the participant rather than into `facts`: it is not something the customer
+   * told Baz, and `identity.fullName` is a fact with a provenance that would be a lie here.
+   */
+  async function adoptIdentity(participantId: string, caseId: string): Promise<void> {
+    const user = caller.data.user
+    if (!user || user.is_anonymous === true) return
+
+    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
+    const named = ['full_name', 'name']
+      .map((key) => metadata[key])
+      .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+
+    const theCase = await admin
+      .from('cases')
+      .select('auth_level')
+      .eq('id', caseId)
+      .maybeSingle()
+
+    if ((theCase.data as { auth_level?: string } | null)?.auth_level !== 'authenticated') {
+      mustWrite(
+        await admin.from('cases').update({ auth_level: 'authenticated' }).eq('id', caseId),
+        'the case',
+      )
+      await writeEventRow(admin, caseId, 'customer_signed_in', { provider: 'google' })
+    }
+
+    if (named !== undefined) {
+      const participant = await admin
+        .from('participants')
+        .select('display_name')
+        .eq('id', participantId)
+        .maybeSingle()
+
+      if (!(participant.data as { display_name?: string | null } | null)?.display_name) {
+        mustWrite(
+          await admin
+            .from('participants')
+            .update({ display_name: named.trim() })
+            .eq('id', participantId),
+          'the participant',
+        )
+      }
+    }
+  }
+
   /** The response every action that lands on a conversation returns. */
   async function sessionFor(
     participantId: string,
@@ -117,11 +171,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
     role: string,
     created: boolean,
   ): Promise<Response> {
+    await adoptIdentity(participantId, caseId)
+
     const theCase = await admin
       .from('cases')
       .select('auth_level, customer_id')
       .eq('id', caseId)
       .maybeSingle()
+
+    const participant = await admin
+      .from('participants')
+      .select('display_name')
+      .eq('id', participantId)
+      .maybeSingle()
+
+    const signedInName = (participant.data as { display_name?: string | null } | null)?.display_name
 
     return json(
       ok({
@@ -129,7 +193,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
         participantId,
         role: role === 'partner' ? 'partner' : 'primary',
         authLevel: theCase.data?.auth_level === 'authenticated' ? 'authenticated' : 'anonymous',
-        customerFirstName: theCase.data?.customer_id ? canonicalCase.customer.firstName : null,
+        customerFirstName: theCase.data?.customer_id
+          ? canonicalCase.customer.firstName
+          : (signedInName?.split(' ')[0] ?? null),
         created,
         hasUpdates: await updatesSince(caseId),
       } satisfies SessionResponse),

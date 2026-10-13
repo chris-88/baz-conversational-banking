@@ -4,11 +4,21 @@ import { RouterProvider } from 'react-router-dom'
 import { Providers } from '@/app/providers'
 import { router } from '@/app/router'
 import { initSentry } from '@/lib/sentry'
+import { completeSignIn } from '@/lib/identity'
 import { recoverFromStaleDeploy } from '@/app/staleDeploy'
 import '@/styles/fonts.css'
 import '@/index.css'
 
 initSentry()
+
+/*
+ * Redeem a sign-in that has just come back from Google, before React mounts.
+ *
+ * It has to happen first: `session start` runs on mount and decides which case this browser
+ * gets, and running it against the anonymous session a moment before the Google one lands
+ * would hand them the wrong conversation and then quietly correct it.
+ */
+await completeSignIn().catch(() => undefined)
 
 /*
  * Vite raises this when a dynamic import 404s, which on a static host means one thing: the
