@@ -1,0 +1,186 @@
+import type { FormDefinition, FormField } from './definition.ts'
+import { isActive, type Answers } from './logic.ts'
+
+/**
+ * The packet the existing web journey would POST, built from the same definition it renders.
+ *
+ * This is the artefact the whole feature exists to produce. Not a summary of the application
+ * and not an approximation of it: the ordered entries a browser's `FormData` would carry to
+ * `POST /api/forms/<id>`, so that the definition, the answers and the wire format can be put
+ * side by side and read against each other.
+ *
+ * An ordered array rather than an object, because `FormData` permits repeated keys and the
+ * real SuperSaver packet uses them: `input_1189[]` appears twice, once for the number and once
+ * for the country. A JSON object would silently lose one of them.
+ */
+
+/** Where a value came from, so the console can show the difference. */
+export const ENTRY_SOURCES = ['answer', 'reused', 'default', 'consent', 'runtime'] as const
+export type EntrySource = (typeof ENTRY_SOURCES)[number]
+
+export type SubmissionEntry = {
+  readonly key: string
+  readonly value: string
+  readonly source: EntrySource
+  /** The definition field this came from, where one exists. */
+  readonly fieldId: string | null
+  readonly label: string
+  /** The platform's own downstream mapping, carried through untouched. */
+  readonly toscana: string | null
+  /** Masked in the console by default. */
+  readonly sensitive: boolean
+}
+
+/** Structure rather than questions: nothing here is ever asked or submitted. */
+const STRUCTURAL = new Set(['html', 'section', 'page', 'accordion', 'form_module', 'file_preview'])
+
+/** Types whose values should not be shown in full in an inspector. */
+const SENSITIVE = new Set([
+  'boi_ppsn',
+  'account_number',
+  'sort_code_v2',
+  'iban',
+  'boi_phone',
+  'boi_email_auth_field',
+  'boi_otp_auth_field',
+  'email',
+  'date',
+])
+
+const text = (value: unknown): string =>
+  typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : ''
+
+function toscanaOf(field: FormField): string | null {
+  return typeof field.toscana === 'string' && field.toscana.length > 0 ? field.toscana : null
+}
+
+/**
+ * How one field becomes wire entries.
+ *
+ * Three shapes exist in the real packet and all three are observed rather than invented: a
+ * plain `input_<id>`, a dotted `input_<id>.<n>` for a checkbox's sub-input, and a repeated
+ * `input_<id>[]` for compound fields that carry more than one value.
+ */
+function entriesFor(field: FormField, answer: unknown, source: EntrySource): readonly SubmissionEntry[] {
+  const base = {
+    fieldId: field.id,
+    label: field.label,
+    toscana: toscanaOf(field),
+    sensitive: SENSITIVE.has(field.type),
+  }
+
+  // A checkbox submits under its sub-input ids, carrying the choice text as the value.
+  if (field.type === 'checkbox' && field.inputs && field.inputs.length > 0) {
+    const chosen = Array.isArray(answer) ? (answer as readonly unknown[]).map(text) : [text(answer)]
+    return field.inputs
+      .map((input, index) => ({ input, value: chosen[index] ?? '' }))
+      .filter((pair) => pair.value.length > 0)
+      .map((pair) => ({ ...base, key: `input_${pair.input.id}`, value: pair.value, source }))
+  }
+
+  // Compound fields repeat the key. The phone field carries the number and then the country.
+  if (Array.isArray(answer)) {
+    return (answer as readonly unknown[]).map((item) => ({
+      ...base,
+      key: `input_${field.id}[]`,
+      value: text(item),
+      source,
+    }))
+  }
+
+  return [{ ...base, key: `input_${field.id}`, value: text(answer), source }]
+}
+
+export type BuildInput = {
+  readonly definition: FormDefinition
+  readonly answers: Answers
+  /** Which answers Baz already held rather than asked for, for the questions-avoided story. */
+  readonly reused?: ReadonlySet<string>
+  /**
+   * Issued by the GET and never stored.
+   *
+   * Absent here on purpose when none is to hand: the console shows the slot and says it is
+   * empty, which is more honest than a plausible-looking string in a packet nobody will send.
+   */
+  readonly nonce?: string | undefined
+  readonly pageLocation: string
+}
+
+export type GeneratedSubmission = {
+  /** Where the genuine journey would send this. Recorded as metadata, never called. */
+  readonly target: string
+  readonly method: 'POST'
+  readonly encoding: 'multipart/form-data'
+  readonly formId: string
+  readonly formVersion: string
+  readonly entries: readonly SubmissionEntry[]
+  readonly generatedAt: string
+}
+
+/**
+ * Build the packet.
+ *
+ * Fields are walked in definition order, which is the order the browser appends them, and
+ * inactive branches are skipped: a question that does not apply to this customer contributes
+ * nothing, however required it is marked.
+ */
+export function buildSubmission(input: BuildInput): GeneratedSubmission {
+  const { definition, answers } = input
+  const entries: SubmissionEntry[] = []
+
+  for (const field of definition.fields) {
+    if (STRUCTURAL.has(field.type)) continue
+    if (!isActive(field, answers)) continue
+
+    const answered = Object.prototype.hasOwnProperty.call(answers, field.id)
+    const fallback = text(field.defaultValue)
+
+    if (!answered && fallback.length === 0) continue
+
+    const source: EntrySource = answered
+      ? input.reused?.has(field.id) === true
+        ? 'reused'
+        : field.type === 'checkbox'
+          ? 'consent'
+          : 'answer'
+      : 'default'
+
+    entries.push(...entriesFor(field, answered ? answers[field.id] : fallback, source))
+  }
+
+  /*
+   * The two runtime values, appended last exactly as the browser appends them.
+   *
+   * The nonce is whatever the live GET returned. It is never hard-coded and never stored with
+   * the snapshot: a stored one is stale, and the only thing a stale one could do is make this
+   * packet look like something that could be sent.
+   */
+  entries.push({
+    key: `boi_nonce_form_field_${definition.id}`,
+    value: input.nonce ?? '',
+    source: 'runtime',
+    fieldId: null,
+    label: 'Form nonce',
+    toscana: null,
+    sensitive: true,
+  })
+  entries.push({
+    key: 'page_location',
+    value: input.pageLocation,
+    source: 'runtime',
+    fieldId: null,
+    label: 'Page location',
+    toscana: null,
+    sensitive: false,
+  })
+
+  return {
+    target: `https://digital.bankofireland.com/api/forms/${definition.id}`,
+    method: 'POST',
+    encoding: 'multipart/form-data',
+    formId: definition.id,
+    formVersion: definition.title,
+    entries,
+    generatedAt: new Date().toISOString(),
+  }
+}
