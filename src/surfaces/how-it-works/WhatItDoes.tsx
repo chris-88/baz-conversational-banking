@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Decider, Figures, Panel, Prose, Section, type Decides } from './parts'
+import { Difference } from './Difference'
 
 /**
  * What Baz can actually do, and one conversation showing it.
@@ -199,6 +200,13 @@ export function WhatItDoes(): ReactNode {
           ))}
         </div>
       </Section>
+
+      {/*
+        Placed after the feature list and before the transcript: the reader has just been told
+        what it does, and "is this a chatbot?" is the next thing they think. Answering it here
+        means the conversation below is read as evidence rather than as a demonstration.
+      */}
+      <Difference />
 
       <Section
         eyebrow="A real conversation"
