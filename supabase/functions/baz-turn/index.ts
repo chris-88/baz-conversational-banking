@@ -13,6 +13,11 @@ import { confirmationsForReview, readyForReview } from '../_shared/domain/requir
 import { factCatalogue } from '../_shared/domain/facts.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
 import { DATA_NOTICE_EVENT, dataNoticeCard } from '../_shared/llm/data-notice.ts'
+import {
+  SIGN_IN_PROMPT_EVENT,
+  signInPromptCard,
+  worthSigningInFor,
+} from '../_shared/llm/sign-in-prompt.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
 import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
@@ -1714,6 +1719,38 @@ async function handleTurn(request: Request): Promise<Response> {
         if (pendingNotice !== undefined) {
           shown.push(pendingNotice)
           send({ type: 'card', card: pendingNotice })
+        }
+
+        /*
+         * The offer to sign in, once there is something it would protect.
+         *
+         * Checked after the turn rather than before, because the thing that makes it worth
+         * asking — an application — is usually created by the tap that happened during it.
+         * Once per case: a prompt that returns every turn is a wall by instalments.
+         */
+        if (isCustomerTurn) {
+          const after = await loadCase(admin, turn.caseId)
+          if (after && worthSigningInFor(after)) {
+            const offered = await admin
+              .from('events')
+              .select('id')
+              .eq('case_id', turn.caseId)
+              .eq('type', SIGN_IN_PROMPT_EVENT)
+              .limit(1)
+              .maybeSingle()
+
+            if (!offered.data) {
+              await writeEvent(admin, {
+                caseId: turn.caseId,
+                type: SIGN_IN_PROMPT_EVENT,
+                actor: 'system',
+                payload: {},
+              })
+              const card = signInPromptCard(`${env('APP_BASE_URL')}#/privacy`)
+              shown.push(card)
+              send({ type: 'card', card })
+            }
+          }
         }
 
         /*

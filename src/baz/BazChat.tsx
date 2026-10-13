@@ -16,6 +16,7 @@ import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
+import { startGoogleSignIn } from '@/lib/identity'
 import { loadHistory } from '@/baz/history'
 import { runCaseAction } from '@/lib/caseActions'
 import { callFunctionWithFile } from '@/lib/callFunction'
@@ -441,6 +442,12 @@ export function BazChat({
       )
       setFollowUps(QUOTE_FOLLOW_UPS)
     },
+
+    /*
+     * Leaves the page, so there is nothing to do afterwards and nothing to tell Baz. The
+     * conversation is picked up again on the way back in.
+     */
+    onSignIn: () => startGoogleSignIn(),
 
     onDeclineProducts: async (products) => {
       const first = products[0]

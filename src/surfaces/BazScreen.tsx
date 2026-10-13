@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { BazChat } from '@/baz/BazChat'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { ConversationMenu } from '@/baz/ConversationMenu'
+import { IdentityBadge } from '@/baz/IdentityBadge'
 import { rememberPresenterKey } from '@/lib/session'
 import { routes } from '@/app/routes'
 import { cn } from '@/lib/utils'
@@ -84,8 +85,11 @@ export function BazScreen(): ReactNode {
           >
             <BazWordmark className="h-9" />
           </Link>
-          {/* Balances the hamburger so the wordmark stays centred on the screen, not beside it. */}
-          <span aria-hidden />
+          {/*
+            The avatar, once there is one. It renders nothing while anonymous, which is also
+            what keeps the wordmark centred: the column is reserved either way.
+          */}
+          <IdentityBadge className="justify-self-end" />
         </div>
       </header>
 

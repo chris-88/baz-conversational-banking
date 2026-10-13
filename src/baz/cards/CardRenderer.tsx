@@ -4,6 +4,7 @@ import { ProductOptionsCard, type ProductChoice } from '@/baz/cards/ProductOptio
 import { QuoteCard } from '@/baz/cards/QuoteCard'
 import type { SubscribeResult } from '@/lib/push'
 import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
+import { SignInCard } from '@/baz/cards/SignInCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
@@ -52,6 +53,8 @@ export type CardActions = {
    * somebody who has just said hello.
    */
   readonly onEnableNotifications?: () => Promise<SubscribeResult>
+  /** Begin signing in. Resolves only on failure; success navigates to Google. */
+  readonly onSignIn?: () => Promise<{ ok: boolean; message?: string }> | void
   /** Resolves true only when the server accepted the plan. */
   readonly onConfirmPlan?: (planId: string) => Promise<boolean> | boolean
   readonly onDeclinePlan?: (planId: string) => Promise<void> | void
@@ -73,6 +76,15 @@ export function CardRenderer({
           card={card}
           {...(actions.onConfirmPlan ? { onConfirm: actions.onConfirmPlan } : {})}
           {...(actions.onDeclinePlan ? { onDecline: actions.onDeclinePlan } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'sign_in':
+      return (
+        <SignInCard
+          card={card}
+          {...(actions.onSignIn ? { onSignIn: actions.onSignIn } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )

@@ -301,6 +301,19 @@ export const mortgageRatesCardSchema = z.object({
  * The copy is fixed and built by the server. The model does not write it, cannot summarise it
  * and cannot decide when it appears (Invariant 2).
  */
+/**
+ * §28 — offered once, when there is something a sign-in would protect.
+ *
+ * Fixed copy from the server. The model cannot ask for this one.
+ */
+export const signInCardSchema = z.object({
+  type: z.literal('sign_in'),
+  title: z.string(),
+  points: z.array(z.string()).min(1).max(4),
+  reassurance: z.string(),
+  whyHref: z.string(),
+})
+
 export const dataNoticeCardSchema = z.object({
   type: z.literal('data_notice'),
   title: z.string(),
@@ -323,6 +336,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   uploadRequestCardSchema,
   mortgageRatesCardSchema,
   dataNoticeCardSchema,
+  signInCardSchema,
 ])
 
 export type Card = z.infer<typeof cardSchema>
@@ -342,4 +356,5 @@ export const CARD_TYPES = [
   'health_form',
   'mortgage_rates',
   'data_notice',
+  'sign_in',
 ] as const satisfies readonly CardType[]
