@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * The Baz wordmark, from `docs/baz-name.svg`.
+ * The Baz wordmark, from `baz-name.svg`.
  *
  * Three drawn letters rather than type: a `b` built from a stem and a ring, an `a` from a ring
  * and a stem the other way up, and a `z` from two bars and a diagonal. Only the `b` carries
@@ -20,41 +20,39 @@ import { cn } from '@/lib/utils'
 export function BazWordmark({ className }: { readonly className?: string }): ReactNode {
   return (
     <svg
-      viewBox="0 0 202 87"
+      viewBox="0 0 194 72"
       role="img"
       aria-label="Baz"
       className={cn('text-baz-primary h-7 w-auto', className)}
     >
       {/* b */}
-      <circle cx="32" cy="55" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
-      <circle cx="26" cy="52" r="3" fill="currentColor" />
-      <circle cx="37" cy="52" r="3" fill="currentColor" />
-      <path d="M34 52H40" stroke="currentColor" />
-      <path d="M23 52H29" stroke="currentColor" />
+      <circle cx="32" cy="40" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
+      <circle cx="26" cy="37" r="3" fill="currentColor" />
+      <circle cx="37" cy="37" r="3" fill="currentColor" />
       <path
-        d="M0 7.5C0 3.35786 3.35786 0 7.5 0V0C11.6421 0 15 3.35786 15 7.5V55H0V7.5Z"
+        d="M0 7.5C0 3.35786 3.35786 0 7.5 0V0C11.6421 0 15 3.35786 15 7.5V40H0V7.5Z"
         fill="currentColor"
       />
 
       {/* a */}
-      <circle cx="101" cy="55" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
+      <circle cx="101" cy="40" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />
       <path
-        d="M133 79.5C133 83.6421 129.642 87 125.5 87V87C121.358 87 118 83.6421 118 79.5L118 53L133 53L133 79.5Z"
+        d="M133 64.5C133 68.6421 129.642 72 125.5 72V72C121.358 72 118 68.6421 118 64.5L118 38L133 38L133 64.5Z"
         fill="currentColor"
       />
 
       {/* z */}
       <path
-        d="M145.5 38C141.358 38 138 34.6421 138 30.5V30.5C138 26.3579 141.358 23 145.5 23L194 23L194 38L145.5 38Z"
+        d="M145.5 23C141.358 23 138 19.6421 138 15.5V15.5C138 11.3579 141.358 8 145.5 8L187 8L187 23L145.5 23Z"
         fill="currentColor"
       />
-      <path d="M146 79L194 31" stroke="currentColor" strokeWidth="15" />
+      <path d="M145 65L187 15" stroke="currentColor" strokeWidth="14.8" />
       <path
-        d="M194.5 72C198.642 72 202 75.3579 202 79.5V79.5C202 83.6421 198.642 87 194.5 87L146 87L146 72L194.5 72Z"
+        d="M186.5 57C190.642 57 194 60.3579 194 64.5V64.5C194 68.6421 190.642 72 186.5 72L146 72L146 57L186.5 57Z"
         fill="currentColor"
       />
-      <circle cx="194.5" cy="30.5" r="7.5" fill="currentColor" />
-      <circle cx="145.5" cy="79.5" r="7.5" fill="currentColor" />
+      <circle cx="186.5" cy="15.5" r="7.5" fill="currentColor" />
+      <circle cx="145.5" cy="64.5" r="7.5" fill="currentColor" />
     </svg>
   )
 }
