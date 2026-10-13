@@ -1,4 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
+import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
+import { buildSubmission } from '../_shared/domain/forms/submission.ts'
+import { activeFields } from '../_shared/domain/forms/logic.ts'
 import { createClient } from '@supabase/supabase-js'
 import { serveJson } from '../_shared/http/serve.ts'
 import type { Database, Json } from '../_shared/db/database.types.ts'
@@ -1588,6 +1591,116 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       if (deleted.error) return errorResponse('conflict', deleted.error.message)
 
       return json(ok({ purged: ids.length }), 200)
+    }
+
+    case 'list_form_applications': {
+      const rows = await admin
+        .from('form_applications')
+        .select('id, case_id, form_id, form_version, answers, reused_fields, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(60)
+
+      if (rows.error) return errorResponse('conflict', rows.error.message)
+
+      return json(
+        ok({
+          applications: ((rows.data ?? []) as any[]).map((row) => ({
+            id: row.id as string,
+            caseId: row.case_id as string,
+            formId: row.form_id as string,
+            formVersion: row.form_version as string,
+            // Enough to show progress in a list without building every packet.
+            answered: Object.keys((row.answers ?? {}) as Record<string, unknown>).length,
+            reused: ((row.reused_fields ?? []) as string[]).length,
+            updatedAt: row.updated_at as string,
+          })),
+        }),
+        200,
+      )
+    }
+
+    case 'inspect_form_application': {
+      const row = await admin
+        .from('form_applications')
+        .select('id, case_id, form_id, form_version, source_hash, answers, reused_fields, updated_at')
+        .eq('id', action.formApplicationId)
+        .maybeSingle()
+
+      if (row.error) return errorResponse('conflict', row.error.message)
+      if (!row.data) return errorResponse('not_found', 'No such form application.')
+
+      const record = row.data as any
+      const snapshot = formSnapshot(String(record.form_id))
+      if (!snapshot) return errorResponse('not_found', 'No definition snapshot for that form.')
+
+      const answers = (record.answers ?? {}) as Record<string, unknown>
+      const reused = new Set(((record.reused_fields ?? []) as string[]))
+
+      /*
+       * The packet is built here rather than stored, so an application that is still being
+       * filled in shows the packet it currently maps to. Nothing is frozen until there is a
+       * reason to freeze it, and in this prototype there never is: it is not sent.
+       */
+      const packet = buildSubmission({
+        definition: snapshot.definition,
+        answers,
+        reused,
+        pageLocation: snapshot.pageLocation,
+      })
+
+      const active = activeFields(snapshot.definition.fields, answers)
+      const questions = active.filter(
+        (field) => !['html', 'section', 'page', 'accordion', 'form_module'].includes(field.type),
+      )
+
+      return json(
+        ok({
+          id: record.id as string,
+          caseId: record.case_id as string,
+          updatedAt: record.updated_at as string,
+
+          // 1. The definition we collected, and where it came from.
+          definition: {
+            formId: snapshot.formId,
+            version: snapshot.version,
+            source: snapshot.source,
+            retrievedAt: snapshot.retrievedAt,
+            sourceHash: snapshot.sourceHash,
+            fieldCount: snapshot.definition.fields.length,
+            activeCount: active.length,
+            questionCount: questions.length,
+            requiredCount: questions.filter((field) => field.isRequired).length,
+          },
+
+          // 2. What has been collected, against the definition's own labels.
+          collected: questions
+            .filter((field) => Object.prototype.hasOwnProperty.call(answers, field.id))
+            .map((field) => ({
+              fieldId: field.id,
+              label: field.label,
+              type: field.type,
+              toscana: typeof field.toscana === 'string' ? field.toscana : null,
+              value: answers[field.id],
+              reused: reused.has(field.id),
+            })),
+
+          // What is still outstanding, so an unfinished application reads honestly.
+          outstanding: questions
+            .filter(
+              (field) =>
+                field.isRequired && !Object.prototype.hasOwnProperty.call(answers, field.id),
+            )
+            .map((field) => ({ fieldId: field.id, label: field.label, type: field.type })),
+
+          // 3. The exact packet, and the fact that it goes nowhere.
+          submission: {
+            ...packet,
+            status: 'GENERATED_NOT_SENT' as const,
+            externalRequestMade: false,
+          },
+        }),
+        200,
+      )
     }
 
     case 'tag_test_case': {

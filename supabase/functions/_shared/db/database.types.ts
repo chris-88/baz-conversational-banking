@@ -560,6 +560,50 @@ export type Database = {
           },
         ]
       }
+      form_applications: {
+        Row: {
+          answers: Json
+          case_id: string
+          created_at: string
+          form_id: string
+          form_version: string
+          id: string
+          reused_fields: string[]
+          source_hash: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          case_id: string
+          created_at?: string
+          form_id: string
+          form_version: string
+          id?: string
+          reused_fields?: string[]
+          source_hash: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          case_id?: string
+          created_at?: string
+          form_id?: string
+          form_version?: string
+          id?: string
+          reused_fields?: string[]
+          source_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_applications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           cards: Json

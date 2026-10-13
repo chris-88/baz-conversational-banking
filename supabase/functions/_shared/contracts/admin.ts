@@ -123,6 +123,18 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('tag_test_case'), caseId: z.uuid() }),
 
   /**
+   * Everything about one form application, side by side.
+   *
+   * The definition that was collected, the answers that have been given, and the exact packet
+   * those answers produce. Works on an unfinished application on purpose: the mapping is far
+   * more convincing watched filling up than presented complete.
+   */
+  z.object({ action: z.literal('inspect_form_application'), formApplicationId: z.uuid() }),
+
+  /** Every form application on the system, for the console's list. */
+  z.object({ action: z.literal('list_form_applications') }),
+
+  /**
    * §39 — put a request through the gate and report what happened to it.
    *
    * The same classifier and the same deterministic checks a customer's message meets, with no
