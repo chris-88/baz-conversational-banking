@@ -1576,7 +1576,6 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       if (rows.error) return errorResponse('conflict', 'Could not read the cases.')
 
       const ids = ((rows.data ?? []) as { id: string }[]).map((row) => row.id)
-      if (ids.length === 0) return json(ok({ purged: 0 }), 200)
 
       /*
        * One statement, not one per case.
@@ -1587,10 +1586,67 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
        * get through. A purge is a demo convenience; it should not be able to take the product
        * down while it runs.
        */
-      const deleted = await admin.from('cases').delete().in('id', ids)
-      if (deleted.error) return errorResponse('conflict', deleted.error.message)
+      if (ids.length > 0) {
+        const deleted = await admin.from('cases').delete().in('id', ids)
+        if (deleted.error) return errorResponse('conflict', deleted.error.message)
+      }
 
-      return json(ok({ purged: ids.length }), 200)
+      /*
+       * And the visitors themselves, which a purge did not touch.
+       *
+       * Deleting every case left every auth user behind, so a browser that had been here
+       * before still resolved to a real account: the next visit was recognised, picked up a
+       * fresh case silently, and was never asked to sign in. Which is precisely what somebody
+       * resetting between run-throughs is trying to test. The sweep runs even when there were
+       * no cases to delete, because that is the state the first fix left behind.
+       *
+       * Administrators are kept. They are the only way back into this console, and purging
+       * yourself out of it is not a reset, it is a lockout.
+       */
+      const admins = await admin.from('admin_users').select('auth_user_id')
+      if (admins.error) return errorResponse('conflict', admins.error.message)
+      const keep = new Set(
+        ((admins.data ?? []) as { auth_user_id: string }[]).map((row) => row.auth_user_id),
+      )
+
+      let usersRemoved = 0
+      /*
+       * Always page one, never page two.
+       *
+       * Deleting shortens the list under us, so walking pages forward steps over whoever moved
+       * up into the page just emptied. Reading the first page again after each sweep is the
+       * only way that terminates on the right set: eventually it holds nothing but admins.
+       *
+       * A pass that removes nobody ends it, so a user the API refuses to delete cannot spin
+       * here, and the outer bound covers the rest.
+       */
+      for (let pass = 0; pass < 40; pass += 1) {
+        const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
+        if (listed.error) return errorResponse('conflict', listed.error.message)
+
+        const doomed = listed.data.users.filter((user) => !keep.has(user.id))
+        if (doomed.length === 0) break
+
+        /* Ten at a time: serial was a round trip per visitor, which a demo day's worth of
+         * anonymous users turned into a function timeout. */
+        let progressed = false
+        for (let at = 0; at < doomed.length; at += 10) {
+          const batch = doomed.slice(at, at + 10)
+          const results = await Promise.all(
+            batch.map(async (user) => await admin.auth.admin.deleteUser(user.id)),
+          )
+          for (const result of results) {
+            if (!result.error) {
+              usersRemoved += 1
+              progressed = true
+            }
+          }
+        }
+
+        if (!progressed) break
+      }
+
+      return json(ok({ purged: ids.length, usersRemoved }), 200)
     }
 
     case 'list_form_applications': {

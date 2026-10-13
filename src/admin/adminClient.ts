@@ -4,11 +4,13 @@ import {
   catalogueOverridesSchema,
   guardrailTestSchema,
   personaPreviewSchema,
+  purgeResultSchema,
   type Analytics,
   type CatalogueOverrides,
   type GuardrailTest,
   type PersonaPreview,
   type Period,
+  type PurgeResult,
 } from '@contracts/admin.ts' 
 import {
   adminCaseSchema,
@@ -33,7 +35,8 @@ export const adminApi = {
   inspect: async (caseId: string): Promise<AdminCase> =>
     adminCaseSchema.parse(await call({ action: 'inspect_case', caseId })),
   resetCase: () => call({ action: 'reset_case' }),
-  purgeCases: () => call({ action: 'purge_cases' }),
+  purgeCases: async (): Promise<PurgeResult> =>
+    purgeResultSchema.parse(await call({ action: 'purge_cases' })),
   deleteCase: (caseId: string) => call({ action: 'delete_case', caseId }),
   testGuardrail: async (message: string): Promise<GuardrailTest> =>
     guardrailTestSchema.parse(await call({ action: 'test_guardrail', message })),

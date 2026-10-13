@@ -681,6 +681,18 @@ export type GuardrailTest = z.infer<typeof guardrailTestSchema>
 export const personaPreviewSchema = z.object({ reply: z.string() })
 export type PersonaPreview = z.infer<typeof personaPreviewSchema>
 
+/**
+ * What a purge took. Both numbers are reported back because the console button claims to clear
+ * sign-ins as well as conversations, and a presenter resetting between run-throughs needs to
+ * see that the second half happened: the symptom of it not happening is a returning browser
+ * being recognised, which looks like success until somebody tries to sign up again.
+ */
+export const purgeResultSchema = z.object({
+  purged: z.number().int().nonnegative(),
+  usersRemoved: z.number().int().nonnegative(),
+})
+export type PurgeResult = z.infer<typeof purgeResultSchema>
+
 export type AdminRequest = z.infer<typeof adminRequestSchema>
 export type AdminOverview = z.infer<typeof adminOverviewSchema>
 export type AdminCase = z.infer<typeof adminCaseSchema>

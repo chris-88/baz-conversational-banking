@@ -33,6 +33,7 @@ import { adminApi } from '@/admin/adminClient'
 import { CaseContext } from '@/admin/CaseContext'
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { MessagesSquareIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { PeriodSelect, PageHeader, MetricCard } from '@/admin/parts'
@@ -258,9 +259,21 @@ function Controls({
   const reset = useMutation({ mutationFn: adminApi.resetCase, onSuccess: onChanged })
   const purge = useMutation({
     mutationFn: adminApi.purgeCases,
-    onSuccess: () => {
+    /*
+     * Says what went, both halves of it. A purge that cleared the conversations and quietly
+     * left the sign-ins behind looked identical to one that worked, right up until a returning
+     * browser was recognised and never asked to sign up.
+     */
+    onSuccess: (result) => {
       setConfirming(false)
+      toast.success(
+        `${String(result.purged)} ${result.purged === 1 ? 'conversation' : 'conversations'} and ` +
+          `${String(result.usersRemoved)} ${result.usersRemoved === 1 ? 'sign-in' : 'sign-ins'} cleared`,
+      )
       onChanged()
+    },
+    onError: (error: Error) => {
+      toast.error(error.message)
     },
   })
 
@@ -298,8 +311,10 @@ function Controls({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete every conversation?</AlertDialogTitle>
             <AlertDialogDescription>
-              All {count} go, along with their facts, applications, plans and events. The sample
-              customer can be rebuilt afterwards from this menu. This cannot be undone.
+              All {count} go, along with their facts, applications, plans and events. Every
+              visitor sign-in goes with them, admins aside, so anyone who returns arrives as a
+              stranger. The sample customer can be rebuilt afterwards from this menu. This cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
