@@ -9,36 +9,6 @@ import { Input } from '@/components/ui/input'
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
 
 /**
- * The Google mark, drawn rather than fetched.
- *
- * Google's brand guidelines require their own logo on the button, and loading it from a CDN
- * would make a third-party request on a page whose whole argument is that it is careful with
- * what it shares.
- */
-function GoogleMark(): ReactNode {
-  return (
-    <svg viewBox="0 0 48 48" className="size-4 shrink-0" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"
-      />
-      <path
-        fill="#34A853"
-        d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z"
-      />
-      <path
-        fill="#EA4335"
-        d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"
-      />
-    </svg>
-  )
-}
-
-/**
  * §28 — offered once, at the point where signing in protects something that already exists.
  *
  * Deliberately not a wall. Everything on screen stays usable, there is no "maybe later" to
@@ -47,11 +17,9 @@ function GoogleMark(): ReactNode {
  */
 export function SignInCard({
   card,
-  onSignIn,
   disabled,
 }: {
   card: Payload
-  onSignIn?: () => Promise<{ ok: boolean; message?: string }> | void
   disabled?: boolean
 }): ReactNode {
   const [busy, setBusy] = useState(false)
@@ -70,14 +38,13 @@ export function SignInCard({
   const [error, setError] = useState<string | null>(() => lastSignInError())
 
   /*
-   * Email is offered underneath rather than beside.
+   * Email only.
    *
-   * Google is two taps and supplies a name, which is what lets Baz say it will fill some of
-   * this in. Email means leaving the conversation, finding a message and coming back, and
-   * supplies nothing but an address. Both are real options; they are not equal ones, and a
-   * card that presents them as equal sends people down the slower path for no reason.
+   * Google worked and was removed on purpose. In front of a banking audience "why is a bank
+   * signing people in with Google" is a question that takes the room somewhere else, and the
+   * consent screen names the Supabase project rather than Baz, which reads as unfinished. The
+   * provider code is still in `identity.ts` and nothing is surfaced for it.
    */
-  const [emailOpen, setEmailOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
 
@@ -91,25 +58,6 @@ export function SignInCard({
       if (result.ok) setSent(true)
       else setError(result.message ?? 'That did not work.')
     })
-  }
-
-  const run = () => {
-    if (!onSignIn || busy) return
-    setBusy(true)
-    setError(null)
-    clearSignInError()
-    // Succeeds by navigating away, so `busy` is only ever cleared by a failure.
-    void Promise.resolve(onSignIn())
-      .then((result) => {
-        if (result && result.ok === false) {
-          setError(result.message ?? 'That did not work. Try again in a moment.')
-          setBusy(false)
-        }
-      })
-      .catch(() => {
-        setError('That did not work. Try again in a moment.')
-        setBusy(false)
-      })
   }
 
   return (
@@ -131,56 +79,41 @@ export function SignInCard({
       </div>
 
       <div className="space-y-2 px-4 pb-4">
-        <Button className="w-full" disabled={(disabled ?? false) || busy} onClick={run}>
-          <GoogleMark />
-          Continue with Google
-        </Button>
-
-        <p className="text-muted-foreground text-center text-xs leading-relaxed">
-          {card.reassurance}
-        </p>
-
-        {error !== null && <p className="text-destructive text-center text-xs">{error}</p>}
-
         {sent ? (
           <p className="text-center text-sm font-medium">
-            Check your email — there is a link in it that brings you straight back here.
+            Check your email. There is a link in it that brings you straight back here.
           </p>
-        ) : emailOpen ? (
+        ) : (
           <div className="space-y-2">
             <Input
               type="email"
               inputMode="email"
               autoComplete="email"
               placeholder="you@example.com"
+              aria-label="Your email address"
               value={email}
-              disabled={busy}
+              disabled={(disabled ?? false) || busy}
               onChange={(event) => setEmail(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') sendLink()
               }}
             />
             <Button
-              variant="outline"
               className="w-full"
-              disabled={busy || email.trim().length === 0}
+              disabled={(disabled ?? false) || busy || email.trim().length === 0}
               onClick={sendLink}
             >
-              Send me a link
+              <MailIcon className="size-4" />
+              {busy ? 'Sending…' : 'Send me a link'}
             </Button>
           </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground w-full"
-            disabled={(disabled ?? false) || busy}
-            onClick={() => setEmailOpen(true)}
-          >
-            <MailIcon className="size-4" />
-            Use my email instead
-          </Button>
         )}
+
+        <p className="text-muted-foreground text-center text-xs leading-relaxed">
+          {card.reassurance}
+        </p>
+
+        {error !== null && <p className="text-destructive text-center text-xs">{error}</p>}
 
         <p className="text-center">
           <a

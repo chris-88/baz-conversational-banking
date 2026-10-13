@@ -680,10 +680,11 @@ async function handleTurn(request: Request): Promise<Response> {
     ' An offer to sign in is on screen directly under your reply, and your reply is what has ' +
     'to lead into it. Put it to them in your own words: there is now something here worth ' +
     'keeping, and signing in means they can stop and pick it up later or on another device. ' +
-    'Ask whether they would like to, and end there. Do not ask for their name, date of birth, ' +
-    'address or anything else personal in this turn — signing in supplies some of it, and ' +
-    'asking them to type what is about to be filled in is the wrong way round. Do not describe ' +
-    'the card or name the button.'
+    'Ask whether they would like to, and end there. Do not ask for their name, date of ' +
+    'birth, address or anything else personal in this turn: the offer is the whole point of ' +
+    'the turn and a question beside it splits their attention. Do not promise that signing in ' +
+    'fills anything in for them, because it does not. It keeps what they have and lets them ' +
+    'come back to it. Do not describe the card or name the button.'
 
   const history = loaded.messages
     .filter((message) => message.role !== 'system')
