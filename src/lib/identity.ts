@@ -147,6 +147,31 @@ export async function startGoogleSignIn(): Promise<{ ok: boolean; message?: stri
  */
 const FAILURE_KEY = 'baz.signInError'
 
+/**
+ * Set while a link has been downgraded to an ordinary sign-in, so it happens once.
+ *
+ * Without it, an account that cannot be linked would bounce between Google and here forever.
+ */
+const RETRIED_KEY = 'baz.signInRetried'
+
+/**
+ * Whether Supabase refused the link because that Google account already belongs to somebody.
+ *
+ * This is the ordinary second-device case: they signed in on a laptop, opened Baz on a phone,
+ * and tapped sign in from a fresh anonymous session. Linking is impossible — the identity is
+ * taken — and signing in is the right answer, because the account it finds is the one holding
+ * their conversation.
+ *
+ * It cannot be caught where it is raised. `linkIdentity` does not fail locally; it redirects,
+ * and Supabase rejects it during the callback, so the refusal arrives as a parameter on the
+ * way back rather than as a rejected promise.
+ */
+function identityTaken(reason: string): boolean {
+  return /identity_already_exists|already linked|already been linked|already registered/i.test(
+    reason,
+  )
+}
+
 export function lastSignInError(): string | null {
   try {
     return window.sessionStorage.getItem(FAILURE_KEY)
@@ -161,6 +186,30 @@ export function clearSignInError(): void {
     window.sessionStorage.removeItem(FAILURE_KEY)
   } catch {
     // Nothing stored it in the first place.
+  }
+}
+
+function alreadyRetried(): boolean {
+  try {
+    return window.sessionStorage.getItem(RETRIED_KEY) === '1'
+  } catch {
+    return true
+  }
+}
+
+function markRetried(): void {
+  try {
+    window.sessionStorage.setItem(RETRIED_KEY, '1')
+  } catch {
+    // Without storage the retry cannot be bounded, so it is not attempted at all.
+  }
+}
+
+function clearRetried(): void {
+  try {
+    window.sessionStorage.removeItem(RETRIED_KEY)
+  } catch {
+    // Nothing to clear.
   }
 }
 
@@ -193,17 +242,33 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
 
   if (code === null) {
     clean()
-    restoreRoute()
-    if (oauthError !== null) {
+
+    if (oauthError !== null && identityTaken(oauthError) && !alreadyRetried()) {
+      /*
+       * Linking was refused because the account exists. Go straight back to Google as a plain
+       * sign-in rather than returning them to a card that can only fail the same way again.
+       */
+      markRetried()
+      const client = requireSupabase()
+      const { error } = await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: returnTo() },
+      })
+      if (!error) return { signedIn: false }
+      rememberFailure(error.message)
+    } else if (oauthError !== null) {
       console.error('sign-in refused:', oauthError)
       rememberFailure(oauthError)
     }
+
+    restoreRoute()
     return { signedIn: false, ...(oauthError === null ? {} : { error: oauthError }) }
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   clean()
   restoreRoute()
+  if (!error) clearRetried()
   if (error) {
     console.error('sign-in exchange failed:', error.message)
     rememberFailure(error.message)
