@@ -149,11 +149,18 @@ const FAILURE_KEY = 'baz.signInError'
 
 export function lastSignInError(): string | null {
   try {
-    const error = window.sessionStorage.getItem(FAILURE_KEY)
-    if (error) window.sessionStorage.removeItem(FAILURE_KEY)
-    return error
+    return window.sessionStorage.getItem(FAILURE_KEY)
   } catch {
     return null
+  }
+}
+
+/** Cleared when they try again, rather than by reading it — see the card for why. */
+export function clearSignInError(): void {
+  try {
+    window.sessionStorage.removeItem(FAILURE_KEY)
+  } catch {
+    // Nothing stored it in the first place.
   }
 }
 

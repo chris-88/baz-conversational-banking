@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CheckIcon, LockIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { lastSignInError } from '@/lib/identity'
+import { clearSignInError, lastSignInError } from '@/lib/identity'
 
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
 
@@ -54,24 +54,25 @@ export function SignInCard({
   disabled?: boolean
 }): ReactNode {
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   /*
    * A sign-in that failed on the way back has nowhere else to appear.
    *
-   * `completeSignIn` runs before React mounts, so it leaves the reason behind and this is the
-   * one component guaranteed to be on screen afterwards — the card they tapped. Without this
-   * the screen simply jumped to Google and came back, with nothing said.
+   * `completeSignIn` runs before React mounts, so it leaves the reason behind, and this is the
+   * one component guaranteed to be on screen afterwards — the card they tapped. Without it the
+   * screen simply jumped to Google and came back with nothing said.
+   *
+   * Read as the initial value rather than in an effect: an effect that sets state on mount is
+   * a cascading render, and the read is deliberately non-destructive so StrictMode's second
+   * pass does not swallow the message. It is cleared when they try again.
    */
-  useEffect(() => {
-    const failed = lastSignInError()
-    if (failed !== null) setError(failed)
-  }, [])
+  const [error, setError] = useState<string | null>(() => lastSignInError())
 
   const run = () => {
     if (!onSignIn || busy) return
     setBusy(true)
     setError(null)
+    clearSignInError()
     // Succeeds by navigating away, so `busy` is only ever cleared by a failure.
     void Promise.resolve(onSignIn())
       .then((result) => {

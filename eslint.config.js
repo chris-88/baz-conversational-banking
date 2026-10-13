@@ -13,6 +13,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 const DENO_ENTRYPOINTS = [
   'supabase/functions/*/**',
   '!supabase/functions/_shared/**',
+  // `_shared/http` is Deno-only too: it calls `Deno.serve`, so it cannot go in a folder the
+  // app compiles, and no tsconfig covers it for the project service to lint against.
+  'supabase/functions/_shared/http/**',
 ]
 
 /** Invariant 11: Baz is portable. §32 */
