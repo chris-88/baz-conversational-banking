@@ -44,6 +44,7 @@ import {
   recordFacts,
   saveMessage,
   touchLastSeen,
+  type Db,
   writeEvent,
 } from '../_shared/db/case-repository.ts'
 import { buildCaseDigest } from '../_shared/db/digest.ts'
@@ -662,6 +663,17 @@ async function handleTurn(request: Request): Promise<Response> {
 
   if (isCustomerTurn) history.push({ role: 'user', content: customerMessage })
 
+  /*
+   * Whether the offer to sign in is about to appear under this reply.
+   *
+   * Decided before the model speaks, not after, because it changes what the reply should say.
+   * Baz was starting three applications and asking for a name and date of birth in the same
+   * breath, with the sign-in card arriving underneath — asking somebody to type what signing
+   * in is about to supply, in the wrong order.
+   */
+  const offeringSignIn =
+    !(await caseHasEvent(admin, turn.caseId, SIGN_IN_PROMPT_EVENT)) && worthSigningInFor(loaded)
+
   if (turn.trigger === 'action') {
     // Told as an event, not quoted as speech, so Baz does not answer a question nobody asked.
     history.push({
@@ -669,7 +681,18 @@ async function handleTurn(request: Request): Promise<Response> {
       content:
         `(The customer did this in the app: ${customerMessage} They did not type anything, so ` +
         'do not reply as though they had and do not thank them for a message. ' +
-        `${turn.note ?? 'Say what it means for them and what you need next.'} Keep it brief.)`,
+        `${turn.note ?? 'Say what it means for them and what you need next.'} Keep it brief.` +
+        (offeringSignIn
+          ? ' An offer to sign in is on screen under your reply, and the reply is what has to ' +
+            'make the case for it. Say briefly what is now in progress, then put it to them in ' +
+            'your own words: this is the point where there is something worth keeping, and ' +
+            'signing in means they can stop here and pick it up later or on another device. ' +
+            'Ask whether they would like to. Do not ask for their name, date of birth, ' +
+            'address or anything else personal this turn — signing in may supply it, and ' +
+            'asking them to type what is about to be filled in is the wrong way round. Do not ' +
+            'describe the card or name the button.'
+          : '') +
+        ')',
     })
   }
 
@@ -1733,18 +1756,22 @@ async function handleTurn(request: Request): Promise<Response> {
          * asking — an application — is usually created by the tap that happened during it.
          * Once per case: a prompt that returns every turn is a wall by instalments.
          */
-        if (isCustomerTurn) {
+        /*
+         * Any turn, not only a typed one.
+         *
+         * This was gated on `isCustomerTurn`, which excluded exactly the turn that matters:
+         * starting applications is a tap, so it arrives as `action`. The offer could therefore
+         * only appear on some later message — after Baz had already moved on to asking for a
+         * name and a date of birth, which is both the wrong moment and the wrong order. The
+         * point of asking here is that signing in can carry the name instead of the customer
+         * typing it.
+         */
+        {
           const after = await loadCase(admin, turn.caseId)
           if (after && worthSigningInFor(after)) {
-            const offered = await admin
-              .from('events')
-              .select('id')
-              .eq('case_id', turn.caseId)
-              .eq('type', SIGN_IN_PROMPT_EVENT)
-              .limit(1)
-              .maybeSingle()
+            const alreadyOffered = await caseHasEvent(admin, turn.caseId, SIGN_IN_PROMPT_EVENT)
 
-            if (!offered.data) {
+            if (!alreadyOffered) {
               await writeEvent(admin, {
                 caseId: turn.caseId,
                 type: SIGN_IN_PROMPT_EVENT,
@@ -1850,6 +1877,18 @@ async function handleTurn(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: { ...CORS, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
   })
+}
+
+/** Whether something has already happened once on this case. */
+async function caseHasEvent(admin: Db, caseId: string, type: string): Promise<boolean> {
+  const found = await admin
+    .from('events')
+    .select('id')
+    .eq('case_id', caseId)
+    .eq('type', type)
+    .limit(1)
+    .maybeSingle()
+  return Boolean(found.data)
 }
 
 function streamOf(events: readonly StreamEvent[]): Response {

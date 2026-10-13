@@ -163,6 +163,61 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         )
       }
     }
+
+    /*
+     * What signing in actually saves them typing.
+     *
+     * Baz offers this with "it would let me fill in your details rather than ask you to type
+     * them", and that has to be true or it is a promise the next turn breaks. A name on the
+     * participant record is how Baz greets somebody; a name in `facts` is what satisfies the
+     * requirement every journey opens with.
+     *
+     * `system_derived`, because nobody stated it: it came from the identity provider. Not
+     * `verified` — Google confirms the account, not that the person is who the name says, and
+     * a bank reading `verified: true` would take it to mean something it does not.
+     *
+     * Never overwrites. Somebody who has already told Baz their name has told Baz their name,
+     * and a display name from Google is not grounds to correct them.
+     */
+    const existing = await admin
+      .from('facts')
+      .select('key')
+      .eq('case_id', caseId)
+      .in('key', ['identity.fullName', 'identity.email'])
+      .is('superseded_by', null)
+
+    const held = new Set(((existing.data ?? []) as { key: string }[]).map((row) => row.key))
+
+    const rows: Record<string, unknown>[] = []
+    if (named !== undefined && !held.has('identity.fullName')) {
+      rows.push({
+        case_id: caseId,
+        key: 'identity.fullName',
+        participant_id: participantId,
+        subject_kind: 'participant',
+        value: named.trim() as unknown as Json,
+        source: 'system_derived',
+        verified: false,
+      })
+    }
+    if (user.email && !held.has('identity.email')) {
+      rows.push({
+        case_id: caseId,
+        key: 'identity.email',
+        participant_id: participantId,
+        subject_kind: 'participant',
+        value: user.email as unknown as Json,
+        source: 'system_derived',
+        verified: false,
+      })
+    }
+
+    if (rows.length > 0) {
+      mustWrite(await admin.from('facts').insert(rows as never), 'the signed-in details')
+      for (const row of rows) {
+        await writeEventRow(admin, caseId, 'context_captured', { key: row['key'] })
+      }
+    }
   }
 
   /** The response every action that lands on a conversation returns. */
