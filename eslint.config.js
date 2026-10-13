@@ -44,6 +44,8 @@ export default tseslint.config(
       // Plain ESM run by node directly, outside the typed project. It only exists to keep live
       // probes from eating the demonstration's capacity, and has no place in the app's build.
       'scripts/live-probe.mjs',
+      // Same: plain ESM, run by hand to push the auth email templates to the hosted project.
+      'scripts/push-auth-templates.mjs',
       ...DENO_ENTRYPOINTS,
       // Generated from the linked project by `npm run db:types`.
       'supabase/functions/_shared/db/database.types.ts',
