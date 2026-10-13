@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { serveJson } from '../_shared/contracts/serve.ts'
 import type { Database } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
@@ -43,7 +44,7 @@ function env(name: string): string {
   return value
 }
 
-Deno.serve(async (request: Request): Promise<Response> => {
+serveJson(CORS, async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return errorResponse('bad_request', 'Use POST.')
 

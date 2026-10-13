@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import Anthropic from '@anthropic-ai/sdk'
+import { serveJson } from '../_shared/contracts/serve.ts'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../_shared/db/database.types.ts'
 import { bazTurnRequestSchema } from '../_shared/contracts/baz-turn.ts'
@@ -155,7 +156,7 @@ function env(name: string): string {
  * headers, so the browser blocks the response and the customer sees "Load failed" with no
  * clue what failed. A turn is allowed to fail; it is not allowed to fail silently.
  */
-Deno.serve(async (request: Request): Promise<Response> => {
+serveJson(CORS, async (request: Request): Promise<Response> => {
   try {
     return await handleTurn(request)
   } catch (error) {
@@ -785,7 +786,11 @@ async function handleTurn(request: Request): Promise<Response> {
                 if (outcome.accepted.length > 0) {
                   const reloaded = await loadCase(admin, turn.caseId)
                   if (reloaded) {
-                    const summaries = await recomputeApplications(admin, reloaded)
+                    const summaries = await recomputeApplications(admin, reloaded, {
+    nameFor: (product, catalogueId) =>
+      (catalogueId === null ? undefined : knowledgeProduct(catalogueId)?.name) ??
+      journeyFor(product).displayName,
+  })
                     const ready = summaries.filter((a) => a.state === 'ready')
                     if (ready.length > 0) {
                       progressed = ` Ready to review: ${ready.map((a) => a.displayName).join(', ')}.`

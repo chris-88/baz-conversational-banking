@@ -43,6 +43,15 @@ export function summarise(
   application: Application,
   journey: Journey,
   evaluation: JourneyEvaluation,
+  /**
+   * What the specific product is called, where the kind alone does not say.
+   *
+   * Without it a case holding SuperSaver, a notice account and MortgageSaver shows three rows
+   * all reading "Savings account" — the same confusion the catalogue id was added to end, one
+   * layer further down. Injected rather than looked up, because this file is tenant-free
+   * (Invariant 11).
+   */
+  nameFor?: (product: Product, catalogueId: string | null) => string,
 ): ApplicationSummary {
   const blocking = evaluation.outstanding.filter((item) => item.blocking)
   const satisfied = evaluation.satisfied.length
@@ -51,7 +60,8 @@ export function summarise(
   return {
     id: String(application.id),
     product: application.product,
-    displayName: journey.displayName,
+    displayName:
+      nameFor?.(application.product, application.catalogueId ?? null) ?? journey.displayName,
     state: application.state,
     stateLabel: stateLabel(application.state),
     outstanding: blocking.filter((i) => i.waitingOn === 'primary').map((i) => i.requirement.label),
@@ -72,7 +82,11 @@ export function summarise(
 export async function recomputeApplications(
   client: Db,
   loaded: LoadedCase,
-  options: { readonly activeApplicationId?: ApplicationId | undefined } = {},
+  options: {
+    readonly activeApplicationId?: ApplicationId | undefined
+    /** See `summarise`: what the specific catalogue product is called. */
+    readonly nameFor?: (product: Product, catalogueId: string | null) => string
+  } = {},
 ): Promise<readonly ApplicationSummary[]> {
   const summaries: ApplicationSummary[] = []
 
@@ -112,11 +126,11 @@ export async function recomputeApplications(
         },
       })
 
-      summaries.push(summarise(result.application, journey, evaluation))
+      summaries.push(summarise(result.application, journey, evaluation, options.nameFor))
       continue
     }
 
-    summaries.push(summarise(application, journey, evaluation))
+    summaries.push(summarise(application, journey, evaluation, options.nameFor))
   }
 
   return summaries
