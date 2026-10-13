@@ -1267,3 +1267,18 @@ The server now sends an SSE comment every ten seconds. Chosen over raising the
 client's limit because a genuinely dead stream should still fail fast, and
 over a new stream event because a comment needs no change to the contract or
 the client.
+
+## 2026-10-13: A reset clears the sign-ins too (§37, §44)
+
+§44 asks for a purge of cases and says nothing about auth users, so the first
+build deleted cases alone. That left every browser that had been here before
+resolving to a real account: the next visit was recognised, handed a fresh case
+and never asked to sign in, which is the one thing somebody resetting between
+run-throughs is trying to test.
+
+A purge now deletes every auth user except those in `admin_users`. Admins are
+kept because they are the only way back into the console. The sweep lives in
+`_shared/db/purge-users.ts` behind a two-call interface so it can be unit
+tested: the first version paged forward through a listing it was deleting from,
+which steps over whoever moves up into the page just emptied, and no test in
+this repo could have caught that inside an Edge Function handler.
