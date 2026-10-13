@@ -18,7 +18,7 @@ import type { AdminOverview } from '@contracts/admin.ts'
 const DESCRIPTIONS: Readonly<Record<SliderName, string>> = {
   length: 'Shorter is terser. Longer explains more before asking the next thing.',
   humour: 'Light remarks where they fit. Never during anything sensitive.',
-  sarcasm: 'Dry asides. Use sparingly — it reads badly when somebody is worried.',
+  sarcasm: 'Dry asides. Use sparingly: it reads badly when somebody is worried.',
   formality: 'Higher is professional and measured. Lower is how a person actually talks.',
   playfulness: 'Warmth and a bit of character in how things are put.',
   poetic: 'More expressive turns of phrase. At the top it is a party trick.',

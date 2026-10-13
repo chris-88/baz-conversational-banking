@@ -422,7 +422,7 @@ export function BazChat({
         'action',
         'Go through that one properly: what it is for, what is good about it and what is less ' +
           'good, from the catalogue and nothing else. The others are still on screen, so do not ' +
-          'list them again. Then stop and let them steer — ask whether they want to go further ' +
+          'list them again. Then stop and let them steer. Ask whether they want to go further ' +
           'into this one or look at what opening it would involve. Ask nothing else in this ' +
           'turn, and do not start anything.',
       )
@@ -437,7 +437,7 @@ export function BazChat({
         'Explain what that option means in practice and what is good and less good about it, in ' +
           'a few sentences. Then stop and let them steer: ask whether they want to go further ' +
           'into this one or hear what applying would actually involve. Ask nothing else in this ' +
-          'turn — no income, no property, no timing, however obviously you need it next. Do not ' +
+          'turn: no income, no property, no timing, however obviously you need it next. Do not ' +
           'start an application.',
       )
       setFollowUps(QUOTE_FOLLOW_UPS)

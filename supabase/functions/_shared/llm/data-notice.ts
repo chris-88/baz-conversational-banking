@@ -5,7 +5,7 @@ import type { Card } from '../contracts/cards.ts'
  *
  * Fixed copy, built here, shown by the server the first time a fact is written for a case. Not
  * a tool, so the model cannot summon it, skip it, paraphrase it or argue with somebody about
- * it — which is the whole reason it is not a tool.
+ * it, which is the whole reason it is not a tool.
  *
  * Timing is the point. At the start of a conversation it is a wall of text before anybody has
  * said anything, which the opening screen deliberately avoids; at the end it is too late. The
@@ -20,7 +20,7 @@ export function dataNoticeCard(noticeHref: string): Card {
     points: [
       'What you tell me is stored, so I do not have to ask you twice. That is the part being demonstrated.',
       'This is a prototype, not a banking service, and nothing here reaches a bank.',
-      'Please leave out anything you would mind being kept — a real PPS number, real account details.',
+      'Please leave out anything you would mind being kept, a real PPS number, real account details.',
     ],
     noticeHref,
   }

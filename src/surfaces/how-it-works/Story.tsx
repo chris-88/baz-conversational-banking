@@ -212,7 +212,7 @@ export function Story(): ReactNode {
           </p>
           <p>
             The same instinct kept going. The composer took the bottom of the screen, the prototype
-            banner went, and finally a tagline we had written and liked —{' '}
+            banner went, and finally a tagline we had written and liked:{' '}
             <em>&ldquo;Jarvis, but for banking&rdquo;</em> went in on day seven and came out on day
             nine, along with the scripted introduction Baz used to open with. An opening that
             explains the product is an opening that admits it needs explaining.

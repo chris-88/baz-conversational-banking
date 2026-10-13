@@ -129,7 +129,7 @@ export function Legend(): ReactNode {
       {
         decides: 'model',
         name: 'Model judgement',
-        gloss: 'Where a language model is genuinely better — phrasing, inference, tone.',
+        gloss: 'Where a language model is genuinely better: phrasing, inference, tone.',
       },
     ]
 

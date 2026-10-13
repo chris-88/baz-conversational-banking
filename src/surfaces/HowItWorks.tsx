@@ -99,7 +99,7 @@ export function HowItWorks(): ReactNode {
             <strong className="text-foreground font-semibold">
               What a visitor types is not synthetic.
             </strong>{' '}
-            It is real, and it is stored, which is the thing being demonstrated —{' '}
+            It is real, and it is stored, which is the thing being demonstrated.{' '}
             <Link className="underline" to={routes.privacy}>
               how your data is used
             </Link>{' '}

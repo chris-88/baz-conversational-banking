@@ -11,9 +11,9 @@ import { Figures, Panel, Prose, Section } from './parts'
 
 /** Measured from a live conversation. Every figure is one the API reported about itself. */
 const TURN: readonly { readonly part: string; readonly cost: string; readonly note?: string }[] = [
-  { part: 'Turn 1 — writes the whole 28,087-token prefix', cost: '€0.174', note: 'once an hour, shared' },
-  { part: 'Turn 2 — writes 922 tokens, reads the rest', cost: '€0.031' },
-  { part: 'Turn 3 — writes 1,064 tokens, reads the rest', cost: '€0.036' },
+  { part: 'Turn 1: writes the whole 28,087-token prefix', cost: '€0.174', note: 'once an hour, shared' },
+  { part: 'Turn 2: writes 922 tokens, reads the rest', cost: '€0.031' },
+  { part: 'Turn 3: writes 1,064 tokens, reads the rest', cost: '€0.036' },
 ]
 
 export function Cost(): ReactNode {
@@ -148,7 +148,7 @@ export function Cost(): ReactNode {
           <Panel title="5 · The tool schemas are part of the prompt">
             <Prose>
               <p>
-                The twelve tools carry <strong>5,068 tokens</strong> of JSON schema — 18% of
+                The twelve tools carry <strong>5,068 tokens</strong> of JSON schema, 18% of
                 everything sent, and more than the policy, the voice, the fact reference and the
                 tool guidance put together.
               </p>

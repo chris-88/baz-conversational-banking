@@ -34,10 +34,10 @@ export const PRESET_NAMES = [
 ] as const
 export type PresetName = (typeof PRESET_NAMES)[number]
 
-/** §17, §38 — presets are named slider sets. "Custom" simply means values of your own. */
+/** §17, §38, presets are named slider sets. "Custom" simply means values of your own. */
 export const PRESETS: Readonly<Record<PresetName, PersonaSliders>> = {
   // §16: the default Baz is concise, curious and LIGHTLY HUMOROUS, occasionally playful.
-  // Values sit mid-band deliberately — 0.3 would render as "No jokes", which contradicts §16
+  // Values sit mid-band deliberately, 0.3 would render as "No jokes", which contradicts §16
   // and the opening line in the vision document.
   default: { length: 0.45, humour: 0.45, sarcasm: 0.15, formality: 0.5, playfulness: 0.45, poetic: 0 },
   // Concise is about length. It does not strip the personality out of Baz.
@@ -59,18 +59,18 @@ const FRAGMENTS: Readonly<Record<SliderName, Fragments>> = {
   ],
   humour: [
     'Play it straight. No jokes.',
-    'Be dry. A wry aside where the moment genuinely offers one — never forced, never at their expense.',
+    'Be dry. A wry aside where the moment genuinely offers one, never forced, never at their expense.',
     'Be funny. Properly funny, in an understated way. Never at their expense, and never instead of being useful.',
   ],
   sarcasm: [
     'No sarcasm at all.',
     'The occasional raised eyebrow is fine. Aim it at the situation, never at the person.',
-    'Dry, deadpan, slightly sardonic — about banking, bureaucracy and yourself. Never about them or their circumstances.',
+    'Dry, deadpan, slightly sardonic, about banking, bureaucracy and yourself. Never about them or their circumstances.',
   ],
   formality: [
     'Talk like a person texting a friend who happens to know banking. Contractions, short forms, no ceremony.',
     'Talk like a good colleague. Contractions, plain words, no bank-speak.',
-    'Be precise and measured. Avoid contractions and slang, but stay human — formal is not the same as stiff.',
+    'Be precise and measured. Avoid contractions and slang, but stay human, formal is not the same as stiff.',
   ],
   playfulness: [
     'Be literal and direct.',
@@ -93,7 +93,7 @@ function band(value: number): 0 | 1 | 2 {
 const clamp = (value: number): number => Math.min(1, Math.max(0, value))
 
 /**
- * §50, Invariant 5 — on a sensitive turn, humour, sarcasm, playfulness and poetic are forced
+ * §50, Invariant 5, on a sensitive turn, humour, sarcasm, playfulness and poetic are forced
  * to zero. This is applied here rather than being asked of the model, so no persona setting
  * can override it.
  */

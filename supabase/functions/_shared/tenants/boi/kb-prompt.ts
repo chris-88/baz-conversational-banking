@@ -9,12 +9,12 @@ import { combinationsSection } from './combinations.ts'
  *
  * This replaced a catalogue of seven invented products. Everything here is read from their
  * public site and verified on the date in the metadata, which is why the disclaimer below says
- * what it says rather than "illustrative and invented for a prototype" — that sentence was
+ * what it says rather than "illustrative and invented for a prototype", that sentence was
  * honest about the old catalogue and would be a lie about this one, in the unusual direction of
  * telling somebody that real published terms were made up.
  *
  * What is still invented is the arithmetic. The pack holds no mortgage rate table and no
- * protection premiums — it says so itself, under `not_authoritative_for` — so the figures the
+ * protection premiums, it says so itself, under `not_authoritative_for`, so the figures the
  * quote card computes from remain illustrative and are labelled as such wherever they appear.
  */
 
@@ -44,7 +44,7 @@ export function knowledgeProduct(id: string): KnowledgeProduct | undefined {
 /**
  * What a figure in this pack is worth.
  *
- * Every pricing snapshot carries `volatile: true`, and several are months old — the personal
+ * Every pricing snapshot carries `volatile: true`, and several are months old, the personal
  * loan's APR range is dated February 2025. A rate stated as current when it is a snapshot is
  * the one mistake this whole catalogue exists to avoid.
  */
@@ -80,7 +80,7 @@ function describe(product: KnowledgeProduct): string {
       ? []
       : [
           `Rate: ${rate.headline}${rate.note === null ? '' : ` (${rate.note})`}` +
-            `${asOf === null ? '' : ` — last published ${asOf}`}`,
+            `${asOf === null ? '' : `, last published ${asOf}`}`,
         ]),
     ...line('Suits', product.best_for),
     ...line('Features', product.features),
@@ -94,7 +94,7 @@ function describe(product: KnowledgeProduct): string {
     ...line('Not yet when', usage.defer_when),
     ...(product.advice_model === 'information_or_self_serve'
       ? []
-      : [`Ends in: ${product.advice_model.replaceAll('_', ' ')} — you take it to the door, not through it.`]),
+      : [`Ends in: ${product.advice_model.replaceAll('_', ' ')}, you take it to the door, not through it.`]),
   ].join('\n')
 }
 

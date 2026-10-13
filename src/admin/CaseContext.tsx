@@ -74,8 +74,8 @@ function Customer({ data }: { readonly data: AdminCase }): ReactNode {
                 key: 'Days active',
                 value:
                   customer.daysActive === 0
-                    ? '—'
-                    : `${String(customer.daysActive)}${customer.daysActive > 1 ? ' — came back' : ''}`,
+                    ? 'not yet'
+                    : `${String(customer.daysActive)}${customer.daysActive > 1 ? ', came back' : ''}`,
               },
               { key: 'Messages sent', value: customer.messages },
               /*
@@ -91,7 +91,7 @@ function Customer({ data }: { readonly data: AdminCase }): ReactNode {
                 key: 'Time in conversation',
                 value:
                   customer.timing.activeMinutes === 0
-                    ? '—'
+                    ? 'not yet'
                     : `${minutes(customer.timing.activeMinutes)}${
                         customer.timing.sittings > 1
                           ? ` · ${String(customer.timing.sittings)} sittings`
@@ -390,6 +390,6 @@ function minutes(value: number): string {
 }
 
 function when(value: string | null): string {
-  if (value === null) return '—'
+  if (value === null) return 'not yet'
   return `${value.slice(0, 10)} ${value.slice(11, 16)}`
 }

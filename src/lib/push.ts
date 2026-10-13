@@ -41,7 +41,7 @@ export async function subscribeToPush(caseId: string): Promise<SubscribeResult> 
     return {
       state: 'unsupported',
       // The common case by a distance, and worth saying plainly rather than "not supported".
-      reason: 'On iPhone, add Baz to your Home Screen first — Safari only allows this there.',
+      reason: 'On iPhone, add Baz to your Home Screen first. Safari only allows this there.',
     }
   }
 

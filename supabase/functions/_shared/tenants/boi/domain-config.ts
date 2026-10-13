@@ -1,5 +1,5 @@
 /**
- * §20 — the permitted conversational domain, and §39 — making enforcement observable.
+ * §20, the permitted conversational domain, and §39, making enforcement observable.
  *
  * Deliberately data rather than prose in a system prompt: the gate is enforcement, not a
  * request (§25, Invariant 4). The permitted domain is configurable rather than permanently
@@ -131,7 +131,7 @@ export const boiDomainConfig: DomainConfig = {
       label: 'Unsupported',
       reachesModel: false,
       description:
-        'An instruction to move money or change an account — a transaction, not a question. ' +
+        'An instruction to move money or change an account, a transaction, not a question. ' +
         'Never a question about what Baz can do: those reach Baz, which knows the answer.',
       examples: ['Transfer €500 to my sister', 'Cancel my card', 'Change my PIN'],
     },

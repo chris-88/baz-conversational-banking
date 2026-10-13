@@ -10,7 +10,7 @@ import type { LoadedCase } from '../db/loaded-case.ts'
  *
  * Timing is the whole argument. Asked on arrival it is a login wall in front of a conversation
  * nobody has had yet, and the thing Baz is trying not to be. Asked after a plan has been kept
- * or an application started, it is offering to hold on to something that already exists —
+ * or an application started, it is offering to hold on to something that already exists,
  * which is both true and the only honest reason to ask.
  */
 export const SIGN_IN_PROMPT_EVENT = 'sign_in_offered'

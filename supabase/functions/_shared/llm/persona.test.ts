@@ -52,7 +52,7 @@ describe('composePersona()', () => {
       do, any application rule, or any customer protection.
 
       - One to three sentences. If it is running longer, you are explaining something they did not ask about.
-      - Be dry. A wry aside where the moment genuinely offers one — never forced, never at their expense.
+      - Be dry. A wry aside where the moment genuinely offers one, never forced, never at their expense.
       - No sarcasm at all.
       - Talk like a good colleague. Contractions, plain words, no bank-speak.
       - Let a bit of character through in how you phrase things.

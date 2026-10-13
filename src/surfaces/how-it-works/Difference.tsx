@@ -27,7 +27,7 @@ const ROWS: readonly Row[] = [
     moment: 'Working out what you need',
     form: 'You choose the product first, from a menu, before anyone has asked what you are trying to do.',
     chatbot: 'It can explain the products if you name one, and ask you which you meant if you do not.',
-    baz: 'You describe the situation — buying a place, a baby coming, wanting to stop renting — and what you need is worked out from it.',
+    baz: 'You describe the situation (buying a place, a baby coming, wanting to stop renting) and what you need is worked out from it.',
   },
   {
     moment: 'Wanting more than one thing',

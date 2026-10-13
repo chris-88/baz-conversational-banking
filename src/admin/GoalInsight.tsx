@@ -38,7 +38,7 @@ const TIER_LABELS: Record<string, string> = {
 }
 
 const TIER_NOTES: Record<string, string> = {
-  primary: 'The goal they named. Not the best-evidenced one — the one they said out loud.',
+  primary: 'The goal they named. Not the best-evidenced one, the one they said out loud.',
   strong_related: 'Established, and genuinely connected. Baz may raise one of these.',
   secondary: 'Enough evidence to hold as context. Not enough to bring up unprompted.',
   deferred: 'Remembered, with the condition that would make it worth raising again.',

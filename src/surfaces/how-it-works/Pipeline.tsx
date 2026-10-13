@@ -98,7 +98,7 @@ const TOOLS: readonly { readonly name: string; readonly what: string }[] = [
   { name: 'show_review', what: 'Names an application. The server builds the review from the database, not from model text.' },
   { name: 'show_status', what: 'Renders the status card from the database, independently of anything the model said.' },
   { name: 'show_pause_prompt', what: 'Offers to pause. The customer confirms in the card.' },
-  { name: 'show_form', what: 'Opens a structured form — the only route by which sensitive data is ever collected.' },
+  { name: 'show_form', what: 'Opens a structured form, the only route by which sensitive data is ever collected.' },
   { name: 'request_upload', what: 'Can only reference a document request that already exists.' },
   { name: 'show_partner_invite', what: 'Offers to invite a second person. Offers.' },
 ]
@@ -194,7 +194,7 @@ export function Pipeline(): ReactNode {
       <Section
         eyebrow="Stage 01"
         title="What the model is allowed to know"
-        lede="The model does not query the database and has no memory of its own. It receives a digest — a rendered summary built from controlled data, rebuilt from scratch on every turn."
+        lede="The model does not query the database and has no memory of its own. It receives a digest: a rendered summary built from controlled data, rebuilt from scratch on every turn."
       >
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Panel title="Facts carry provenance">
@@ -228,7 +228,7 @@ export function Pipeline(): ReactNode {
       </Section>
 
       <Section
-        eyebrow="Stage 02 — the controls"
+        eyebrow="Stage 02: the controls"
         title="The gate"
         lede="Domain restriction is not an instruction in a prompt asking the model nicely to stay on topic. It is a separate decision made in front of the model, and a blocked message never reaches it."
       >
@@ -295,7 +295,7 @@ export function Pipeline(): ReactNode {
               frustrated about their mortgage is a customer, not an abuse case.
             </p>
             <p>
-              A <strong>sensitive</strong> flag — bereavement, illness, financial distress, a
+              A <strong>sensitive</strong> flag for bereavement, illness, financial distress, a
               declined application — forces humour and playfulness to zero for that turn and
               suppresses product offers entirely.
             </p>
@@ -324,7 +324,7 @@ export function Pipeline(): ReactNode {
       <Section
         eyebrow="Stage 03"
         title="What the model is actually sent"
-        lede="The system prompt is assembled in a fixed order, immutable parts first. That order is not stylistic: everything above the break is identical for every customer and every conversation, which is what makes it cacheable — and what makes it impossible for anything downstream to edit."
+        lede="The system prompt is assembled in a fixed order, immutable parts first. That order is not stylistic: everything above the break is identical for every customer and every conversation, which is what makes it cacheable, and what makes it impossible for anything downstream to edit."
       >
         <div className="mt-7 space-y-0.5">
           {LAYERS.map((layer, index) => (
@@ -374,7 +374,7 @@ export function Pipeline(): ReactNode {
       </Section>
 
       <Section
-        eyebrow="Stage 03 — the boundary"
+        eyebrow="Stage 03: the boundary"
         title="Twelve tools, none of which can do anything"
         lede="The model has a fixed tool set. Eleven of the twelve render something on screen. Exactly one writes data, and it is the most constrained of the lot."
       >

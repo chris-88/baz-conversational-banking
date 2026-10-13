@@ -19,14 +19,14 @@ const FEATURES: readonly {
 }[] = [
   {
     name: 'Works out what you are trying to do',
-    what: 'You describe a situation — moving in together, a baby coming, wanting to stop renting — and Baz works out which products that implies, rather than asking you to pick from a menu.',
+    what: 'You describe a situation (moving in together, a baby coming, wanting to stop renting) and Baz works out which products that implies, rather than asking you to pick from a menu.',
     how: 'Conditions over facts, scored and combined. A goal is worth mentioning at 0.5 and established at 0.75. The model never matches on phrases.',
     decides: 'code',
   },
   {
     name: 'Quotes the bank’s real mortgage rates',
     what: 'Published rates for your buyer type, BER, amount and term, with the repayment worked out and the cashback trade-off spelled out in euro.',
-    how: '133 published rows. Which ones you are entitled to see is decided in code — including refusing to price a BER the bank has not published.',
+    how: '133 published rows. Which ones you are entitled to see is decided in code, including refusing to price a BER the bank has not published.',
     decides: 'code',
   },
   {
@@ -55,7 +55,7 @@ const FEATURES: readonly {
   },
   {
     name: 'Comes back to you',
-    what: 'A notification on your phone when the target is hit or an application moves — not an email you have to go looking for.',
+    what: 'A notification on your phone when the target is hit or an application moves, not an email you have to go looking for.',
     how: 'Web Push, straight to the browser’s push service. No per-message charge and nothing to register.',
     decides: 'code',
   },
@@ -95,7 +95,7 @@ const TRANSCRIPT: readonly {
       },
       {
         decides: 'model',
-        text: '"Next year" becomes a date, because the prompt carries today’s date — without it this is a clarifying question the case believes was never answered.',
+        text: '"Next year" becomes a date, because the prompt carries today’s date. Without it this is a clarifying question the case believes was never answered.',
       },
       {
         decides: 'code',
@@ -109,7 +109,7 @@ const TRANSCRIPT: readonly {
     beneath: [
       {
         decides: 'code',
-        text: 'Four more facts. Two incomes with different subjects — hers will never satisfy a requirement that wants his.',
+        text: 'Four more facts. Two incomes with different subjects: hers will never satisfy a requirement that wants his.',
       },
       {
         decides: 'model',
@@ -127,7 +127,7 @@ const TRANSCRIPT: readonly {
       },
       {
         decides: 'model',
-        text: 'Asks for the two it is missing rather than guessing or quoting a range. "I can pull that up" is true — it holds the bank’s published table.',
+        text: 'Asks for the two it is missing rather than guessing or quoting a range. "I can pull that up" is true: it holds the bank’s published table.',
       },
     ],
   },
@@ -145,7 +145,7 @@ const TRANSCRIPT: readonly {
       },
       {
         decides: 'model',
-        text: 'Explains the trade-off the pack asks for by name — the lowest rate carries no cashback, so the cheaper one depends on how long they stay.',
+        text: 'Explains the trade-off the pack asks for by name: the lowest rate carries no cashback, so the cheaper one depends on how long they stay.',
       },
     ],
   },
@@ -172,7 +172,7 @@ export function WhatItDoes(): ReactNode {
       <Section
         eyebrow="What it does"
         title="Ten things, and only one of them is the writing"
-        lede="Almost everything below is ordinary code. The model is what makes it sound like a person asking, which is the part it is genuinely best at — and the part that would be hardest to replace."
+        lede="Almost everything below is ordinary code. The model is what makes it sound like a person asking, which is the part it is genuinely best at, and the part that would be hardest to replace."
       >
         <div className="mt-7 space-y-2">
           {FEATURES.map((feature) => (
@@ -211,7 +211,7 @@ export function WhatItDoes(): ReactNode {
       <Section
         eyebrow="A real conversation"
         title="Four messages, from hello to priced options"
-        lede="This was run against the live system. Every reply is Baz's own words — nothing here is an illustration of what it might have said. Underneath each turn is what actually happened."
+        lede="This was run against the live system. Every reply is Baz's own words. Nothing here is an illustration of what it might have said. Underneath each turn is what actually happened."
       >
         <div className="mt-7 space-y-5">
           {TRANSCRIPT.map((turn, index) => (

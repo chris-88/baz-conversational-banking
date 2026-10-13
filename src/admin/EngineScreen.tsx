@@ -71,7 +71,7 @@ export function EngineScreen(): ReactNode {
     <div className="@container @3xl:h-full @3xl:min-h-0 flex flex-col gap-4">
       <PageHeader
         title="Goals and needs"
-        description="The catalogue the engines read. Conditions over facts, scored and combined — not phrases the model matches on."
+        description="The catalogue the engines read. Conditions over facts, scored and combined, not phrases the model matches on."
         actions={
           edited > 0 ? (
             <span className="text-muted-foreground text-xs">

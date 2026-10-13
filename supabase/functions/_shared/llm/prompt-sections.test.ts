@@ -166,7 +166,7 @@ describe('what the engine governs', () => {
 
   it('scopes the need scores to what Baz volunteers', () => {
     expect(prompt).toMatch(/governs what you volunteer, and nothing else/i)
-    expect(prompt).toMatch(/has asked — and "the engine has not scored it highly enough yet"/i)
+    expect(prompt).toMatch(/has asked, and "the engine has not scored it highly enough yet"/i)
   })
 
   it('says a rough timeframe is still an answer', () => {

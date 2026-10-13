@@ -54,7 +54,7 @@ export function PartnerJoin(): ReactNode {
         // thing from here: this link will not get them in.
         if (!cancelled) {
           setError(
-            'That invitation link isn’t valid. It may have expired or already been used — ask ' +
+            'That invitation link isn’t valid. It may have expired or already been used. Ask ' +
               'for a new one.',
           )
         }

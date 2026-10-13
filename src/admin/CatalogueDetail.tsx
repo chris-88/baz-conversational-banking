@@ -223,7 +223,7 @@ export function NeedDetail({
             {
               label: 'Sensitivity',
               value: need.sensitive
-                ? 'sensitive — humour is forced off and no product is offered on that turn'
+                ? 'sensitive: humour is forced off and no product is offered on that turn'
                 : 'standard',
             },
             ...lifecycle(override),
@@ -544,7 +544,7 @@ function lifecycle(
 ): readonly { readonly label: string; readonly value: string; readonly muted?: boolean }[] {
   if (override === undefined) {
     return [
-      { label: 'Wording', value: 'as compiled into the build — never reworded', muted: true },
+      { label: 'Wording', value: 'as compiled into the build, never reworded', muted: true },
     ]
   }
 

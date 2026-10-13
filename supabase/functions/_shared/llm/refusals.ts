@@ -1,7 +1,7 @@
 import type { DomainCategoryId } from '../tenants/boi/domain-config.ts'
 
 /**
- * §26 — off-domain responses.
+ * §26, off-domain responses.
  *
  * Short, and they never contain the prohibited answer. The pattern the specification
  * explicitly rules out is answering the question and appending a banking disclaimer

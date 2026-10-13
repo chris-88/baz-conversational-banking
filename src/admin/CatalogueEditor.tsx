@@ -209,7 +209,7 @@ function Form({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="compiled">
-                  As compiled — {editing.entry.priority.replaceAll('_', ' ')}
+                  As compiled: {editing.entry.priority.replaceAll('_', ' ')}
                 </SelectItem>
                 {NEED_PRIORITIES.map((priority) => (
                   <SelectItem key={priority} value={priority} className="capitalize">

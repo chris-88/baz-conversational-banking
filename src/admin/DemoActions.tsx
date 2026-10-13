@@ -66,7 +66,7 @@ export function DemoActions({
             note={
               savings.data?.reached === true
                 ? `Reached €${savings.data.target?.toLocaleString('en-IE') ?? ''}. They have something to come back for.`
-                : 'Months pass and the money is there — the thing the bank said it would watch for. §41'
+                : 'Months pass and the money is there, the thing the bank said it would watch for. §41'
             }
             disabled={savings.isPending}
             onClick={() => savings.mutate()}

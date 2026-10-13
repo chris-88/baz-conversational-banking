@@ -82,7 +82,7 @@ export function ProfileScreen({
                 items={[
                   {
                     key: 'Signed in',
-                    value: session.since === null ? '—' : new Date(session.since).toLocaleString(),
+                    value: session.since === null ? 'not yet' : new Date(session.since).toLocaleString(),
                   },
                   {
                     /* The honest version of "permissions". There is one role and it is checked
@@ -188,7 +188,7 @@ function Missing({ name, what }: { readonly name: string; readonly what: string 
         <p className="text-sm font-medium">{name}</p>
         <p className="text-muted-foreground text-xs">{what}</p>
       </div>
-      <Switch checked={false} disabled aria-label={`${name} — not built`} />
+      <Switch checked={false} disabled aria-label={`${name}, not built`} />
     </div>
   )
 }

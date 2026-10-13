@@ -177,7 +177,7 @@ export function ConversationMenu({
           <SheetTitle className="text-base">Your conversations</SheetTitle>
           <SheetDescription className="text-xs">
             {cases.data?.presenter === true
-              ? 'Presenter mode — every conversation on this system.'
+              ? 'Presenter mode: every conversation on this system.'
               : 'Everything you have started with Baz.'}
           </SheetDescription>
         </SheetHeader>
