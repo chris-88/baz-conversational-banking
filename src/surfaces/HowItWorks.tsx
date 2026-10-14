@@ -1,112 +1,103 @@
-import type { ReactNode } from 'react'
-import { useDocumentTitle } from '@/lib/useDocumentTitle'
+import { useCallback, useEffect, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftIcon } from 'lucide-react'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { routes } from '@/app/routes'
-import { WhatItDoes } from './how-it-works/WhatItDoes'
-import { Pipeline } from './how-it-works/Pipeline'
-import { Story } from './how-it-works/Story'
-import { Cost } from './how-it-works/Cost'
+import { CHAPTERS, type ChapterId } from '@/content/how-it-works/copy'
+import { ChapterNav } from './how-it-works/ChapterNav'
+import { useActiveChapter } from './how-it-works/useActiveChapter'
+import { Hero } from './how-it-works/Hero'
+import { Opportunity } from './how-it-works/Opportunity'
+import { Experience } from './how-it-works/Experience'
+import { Architecture } from './how-it-works/Architecture'
+import { Discovery } from './how-it-works/Discovery'
+import { Build } from './how-it-works/Build'
+import { Lessons } from './how-it-works/Lessons'
+import { Economics } from './how-it-works/Economics'
+import { FullReplay } from './how-it-works/FullReplay'
 
 /**
- * The explainer: how the AI is built, how it got that way, and what it costs to run.
+ * The explainer: what this is, how it works, how it got here, and what it costs.
  *
- * Reachable by its own address rather than from the conversation, because it is written for
- * someone evaluating the work rather than someone using it. The three sections are separate
- * addresses so one of them can be sent to somebody on its own.
+ * Written for somebody evaluating the work rather than somebody using the product, which is why
+ * it is at its own address and reads as an article rather than a dashboard. Each chapter pairs
+ * a claim with the evidence for it, and the evidence is real: published definitions, measured
+ * token counts, commits counted out of git.
+ *
+ * Three rules hold the whole page together. Nothing is only legible once it has animated, so
+ * everything works with motion switched off. Every number carries where it came from, because
+ * the draft this replaces had three of four headline figures wrong. And anything the prototype
+ * does not actually do is labelled as a direction rather than described in the present tense.
  */
-
-const SECTIONS = ['what', 'pipeline', 'story', 'cost'] as const
-type SectionId = (typeof SECTIONS)[number]
-
-function isSection(value: string | undefined): value is SectionId {
-  return SECTIONS.some((section) => section === value)
-}
-
 export function HowItWorks(): ReactNode {
   useDocumentTitle('How Baz works')
-  const { section } = useParams()
+
+  const { section } = useParams<{ section: string }>()
   const navigate = useNavigate()
-  const active: SectionId = isSection(section) ? section : 'what'
+  const active = useActiveChapter(CHAPTERS)
+
+  /** A deep link lands on its chapter. One-time, so later scrolling is not fought. */
+  useEffect(() => {
+    if (section === undefined) return
+    if (!CHAPTERS.some((chapter) => chapter === section)) return
+    document.getElementById(section)?.scrollIntoView({ block: 'start' })
+  }, [section])
+
+  /* The address follows the reader, replacing rather than pushing: the back button should
+   * leave the page, not walk back through it. */
+  useEffect(() => {
+    if (section === active) return
+    void navigate(`${routes.howItWorks}/${active}`, { replace: true })
+  }, [active, navigate, section])
+
+  const jump = useCallback((chapter: ChapterId) => {
+    document.getElementById(chapter)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   return (
     <div className="bg-background min-h-dvh">
-      <header className="border-border/60 border-b">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-5">
-          <Link to={routes.landing} className="flex items-center gap-3">
-            <BazWordmark className="h-7" />
-          </Link>
-          <span className="bg-border hidden h-5 w-px sm:block" />
-          <span className="text-muted-foreground hidden text-sm sm:block">How it works</span>
-          <Button asChild variant="ghost" size="sm" className="ml-auto">
+      <header className="border-b">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <BazWordmark className="h-5 w-auto" />
+            <span aria-hidden className="bg-border h-4 w-px" />
+            <span className="text-muted-foreground text-sm">How it works</span>
+          </div>
+          <Button asChild variant="ghost" size="sm" className="gap-1.5">
             <Link to={routes.baz}>
-              <ArrowLeftIcon />
+              <ArrowLeftIcon className="size-4" />
               Back to Baz
             </Link>
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl px-6 pb-20">
-        <div className="pt-10 sm:pt-14">
-          <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-5xl">
-            How Baz works
-          </h1>
-          <p className="text-muted-foreground mt-4 max-w-xl text-base text-pretty sm:text-lg">
-            What it can do, what the AI is actually doing underneath, what stops it doing the
-            wrong thing, how it changed while it was being built, and what it costs to run.
-          </p>
-        </div>
+      <main className="mx-auto max-w-5xl px-4 sm:px-6">
+        <Hero />
+        <ChapterNav active={active} onJump={jump} />
 
-        <Tabs
-          value={active}
-          onValueChange={(next) => {
-            void navigate(next === 'what' ? routes.howItWorks : `${routes.howItWorks}/${next}`)
-          }}
-          className="mt-8"
-        >
-          {/* Scrolls rather than hiding the last tab on a phone. */}
-          <TabsList className="max-w-full justify-start overflow-x-auto">
-            <TabsTrigger value="what">What it does</TabsTrigger>
-            <TabsTrigger value="pipeline">How it works</TabsTrigger>
-            <TabsTrigger value="story">The story</TabsTrigger>
-            <TabsTrigger value="cost">What it costs</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="what">
-            <WhatItDoes />
-          </TabsContent>
-          <TabsContent value="pipeline">
-            <Pipeline />
-          </TabsContent>
-          <TabsContent value="story">
-            <Story />
-          </TabsContent>
-          <TabsContent value="cost">
-            <Cost />
-          </TabsContent>
-        </Tabs>
-
-        <footer className="text-muted-foreground border-border mt-4 border-t pt-8 text-sm">
-          <p className="max-w-[62ch]">
-            <strong className="text-foreground font-semibold">A note on the data.</strong> Product
-            information is Bank of Ireland&rsquo;s real published catalogue. The bank side is
-            invented: customer records, balances and the simulated sign-in hold no real
-            credentials and no real customer data.{' '}
-            <strong className="text-foreground font-semibold">
-              What a visitor types is not synthetic.
-            </strong>{' '}
-            It is real, and it is stored, which is the thing being demonstrated.{' '}
-            <Link className="underline" to={routes.privacy}>
-              how your data is used
-            </Link>{' '}
-            says what happens to it.
-          </p>
-        </footer>
+        <Opportunity />
+        <Experience />
+        <Architecture />
+        <Discovery />
+        <Build />
+        <Lessons />
+        <Economics />
+        <FullReplay />
       </main>
+
+      <footer className="border-t py-8">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
+          <p className="text-muted-foreground text-xs">
+            A Bank of Ireland prototype. Not a banking service, and nothing in it reaches a bank.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to={routes.baz}>Try it</Link>
+          </Button>
+        </div>
+      </footer>
     </div>
   )
 }

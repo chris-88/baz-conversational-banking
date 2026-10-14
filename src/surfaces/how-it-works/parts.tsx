@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -165,6 +166,101 @@ export function Figures({
           <span className="block text-2xl font-bold tracking-tight tabular-nums">{item.value}</span>
           <span className="text-muted-foreground mt-1 block text-xs leading-snug">
             {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * What kind of claim this is.
+ *
+ * The page makes three different kinds and a reader has to be able to tell them apart without
+ * reading carefully: something the prototype actually does, something a production system
+ * would do, and a number somebody worked out. Spec §26 asks for exactly this, and it is also
+ * the difference between a case study and a sales deck.
+ */
+export type ClaimKind = 'poc' | 'production' | 'illustrative' | 'synthetic' | 'measured'
+
+const CLAIM: Readonly<Record<ClaimKind, { readonly text: string; readonly tone: string }>> = {
+  poc: { text: 'POC', tone: 'bg-primary/10 text-primary' },
+  production: { text: 'Production direction', tone: 'bg-muted text-muted-foreground' },
+  illustrative: { text: 'Illustrative', tone: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
+  synthetic: { text: 'Synthetic example', tone: 'bg-muted text-muted-foreground' },
+  measured: {
+    text: 'Measured',
+    tone: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  },
+}
+
+export function Claim({ kind }: { readonly kind: ClaimKind }): ReactNode {
+  const claim = CLAIM[kind]
+  return (
+    <span
+      className={cn(
+        'inline-block rounded-[3px] px-1.5 py-0.5 font-mono text-[10.5px] font-medium tracking-[0.07em] uppercase',
+        claim.tone,
+      )}
+    >
+      {claim.text}
+    </span>
+  )
+}
+
+/**
+ * An editorial reveal that does nothing when motion is not wanted.
+ *
+ * Reduced motion gets the final state immediately rather than a faster animation: somebody who
+ * has asked for no movement has not asked for quicker movement. Nothing on this page is only
+ * legible once it has animated, which is the rule that makes that safe.
+ */
+export function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  readonly children: ReactNode
+  readonly delay?: number
+  readonly className?: string
+}): ReactNode {
+  const still = useReducedMotion()
+
+  if (still === true) return <div className={className}>{children}</div>
+
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/** A measured figure, with the measurement that produced it. */
+export function SourcedFigures({
+  items,
+}: {
+  readonly items: readonly {
+    readonly value: string
+    readonly label: string
+    readonly basis: string
+  }[]
+}): ReactNode {
+  return (
+    <div className="bg-border mt-7 grid gap-px overflow-hidden rounded-md border sm:grid-cols-2 lg:grid-cols-4">
+      {items.map((item) => (
+        <div key={item.label} className="bg-card p-4">
+          <span className="block text-2xl font-bold tracking-tight tabular-nums">{item.value}</span>
+          <span className="text-muted-foreground mt-1 block text-xs leading-snug">
+            {item.label}
+          </span>
+          <span className="text-muted-foreground/70 mt-2 block text-[11px] leading-snug">
+            {item.basis}
           </span>
         </div>
       ))}
