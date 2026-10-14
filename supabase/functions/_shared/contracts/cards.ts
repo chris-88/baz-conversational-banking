@@ -187,6 +187,26 @@ export const formDeclarationsCardSchema = z.object({
   ).min(1),
 })
 
+/**
+ * A document the bank's own form asks for, with the form's own limits.
+ *
+ * The accepted types and the size cap are read out of the published control rather than chosen
+ * by us: `maxFileSize: 2` and `jpg, png, jpeg, pdf` are what the definition says, and enforcing
+ * our own rule instead would mean accepting a file the real journey would reject.
+ */
+export const formUploadCardSchema = z.object({
+  type: z.literal('form_upload'),
+  applicationId,
+  /** The row the file is attached to, which is also what authorises the upload. */
+  formApplicationId: z.uuid(),
+  fieldId: z.string(),
+  /** The form's own words for the document. */
+  label: z.string(),
+  formName: z.string(),
+  acceptedExtensions: z.array(z.string()),
+  maxFileSizeMb: z.number().nullable(),
+})
+
 export const pausePromptCardSchema = z.object({
   type: z.literal('pause_prompt'),
   applicationId,
@@ -354,6 +374,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   planProposalCardSchema,
   consentCardSchema,
   formDeclarationsCardSchema,
+  formUploadCardSchema,
   healthFormCardSchema,
   productOptionCardSchema,
   comparisonCardSchema,
@@ -382,6 +403,7 @@ export const CARD_TYPES = [
   'upload_request',
   'consent',
   'form_declarations',
+  'form_upload',
   'health_form',
   'mortgage_rates',
   'data_notice',

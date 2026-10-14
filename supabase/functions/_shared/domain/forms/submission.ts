@@ -42,7 +42,7 @@ export type SubmissionEntry = {
 }
 
 /** Structure rather than questions: nothing here is ever asked or submitted. */
-const STRUCTURAL = new Set(['html', 'section', 'page', 'accordion', 'form_module', 'file_preview'])
+const STRUCTURAL = new Set(['html', 'section', 'page', 'accordion', 'form_module'])
 
 /** Types whose values should not be shown in full in an inspector. */
 const SENSITIVE = new Set([
@@ -59,6 +59,33 @@ const SENSITIVE = new Set([
 
 const text = (value: unknown): string =>
   typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : ''
+
+/**
+ * A file attached to one of the form's upload controls.
+ *
+ * A reference, never bytes. What is recorded is enough to show which file answered which
+ * control, and nothing that could pass for the real upload service's receipt.
+ */
+export type FormUpload = {
+  readonly fileName: string
+  readonly storagePath: string
+  readonly sizeBytes?: number
+  readonly mimeType?: string
+}
+
+function asUpload(value: unknown): FormUpload | null {
+  if (typeof value !== 'object' || value === null) return null
+  const candidate = value as { fileName?: unknown; storagePath?: unknown; sizeBytes?: unknown; mimeType?: unknown }
+  if (typeof candidate.fileName !== 'string' || typeof candidate.storagePath !== 'string') {
+    return null
+  }
+  return {
+    fileName: candidate.fileName,
+    storagePath: candidate.storagePath,
+    ...(typeof candidate.sizeBytes === 'number' ? { sizeBytes: candidate.sizeBytes } : {}),
+    ...(typeof candidate.mimeType === 'string' ? { mimeType: candidate.mimeType } : {}),
+  }
+}
 
 /** `{ years, months }`, as the prefill tables produce for a duration control. */
 function isDuration(value: unknown): value is { years: number; months: number } {
@@ -217,6 +244,7 @@ export function buildSubmission(input: BuildInput): GeneratedSubmission {
   const active = new Set(state.active.map((field) => field.id))
 
   const ndi = new Map((input.ndi ?? []).map((outcome) => [outcome.fieldId, outcome]))
+  const uploads: { fieldId: string; upload: FormUpload }[] = []
 
   for (const field of definition.fields) {
     if (STRUCTURAL.has(field.type)) continue
@@ -236,6 +264,47 @@ export function buildSubmission(input: BuildInput): GeneratedSubmission {
       continue
     }
 
+    /*
+     * An upload control sends no value of its own.
+     *
+     * The captured submission carries nothing for `input_151` and instead carries a manifest,
+     * `gform_uploaded_files`, appended at the very end. The file bytes went somewhere else
+     * entirely, before the form was submitted, which is why this is a two-stage thing.
+     */
+    if (field.type === 'fileupload') {
+      const attached = asUpload(state.values[field.id])
+      if (attached) uploads.push({ fieldId: field.id, upload: attached })
+      continue
+    }
+
+    /*
+     * A preview control reports the state of the file beside it.
+     *
+     * `fileFields: ["input_151"]` is the control saying which upload it is showing, so it says
+     * "previewing" exactly when that upload has something to preview, which is what the real
+     * submission carries.
+     */
+    if (field.type === 'file_preview') {
+      const watching = (field.platform?.['fileFields'] ?? []) as unknown
+      const watched = Array.isArray(watching)
+        ? (watching as unknown[]).map((entry) => String(entry).replace(/^input_/, ''))
+        : []
+
+      const ready = watched.some((id) => asUpload(state.values[id]) !== null)
+      if (!ready) continue
+
+      entries.push({
+        key: `input_${field.id}`,
+        value: 'previewing',
+        source: 'derived',
+        fieldId: field.id,
+        label: field.label,
+        toscana: toscanaOf(field),
+        sensitive: false,
+      })
+      continue
+    }
+
     const derived = Object.prototype.hasOwnProperty.call(state.derived, field.id)
     const answered = Object.prototype.hasOwnProperty.call(state.values, field.id)
     if (!answered) continue
@@ -252,6 +321,40 @@ export function buildSubmission(input: BuildInput): GeneratedSubmission {
             : 'answer'
 
     entries.push(...entriesFor(field, state.values[field.id], source))
+  }
+
+  /*
+   * The upload manifest, appended before the runtime values as the capture shows.
+   *
+   * Two fields of each entry are deliberately absent. The genuine journey uploads to a service
+   * that issues `x-file-hash` and `x-signed-file-hash`, and those are the one thing in this
+   * feature that must never be invented: a fabricated signature is a forged credential,
+   * however synthetic the file it describes. The console shows the gap and names what fills it.
+   */
+  if (uploads.length > 0) {
+    const manifest: Record<string, unknown[]> = {}
+    for (const { fieldId, upload } of uploads) {
+      manifest[`input_${fieldId}`] = [
+        {
+          temp_filename: upload.storagePath,
+          uploaded_filename: upload.fileName,
+          size_bytes: upload.sizeBytes,
+          content_type: upload.mimeType,
+          'x-file-hash': null,
+          'x-signed-file-hash': null,
+        },
+      ]
+    }
+
+    entries.push({
+      key: 'gform_uploaded_files',
+      value: JSON.stringify(manifest),
+      source: 'derived',
+      fieldId: null,
+      label: 'Uploaded files',
+      toscana: null,
+      sensitive: false,
+    })
   }
 
   /*

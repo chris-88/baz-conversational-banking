@@ -482,6 +482,21 @@ export function BazChat({
         'Say what is still outstanding on that application.',
       )
     },
+    onAttachFormDocument: async (formApplicationId, fieldId, file) => {
+      setActionError(null)
+      const form = new FormData()
+      form.append('formApplicationId', formApplicationId)
+      form.append('fieldId', fieldId)
+      form.append('file', file)
+
+      // Throws on failure so the card says so where the customer is looking.
+      await callFunctionWithFile('upload', form)
+      void send(
+        `I attached ${file.name}.`,
+        'action',
+        'Confirm it is attached and say what is left.',
+      )
+    },
     onConfirmDeclarations: async (applicationId, fieldIds) => {
       await commit(
         { action: 'confirm_form_declarations', applicationId, fieldIds: [...fieldIds] },

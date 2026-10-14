@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { serveJson } from '../_shared/http/serve.ts'
-import type { Database } from '../_shared/db/database.types.ts'
+import type { Database, Json } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   mustWrite,
   writeEvent,
 } from '../_shared/db/case-repository.ts'
+import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
 
 /**
  * `upload` — the only way a document enters a case (§6 Stage 7, §10).
@@ -67,9 +68,21 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
   }
 
   const requestId = form.get('requestId')
+  const formApplicationId = form.get('formApplicationId')
+  const fieldId = form.get('fieldId')
   const file = form.get('file')
 
-  if (typeof requestId !== 'string' || requestId.length === 0) {
+  /*
+   * Two kinds of document, and they are not the same thing.
+   *
+   * A journey document answers a requirement Baz wrote, and is tracked in `documents` with a
+   * verification state the bank controls. A form document answers an upload control on the
+   * bank's own published form, and is a reference in a packet. Mixing them would mean
+   * inventing a requirement id for every upload field on every form the bank publishes.
+   */
+  const toForm = typeof formApplicationId === 'string' && formApplicationId.length > 0
+
+  if (!toForm && (typeof requestId !== 'string' || requestId.length === 0)) {
     return errorResponse('bad_request', 'Which document is this for?')
   }
   if (!(file instanceof File)) return errorResponse('bad_request', 'No file was attached.')
@@ -81,8 +94,22 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     return errorResponse('bad_request', 'Send a PDF or a photo.')
   }
 
+  if (toForm) {
+    return await attachToForm({
+      admin,
+      authUserId,
+      formApplicationId,
+      fieldId: typeof fieldId === 'string' ? fieldId : '',
+      file,
+    })
+  }
+
   // The open request is the authorisation: it names the application, and the application names
   // the case the caller must be a participant in.
+  if (typeof requestId !== 'string') {
+    return errorResponse('bad_request', 'Which document is this for?')
+  }
+
   const requestRow = await admin
     .from('application_requests')
     .select('id, status, requirement_id, application_id, applications!inner(case_id)')
@@ -152,3 +179,112 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
   return json(ok({ fileName: file.name, requirementId: row.requirement_id }), 200)
 })
+
+/**
+ * A file attached to an upload control on the bank's own form.
+ *
+ * What goes in the packet is a reference, never the bytes and never a signature. The genuine
+ * journey uploads to a service that issues `x-file-hash` and `x-signed-file-hash`, and those
+ * are the one thing in this whole feature that must not be invented: a fabricated signature is
+ * a forged credential, however synthetic the file it describes (§9 of the feature note).
+ */
+async function attachToForm(input: {
+  admin: ReturnType<typeof createClient<Database>>
+  authUserId: string
+  formApplicationId: string
+  fieldId: string
+  file: File
+}): Promise<Response> {
+  const { admin, file } = input
+
+  if (input.fieldId === '') return errorResponse('bad_request', 'Which part of the form is this for?')
+
+  const row = await admin
+    .from('form_applications')
+    .select('id, case_id, form_id')
+    .eq('id', input.formApplicationId)
+    .maybeSingle()
+
+  if (row.error) return errorResponse('conflict', row.error.message)
+  if (!row.data) return errorResponse('not_found', 'There is no such form application.')
+
+  const caseId = row.data.case_id
+
+  const session = await admin
+    .from('participant_sessions')
+    .select('participant_id, participants!inner(case_id, role)')
+    .eq('auth_user_id', input.authUserId)
+    .limit(50)
+
+  const attached = ((session.data ?? []) as any[]).find(
+    (entry) => entry.participants?.case_id === caseId,
+  )
+  if (!attached) return errorResponse('forbidden', 'This is not your case.')
+
+  const snapshot = formSnapshot(row.data.form_id)
+  const field = snapshot?.definition.fields.find((candidate) => candidate.id === input.fieldId)
+  if (!field || field.type !== 'fileupload') {
+    return errorResponse('bad_request', 'That is not a document this form asks for.')
+  }
+
+  /*
+   * The form's own limits, not ours.
+   *
+   * The control declares `maxFileSize` in megabytes and the extensions it accepts. Enforcing
+   * the published rule rather than a rule of our own is the same principle as everywhere else
+   * here: the definition is the contract.
+   */
+  const maxMb = Number(field.platform?.['maxFileSize'] ?? 0)
+  if (Number.isFinite(maxMb) && maxMb > 0 && file.size > maxMb * 1024 * 1024) {
+    return errorResponse('bad_request', `That file is larger than ${String(maxMb)}MB.`)
+  }
+
+  const allowed = String(field.platform?.['allowedExtensions'] ?? '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0)
+
+  const extension = file.name.includes('.')
+    ? file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase()
+    : ''
+
+  if (allowed.length > 0 && !allowed.includes(extension)) {
+    return errorResponse('bad_request', `This one takes ${allowed.join(', ')}.`)
+  }
+
+  const storagePath = `${caseId}/form-${row.data.form_id}-${input.fieldId}-${crypto.randomUUID()}.${extension}`
+
+  const stored = await admin.storage
+    .from('documents')
+    .upload(storagePath, file, { contentType: file.type, upsert: false })
+
+  if (stored.error) return errorResponse('internal', 'That upload did not complete.')
+
+  mustWrite(
+    await admin.from('form_answers').upsert(
+      {
+        form_application_id: row.data.id,
+        field_id: input.fieldId,
+        value: {
+          fileName: file.name,
+          sizeBytes: file.size,
+          mimeType: file.type,
+          storagePath,
+        } as unknown as Json,
+        source: 'document',
+        participant_id: attached.participant_id,
+      },
+      { onConflict: 'form_application_id,field_id' },
+    ),
+    'the document reference',
+  )
+
+  await writeEvent(admin, {
+    caseId,
+    type: 'document_uploaded',
+    actor: attached.participants.role === 'partner' ? 'partner' : 'customer',
+    payload: { form: row.data.form_id, fieldId: input.fieldId, fileName: file.name },
+  })
+
+  return json(ok({ fileName: file.name, fieldId: input.fieldId }), 200)
+}

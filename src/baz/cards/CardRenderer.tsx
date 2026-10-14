@@ -5,6 +5,7 @@ import { QuoteCard } from '@/baz/cards/QuoteCard'
 import type { SubscribeResult } from '@/lib/push'
 import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
 import { FormDeclarationsCard } from '@/baz/cards/FormDeclarationsCard'
+import { FormUploadCard } from '@/baz/cards/FormUploadCard'
 import { SignInCard } from '@/baz/cards/SignInCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
@@ -59,6 +60,12 @@ export type CardActions = {
   /** Resolves true only when the server accepted the plan. */
   readonly onConfirmPlan?: (planId: string) => Promise<boolean> | boolean
   readonly onDeclinePlan?: (planId: string) => Promise<void> | void
+  /** A file attached to one of the bank form's own upload controls. */
+  readonly onAttachFormDocument?: (
+    formApplicationId: string,
+    fieldId: string,
+    file: File,
+  ) => Promise<void> | void
   /** Every declaration the bank's form requires, confirmed in one tap after each is ticked. */
   readonly onConfirmDeclarations?: (
     applicationId: string,
@@ -97,6 +104,15 @@ export function CardRenderer({
 
     case 'data_notice':
       return <DataNoticeCard card={card} />
+
+    case 'form_upload':
+      return (
+        <FormUploadCard
+          card={card}
+          {...(actions.onAttachFormDocument ? { onAttach: actions.onAttachFormDocument } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
 
     case 'form_declarations':
       return (

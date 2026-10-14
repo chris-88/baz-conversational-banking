@@ -48,6 +48,9 @@ export const recordFormAnswersInput = z.object({
 
 export const showFormDeclarationsInput = z.object({ applicationId: z.uuid() })
 
+/** Which application; the server decides which document the form is waiting for. */
+export const showFormUploadInput = z.object({ applicationId: z.uuid() })
+
 export const recordFactsInput = z.object({
   facts: z
     .array(
@@ -214,6 +217,7 @@ export const TOOL_INPUTS = {
   record_facts: recordFactsInput,
   record_form_answers: recordFormAnswersInput,
   show_form_declarations: showFormDeclarationsInput,
+  show_form_upload: showFormUploadInput,
   show_product_options: showProductOptionsInput,
   show_review: showReviewInput,
   show_pause_prompt: showPausePromptInput,
@@ -260,6 +264,13 @@ export const TOOLS: readonly ToolDefinition[] = [
       'tick. Use this when the only things left are declarations. You cannot record them any ' +
       'other way.',
     schema: showFormDeclarationsInput,
+  },
+  {
+    name: 'show_form_upload',
+    description:
+      'Ask for a document the bank form requires, so the customer can attach it. The server ' +
+      'decides which document is next and what the form accepts.',
+    schema: showFormUploadInput,
   },
   {
     name: 'show_product_options',

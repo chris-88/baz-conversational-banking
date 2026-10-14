@@ -201,3 +201,83 @@ describe('controls that are more than one entry', () => {
     ])
   })
 })
+
+/**
+ * The document half of the packet, which is a reference and never bytes.
+ *
+ * The captured submission carries nothing for the upload field itself. The file went somewhere
+ * else before the form was submitted, and what travels with the form is a manifest naming it,
+ * plus the preview control reporting that there is something to preview.
+ */
+describe('documents', () => {
+  const uploadForm = formDefinitionSchema.parse({
+    id: '1940',
+    title: 'test',
+    fields: [
+      { id: '151', type: 'fileupload', label: 'PPS number document', toscana: 'PPSN_Document' },
+      { id: '436', type: 'file_preview', label: 'File Preview', fileFields: ['input_151'] },
+    ],
+  })
+
+  const attached = {
+    151: {
+      fileName: 'payslip.pdf',
+      storagePath: 'case-1/form-1940-151-abc.pdf',
+      sizeBytes: 90_000,
+      mimeType: 'application/pdf',
+    },
+  }
+
+  it('sends a manifest rather than a value on the upload field', () => {
+    const packet = buildSubmission({
+      definition: uploadForm,
+      answers: attached,
+      pageLocation: 'https://example.test',
+    })
+
+    expect(packet.entries.map((e) => e.key)).not.toContain('input_151')
+
+    const manifest = packet.entries.find((e) => e.key === 'gform_uploaded_files')
+    expect(manifest).toBeDefined()
+
+    const parsed = JSON.parse(manifest?.value ?? '{}') as Record<string, { uploaded_filename: string }[]>
+    expect(parsed['input_151']?.[0]?.uploaded_filename).toBe('payslip.pdf')
+  })
+
+  /**
+   * The one thing in this feature that must never be invented. The real upload service issues
+   * these; a plausible-looking signature from us would be a forged credential, whatever the
+   * file behind it is.
+   */
+  it('leaves the production signatures empty', () => {
+    const packet = buildSubmission({
+      definition: uploadForm,
+      answers: attached,
+      pageLocation: 'https://example.test',
+    })
+
+    const manifest = JSON.parse(
+      packet.entries.find((e) => e.key === 'gform_uploaded_files')?.value ?? '{}',
+    ) as Record<string, Record<string, unknown>[]>
+
+    expect(manifest['input_151']?.[0]?.['x-file-hash']).toBeNull()
+    expect(manifest['input_151']?.[0]?.['x-signed-file-hash']).toBeNull()
+  })
+
+  it('previews only once there is something to preview', () => {
+    const empty = buildSubmission({
+      definition: uploadForm,
+      answers: {},
+      pageLocation: 'https://example.test',
+    })
+    expect(empty.entries.map((e) => e.key)).not.toContain('input_436')
+    expect(empty.entries.map((e) => e.key)).not.toContain('gform_uploaded_files')
+
+    const full = buildSubmission({
+      definition: uploadForm,
+      answers: attached,
+      pageLocation: 'https://example.test',
+    })
+    expect(full.entries.find((e) => e.key === 'input_436')?.value).toBe('previewing')
+  })
+})

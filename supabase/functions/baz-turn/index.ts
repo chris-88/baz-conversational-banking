@@ -88,6 +88,7 @@ const ENABLED_TOOLS: readonly ToolName[] = [
   'record_facts',
   'record_form_answers',
   'show_form_declarations',
+  'show_form_upload',
   'show_product_options',
   'show_status',
   'show_review',
@@ -782,7 +783,10 @@ async function handleTurn(request: Request): Promise<Response> {
            */
           enabledTools: digest.forms === undefined
             ? ENABLED_TOOLS.filter(
-                (tool) => tool !== 'record_form_answers' && tool !== 'show_form_declarations',
+                (tool) =>
+                  tool !== 'record_form_answers' &&
+                  tool !== 'show_form_declarations' &&
+                  tool !== 'show_form_upload',
               )
             : ENABLED_TOOLS,
           onToolRejected: (rejection) => rejections.push(rejection),
@@ -1248,6 +1252,51 @@ async function handleTurn(request: Request): Promise<Response> {
                   result: `Showed ${String(declarations.length)} declarations. The customer ticks each one.`,
                   card,
                 }
+              }
+
+              /*
+               * The next document the form is waiting for.
+               *
+               * The model names the application; the server picks the control and reads its
+               * limits out of the definition. Which document a form wants, and what it will
+               * accept, is the document's business.
+               */
+              case 'show_form_upload': {
+                const { applicationId } = input as { applicationId: string }
+                const application = findApplication(loaded, applicationId)
+                if (!application) return { result: 'There is no such application.' }
+
+                const mapping = formForProduct(application.product)
+                const snapshot = mapping ? formSnapshot(mapping.formId) : undefined
+                if (!snapshot) return { result: 'That application has no bank form behind it.' }
+
+                const stored = loaded.formApplications.find(
+                  (row) => row.formId === snapshot.formId,
+                )
+                if (!stored) return { result: 'Nothing has been collected for that form yet.' }
+
+                const state = resolveFormState(snapshot.definition, stored.answers)
+                const wanted = state.outstanding.find((field) => field.type === 'fileupload')
+                if (!wanted) return { result: 'That form is not waiting for any documents.' }
+
+                const maxMb = Number(wanted.platform?.['maxFileSize'] ?? 0)
+                const extensions = String(wanted.platform?.['allowedExtensions'] ?? '')
+                  .split(',')
+                  .map((entry) => entry.trim().toLowerCase())
+                  .filter((entry) => entry.length > 0)
+
+                const card: Card = {
+                  type: 'form_upload',
+                  applicationId,
+                  formApplicationId: stored.id,
+                  fieldId: wanted.id,
+                  label: wanted.label,
+                  formName: snapshot.version,
+                  acceptedExtensions: extensions,
+                  maxFileSizeMb: Number.isFinite(maxMb) && maxMb > 0 ? maxMb : null,
+                }
+
+                return { result: 'Asked for the document. The customer attaches it.', card }
               }
 
               case 'show_form': {

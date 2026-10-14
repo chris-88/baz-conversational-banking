@@ -68,6 +68,12 @@ describe('the model has no tool that takes an action', () => {
     // because consent is the thing a model must never manufacture. It takes an application id
     // and nothing else: the wording comes out of the published definition, the server builds
     // the card, and the customer ticking each line and tapping is what records any of it.
+    //
+    // `show_form_upload` is the fifteenth and takes an application id for the same reason: the
+    // server picks which document the form is waiting for and reads the accepted types and
+    // size cap out of the published control. A file arrives through `upload`, not through
+    // this, and what reaches the packet is a reference with the production signature fields
+    // left empty.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
@@ -76,6 +82,7 @@ describe('the model has no tool that takes an action', () => {
       'show_comparison',
       'show_form',
       'show_form_declarations',
+      'show_form_upload',
       'show_mortgage_rates',
       'show_partner_invite',
       'show_pause_prompt',
