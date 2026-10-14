@@ -172,6 +172,39 @@ A requirement satisfied by a fact that was bank-held or captured for a different
 
 `offered | accepted | declined | deferred`. Declined products are listed in the case digest as "do not raise again" (§49).
 
+### Digital forms
+
+Baz reads the bank's own published form definitions and is another renderer of them. Two are
+snapshotted: `1833` SuperSaver (499 fields) and `1940` personal loan (418). Adding a third is a
+snapshot plus two rows in `tenants/boi/forms/mapping.ts`; nothing in `_shared/domain/forms`
+knows a form id.
+
+- `definition.ts` parses the published JSON. Operators are `is`, `isnot`, `>`, `<`.
+- `logic.ts` decides what applies. **Most branching is on the page, not the field**: a page
+  break gates every field carrying its `pageNumber`.
+- `calculations.ts` evaluates the definition's own formulas (`{:179}+{:218}`) with a
+  hand-written four-operator parser. Never `eval`, never the model.
+- `state.ts` settles: defaults, then calculations, then active fields, repeat. Stale answers on
+  abandoned branches are dropped.
+- `ndi.ts` handles the calculating controls, each declaring its fidelity:
+  `source_faithful | fixture | unsupported`. Repayments are computed from the control's own
+  declared inputs; **eligibility is always a fixture** and the model can never set it.
+- `submission.ts` builds the ordered FormData packet. **Nothing ever POSTs it.** The endpoint is
+  recorded as intended-destination metadata.
+
+Facts are canonical and each form has its own adapter table: the two forms share two toscana
+names out of 120 and 154, and a name is not unique within a form either, so destinations
+resolve against the live branch. Never prefill a `hidden` field. Where several fields share a
+name, required ones win.
+
+Answers that are not facts (a form-specific question, a declaration, a document reference) live
+in `form_answers`, with the wording for consents. `form_applications.answers` is the merge,
+facts last.
+
+A declaration can only be made by tapping the card; `record_form_answers` refuses a checkbox or
+an upload whatever it is sent. Document manifests leave `x-file-hash` and `x-signed-file-hash`
+null, because the service issuing them is not ours.
+
 ## Baz model tools
 
 Every tool input is Zod-validated before any effect. Invalid input returns a tool error to the model and is never thrown to the user.
@@ -183,6 +216,13 @@ Every tool input is Zod-validated before any effect. Invalid input returns a too
 - `request_upload`: an existing open `application_request` only.
 - `show_partner_invite`: application ids the partner is needed for.
 - `show_status`: renders the DB status card.
+- `record_form_answers`: an answer to the bank form's own question. Server checks the field is
+  live, is a question, and that a choice value is one the form offers. Refuses declarations and
+  uploads outright.
+- `show_form_declarations`: the form's declarations, in its published wording, for the customer
+  to tick. The model supplies no text.
+- `show_form_upload`: the next document the form wants, with the control's own size and type
+  limits.
 
 Stream events are a Zod discriminated union: `text_delta | card | status | done | error`.
 
