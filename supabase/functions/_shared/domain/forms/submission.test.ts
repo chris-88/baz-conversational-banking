@@ -105,3 +105,99 @@ describe('buildSubmission()', () => {
     expect(entry?.toscana).toBeTruthy()
   })
 })
+
+describe('controls that are more than one entry', () => {
+  const durationForm = formDefinitionSchema.parse({
+    id: '1940',
+    title: 'test',
+    fields: [
+      {
+        id: '443',
+        type: 'years_and_months_field',
+        label: 'Time at current address',
+        inputs: [
+          { id: '443.1', label: 'Years' },
+          { id: '443.2', label: 'Months' },
+          { id: '443.3', label: 'Total months' },
+        ],
+      },
+    ],
+  })
+
+  it('expands a duration into years, months and the total', () => {
+    const packet = buildSubmission({
+      definition: durationForm,
+      answers: { 443: { years: 5, months: 7 } },
+      pageLocation: 'https://example.test',
+    })
+
+    const entries = packet.entries.filter((e) => e.key.startsWith('input_443'))
+    expect(entries.map((e) => [e.key, e.value])).toEqual([
+      ['input_443.1', '5'],
+      ['input_443.2', '7'],
+      // Arithmetic, not a question: nobody is asked for their total in months.
+      ['input_443.3', '67'],
+    ])
+  })
+
+  it('carries a calculation as parameters and result, like the captured submission', () => {
+    const quoteForm = formDefinitionSchema.parse({
+      id: '1940',
+      title: 'test',
+      fields: [{ id: '238', type: 'ndi_calculator', label: 'Full Quote Calculation' }],
+    })
+
+    const packet = buildSubmission({
+      definition: quoteForm,
+      answers: {},
+      pageLocation: 'https://example.test',
+      ndi: [
+        {
+          fieldId: '238',
+          control: 'ndi_calculator',
+          label: 'Full Quote Calculation',
+          fidelity: 'source_faithful',
+          parameters: { loanAmount: 20000, term: 24 },
+          result: 903.63,
+          note: '',
+        },
+      ],
+    })
+
+    const entries = packet.entries.filter((e) => e.key.startsWith('input_238'))
+    expect(entries.map((e) => e.key)).toEqual(['input_238.parameters', 'input_238.result'])
+    expect(JSON.parse(entries[0]?.value ?? '{}')).toEqual({ loanAmount: 20000, term: 24 })
+    expect(entries[1]?.value).toContain('903.63')
+    // Nobody was asked for either of them.
+    expect(entries.every((e) => e.source === 'derived')).toBe(true)
+  })
+
+  it('sends an eligibility verdict as one entry', () => {
+    const eligibilityForm = formDefinitionSchema.parse({
+      id: '1940',
+      title: 'test',
+      fields: [{ id: '239', type: 'ndi_eligibility', label: 'Eligibility' }],
+    })
+
+    const packet = buildSubmission({
+      definition: eligibilityForm,
+      answers: {},
+      pageLocation: 'https://example.test',
+      ndi: [
+        {
+          fieldId: '239',
+          control: 'ndi_eligibility',
+          label: 'Eligibility',
+          fidelity: 'fixture',
+          parameters: {},
+          result: 'eligible',
+          note: '',
+        },
+      ],
+    })
+
+    expect(packet.entries.filter((e) => e.key === 'input_239').map((e) => e.value)).toEqual([
+      'eligible',
+    ])
+  })
+})

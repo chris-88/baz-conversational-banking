@@ -1,6 +1,7 @@
 import type { FormDefinition, FormField } from './definition.ts'
 import { type Answers } from './logic.ts'
 import { resolveFormState } from './state.ts'
+import type { NdiOutcome } from './ndi.ts'
 
 /**
  * The packet the existing web journey would POST, built from the same definition it renders.
@@ -59,6 +60,13 @@ const SENSITIVE = new Set([
 const text = (value: unknown): string =>
   typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : ''
 
+/** `{ years, months }`, as the prefill tables produce for a duration control. */
+function isDuration(value: unknown): value is { years: number; months: number } {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as { years?: unknown; months?: unknown }
+  return typeof candidate.years === 'number' && typeof candidate.months === 'number'
+}
+
 function toscanaOf(field: FormField): string | null {
   return typeof field.toscana === 'string' && field.toscana.length > 0 ? field.toscana : null
 }
@@ -87,6 +95,25 @@ function entriesFor(field: FormField, answer: unknown, source: EntrySource): rea
       .map((pair) => ({ ...base, key: `input_${pair.input.id}`, value: pair.value, source }))
   }
 
+  /*
+   * A duration is one meaning and three entries.
+   *
+   * Time at an address and time in a role are each a control with sub-inputs `443.1`, `443.2`
+   * and `443.3`: years, months, and the total in months. Baz holds `{ years, months }`, which
+   * is what a person says, and the third is arithmetic rather than a question. Expanded here
+   * because the shape a form wants on the wire is the form's business, not the conversation's.
+   */
+  if (isDuration(answer) && field.inputs && field.inputs.length >= 3) {
+    const parts = [
+      String(answer.years),
+      String(answer.months),
+      String(answer.years * 12 + answer.months),
+    ]
+    return field.inputs
+      .slice(0, 3)
+      .map((input, index) => ({ ...base, key: `input_${input.id}`, value: parts[index] ?? '', source }))
+  }
+
   // Compound fields repeat the key. The phone field carries the number and then the country.
   if (Array.isArray(answer)) {
     return (answer as readonly unknown[]).map((item) => ({
@@ -98,6 +125,38 @@ function entriesFor(field: FormField, answer: unknown, source: EntrySource): rea
   }
 
   return [{ ...base, key: `input_${field.id}`, value: text(answer), source }]
+}
+
+/**
+ * The two entries a quote control sends, or the one an eligibility control sends.
+ *
+ * The browser serialises the parameters object by appending it to `FormData`, which turns it
+ * into the string "[object Object]": that is literally what the captured submission carries,
+ * and the platform evidently recomputes from the rest rather than reading it. A packet built
+ * for inspection carries the JSON instead, because an entry reading "[object Object]" is
+ * indistinguishable from a bug and tells a reader nothing. Noted in `docs/decisions.md`.
+ */
+function ndiEntries(field: FormField, outcome: NdiOutcome): readonly SubmissionEntry[] {
+  const base = {
+    fieldId: field.id,
+    label: field.label,
+    toscana: toscanaOf(field),
+    sensitive: false,
+    source: 'derived' as const,
+  }
+
+  if (field.type === 'ndi_eligibility') {
+    return [{ ...base, key: `input_${field.id}`, value: text(outcome.result) }]
+  }
+
+  return [
+    { ...base, key: `input_${field.id}.parameters`, value: JSON.stringify(outcome.parameters) },
+    {
+      ...base,
+      key: `input_${field.id}.result`,
+      value: outcome.result === null ? '' : JSON.stringify({ monthlyRepayment: outcome.result }),
+    },
+  ]
 }
 
 export type BuildInput = {
@@ -113,6 +172,14 @@ export type BuildInput = {
    */
   readonly nonce?: string | undefined
   readonly pageLocation: string
+  /**
+   * What the form's calculating controls produced, from `resolveNdi`.
+   *
+   * Passed in rather than computed here because working them out needs a published interest
+   * rate, which is tenant knowledge and has no business in this file. Omitted entirely for a
+   * form that has none, which is SuperSaver.
+   */
+  readonly ndi?: readonly NdiOutcome[] | undefined
 }
 
 export type GeneratedSubmission = {
@@ -149,9 +216,25 @@ export function buildSubmission(input: BuildInput): GeneratedSubmission {
   const state = resolveFormState(definition, answers)
   const active = new Set(state.active.map((field) => field.id))
 
+  const ndi = new Map((input.ndi ?? []).map((outcome) => [outcome.fieldId, outcome]))
+
   for (const field of definition.fields) {
     if (STRUCTURAL.has(field.type)) continue
     if (!active.has(field.id)) continue
+
+    /*
+     * A calculating control submits what it worked out, in the control's own shape.
+     *
+     * The quote calculators send two entries, `input_238.parameters` and `input_238.result`,
+     * which is how the captured submission carries them. The eligibility control sends one.
+     * Both are marked derived: nobody was asked, and in the eligibility case the value is a
+     * declared stand-in rather than a computed one.
+     */
+    const calculated = ndi.get(field.id)
+    if (calculated) {
+      entries.push(...ndiEntries(field, calculated))
+      continue
+    }
 
     const derived = Object.prototype.hasOwnProperty.call(state.derived, field.id)
     const answered = Object.prototype.hasOwnProperty.call(state.values, field.id)

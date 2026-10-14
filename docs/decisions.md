@@ -1282,3 +1282,35 @@ kept because they are the only way back into the console. The sweep lives in
 tested: the first version paged forward through a listing it was deleting from,
 which steps over whoever moves up into the page just emptied, and no test in
 this repo could have caught that inside an Edge Function handler.
+
+## 2026-10-14: A packet carries the calculation, not "[object Object]" (§51)
+
+The loan form's quote controls submit two entries each, `input_238.parameters`
+and `input_238.result`. The captured browser submission carries the literal
+string "[object Object]" for both, which is what `FormData.append` does to an
+object: the platform evidently recomputes from the rest of the form rather than
+reading them.
+
+Ours carries the JSON instead. The purpose of this packet is to be read beside
+the definition it came from, and an entry reading "[object Object]" is
+indistinguishable from a bug. The deviation from the observed wire format is
+recorded here and shown in the console rather than hidden.
+
+The parameters themselves are the definition's own: field 238 declares
+`loanAmount: "{:255}"`, `salaryNet: "{:83}+{:91}"` and ten more, plus three
+encoded in its CSS class. They are resolved against the customer's answers, so
+the inputs are source-faithful even where the result cannot be.
+
+## 2026-10-14: Repayments are computed, eligibility is not (§51, §63)
+
+Both are "calculations" in the form definition and they are not the same kind of
+thing. A monthly repayment is standard amortisation against a published rate, so
+it is computed here, from the catalogue Baz already quotes from, and the console
+marks it source-faithful. An affordability verdict is a credit decision made by
+undisclosed systems, so it is a declared fixture, the console says so, and the
+model has no way to set it.
+
+The form's own numeric limits are a third thing again, and are reported
+separately: over €75,000 is not a standard loan, written into the bank's document
+as a conditional rule. That is theirs, it is published, and Baz can state it
+without claiming to have assessed anybody.

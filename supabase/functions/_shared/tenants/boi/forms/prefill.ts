@@ -266,7 +266,7 @@ export function resolvePrefill(args: {
     const candidates =
       'toscana' in mapping ? (byToscana.get(mapping.toscana) ?? []) : [mapping.fieldId]
 
-    const destinations = candidates.filter((id) => byId.has(id) && args.active.has(id))
+    const destinations = chooseDestinations(candidates, byId, args.active)
 
     // Either this revision does not have the field, or the customer's branch does not reach it.
     if (destinations.length === 0) {
@@ -369,6 +369,32 @@ function withinChoices(value: unknown, field: FormField | undefined): unknown {
       choice.value.toLowerCase() === wanted || choice.text.trim().toLowerCase() === wanted,
   )
   return match?.value
+}
+
+/**
+ * Which of the fields carrying a name this answer belongs on.
+ *
+ * Live ones only, and never a hidden one: a hidden field holds platform state, it carries its
+ * own default, and the 365 user id has a hidden mirror that the real journey leaves empty. Of
+ * what is left, the required ones win where there are any. The loan form keeps a disused copy
+ * of the purpose question, labelled "DELETE NOT IN USE" and marked optional, beside the real
+ * one; filling both put an answer in the packet that the genuine submission does not carry.
+ *
+ * Where several required fields carry the name and the branch reaches all of them, all are
+ * filled: the form is asking for the same thing twice and means it.
+ */
+function chooseDestinations(
+  candidates: readonly string[],
+  byId: ReadonlyMap<string, FormField>,
+  active: ReadonlySet<string>,
+): readonly string[] {
+  const live = candidates.filter((id) => {
+    const field = byId.get(id)
+    return field !== undefined && field.type !== 'hidden' && active.has(id)
+  })
+
+  const required = live.filter((id) => byId.get(id)?.isRequired === true)
+  return required.length > 0 ? required : live
 }
 
 /**
