@@ -7,6 +7,9 @@ import { serveJson } from '../_shared/http/serve.ts'
 import type { Database, Json } from '../_shared/db/database.types.ts'
 import { sweepUsers } from '../_shared/db/purge-users.ts'
 import { syncFormApplications } from '../_shared/db/form-applications.ts'
+import { resolveFormState } from '../_shared/domain/forms/state.ts'
+import { limitWarnings, resolveNdi } from '../_shared/domain/forms/ndi.ts'
+import { loanAnnualRate } from '../_shared/tenants/boi/forms/rates.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   adminRequestSchema,
@@ -1754,18 +1757,50 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       const reused = new Set(((record.reused_fields ?? []) as string[]))
 
       /*
-       * The packet is built here rather than stored, so an application that is still being
-       * filled in shows the packet it currently maps to. Nothing is frozen until there is a
-       * reason to freeze it, and in this prototype there never is: it is not sent.
+       * Everything is recomputed here rather than stored, so an application that is still being
+       * filled in shows the state and the packet it currently maps to. Nothing is frozen until
+       * there is a reason to freeze it, and in this prototype there never is: it is not sent.
        */
+      const state = resolveFormState(snapshot.definition, answers)
+      const active = state.active
+      const activeIds = new Set(active.map((field) => field.id))
+
+      // The published rate for the term on the form, which is what a quote is computed at.
+      const rate = loanAnnualRate(Number(state.values['234'] ?? 0))
+
+      const ndi = resolveNdi({
+        definition: snapshot.definition,
+        values: state.values,
+        active: activeIds,
+        annualRate: rate?.rate ?? null,
+        eligibilityFixture: 'eligible',
+      })
+
+      const limits = limitWarnings({
+        definition: snapshot.definition,
+        values: state.values,
+        active: activeIds,
+      })
+
       const packet = buildSubmission({
         definition: snapshot.definition,
         answers,
         reused,
         pageLocation: snapshot.pageLocation,
+        ndi,
       })
 
-      const active = activeFields(snapshot.definition.fields, answers)
+      // How each answer got here, which is what makes the consent record evidence.
+      const given = await admin
+        .from('form_answers')
+        .select('field_id, source, wording, answered_at')
+        .eq('form_application_id', record.id)
+
+      if (given.error) return errorResponse('conflict', given.error.message)
+      const provenance = new Map(
+        ((given.data ?? []) as any[]).map((entry) => [entry.field_id as string, entry]),
+      )
+
       const questions = active.filter(
         (field) => !['html', 'section', 'page', 'accordion', 'form_module'].includes(field.type),
       )
@@ -1799,6 +1834,8 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
               toscana: typeof field.toscana === 'string' ? field.toscana : null,
               value: answers[field.id],
               reused: reused.has(field.id),
+              /** `customer`, `consent` or `document` where it was given to the form directly. */
+              givenDirectly: (provenance.get(field.id)?.source ?? null) as string | null,
             })),
 
           // What is still outstanding, so an unfinished application reads honestly.
@@ -1808,6 +1845,61 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
                 field.isRequired && !Object.prototype.hasOwnProperty.call(answers, field.id),
             )
             .map((field) => ({ fieldId: field.id, label: field.label, type: field.type })),
+
+          /*
+           * What the form works out for itself, with how honest each answer is.
+           *
+           * The distinction is the point of the panel: a repayment is computed from the
+           * control's own declared inputs, and an eligibility verdict is a stand-in, because
+           * the real one is a credit decision made by systems that are not published.
+           */
+          calculations: ndi.map((outcome) => ({
+            fieldId: outcome.fieldId,
+            control: outcome.control,
+            label: outcome.label,
+            fidelity: outcome.fidelity,
+            note: outcome.note,
+            parameters: outcome.parameters,
+            result: outcome.result,
+          })),
+          rateBasis: rate?.basis ?? null,
+
+          /** Limits the published document states for itself. Not a credit decision. */
+          limits: limits.map((warning) => ({
+            label: warning.label,
+            comparedField: warning.comparedField,
+            operator: warning.operator,
+            limit: warning.limit,
+            actual: warning.actual,
+          })),
+
+          /** Declarations, with the wording that was on screen and when it was agreed to. */
+          consents: ((given.data ?? []) as any[])
+            .filter((entry) => entry.source === 'consent')
+            .map((entry) => ({
+              fieldId: entry.field_id as string,
+              wording: (entry.wording ?? '') as string,
+              agreedAt: entry.answered_at as string,
+            })),
+
+          /**
+           * Documents, as references.
+           *
+           * `signatures` says plainly what is missing and why: the production upload service
+           * issues the file hashes, and inventing one would be forging a credential.
+           */
+          documents: ((given.data ?? []) as any[])
+            .filter((entry) => entry.source === 'document')
+            .map((entry) => {
+              const value = (answers[entry.field_id as string] ?? {}) as Record<string, unknown>
+              return {
+                fieldId: entry.field_id as string,
+                fileName: (value['fileName'] ?? '') as string,
+                sizeBytes: (value['sizeBytes'] ?? null) as number | null,
+                attachedAt: entry.answered_at as string,
+                signatures: 'not generated: the production upload service issues these',
+              }
+            }),
 
           // 3. The exact packet, and the fact that it goes nowhere.
           submission: {

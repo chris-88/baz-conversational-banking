@@ -1,7 +1,15 @@
 import { type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon, FileJsonIcon, RefreshCwIcon, ShieldOffIcon } from 'lucide-react'
+import {
+  ArrowLeftIcon,
+  CalculatorIcon,
+  FileCheckIcon,
+  FileJsonIcon,
+  PaperclipIcon,
+  RefreshCwIcon,
+  ShieldOffIcon,
+} from 'lucide-react'
 import { adminApi, type FormInspection, type SubmissionEntry } from '@/admin/adminClient'
 import { routes } from '@/app/routes'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +37,7 @@ const SOURCE_TONE: Readonly<Record<SubmissionEntry['source'], string>> = {
   answer: 'bg-primary/10 text-primary',
   reused: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   consent: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  derived: 'bg-violet-500/10 text-violet-700 dark:text-violet-400',
   default: 'bg-muted text-muted-foreground',
   runtime: 'bg-muted text-muted-foreground',
 }
@@ -37,6 +46,7 @@ const SOURCE_LABEL: Readonly<Record<SubmissionEntry['source'], string>> = {
   answer: 'asked',
   reused: 'already knew',
   consent: 'consent',
+  derived: 'worked out',
   default: 'form default',
   runtime: 'runtime',
 }
@@ -53,6 +63,143 @@ function Stat({ label, value }: { label: string; value: string | number }): Reac
       <p className="text-muted-foreground text-2xs tracking-wide uppercase">{label}</p>
       <p className="text-sm font-semibold tabular-nums">{value}</p>
     </div>
+  )
+}
+
+const FIDELITY_LABEL: Readonly<Record<string, string>> = {
+  source_faithful: 'computed from the form’s own inputs',
+  fixture: 'stand-in, not computed',
+  unsupported: 'cannot be worked out yet',
+}
+
+const FIDELITY_TONE: Readonly<Record<string, string>> = {
+  source_faithful: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  fixture: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  unsupported: 'bg-muted text-muted-foreground',
+}
+
+/**
+ * What the form decides, and how much of it we are entitled to decide.
+ *
+ * The panel exists to make one distinction visible in a room: a repayment is arithmetic from
+ * the control's own declared inputs, and an eligibility verdict is a credit decision made by
+ * systems nobody here has seen. Showing them the same way would be the dishonest part.
+ */
+function Calculations({ data }: { data: FormInspection }): ReactNode {
+  if (data.calculations.length === 0 && data.limits.length === 0) return null
+
+  return (
+    <Card className="p-4">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <CalculatorIcon className="size-4" />
+        What the form works out
+      </h2>
+      {data.rateBasis !== null && (
+        <p className="text-muted-foreground mt-1 text-xs">Quoted at the {data.rateBasis}.</p>
+      )}
+
+      <div className="mt-3 space-y-3">
+        {data.calculations.map((calculation) => (
+          <div key={calculation.fieldId} className="rounded-md border p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium">{calculation.label}</p>
+              <Badge className={cn('text-2xs', FIDELITY_TONE[calculation.fidelity])}>
+                {FIDELITY_LABEL[calculation.fidelity]}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              {calculation.note}
+            </p>
+
+            {Object.keys(calculation.parameters).length > 0 && (
+              <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                {Object.entries(calculation.parameters).map(([name, value]) => (
+                  <div key={name} className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground truncate font-mono text-2xs">{name}</dt>
+                    <dd className="font-medium tabular-nums">{String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {calculation.result !== null && (
+              <p className="mt-2 text-sm font-semibold tabular-nums">
+                {typeof calculation.result === 'number'
+                  ? `€${calculation.result.toFixed(2)} a month`
+                  : calculation.result}
+              </p>
+            )}
+          </div>
+        ))}
+
+        {data.limits.map((limit) => (
+          <div
+            key={`${limit.comparedField}-${limit.limit}`}
+            className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3"
+          >
+            <p className="text-sm font-medium">{limit.label}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              The document&rsquo;s own rule: field {limit.comparedField} is {limit.actual}, which
+              is {limit.operator} {limit.limit}.
+            </p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+/** A declaration is only evidence if the wording it was given against travels with it. */
+function Consents({ data }: { data: FormInspection }): ReactNode {
+  if (data.consents.length === 0) return null
+
+  return (
+    <Card className="p-4">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <FileCheckIcon className="size-4" />
+        Declarations agreed to
+      </h2>
+      <ul className="mt-3 space-y-3">
+        {data.consents.map((consent) => (
+          <li key={consent.fieldId} className="border-l-2 pl-3">
+            <p className="text-xs leading-relaxed">{consent.wording}</p>
+            <p className="text-muted-foreground mt-1 text-2xs">
+              input_{consent.fieldId} · {new Date(consent.agreedAt).toLocaleString()}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
+function Documents({ data }: { data: FormInspection }): ReactNode {
+  if (data.documents.length === 0) return null
+
+  return (
+    <Card className="p-4">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <PaperclipIcon className="size-4" />
+        Documents
+      </h2>
+      <ul className="mt-3 space-y-2">
+        {data.documents.map((document) => (
+          <li key={document.fieldId} className="rounded-md border p-3">
+            <p className="text-sm font-medium">{document.fileName}</p>
+            <p className="text-muted-foreground mt-1 text-2xs">
+              input_{document.fieldId}
+              {document.sizeBytes !== null &&
+                ` · ${String(Math.round(document.sizeBytes / 1024))}KB`}
+              {' · '}
+              {new Date(document.attachedAt).toLocaleString()}
+            </p>
+            <p className="text-muted-foreground mt-2 text-2xs">
+              Signatures: {document.signatures}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }
 
@@ -127,7 +274,15 @@ function Inspection({ data }: { data: FormInspection }): ReactNode {
         )}
       </Card>
 
-      {/* 3. The packet, and the fact that it is going nowhere. */}
+      {/* 3. What the form decides for itself, and how much of that we are entitled to. */}
+      <Calculations data={data} />
+
+      {/* 4. What was agreed to, in the words it was agreed to in. */}
+      <Consents data={data} />
+
+      <Documents data={data} />
+
+      {/* 5. The packet, and the fact that it is going nowhere. */}
       <Card className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-base font-semibold">

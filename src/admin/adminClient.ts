@@ -127,7 +127,7 @@ export type FormApplicationSummary = {
 export type SubmissionEntry = {
   readonly key: string
   readonly value: string
-  readonly source: 'answer' | 'reused' | 'default' | 'consent' | 'runtime'
+  readonly source: 'answer' | 'reused' | 'default' | 'consent' | 'derived' | 'runtime'
   readonly fieldId: string | null
   readonly label: string
   readonly toscana: string | null
@@ -156,6 +156,39 @@ export type FormInspection = {
     readonly toscana: string | null
     readonly value: unknown
     readonly reused: boolean
+    readonly givenDirectly: string | null
+  }[]
+  /** What the form works out for itself, and how honest each answer is. */
+  readonly calculations: readonly {
+    readonly fieldId: string
+    readonly control: string
+    readonly label: string
+    readonly fidelity: 'source_faithful' | 'fixture' | 'unsupported'
+    readonly note: string
+    readonly parameters: Readonly<Record<string, string | number>>
+    readonly result: string | number | null
+  }[]
+  /** Which published rate a quote was computed at, when one was. */
+  readonly rateBasis: string | null
+  /** Limits the document states for itself. Not a credit decision. */
+  readonly limits: readonly {
+    readonly label: string
+    readonly comparedField: string
+    readonly operator: string
+    readonly limit: string
+    readonly actual: number
+  }[]
+  readonly consents: readonly {
+    readonly fieldId: string
+    readonly wording: string
+    readonly agreedAt: string
+  }[]
+  readonly documents: readonly {
+    readonly fieldId: string
+    readonly fileName: string
+    readonly sizeBytes: number | null
+    readonly attachedAt: string
+    readonly signatures: string
   }[]
   readonly outstanding: readonly {
     readonly fieldId: string
