@@ -1,10 +1,28 @@
 import { useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { ListIcon } from 'lucide-react'
-import { NAV, type ChapterId } from '@/content/how-it-works/copy'
+import { CHAPTERS, NAV, type ChapterId } from '@/content/how-it-works/copy'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
+/**
+ * The nav entry a chapter belongs under.
+ *
+ * Eight sections, six of them listed: the lessons and the closing replay are read on the way
+ * past rather than navigated to. Without this, reaching either one unmarked every entry in the
+ * rail, so the last third of the article had no "you are here" at all.
+ */
+function railEntry(active: ChapterId): ChapterId {
+  const at = CHAPTERS.indexOf(active)
+  let found: ChapterId = NAV[0]?.id ?? active
+
+  for (const chapter of NAV) {
+    if (CHAPTERS.indexOf(chapter.id) <= at) found = chapter.id
+  }
+
+  return found
+}
 
 /**
  * Where you are in the argument, and how much of it is left.
@@ -31,9 +49,21 @@ export function ChapterRail({
   readonly onJump: (chapter: ChapterId) => void
 }): ReactNode {
   const still = useReducedMotion() === true
+  const here = railEntry(active)
 
   return (
-    <nav aria-label="Chapters" className="sticky top-24 hidden lg:block">
+    <nav
+      aria-label="Chapters"
+      /*
+       * `self-start` is what makes the sticky work.
+       *
+       * A grid item stretches to the height of its row by default, and this row is the whole
+       * article. The nav was therefore thirteen thousand pixels tall, which gives a sticky box
+       * nowhere to travel: it scrolled away with the page and looked exactly like a nav that
+       * was never sticky at all. Sized to its own content, it pins.
+       */
+      className="sticky top-24 hidden self-start lg:block"
+    >
       <p className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
         Contents
       </p>
@@ -50,18 +80,18 @@ export function ChapterRail({
           <li key={chapter.id}>
             <button
               type="button"
-              aria-current={active === chapter.id ? 'true' : undefined}
+              aria-current={here === chapter.id ? 'true' : undefined}
               onClick={() => {
                 onJump(chapter.id)
               }}
               className={cn(
                 'focus-visible:ring-ring relative block w-full rounded-r-md py-1.5 pr-2 pl-4 text-left text-[13px] transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                active === chapter.id
+                here === chapter.id
                   ? 'text-foreground font-semibold'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {active === chapter.id &&
+              {here === chapter.id &&
                 (still ? (
                   <span aria-hidden className="bg-primary absolute top-1.5 bottom-1.5 left-0 w-[2px] rounded-full" />
                 ) : (
@@ -92,8 +122,9 @@ export function ChapterBar({
   readonly onJump: (chapter: ChapterId) => void
 }): ReactNode {
   const [open, setOpen] = useState(false)
-  const current = NAV.find((chapter) => chapter.id === active)
-  const at = NAV.findIndex((chapter) => chapter.id === active)
+  const here = railEntry(active)
+  const current = NAV.find((chapter) => chapter.id === here)
+  const at = NAV.findIndex((chapter) => chapter.id === here)
 
   return (
     <div className="bg-background/90 sticky top-0 z-30 -mx-4 border-b backdrop-blur-sm sm:-mx-6 lg:hidden">
@@ -137,7 +168,7 @@ export function ChapterBar({
                     }}
                     className={cn(
                       'focus-visible:ring-ring flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-none',
-                      active === chapter.id
+                      here === chapter.id
                         ? 'bg-primary/10 text-primary font-semibold'
                         : 'hover:bg-muted',
                     )}
