@@ -1,4 +1,4 @@
-import type { ConditionalLogic, FormField } from './definition.ts'
+import type { ConditionalLogic, FormField, LogicOperator } from './definition.ts'
 
 /**
  * Which questions apply to this customer, decided in code.
@@ -9,8 +9,10 @@ import type { ConditionalLogic, FormField } from './definition.ts'
  * that is active must not be skipped. Same division as everywhere else in Baz, the engine
  * decides what is needed and the model decides how to ask.
  *
- * The whole operator surface is `is` and `isnot`, with `all` or `any`, acting to `show` or
- * `hide`. That is not a simplification: it is every operator the published definition uses.
+ * The operator surface is `is`, `isnot`, `>` and `<`, with `all` or `any`, acting to `show` or
+ * `hide`. That is not a simplification: it is every operator the published definitions use.
+ * SuperSaver needs only the first two; the loan adds the comparisons, every one of them against
+ * a calculated amount deciding whether a loan is too large for the product it is on.
  */
 
 /** What the customer has answered so far, keyed by field id. */
@@ -36,7 +38,37 @@ function asStrings(value: unknown): readonly string[] {
   return [one(value)]
 }
 
-function ruleMatches(answer: unknown, operator: 'is' | 'isnot', expected: unknown): boolean {
+/**
+ * As a number, for the two comparison operators.
+ *
+ * `undefined` for anything that is not one, and an unanswered or unreadable value never
+ * satisfies a comparison: the branches these open are the loan-amount validity warnings, and
+ * warning somebody about an amount they have not given is worse than saying nothing.
+ */
+export function quantity(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (trimmed === '') return undefined
+  const parsed = Number(trimmed.replace(/[€,\s]/g, ''))
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function ruleMatches(answer: unknown, operator: LogicOperator, expected: unknown): boolean {
+  /*
+   * Numerically, and only numerically.
+   *
+   * Compared as text, "9000" is greater than "75000", which would show the "too much to
+   * borrow" warning on an ordinary nine-thousand-euro loan. Everything else in this file
+   * compares as strings because the platform does; these two cannot.
+   */
+  if (operator === '>' || operator === '<') {
+    const actual = quantity(answer)
+    const target = quantity(expected)
+    if (actual === undefined || target === undefined) return false
+    return operator === '>' ? actual > target : actual < target
+  }
+
   const actual = asStrings(answer)
   const target = one(expected)
 
@@ -78,10 +110,43 @@ export function isActive(field: FormField, answers: Answers): boolean {
   return logic.actionType === 'show' ? passes : !passes
 }
 
-/** Every field that currently applies, in definition order. */
+/**
+ * Every field that currently applies, in definition order.
+ *
+ * Two gates, not one. A field's own rules decide whether it applies, and so does the page it
+ * sits on: both definitions are multi-page wizards, and most of the branching is on the page.
+ * The loan form has 47 pages, 29 of them conditional, and the fields behind them frequently
+ * carry no rules of their own. The student education questions are plain required selects on a
+ * page that appears only when the student flag is set, so without the page gate a customer
+ * buying a car is asked which college they attend, and a packet carries answers from branches
+ * nobody was on.
+ */
 export function activeFields(
   fields: readonly FormField[],
   answers: Answers,
 ): readonly FormField[] {
-  return fields.filter((field) => isActive(field, answers))
+  const closed = closedPages(fields, answers)
+  return fields.filter(
+    (field) =>
+      isActive(field, answers) &&
+      (field.pageNumber === undefined || !closed.has(field.pageNumber)),
+  )
+}
+
+/**
+ * Page numbers whose page break says they do not apply.
+ *
+ * A page break field carries the page's own conditional logic and a `pageNumber` naming the
+ * page it governs, confirmed against the definition: the break gated on "Top up loan" governs
+ * the page holding the top-up warning, and the one gated on the student flag governs the page
+ * holding the college questions. A page with no break, which is the first one, always applies.
+ */
+function closedPages(fields: readonly FormField[], answers: Answers): ReadonlySet<number> {
+  const closed = new Set<number>()
+  for (const field of fields) {
+    if (field.type !== 'page') continue
+    if (field.pageNumber === undefined) continue
+    if (!isActive(field, answers)) closed.add(field.pageNumber)
+  }
+  return closed
 }

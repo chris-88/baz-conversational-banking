@@ -1,5 +1,6 @@
 import type { FormDefinition, FormField } from './definition.ts'
-import { isActive, type Answers } from './logic.ts'
+import { type Answers } from './logic.ts'
+import { resolveFormState } from './state.ts'
 
 /**
  * The packet the existing web journey would POST, built from the same definition it renders.
@@ -15,7 +16,15 @@ import { isActive, type Answers } from './logic.ts'
  */
 
 /** Where a value came from, so the console can show the difference. */
-export const ENTRY_SOURCES = ['answer', 'reused', 'default', 'consent', 'runtime'] as const
+export const ENTRY_SOURCES = [
+  'answer',
+  'reused',
+  'default',
+  'consent',
+  /** Worked out by the form from its own formula, never asked and never from the model. */
+  'derived',
+  'runtime',
+] as const
 export type EntrySource = (typeof ENTRY_SOURCES)[number]
 
 export type SubmissionEntry = {
@@ -128,24 +137,38 @@ export function buildSubmission(input: BuildInput): GeneratedSubmission {
   const { definition, answers } = input
   const entries: SubmissionEntry[] = []
 
+  /*
+   * The settled state, not the raw answers.
+   *
+   * Three things come out of settling that a field-by-field walk gets wrong. Most of the
+   * branching is on the page rather than the field, so whole sections were reported active that
+   * the customer never saw. The form's own defaults decide which questions exist at all. And
+   * the calculated fields have to be worked out, because the packet carries them: a loan
+   * submits a total nobody typed.
+   */
+  const state = resolveFormState(definition, answers)
+  const active = new Set(state.active.map((field) => field.id))
+
   for (const field of definition.fields) {
     if (STRUCTURAL.has(field.type)) continue
-    if (!isActive(field, answers)) continue
+    if (!active.has(field.id)) continue
 
-    const answered = Object.prototype.hasOwnProperty.call(answers, field.id)
-    const fallback = text(field.defaultValue)
+    const derived = Object.prototype.hasOwnProperty.call(state.derived, field.id)
+    const answered = Object.prototype.hasOwnProperty.call(state.values, field.id)
+    if (!answered) continue
 
-    if (!answered && fallback.length === 0) continue
+    const stated = Object.prototype.hasOwnProperty.call(answers, field.id)
+    const source: EntrySource = derived
+      ? 'derived'
+      : !stated
+        ? 'default'
+        : input.reused?.has(field.id) === true
+          ? 'reused'
+          : field.type === 'checkbox'
+            ? 'consent'
+            : 'answer'
 
-    const source: EntrySource = answered
-      ? input.reused?.has(field.id) === true
-        ? 'reused'
-        : field.type === 'checkbox'
-          ? 'consent'
-          : 'answer'
-      : 'default'
-
-    entries.push(...entriesFor(field, answered ? answers[field.id] : fallback, source))
+    entries.push(...entriesFor(field, state.values[field.id], source))
   }
 
   /*

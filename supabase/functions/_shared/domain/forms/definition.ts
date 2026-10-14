@@ -13,8 +13,16 @@ import { z } from 'zod'
  * What is parsed is what is used.
  */
 
-/** The handful of operators the real definition actually uses, confirmed across 540 rules. */
-export const LOGIC_OPERATORS = ['is', 'isnot'] as const
+/**
+ * Every operator the published definitions use, counted rather than assumed.
+ *
+ * SuperSaver's 540 rules use `is` and `isnot` and nothing else, which is what this said. The
+ * personal loan's 371 rules add `>` eleven times and `<` twice, and because the enum was
+ * closed, the loan definition did not parse at all: the thirteen numeric rules rejected the
+ * whole document. They are all comparisons against calculated amounts, deciding whether a loan
+ * amount is valid for the product the customer is on.
+ */
+export const LOGIC_OPERATORS = ['is', 'isnot', '>', '<'] as const
 export type LogicOperator = (typeof LOGIC_OPERATORS)[number]
 
 export const conditionalRuleSchema = z.object({
@@ -57,7 +65,19 @@ const blankAs = <T extends z.ZodTypeAny>(inner: T) =>
     return value
   }, inner.optional())
 
-export const formFieldSchema = z.object({
+/**
+ * Keeps a copy of the raw control beside the parsed one, so `platform` can be read from it.
+ *
+ * The alternative was a catch-all, which puts an index signature on `FormField` and makes
+ * every typo on a field compile.
+ */
+const withPlatform = <T extends z.ZodTypeAny>(inner: T) =>
+  z.preprocess((value) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return value
+    return { ...(value as Record<string, unknown>), platform: value }
+  }, inner)
+
+const fieldShape = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
   type: z.string(),
   label: z.string().optional().default(''),
@@ -75,9 +95,30 @@ export const formFieldSchema = z.object({
   conditionalLogic: blankAs(conditionalLogicSchema),
   defaultValue: z.unknown().optional(),
   pageNumber: z.number().optional(),
+  /**
+   * What this field works out for itself, in the platform's own formula language.
+   *
+   * `{:179}+{:218}` means field 179 plus field 218. Evaluated in `calculations.ts`, never by
+   * the model, because the rules that decide whether an amount is valid compare against the
+   * result.
+   */
+  calculationFormula: z.string().optional(),
   /** The downstream mapping the bank's own platform carries. Recorded, never interpreted. */
   toscana: z.unknown().optional(),
+  /**
+   * The control's own configuration, kept whole.
+   *
+   * Custom controls carry their settings as ordinary keys on the field, and which keys depend
+   * on the control: the loan's full-quote calculator declares `loanAmount: "{:255}"`,
+   * `salaryNet: "{:83}+{:91}"` and ten more, its eligibility control declares
+   * `ndi_calculation: "238"`, and an upload declares `maxFileSize` and `allowedExtensions`.
+   * A schema listing them would have to grow for every new control type, and Zod drops what it
+   * does not name, so the parsed field would silently lose the thing the control is for.
+   */
+  platform: z.record(z.string(), z.unknown()).optional(),
 })
+
+export const formFieldSchema = withPlatform(fieldShape)
 
 export const formDefinitionSchema = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
@@ -89,5 +130,5 @@ export const formDefinitionSchema = z.object({
 
 export type ConditionalLogic = z.infer<typeof conditionalLogicSchema>
 export type FormChoice = z.infer<typeof choiceSchema>
-export type FormField = z.infer<typeof formFieldSchema>
+export type FormField = z.infer<typeof fieldShape>
 export type FormDefinition = z.infer<typeof formDefinitionSchema>
