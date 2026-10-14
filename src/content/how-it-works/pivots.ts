@@ -6,16 +6,45 @@
  * the thing was arrived at rather than designed in one go.
  */
 
+/**
+ * A miniature of the thing a pivot replaced, or arrived at.
+ *
+ * Deliberately several kinds rather than one. A list of grey pills can stand for anything,
+ * which is why the first version of this section did not read: "Products, Plans, Applications,
+ * Navigation" is four words, where a nav bar above four tiles is a screen somebody built and
+ * then deleted. Each pivot gets the shape of the thing it is actually about.
+ */
+export type Mini =
+  | { readonly kind: 'tiles'; readonly items: readonly string[] }
+  | {
+      readonly kind: 'chat'
+      readonly lines: readonly { readonly from: 'customer' | 'baz'; readonly text: string }[]
+    }
+  | {
+      readonly kind: 'goal'
+      readonly title: string
+      readonly meta: string
+      readonly items: readonly string[]
+    }
+  | { readonly kind: 'dashboard'; readonly nav: readonly string[]; readonly tiles: readonly string[] }
+  | {
+      readonly kind: 'tasks'
+      readonly items: readonly { readonly text: string; readonly owner: 'model' | 'code' }[]
+    }
+  | {
+      readonly kind: 'docs'
+      readonly items: readonly { readonly title: string; readonly note: string }[]
+      readonly source: 'ours' | 'theirs'
+    }
+
 export type Pivot = {
   readonly id: string
   readonly from: string
   readonly to: string
   readonly headline: string
   readonly body: string
-  /** What the customer used to meet. */
-  readonly before: readonly string[]
-  /** What they meet now. */
-  readonly after: readonly string[]
+  readonly before: Mini
+  readonly after: Mini
   readonly beforeCaption: string
   readonly afterCaption: string
 }
@@ -27,10 +56,13 @@ export const pivots: readonly Pivot[] = [
     to: 'Needs',
     headline: 'The customer had to arrive knowing the answer',
     body: 'The first instinct was to help people complete applications. It was useful, and it was too narrow: the customer still had to turn up knowing which application they needed, which is exactly the problem the product was meant to remove.',
-    before: ['Mortgage', 'Personal loan', 'Savings', 'Credit card'],
-    after: ['What are you trying to do?'],
-    beforeCaption: 'What would you like to apply for?',
-    afterCaption: 'A copy change on the surface. A product model change underneath.',
+    before: { kind: 'tiles', items: ['Mortgage', 'Personal loan', 'Savings', 'Credit card'] },
+    after: {
+      kind: 'chat',
+      lines: [{ from: 'baz', text: 'What are you trying to do?' }],
+    },
+    beforeCaption: 'A menu of products, and a customer expected to know which one they are',
+    afterCaption: 'One question that does not assume they do',
   },
   {
     id: 'goals',
@@ -38,21 +70,36 @@ export const pivots: readonly Pivot[] = [
     to: 'Goals',
     headline: 'A need is a moment. A goal has a shape',
     body: 'Needs were better, and still point-in-time. Somebody who says they need a mortgage does not have a mortgage need. They have a home-buying goal, with a deposit, a timeline and several products inside it.',
-    before: ['Mortgage', 'Deposit savings', 'Protection'],
-    after: ['Buy our first home', 'in about 18 months'],
-    beforeCaption: 'Three needs, separately',
-    afterCaption: 'One goal, with the products underneath it',
+    before: { kind: 'tiles', items: ['Mortgage', 'Deposit savings', 'Protection'] },
+    after: {
+      kind: 'goal',
+      title: 'Buy our first home',
+      meta: 'in about 18 months',
+      items: ['Mortgage', 'Deposit savings', 'Protection'],
+    },
+    beforeCaption: 'Three needs, each one its own conversation',
+    afterCaption: 'One goal, with the products as the means to it',
   },
   {
     id: 'conversation',
     from: 'Dashboard',
     to: 'Conversation',
     headline: 'Every element had to justify itself against a sentence',
-    body: 'The build started with the furniture of a banking app: product tiles, plan panels, an application list, navigation. One by one, each had to answer why it was better than asking. Most could not.',
-    before: ['Products', 'Plans', 'Applications', 'Navigation', 'Cards', 'Conversation'],
-    after: ['Conversation'],
-    beforeCaption: 'Six surfaces',
-    afterCaption: 'What survived',
+    body: 'The build started with the furniture of a banking app: product tiles, a plan panel, an application list, navigation. One by one, each had to answer why it was better than asking. Most could not.',
+    before: {
+      kind: 'dashboard',
+      nav: ['Home', 'Products', 'Plans'],
+      tiles: ['Current account', 'Savings', 'Your plan', 'In progress'],
+    },
+    after: {
+      kind: 'chat',
+      lines: [
+        { from: 'customer', text: 'Can I afford a house next year?' },
+        { from: 'baz', text: 'Let us work it out. What are you earning?' },
+      ],
+    },
+    beforeCaption: 'Six surfaces, each a place for the screen and the conversation to disagree',
+    afterCaption: 'What survived, with the cards rendered beside the message that refers to them',
   },
   {
     id: 'deterministic',
@@ -60,10 +107,26 @@ export const pivots: readonly Pivot[] = [
     to: 'AI where ambiguity is useful',
     headline: 'The model decides how to ask, never what is true',
     body: 'Early versions let the model do more: work out what an application still needed, decide whether something was valid, produce a figure. Every one of those moved into code. What is outstanding is computed, a rate comes from a published table, and a repayment is arithmetic.',
-    before: ['Decide what is needed', 'Judge validity', 'Work out the numbers', 'Phrase the answer'],
-    after: ['Phrase the answer'],
-    beforeCaption: 'What the model was asked to do',
-    afterCaption: 'What it is asked to do now',
+    before: {
+      kind: 'tasks',
+      items: [
+        { text: 'What is still needed', owner: 'model' },
+        { text: 'Whether a value is valid', owner: 'model' },
+        { text: 'The repayment figure', owner: 'model' },
+        { text: 'How to phrase it', owner: 'model' },
+      ],
+    },
+    after: {
+      kind: 'tasks',
+      items: [
+        { text: 'What is still needed', owner: 'code' },
+        { text: 'Whether a value is valid', owner: 'code' },
+        { text: 'The repayment figure', owner: 'code' },
+        { text: 'How to phrase it', owner: 'model' },
+      ],
+    },
+    beforeCaption: 'Four jobs, all of them a judgement call',
+    afterCaption: 'Three became arithmetic. One is still worth a model',
   },
   {
     id: 'reuse',
@@ -71,10 +134,22 @@ export const pivots: readonly Pivot[] = [
     to: 'Reuse the bank’s own',
     headline: 'The journeys already existed, in a format a machine can read',
     body: 'The plan was to write a conversational version of each product journey. Then the existing web journey turned out to fetch its own definition from an API, which meant the questions, the branching, the validation and the submission shape were already written down. The work changed from authoring journeys to reading them.',
-    before: ['Write the mortgage flow', 'Write the savings flow', 'Write the loan flow', 'Keep all three in step'],
-    after: ['Read the published definition'],
-    beforeCaption: 'One flow per product, maintained by us',
-    afterCaption: 'One engine, driven by the bank’s own document',
+    before: {
+      kind: 'docs',
+      source: 'ours',
+      items: [
+        { title: 'mortgage.flow.ts', note: 'written by us' },
+        { title: 'savings.flow.ts', note: 'written by us' },
+        { title: 'loan.flow.ts', note: 'written by us' },
+      ],
+    },
+    after: {
+      kind: 'docs',
+      source: 'theirs',
+      items: [{ title: 'GET /api/forms/1940', note: '418 controls, published by the bank' }],
+    },
+    beforeCaption: 'One flow per product, and three copies of the truth to keep in step',
+    afterCaption: 'One engine, reading the document the website already reads',
   },
 ]
 
