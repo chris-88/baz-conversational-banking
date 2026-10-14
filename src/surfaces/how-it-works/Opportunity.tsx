@@ -53,11 +53,14 @@ export function Opportunity(): ReactNode {
           return (
             <Reveal key={pillar.title} delay={index * 0.06}>
               <Surface className="h-full p-5">
-                <Tile tone={tones[index] ?? 'primary'}>
-                  <Icon />
-                </Tile>
-                <p className="mt-3.5 text-[15px] font-semibold">{pillar.title}</p>
-                <p className="text-muted-foreground mt-1.5 text-[13px] leading-relaxed">
+                {/* Tile and title on one line: the heading belongs beside the mark, not under it. */}
+                <div className="flex items-center gap-3">
+                  <Tile tone={tones[index] ?? 'primary'}>
+                    <Icon />
+                  </Tile>
+                  <p className="text-[17px] font-semibold tracking-tight">{pillar.title}</p>
+                </div>
+                <p className="text-muted-foreground mt-3 text-[13px] leading-relaxed">
                   {pillar.body}
                 </p>
               </Surface>

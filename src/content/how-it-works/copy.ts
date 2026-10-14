@@ -38,21 +38,21 @@ export const opportunity = {
   eyebrow: 'The opportunity',
   title: 'A personal banker for everyone',
   body: [
-    'People with money worth managing get someone to talk to. Everyone else gets an app, a product list and the job of working out which parts apply to them.',
+    'Relationship banking has traditionally been reserved for customers whose value justified the cost. Everyone else got a product list and an app.',
     'The gap is not information. The bank publishes everything. The gap is that nobody turns it into a conversation about your life, remembers what you said, and picks it up again a month later.',
     'Baz is an attempt at that: understand what somebody is actually trying to do, hold on to it, and get it done through the bank’s own machinery rather than around it.',
   ],
   pillars: [
     {
-      title: 'Understand me',
+      title: 'Understand',
       body: 'Knows the situation, the goal and the constraints, and never asks for the same thing twice.',
     },
     {
-      title: 'Help me get things done',
+      title: 'Take Action',
       body: 'Products are applied for through the bank’s published journeys, with every commitment made by a tap.',
     },
     {
-      title: 'Stay with me',
+      title: 'Remember',
       body: 'The case survives the session, the channel, the second applicant and the month in between.',
     },
   ],
