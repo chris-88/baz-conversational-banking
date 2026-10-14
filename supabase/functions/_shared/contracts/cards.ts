@@ -160,6 +160,33 @@ export const reviewCardSchema = z.object({
   confirmLabel: z.string(),
 })
 
+/**
+ * The declarations the bank's own form requires, in the bank's own words.
+ *
+ * Six of them on the personal loan, covering credit reporting, the accuracy of what has been
+ * said, consent to a credit reference check, and contact permission. They are not Baz's
+ * wording and they are not summarised: the text here is the text in the published definition,
+ * because a declaration somebody agreed to in a paraphrase is a declaration nobody agreed to.
+ *
+ * Shown rather than asked. The model cannot record one of these in conversation, however
+ * plainly the customer says yes: `record_form_answers` refuses a checkbox field outright
+ * (Invariant 1, §10 of the feature note).
+ */
+export const formDeclarationsCardSchema = z.object({
+  type: z.literal('form_declarations'),
+  applicationId,
+  /** The bank's name for the form, so the card says what it belongs to. */
+  formName: z.string(),
+  declarations: z.array(
+    z.object({
+      /** The definition's own field id. */
+      fieldId: z.string(),
+      /** Exactly as published. Never shortened, never rewritten. */
+      wording: z.string(),
+    }),
+  ).min(1),
+})
+
 export const pausePromptCardSchema = z.object({
   type: z.literal('pause_prompt'),
   applicationId,
@@ -326,6 +353,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   quoteCardSchema,
   planProposalCardSchema,
   consentCardSchema,
+  formDeclarationsCardSchema,
   healthFormCardSchema,
   productOptionCardSchema,
   comparisonCardSchema,
@@ -353,6 +381,7 @@ export const CARD_TYPES = [
   'partner_invite',
   'upload_request',
   'consent',
+  'form_declarations',
   'health_form',
   'mortgage_rates',
   'data_notice',

@@ -120,6 +120,19 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
   }),
 
   /**
+   * The declarations the bank's own form requires, each one ticked.
+   *
+   * Field ids rather than wording: the server reads the text out of the published definition
+   * and stores what it showed, so what is recorded as agreed to cannot drift from what was on
+   * screen, and a client cannot submit a declaration by inventing a nicer sentence.
+   */
+  z.object({
+    action: z.literal('confirm_form_declarations'),
+    applicationId,
+    fieldIds: z.array(z.string().min(1).max(12)).min(1).max(20),
+  }),
+
+  /**
    * The structured health form (§7.5, Invariant 6).
    *
    * This is the only path by which special-category data enters the case, and the server

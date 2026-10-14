@@ -134,6 +134,7 @@ export async function loadCase(
     personaData,
     domainData,
     overridesData,
+    formApplicationsData,
   ] = await Promise.all([
     client.from('participants').select('id, role, display_name').eq('case_id', caseId),
     client
@@ -166,6 +167,15 @@ export async function loadCase(
       .select(
         'kind, entry_id, enabled, name, summary, priority, milestone_labels, checkin_agendas, version, created_at, updated_at',
       ),
+    /*
+     * The digital form applications, so a turn can see what the bank's own document still
+     * wants. Without them the digest can only describe the journey Baz wrote, and the point of
+     * the feature is that the journey is the bank's.
+     */
+    client
+      .from('form_applications')
+      .select('id, form_id, answers')
+      .eq('case_id', caseId),
   ])
 
   /*
@@ -177,6 +187,18 @@ export async function loadCase(
     .array()
     .parse(unwrap(overridesData as Query, 'catalogue overrides'))
     .map(rows.toOverride)
+
+  const formApplications = (
+    (unwrap(formApplicationsData as Query, 'form applications') ?? []) as {
+      id: string
+      form_id: string
+      answers: unknown
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    formId: row.form_id,
+    answers: (row.answers ?? {}) as Readonly<Record<string, unknown>>,
+  }))
 
   const participants = rows.participantRow
     .array()
@@ -263,6 +285,7 @@ export async function loadCase(
     participants,
     facts,
     applications,
+    formApplications,
     // Confirmations and requests are not scoped by case in the query, so they are filtered
     // to this case's applications here.
     confirmations: rows.confirmationRow

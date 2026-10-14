@@ -59,6 +59,7 @@ function loaded(overrides: Partial<LoadedCase> = {}): LoadedCase {
     documents: [],
     requests: [],
     productInterests: [],
+  formApplications: [],
     messages: [],
     eventsSinceLastSeen: [],
     persona: slidersFor('default'),

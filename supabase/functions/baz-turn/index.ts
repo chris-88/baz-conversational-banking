@@ -21,6 +21,10 @@ import {
 } from '../_shared/llm/sign-in-prompt.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { syncFormApplications } from '../_shared/db/form-applications.ts'
+import { recordFormAnswers } from '../_shared/db/record-form-answers.ts'
+import { formForProduct } from '../_shared/tenants/boi/forms/mapping.ts'
+import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
+import { resolveFormState } from '../_shared/domain/forms/state.ts'
 import { createClassifier } from '../_shared/llm/classifier.ts'
 import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
 import { runBazTurn } from '../_shared/llm/baz.ts'
@@ -82,6 +86,8 @@ import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case
 /** The partner and upload tools arrive with M5, so they are not offered yet. */
 const ENABLED_TOOLS: readonly ToolName[] = [
   'record_facts',
+  'record_form_answers',
+  'show_form_declarations',
   'show_product_options',
   'show_status',
   'show_review',
@@ -767,7 +773,18 @@ async function handleTurn(request: Request): Promise<Response> {
         const events = runBazTurn({
           client: anthropic,
           model: env('BAZ_MODEL'),
-          enabledTools: ENABLED_TOOLS,
+          /*
+           * The form tool is offered only when there is a form to answer.
+           *
+           * A tool the model can see is a tool it will eventually try, and on a case with no
+           * form-backed application every call would be refused by the server and spend a
+           * round doing it. The digest and the tool list agree with each other this way.
+           */
+          enabledTools: digest.forms === undefined
+            ? ENABLED_TOOLS.filter(
+                (tool) => tool !== 'record_form_answers' && tool !== 'show_form_declarations',
+              )
+            : ENABLED_TOOLS,
           onToolRejected: (rejection) => rejections.push(rejection),
           onToolCalled: (name) => called.push(name),
           onUsage: recordModel,
@@ -783,6 +800,56 @@ async function handleTurn(request: Request): Promise<Response> {
           history,
           executeTool: async (name, input) => {
             switch (name) {
+              /*
+               * The form's own questions, answered in conversation.
+               *
+               * Written straight through like facts are, and checked just as hard: the server
+               * decides whether a field applies and whether a value is one the form offers.
+               * The form application is resynced immediately so the next thing the model is
+               * told about this form reflects the answer it just recorded.
+               */
+              case 'record_form_answers': {
+                const { applicationId, answers } = input as {
+                  applicationId: string
+                  answers: { fieldId: string; value: string | number | boolean }[]
+                }
+
+                const outcome = await recordFormAnswers(admin, {
+                  caseId: turn.caseId,
+                  applicationId,
+                  participantId: primary,
+                  answers,
+                })
+
+                if (outcome.rejected.length > 0) {
+                  rejections.push({
+                    name: 'record_form_answers',
+                    error: outcome.rejected
+                      .map((item) => `${item.fieldId}: ${item.reason}`)
+                      .join('; ')
+                      .slice(0, 300),
+                  })
+                }
+
+                if (outcome.accepted.length > 0) {
+                  await syncFormApplications(admin, turn.caseId)
+                  await writeEvent(admin, {
+                    caseId: turn.caseId,
+                    type: 'form_answered',
+                    actor: 'customer',
+                    applicationId,
+                    payload: { fields: outcome.accepted.length },
+                  })
+                }
+
+                return {
+                  result:
+                    outcome.accepted.length === 0
+                      ? `Nothing recorded. ${outcome.rejected.map((item) => item.reason).join('; ')}`
+                      : `Recorded ${String(outcome.accepted.length)} answer${outcome.accepted.length === 1 ? '' : 's'}.`,
+                }
+              }
+
               case 'record_facts': {
                 const { facts } = input as { facts: { key: any; subject?: any; value: unknown }[] }
                 const outcome = await recordFacts(admin, {
@@ -1137,6 +1204,50 @@ async function handleTurn(request: Request): Promise<Response> {
                 }
 
                 return { result: 'Pause offered. The customer decides in the card.', card }
+              }
+
+              /*
+               * The declarations, read out of the published definition.
+               *
+               * The model picks the moment; it supplies no wording and cannot. What the card
+               * shows is what the document says, and the tap is the only way any of it reaches
+               * the packet.
+               */
+              case 'show_form_declarations': {
+                const { applicationId } = input as { applicationId: string }
+                const application = findApplication(loaded, applicationId)
+                if (!application) return { result: 'There is no such application.' }
+
+                const mapping = formForProduct(application.product)
+                const snapshot = mapping ? formSnapshot(mapping.formId) : undefined
+                if (!snapshot) {
+                  return { result: 'That application has no bank form behind it.' }
+                }
+
+                const stored = loaded.formApplications.find(
+                  (row) => row.formId === snapshot.formId,
+                )
+                const state = resolveFormState(snapshot.definition, stored?.answers ?? {})
+
+                const declarations = state.outstanding
+                  .filter((field) => field.type === 'checkbox')
+                  .map((field) => ({ fieldId: field.id, wording: field.label }))
+
+                if (declarations.length === 0) {
+                  return { result: 'There are no declarations left to make on that form.' }
+                }
+
+                const card: Card = {
+                  type: 'form_declarations',
+                  applicationId,
+                  formName: snapshot.version,
+                  declarations,
+                }
+
+                return {
+                  result: `Showed ${String(declarations.length)} declarations. The customer ticks each one.`,
+                  card,
+                }
               }
 
               case 'show_form': {

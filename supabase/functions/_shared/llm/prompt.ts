@@ -433,6 +433,14 @@ export type CaseDigest = {
   readonly declinedProducts: readonly Product[]
   readonly advisories: readonly { readonly title: string; readonly explanation: string }[]
   /**
+   * What the bank's own digital form still wants, already rendered as prose.
+   *
+   * Composed in `form-digest.ts` and passed through, because the engine that works out which
+   * of 418 controls apply to this customer has no business in the prompt composer. Empty for
+   * a case with no form-backed application, which is most of them.
+   */
+  readonly forms?: string
+  /**
    * Areas where special-category information is held but deliberately withheld from you
    * (Invariant 6). Counts and labels only, never values.
    */
@@ -754,6 +762,16 @@ function digestSection(digest: CaseDigest): string {
     )
   } else {
     for (const application of digest.applications) lines.push(...applicationLines(application), '')
+  }
+
+  /*
+   * The real form's remaining questions, after the application they belong to.
+   *
+   * Placed here so the model reads them as part of an application in progress rather than as a
+   * standalone list of things to interrogate somebody about.
+   */
+  if (digest.forms !== undefined && digest.forms !== '') {
+    lines.push(digest.forms, '')
   }
 
   if (digest.partner !== null) {

@@ -560,6 +560,54 @@ export type Database = {
           },
         ]
       }
+      form_answers: {
+        Row: {
+          answered_at: string
+          field_id: string
+          form_application_id: string
+          id: string
+          participant_id: string | null
+          source: string
+          value: Json
+          wording: string | null
+        }
+        Insert: {
+          answered_at?: string
+          field_id: string
+          form_application_id: string
+          id?: string
+          participant_id?: string | null
+          source: string
+          value: Json
+          wording?: string | null
+        }
+        Update: {
+          answered_at?: string
+          field_id?: string
+          form_application_id?: string
+          id?: string
+          participant_id?: string | null
+          source?: string
+          value?: Json
+          wording?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_answers_form_application_id_fkey"
+            columns: ["form_application_id"]
+            isOneToOne: false
+            referencedRelation: "form_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_answers_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_applications: {
         Row: {
           answers: Json

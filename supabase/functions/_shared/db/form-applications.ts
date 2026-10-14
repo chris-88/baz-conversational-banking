@@ -94,6 +94,34 @@ export async function syncFormApplications(client: Db, caseId: string): Promise<
     // A mapping whose definition has not been snapshotted. Nothing to collect against.
     if (!snapshot) continue
 
+    /*
+     * What has already been given to this form, which the facts do not cover.
+     *
+     * "Do you use 365 online?" is not a fact about a person worth carrying between products,
+     * and neither is a declaration whose wording belongs to one lending application. Those are
+     * collected against the form and have to survive a sync, or every turn of the conversation
+     * would quietly undo the last one's answers.
+     */
+    const existing = await client
+      .from('form_applications')
+      .select('id')
+      .eq('case_id', caseId)
+      .eq('form_id', snapshot.formId)
+      .maybeSingle()
+
+    if (existing.error) throw new Error(existing.error.message)
+
+    const collected: Record<string, unknown> = {}
+    if (existing.data) {
+      const given = await client
+        .from('form_answers')
+        .select('field_id, value')
+        .eq('form_application_id', existing.data.id)
+
+      if (given.error) throw new Error(given.error.message)
+      for (const row of given.data ?? []) collected[row.field_id] = row.value
+    }
+
     const resolved = fillFromFacts({
       definition: snapshot.definition,
       prefill: application.mapping.prefill,
@@ -102,6 +130,7 @@ export async function syncFormApplications(client: Db, caseId: string): Promise<
         const fact = latest.get(key)
         return fact ? heldAlready(fact, application.id) : false
       },
+      answers: collected,
     })
 
     /*
@@ -114,7 +143,15 @@ export async function syncFormApplications(client: Db, caseId: string): Promise<
         form_id: snapshot.formId,
         form_version: snapshot.version,
         source_hash: snapshot.sourceHash,
-        answers: resolved.answers as unknown as Json,
+        /*
+         * Facts last, so a correction in conversation reaches the form.
+         *
+         * The two rarely collide: a field with a fact behind it is not one the customer is
+         * asked for directly. Where they do, the fact is the one that gets corrected when
+         * somebody says "actually, it is four thousand", and a form answer frozen at the old
+         * value would be the thing that reached the bank.
+         */
+        answers: { ...collected, ...resolved.answers } as unknown as Json,
         reused_fields: [...resolved.reused],
         updated_at: new Date().toISOString(),
       },
@@ -124,7 +161,7 @@ export async function syncFormApplications(client: Db, caseId: string): Promise<
     if (written.error) throw new Error(written.error.message)
 
     forms.push(snapshot.formId)
-    answered += Object.keys(resolved.answers).length
+    answered += Object.keys({ ...collected, ...resolved.answers }).length
     reusedCount += resolved.reused.length
   }
 

@@ -20,6 +20,34 @@ const factKeyEnum = z.enum(FACT_KEYS as unknown as [FactKey, ...FactKey[]])
 const productEnum = z.enum(PRODUCTS)
 const applicationId = z.uuid()
 
+/**
+ * An answer to one of the bank form's own questions.
+ *
+ * Separate from `record_facts` because the two are different kinds of thing. A fact is about a
+ * person and is worth carrying between products for years; "do you use 365 online?" belongs to
+ * one lending application and nowhere else. Mixing them would mean inventing a fact key for
+ * every question on every form the bank publishes.
+ *
+ * The server checks the field exists, is live on this customer's branch, is actually a
+ * question, and that a choice answer is one the form offers. A declaration or an upload cannot
+ * be set here at all, whatever the model sends: those need a tap and a file.
+ */
+export const recordFormAnswersInput = z.object({
+  applicationId: z.uuid(),
+  answers: z
+    .array(
+      z.object({
+        /** The definition's own field id, as given in the digest. */
+        fieldId: z.string().min(1).max(12),
+        value: z.union([z.string().max(200), z.number(), z.boolean()]),
+      }),
+    )
+    .min(1)
+    .max(12),
+})
+
+export const showFormDeclarationsInput = z.object({ applicationId: z.uuid() })
+
 export const recordFactsInput = z.object({
   facts: z
     .array(
@@ -184,6 +212,8 @@ export const showFormInput = z.object({ applicationId })
 
 export const TOOL_INPUTS = {
   record_facts: recordFactsInput,
+  record_form_answers: recordFormAnswersInput,
+  show_form_declarations: showFormDeclarationsInput,
   show_product_options: showProductOptionsInput,
   show_review: showReviewInput,
   show_pause_prompt: showPausePromptInput,
@@ -213,6 +243,23 @@ export const TOOLS: readonly ToolDefinition[] = [
       'Record something the customer just told you, so it is never asked for again. Only for ' +
       'what they actually said — never a guess, an inference, or anything about health.',
     schema: recordFactsInput,
+  },
+  {
+    name: 'record_form_answers',
+    description:
+      "Record an answer to one of the bank form's own questions, listed under THE BANK FORM " +
+      'BEHIND THIS APPLICATION. Only what the customer actually said, and for a question with ' +
+      'a fixed set of answers, only one of those answers. Declarations and documents are not ' +
+      'recorded here: they need a tap or a file.',
+    schema: recordFormAnswersInput,
+  },
+  {
+    name: 'show_form_declarations',
+    description:
+      'Show the declarations the bank form requires, in its own words, for the customer to ' +
+      'tick. Use this when the only things left are declarations. You cannot record them any ' +
+      'other way.',
+    schema: showFormDeclarationsInput,
   },
   {
     name: 'show_product_options',

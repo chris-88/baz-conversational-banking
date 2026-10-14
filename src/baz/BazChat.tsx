@@ -482,6 +482,12 @@ export function BazChat({
         'Say what is still outstanding on that application.',
       )
     },
+    onConfirmDeclarations: async (applicationId, fieldIds) => {
+      await commit(
+        { action: 'confirm_form_declarations', applicationId, fieldIds: [...fieldIds] },
+        'Say what that leaves, and do not repeat the declarations back.',
+      )
+    },
     onHealthForm: async (applicationId, values) => {
       await commit(
         { action: 'submit_health_form', applicationId, values: [...values] },

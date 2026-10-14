@@ -4,6 +4,7 @@ import { ProductOptionsCard, type ProductChoice } from '@/baz/cards/ProductOptio
 import { QuoteCard } from '@/baz/cards/QuoteCard'
 import type { SubscribeResult } from '@/lib/push'
 import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
+import { FormDeclarationsCard } from '@/baz/cards/FormDeclarationsCard'
 import { SignInCard } from '@/baz/cards/SignInCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
@@ -58,6 +59,11 @@ export type CardActions = {
   /** Resolves true only when the server accepted the plan. */
   readonly onConfirmPlan?: (planId: string) => Promise<boolean> | boolean
   readonly onDeclinePlan?: (planId: string) => Promise<void> | void
+  /** Every declaration the bank's form requires, confirmed in one tap after each is ticked. */
+  readonly onConfirmDeclarations?: (
+    applicationId: string,
+    fieldIds: readonly string[],
+  ) => Promise<void> | void
 }
 
 export function CardRenderer({
@@ -91,6 +97,17 @@ export function CardRenderer({
 
     case 'data_notice':
       return <DataNoticeCard card={card} />
+
+    case 'form_declarations':
+      return (
+        <FormDeclarationsCard
+          card={card}
+          {...(actions.onConfirmDeclarations
+            ? { onConfirm: actions.onConfirmDeclarations }
+            : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
 
     case 'mortgage_rates':
       return <MortgageRatesCard card={card} />

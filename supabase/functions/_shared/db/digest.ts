@@ -5,6 +5,7 @@ import { evaluateAdvisories } from '../domain/advisories.ts'
 import { stateLabel } from '../domain/state-machine.ts'
 import type { CaseDigest, DigestApplication, DigestFact, DigestNeeds } from '../llm/prompt.ts'
 import { needContextFor } from './needs.ts'
+import { formDigestSection, formDigests } from './form-digest.ts'
 import { deferred, evaluateNeeds, nextToClarify, readyToSurface } from '../domain/needs/engine.ts'
 import { buildPlan } from '../domain/needs/plan.ts'
 import type { DigestPlan } from '../llm/prompt.ts'
@@ -222,6 +223,8 @@ export function buildCaseDigest(
   const needs = needContext === null ? [] : evaluateNeeds(needContext, loaded.needs)
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
+  // What the bank's own form still wants, which is a different list from the journey's.
+  const forms = formDigestSection(formDigests(loaded))
 
   const partnerOutstanding = [
     ...new Set(applications.flatMap((application) => application.outstandingForPartner ?? [])),
@@ -296,6 +299,7 @@ export function buildCaseDigest(
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,
+    ...(forms === '' ? {} : { forms }),
     declinedProducts: loaded.productInterests
       .filter((interest) => interest.status === 'declined')
       .map((interest) => interest.product),

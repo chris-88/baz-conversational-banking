@@ -1,7 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
 import { serveJson } from '../_shared/http/serve.ts'
-import type { Database } from '../_shared/db/database.types.ts'
+import type { Database, Json } from '../_shared/db/database.types.ts'
 import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import {
   caseActionRequestSchema,
@@ -21,6 +21,9 @@ import {
 import { canTransition } from '../_shared/domain/plans/engine.ts'
 import { deferNeed } from '../_shared/db/needs.ts'
 import { syncFormApplications } from '../_shared/db/form-applications.ts'
+import { formForProduct } from '../_shared/tenants/boi/forms/mapping.ts'
+import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
+import { resolveFormState } from '../_shared/domain/forms/state.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { knowledgeProduct } from '../_shared/tenants/boi/kb-prompt.ts'
 import {
@@ -291,6 +294,76 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
      * reactivate and an abandoned one cannot be paused. Nothing here infers intent: every
      * change came from a tap.
      */
+    /**
+     * §10 — a declaration is only a declaration if somebody read it and tapped.
+     *
+     * The wording is read from the published definition here rather than taken from the
+     * request, so the record says exactly what was on screen. Every field is checked to be a
+     * declaration on this form and active on this customer's branch: a client cannot confirm
+     * something the journey never showed.
+     */
+    case 'confirm_form_declarations': {
+      const application = findApplication(loaded, action.applicationId)
+      if (!application) return errorResponse('not_found', 'That application does not exist.')
+
+      const mapping = formForProduct(application.product)
+      const snapshot = mapping ? formSnapshot(mapping.formId) : undefined
+      if (!snapshot) return errorResponse('bad_request', 'That application has no form behind it.')
+
+      const row = await admin
+        .from('form_applications')
+        .select('id, answers')
+        .eq('case_id', caseId)
+        .eq('form_id', snapshot.formId)
+        .maybeSingle()
+
+      if (row.error) return errorResponse('conflict', row.error.message)
+      if (!row.data) return errorResponse('not_found', 'Nothing has been collected for that form.')
+
+      const state = resolveFormState(snapshot.definition, (row.data.answers ?? {}) as Record<string, unknown>)
+      const active = new Set(state.active.map((field) => field.id))
+      const byId = new Map(snapshot.definition.fields.map((field) => [field.id, field]))
+
+      const writes = []
+      for (const fieldId of action.fieldIds) {
+        const field = byId.get(fieldId)
+        if (!field || field.type !== 'checkbox' || !active.has(fieldId)) {
+          return errorResponse('bad_request', 'That is not a declaration on this form.')
+        }
+
+        // A checkbox submits the value its own choice declares, which is the form's business.
+        const choice = field.choices?.[0]?.value ?? 'Yes'
+
+        writes.push({
+          form_application_id: row.data.id,
+          field_id: fieldId,
+          value: choice as unknown as Json,
+          source: 'consent' as const,
+          // What was on screen, stored beside the agreement to it.
+          wording: field.label.slice(0, 2000),
+          participant_id: session.participant_id,
+        })
+      }
+
+      mustWrite(
+        await admin
+          .from('form_answers')
+          .upsert(writes, { onConflict: 'form_application_id,field_id' }),
+        'the declarations',
+      )
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'consent_granted',
+        actor: 'customer',
+        applicationId: action.applicationId,
+        payload: { form: snapshot.formId, declarations: writes.length },
+      })
+
+      summary = `${String(writes.length)} ${writes.length === 1 ? 'declaration' : 'declarations'} recorded.`
+      break
+    }
+
     case 'decide_plan': {
       const row = await admin
         .from('plans')

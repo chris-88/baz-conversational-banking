@@ -60,6 +60,14 @@ export type LoadedEvent = {
   readonly payload: Record<string, unknown>
 }
 
+export type LoadedFormApplication = {
+  readonly id: string
+  /** The bank's form id, e.g. "1940". */
+  readonly formId: string
+  /** Keyed by the definition's own field ids. */
+  readonly answers: Readonly<Record<string, unknown>>
+}
+
 export type LoadedCase = {
   readonly caseId: string
   readonly kind: CaseKind
@@ -74,6 +82,13 @@ export type LoadedCase = {
   readonly documents: readonly LoadedDocument[]
   readonly requests: readonly LoadedRequest[]
   readonly productInterests: readonly LoadedProductInterest[]
+  /**
+   * Applications against the bank's own digital forms, with what has been collected so far.
+   *
+   * Here rather than fetched where it is needed, because the digest reads it on every turn:
+   * what a form still wants is part of what Baz knows about a case.
+   */
+  readonly formApplications: readonly LoadedFormApplication[]
 
   /** Oldest first. Only the tail is sent to the model. */
   readonly messages: readonly LoadedMessage[]

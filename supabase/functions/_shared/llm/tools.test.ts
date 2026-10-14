@@ -57,12 +57,25 @@ describe('the model has no tool that takes an action', () => {
     // to see and what the repayments are. The model never reads the table, cannot show a rate
     // below its minimum, and cannot price a BER the bank has not published. The card is not
     // tappable at all: a published rate is not an offer, and nothing should start from one.
+    //
+    // `record_form_answers` is the thirteenth and belongs to the digital forms feature. It is
+    // the same kind of thing as `record_facts`: what the customer just said, checked by the
+    // server against the bank's published definition before it is written. It refuses a
+    // declaration and refuses an upload, whatever it is sent, because those need a tap and a
+    // file. It cannot submit anything.
+    //
+    // `show_form_declarations` is the fourteenth and is the one that could look like acting,
+    // because consent is the thing a model must never manufacture. It takes an application id
+    // and nothing else: the wording comes out of the published definition, the server builds
+    // the card, and the customer ticking each line and tapping is what records any of it.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
+      'record_form_answers',
       'request_upload',
       'show_comparison',
       'show_form',
+      'show_form_declarations',
       'show_mortgage_rates',
       'show_partner_invite',
       'show_pause_prompt',
