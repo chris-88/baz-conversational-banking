@@ -105,6 +105,20 @@
   --decides-model: oklch(0.58 0.12 62);
 
   /*
+   * Syntax colours, for the four code blocks on the explainer.
+   *
+   * A published form definition and a wire packet are the evidence that page rests on, and
+   * forty lines of undifferentiated grey is not evidence anybody reads. Tuned against the page
+   * surface rather than taken from an editor theme, which is why they are tokens: the dark
+   * variants below have to be legible on a near-black block.
+   */
+  --code-key: oklch(0.5 0.17 265);
+  --code-string: oklch(0.52 0.15 25);
+  --code-number: oklch(0.52 0.13 160);
+  --code-keyword: oklch(0.55 0.19 300);
+  --code-comment: oklch(0.62 0.02 257);
+
+  /*
    * Baz's own brand, from the supplied dev kit (tokens/brand-tokens.css).
    *
    * Separate from `--primary` on purpose. `--primary` is the tenant's blue — Bank of Ireland's
@@ -141,6 +155,11 @@
 
   /* Lifted off the dark ground, where the light pair reads as mud. */
   --decides-code: oklch(0.74 0.12 178);
+  --code-key: oklch(0.78 0.13 265);
+  --code-string: oklch(0.78 0.12 30);
+  --code-number: oklch(0.78 0.11 160);
+  --code-keyword: oklch(0.78 0.14 300);
+  --code-comment: oklch(0.6 0.02 257);
   --decides-model: oklch(0.78 0.12 70);
 
   /*
@@ -231,6 +250,11 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-code-key: var(--code-key);
+  --color-code-string: var(--code-string);
+  --color-code-number: var(--code-number);
+  --color-code-keyword: var(--code-keyword);
+  --color-code-comment: var(--code-comment);
   --color-brand-deep: var(--brand-deep);
   --color-brand-deep-foreground: var(--brand-deep-foreground);
   --color-state-progress: var(--state-progress);

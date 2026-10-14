@@ -1,5 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import {
+  CalculatorIcon,
+  CheckCircle2Icon,
+  CircleSlashIcon,
+  FileJsonIcon,
+  MessageSquareIcon,
+  PiggyBankIcon,
+  SendIcon,
+  SmartphoneIcon,
+  TriangleAlertIcon,
+  WalletIcon,
+} from 'lucide-react'
 import { discovery as copy } from '@/content/how-it-works/copy'
 import { channels } from '@/content/how-it-works/architecture'
 import {
@@ -10,9 +22,15 @@ import {
   workedExample,
   type Mapping,
 } from '@/content/how-it-works/forms'
-import { Claim, Eyebrow, Prose, Reveal } from './parts'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import {
+  Claim,
+  Code,
+  Reveal,
+  SectionHead,
+  StepBadge,
+  Surface,
+  Tile,
+} from './parts'
 import { cn } from '@/lib/utils'
 
 /**
@@ -27,20 +45,18 @@ export function Discovery(): ReactNode {
   const [lit, setLit] = useState<Mapping['id'] | null>(null)
 
   return (
-    <section id="discovery" className="scroll-mt-20 border-b py-10 sm:py-14">
-      <Eyebrow>{copy.eyebrow}</Eyebrow>
-      <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-balance sm:text-3xl">
-        {copy.title}
-      </h2>
-      <Prose className="mt-4">
-        {copy.body.map((paragraph) => (
+    <section id="discovery" className="scroll-mt-[68px] lg:scroll-mt-[84px] border-t pt-14 pb-14 sm:pt-20 sm:pb-20">
+      <SectionHead
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        lede={copy.body.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
-      </Prose>
+      />
 
       <WorkedExample lit={lit} onLight={setLit} />
 
-      <p className="text-muted-foreground mt-4 max-w-[62ch] text-sm leading-relaxed">
+      <p className="text-muted-foreground mt-5 max-w-[62ch] text-[14px] leading-relaxed">
         {copy.afterExample}
       </p>
 
@@ -71,7 +87,12 @@ function WorkedExample({
     <div className="mt-7">
       <div className="grid gap-3 lg:grid-cols-3">
         {/* 1. What somebody said. */}
-        <Panel step={1} title="Conversation" subtitle="Plain language, their words">
+        <Panel
+          step={1}
+          title="Conversation"
+          subtitle="Plain language, their words"
+          icon={<MessageSquareIcon />}
+        >
           <p className="bg-primary text-primary-foreground ml-auto w-fit rounded-2xl rounded-br-sm px-3 py-2 text-sm leading-relaxed">
             <Sentence lit={lit} onLight={onLight} />
           </p>
@@ -85,16 +106,21 @@ function WorkedExample({
         </Panel>
 
         {/* 2. The bank's own document. */}
-        <Panel step={2} title="Journey definition" subtitle="GET /api/forms/1940">
-          <pre className="bg-muted/60 max-h-56 overflow-auto rounded-md p-3 text-[11.5px] leading-relaxed">
-            <code>{definitionExtract}</code>
-          </pre>
+        <Panel
+          step={2}
+          title="Journey definition"
+          subtitle="GET /api/forms/1940"
+          icon={<FileJsonIcon />}
+        >
+          <div className="bg-muted/50 max-h-60 overflow-auto rounded-lg">
+            <Code text={definitionExtract} language="json" className="p-3" />
+          </div>
           {mapping !== null && (
-            <div className="border-primary/40 bg-primary/5 mt-3 rounded-md border p-3">
-              <p className="font-mono text-[11px]">
+            <div className="border-primary/40 bg-primary/5 mt-3 rounded-lg border p-3">
+              <p className="text-primary font-mono text-[11px] font-medium">
                 field {mapping.fieldId} · {mapping.fieldType}
               </p>
-              <p className="mt-1 text-xs font-medium">{mapping.fieldLabel}</p>
+              <p className="mt-1 text-[12.5px] font-medium">{mapping.fieldLabel}</p>
               <p className="text-muted-foreground mt-1 font-mono text-[11px]">
                 toscana: {mapping.toscana}
               </p>
@@ -103,25 +129,32 @@ function WorkedExample({
         </Panel>
 
         {/* 3. What would be sent. */}
-        <Panel step={3} title="Submission contract" subtitle="POST /api/forms/1940">
+        <Panel
+          step={3}
+          title="Submission contract"
+          subtitle="POST /api/forms/1940"
+          icon={<SendIcon />}
+        >
           <div className="space-y-1.5">
             {workedExample.mappings.flatMap((candidate) =>
               candidate.entries.map((entry) => (
                 <code
                   key={entry.key}
                   className={cn(
-                    'block rounded px-2 py-1 font-mono text-[11.5px] transition-colors',
+                    'block rounded-md px-2.5 py-1.5 font-mono text-[11.5px] transition-colors',
                     lit === candidate.id
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-muted/60 text-muted-foreground',
+                      ? 'bg-primary/10 ring-primary/30 ring-1'
+                      : 'bg-muted/50',
                   )}
                 >
-                  {entry.key} = &quot;{entry.value}&quot;
+                  <span className="text-code-key">{entry.key}</span>
+                  <span className="text-muted-foreground"> = </span>
+                  <span className="text-code-string">&quot;{entry.value}&quot;</span>
                 </code>
               )),
             )}
           </div>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3.5 flex items-start gap-2 border-t pt-3">
             <Claim kind="poc" />
             <p className="text-muted-foreground text-[11px] leading-snug">
               Generated for inspection. Nothing is ever sent there.
@@ -132,7 +165,7 @@ function WorkedExample({
 
       {mapping !== null && (
         <Reveal className="mt-3">
-          <p className="text-muted-foreground border-primary/40 border-l-2 pl-3 text-sm leading-relaxed">
+          <p className="text-muted-foreground border-primary/40 border-l-2 pl-4 text-[13.5px] leading-relaxed">
             {mapping.note}
           </p>
         </Reveal>
@@ -185,104 +218,130 @@ function Panel({
   step,
   title,
   subtitle,
+  icon,
   children,
 }: {
   readonly step: number
   readonly title: string
   readonly subtitle: string
+  readonly icon: ReactNode
   readonly children: ReactNode
 }): ReactNode {
   return (
-    <Card className="min-w-0 gap-0 p-4">
-      <div className="flex items-baseline gap-2">
-        <span className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[10.5px]">
-          {step}
-        </span>
+    <Surface lift className="flex min-w-0 flex-col overflow-hidden">
+      <div className="flex items-center gap-2.5 border-b px-4 py-3">
+        <StepBadge n={step} />
+        <Tile tone="primary" size="sm">
+          {icon}
+        </Tile>
         <div className="min-w-0">
-          <p className="text-sm font-semibold">{title}</p>
+          <p className="text-[13.5px] font-semibold">{title}</p>
           <p className="text-muted-foreground truncate font-mono text-[11px]">{subtitle}</p>
         </div>
       </div>
-      <div className="mt-3">{children}</div>
-    </Card>
+      <div className="min-w-0 flex-1 p-4">{children}</div>
+    </Surface>
   )
 }
 
 /** The two journeys, with the counts that belong to each kept apart. */
 function JourneyCards(): ReactNode {
   const [open, setOpen] = useState<string | null>(null)
+  const icons = [PiggyBankIcon, WalletIcon]
+  const tones = ['savings', 'loan'] as const
 
   return (
-    <div className="mt-10">
-      <h3 className="text-lg font-semibold">Real journeys, real complexity</h3>
-      <p className="text-muted-foreground mt-1 max-w-[62ch] text-sm leading-relaxed">
+    <div className="mt-12">
+      <h3 className="text-xl font-bold tracking-tight">Real journeys, real complexity</h3>
+      <p className="text-muted-foreground mt-2 max-w-[62ch] text-[14px] leading-relaxed">
         Two products, read from the same platform. The loan is the harder one: it describes
         calculations and an eligibility verdict as well as questions.
       </p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {forms.map((form) => (
-          <Reveal key={form.id}>
-            <Card className="h-full gap-0 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-base font-semibold">{form.name}</h4>
-                <Badge variant="secondary" className="font-mono text-[10.5px]">
-                  form {form.id}
-                </Badge>
-              </div>
-              <p className="text-muted-foreground mt-0.5 font-mono text-[11px]">{form.version}</p>
-
-              <dl className="mt-4 grid grid-cols-2 gap-3">
-                <div>
-                  <dt className="text-muted-foreground text-[11px]">Objects in the definition</dt>
-                  <dd className="text-lg font-bold tabular-nums">{form.fieldCount}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground text-[11px]">Entries in the capture</dt>
-                  <dd className="text-lg font-bold tabular-nums">{form.capturedEntries}</dd>
-                </div>
-              </dl>
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {form.capabilities.map((capability) => (
-                  <span
-                    key={capability}
-                    className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[11px]"
-                  >
-                    {capability}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {forms.map((form, index) => {
+          const Icon = icons[index] ?? PiggyBankIcon
+          return (
+            <Reveal key={form.id} delay={index * 0.06}>
+              <Surface lift className="h-full p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Tile tone={tones[index] ?? 'primary'}>
+                      <Icon />
+                    </Tile>
+                    <div className="min-w-0">
+                      <h4 className="text-[15px] font-semibold">{form.name}</h4>
+                      <p className="text-muted-foreground truncate font-mono text-[11px]">
+                        {form.version}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 font-mono text-[10.5px]">
+                    {form.id}
                   </span>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(open === form.id ? null : form.id)
-                }}
-                className="text-primary focus-visible:ring-ring mt-4 self-start rounded text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
-              >
-                {open === form.id ? 'Hide detail' : 'Inspect journey'}
-              </button>
-
-              {open === form.id && (
-                <div className="text-muted-foreground mt-3 space-y-2 border-t pt-3 text-xs leading-relaxed">
-                  <p>{form.capturedBasis}.</p>
-                  <p>
-                    The capture is what a browser sent when a person completed the genuine
-                    journey. It is not what Baz produced.
-                  </p>
-                  {form.id === generated.formId && (
-                    <p className="text-foreground">
-                      On a live case holding twenty facts, Baz had {generated.collected} answers
-                      filled in, {generated.outstanding} questions left, and generated a{' '}
-                      {generated.entries}-entry packet marked {generated.status}.
-                    </p>
-                  )}
                 </div>
-              )}
-            </Card>
-          </Reveal>
-        ))}
+
+                <dl className="mt-5 grid grid-cols-2 gap-3">
+                  {(
+                    [
+                      ['Objects in the definition', form.fieldCount],
+                      ['Entries in the capture', form.capturedEntries],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <div key={label} className="bg-muted/50 rounded-lg p-3">
+                      <dd className="text-xl font-bold tracking-tight tabular-nums">{value}</dd>
+                      <dt className="text-muted-foreground mt-0.5 text-[11.5px] leading-snug">
+                        {label}
+                      </dt>
+                    </div>
+                  ))}
+                </dl>
+
+                <ul className="mt-4 flex flex-wrap gap-1.5">
+                  {form.capabilities.map((capability) => (
+                    <li
+                      key={capability}
+                      className="bg-card flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px]"
+                    >
+                      <CheckCircle2Icon aria-hidden className="text-success size-3" />
+                      {capability}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(open === form.id ? null : form.id)
+                  }}
+                  className="text-primary focus-visible:ring-ring mt-4 self-start rounded text-[12.5px] font-medium focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  {open === form.id ? 'Hide detail' : 'Inspect journey'}
+                </button>
+
+                {open === form.id && (
+                  <div className="text-muted-foreground mt-3 space-y-2 border-t pt-3 text-[12.5px] leading-relaxed">
+                    <p>{form.capturedBasis}.</p>
+                    <p>
+                      The capture is what a browser sent when a person completed the genuine
+                      journey. It is not what Baz produced.
+                    </p>
+                    {form.id === generated.formId && (
+                      <p className="text-foreground bg-primary/5 rounded-lg p-3">
+                        On a live case holding twenty facts, Baz had{' '}
+                        <strong className="font-semibold">{generated.collected}</strong> answers
+                        filled in, <strong className="font-semibold">{generated.outstanding}</strong>{' '}
+                        questions left, and generated a{' '}
+                        <strong className="font-semibold">{generated.entries}-entry</strong> packet
+                        marked {generated.status}.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </Surface>
+            </Reveal>
+          )
+        })}
       </div>
     </div>
   )
@@ -297,47 +356,79 @@ function JourneyCards(): ReactNode {
  * between a demonstration and a claim.
  */
 function Calculations(): ReactNode {
-  const tone: Readonly<Record<string, string>> = {
-    source_faithful: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-    fixture: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-    unsupported: 'bg-muted text-muted-foreground',
-  }
-  const label: Readonly<Record<string, string>> = {
-    source_faithful: 'computed here',
-    fixture: 'stand-in',
-    unsupported: 'cannot be computed',
+  const look: Readonly<
+    Record<string, { readonly label: string; readonly tone: string; readonly icon: ReactNode }>
+  > = {
+    source_faithful: {
+      label: 'computed here',
+      tone: 'bg-success/10 text-success',
+      icon: <CheckCircle2Icon />,
+    },
+    fixture: {
+      label: 'stand-in',
+      tone: 'bg-warning-border/30 text-warning-foreground',
+      icon: <TriangleAlertIcon />,
+    },
+    unsupported: {
+      label: 'cannot be computed',
+      tone: 'bg-muted text-muted-foreground',
+      icon: <CircleSlashIcon />,
+    },
   }
 
   return (
-    <div className="mt-10">
-      <h3 className="text-lg font-semibold">What the form decides, and what we may decide</h3>
-      <p className="text-muted-foreground mt-1 max-w-[62ch] text-sm leading-relaxed">
+    <div className="mt-12">
+      <h3 className="text-xl font-bold tracking-tight">
+        What the form decides, and what we may decide
+      </h3>
+      <p className="text-muted-foreground mt-2 max-w-[62ch] text-[14px] leading-relaxed">
         Four calculating controls, and they are not the same kind of thing. Treating them as if
         they were is how an assistant ends up inventing a lending decision.
       </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {calculations.map((calculation) => (
-          <Reveal key={calculation.fieldId}>
-            <Card className="h-full gap-0 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold">{calculation.label}</p>
-                <span
-                  className={cn(
-                    'rounded-[3px] px-1.5 py-0.5 font-mono text-[10.5px] tracking-[0.07em] uppercase',
-                    tone[calculation.fidelity],
-                  )}
-                >
-                  {label[calculation.fidelity]}
-                </span>
-              </div>
-              <p className="mt-2 text-base font-semibold tabular-nums">{calculation.result}</p>
-              <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                {calculation.why}
-              </p>
-            </Card>
-          </Reveal>
-        ))}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {calculations.map((calculation, index) => {
+          const style = look[calculation.fidelity]
+          return (
+            <Reveal key={calculation.fieldId} delay={index * 0.04}>
+              <Surface className="h-full p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Tile
+                      tone={
+                        calculation.fidelity === 'source_faithful'
+                          ? 'success'
+                          : calculation.fidelity === 'fixture'
+                            ? 'warning'
+                            : 'primary'
+                      }
+                      size="sm"
+                    >
+                      <CalculatorIcon />
+                    </Tile>
+                    <p className="text-[14px] font-semibold">{calculation.label}</p>
+                  </div>
+                  <span
+                    className={cn(
+                      'flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold tracking-[0.06em] uppercase [&>svg]:size-3',
+                      style?.tone,
+                    )}
+                  >
+                    {style?.icon}
+                    {style?.label}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-lg font-bold tracking-tight tabular-nums">
+                  {calculation.result}
+                </p>
+                <p className="text-muted-foreground mt-2 text-[12.5px] leading-relaxed">
+                  {calculation.why}
+                </p>
+              </Surface>
+            </Reveal>
+          )
+        })}
       </div>
     </div>
   )
@@ -346,46 +437,65 @@ function Calculations(): ReactNode {
 /** One definition, three renderers, with the third honestly labelled. */
 function Channels(): ReactNode {
   const still = useReducedMotion() === true
+  const icons = [SmartphoneIcon, SmartphoneIcon, MessageSquareIcon]
 
   return (
-    <Reveal className="mt-10">
-      <h3 className="text-lg font-semibold">One digital journey, several channels</h3>
+    <Reveal className="mt-12">
+      <h3 className="text-xl font-bold tracking-tight">One digital journey, several channels</h3>
 
-      <div className="mt-4">
-        <Card className="mx-auto max-w-sm p-4 text-center">
-          <p className="text-sm font-semibold">{channels.source}</p>
-          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+      <div className="mt-5">
+        <Surface lift className="mx-auto max-w-sm p-5 text-center">
+          <div className="flex justify-center">
+            <Tile tone="deep">
+              <FileJsonIcon />
+            </Tile>
+          </div>
+          <p className="mt-3 text-[15px] font-semibold">{channels.source}</p>
+          <p className="text-muted-foreground mt-1.5 text-[12.5px] leading-relaxed">
             {channels.sourceDetail}
           </p>
-        </Card>
+        </Surface>
 
-        <div aria-hidden className="bg-border mx-auto h-6 w-px" />
+        <div aria-hidden className="bg-border mx-auto h-8 w-px" />
 
         <div className="grid gap-3 sm:grid-cols-3">
-          {channels.renderers.map((renderer, index) => (
-            <motion.div
-              key={renderer.name}
-              {...(still
-                ? {}
-                : {
-                    initial: { opacity: 0, y: 8 },
-                    whileInView: { opacity: 1, y: 0 },
-                    viewport: { once: true },
-                    transition: { duration: 0.3, delay: index * 0.12 },
-                  })}
-            >
-              <Card className="h-full gap-1 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">{renderer.name}</p>
-                  <Claim kind={renderer.status === 'POC' ? 'poc' : 'production'} />
-                </div>
-                <p className="text-muted-foreground text-xs leading-relaxed">{renderer.detail}</p>
-              </Card>
-            </motion.div>
-          ))}
+          {channels.renderers.map((renderer, index) => {
+            const Icon = icons[index] ?? MessageSquareIcon
+            const isBaz = renderer.status === 'POC'
+            return (
+              <motion.div
+                key={renderer.name}
+                {...(still
+                  ? {}
+                  : {
+                      initial: { opacity: 0, y: 10 },
+                      whileInView: { opacity: 1, y: 0 },
+                      viewport: { once: true },
+                      transition: { duration: 0.35, delay: index * 0.12 },
+                    })}
+              >
+                <Surface
+                  className={cn('h-full p-4', isBaz && 'border-primary/40 bg-primary/[0.03]')}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <Tile tone={isBaz ? 'primary' : 'deep'} size="sm">
+                        <Icon />
+                      </Tile>
+                      <p className="text-[14px] font-semibold">{renderer.name}</p>
+                    </div>
+                    <Claim kind={isBaz ? 'poc' : 'production'} />
+                  </div>
+                  <p className="text-muted-foreground mt-2.5 text-[12.5px] leading-relaxed">
+                    {renderer.detail}
+                  </p>
+                </Surface>
+              </motion.div>
+            )
+          })}
         </div>
 
-        <p className="text-muted-foreground mt-4 text-center text-sm">{channels.caption}</p>
+        <p className="text-muted-foreground mt-5 text-center text-[14px]">{channels.caption}</p>
       </div>
     </Reveal>
   )

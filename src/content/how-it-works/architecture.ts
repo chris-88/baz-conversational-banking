@@ -59,11 +59,11 @@ export const stages: readonly Stage[] = [
   },
   {
     id: 'bank',
-    name: 'The bank’s own journey',
-    oneLine: 'The definition, and where a real submission would go',
+    name: 'The bank',
+    oneLine: 'Its own definition, and where a real submission would go',
     detail: [
-      'GET /api/forms/1940 — the published journey definition.',
-      'POST /api/forms/1940 — recorded as the intended destination.',
+      'GET /api/forms/1940 is the published journey definition.',
+      'POST /api/forms/1940 is recorded as the intended destination.',
       'In this prototype nothing is ever sent there.',
     ],
     isModel: false,

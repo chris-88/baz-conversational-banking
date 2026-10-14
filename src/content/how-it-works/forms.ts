@@ -134,7 +134,7 @@ export const generated = {
   collected: 21,
   outstanding: 18,
   entries: 43,
-  status: 'GENERATED — NOT SENT',
+  status: 'GENERATED, NOT SENT',
   measuredAt: '2026-10-14',
 } as const
 

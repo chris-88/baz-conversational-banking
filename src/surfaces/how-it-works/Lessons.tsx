@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronDownIcon } from 'lucide-react'
+import { ChevronDownIcon, LightbulbIcon } from 'lucide-react'
 import { lessons as copy } from '@/content/how-it-works/copy'
 import { engineeringNotes, lessons } from '@/content/how-it-works/pivots'
-import { Eyebrow, Prose, Reveal } from './parts'
-import { Card } from '@/components/ui/card'
+import { Reveal, SectionHead, Surface, Tile } from './parts'
 import { cn } from '@/lib/utils'
 
 /**
@@ -20,18 +19,16 @@ export function Lessons(): ReactNode {
   const [open, setOpen] = useState(false)
 
   return (
-    <section id="lessons" className="scroll-mt-20 border-b py-10 sm:py-14">
-      <Eyebrow>{copy.eyebrow}</Eyebrow>
-      <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-balance sm:text-3xl">
-        {copy.title}
-      </h2>
-      <Prose className="mt-4">
-        {copy.body.map((paragraph) => (
+    <section id="lessons" className="scroll-mt-[68px] lg:scroll-mt-[84px] border-t pt-14 pb-14 sm:pt-20 sm:pb-20">
+      <SectionHead
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        lede={copy.body.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
-      </Prose>
+      />
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-2">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {lessons.map((lesson, index) => (
           <Reveal key={lesson.id} delay={index * 0.04}>
             <LessonCard lesson={lesson} />
@@ -58,10 +55,12 @@ export function Lessons(): ReactNode {
         {open && (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {engineeringNotes.map((note) => (
-              <Card key={note.title} className="gap-1 p-4">
-                <p className="text-sm font-semibold">{note.title}</p>
-                <p className="text-muted-foreground text-xs leading-relaxed">{note.body}</p>
-              </Card>
+              <Surface key={note.title} className="p-4">
+                <p className="text-[13.5px] font-semibold">{note.title}</p>
+                <p className="text-muted-foreground mt-1.5 text-[12.5px] leading-relaxed">
+                  {note.body}
+                </p>
+              </Surface>
             ))}
           </div>
         )}
@@ -74,10 +73,15 @@ function LessonCard({ lesson }: { readonly lesson: (typeof lessons)[number] }): 
   const [shown, setShown] = useState(false)
 
   return (
-    <Card className="h-full gap-0 p-5">
-      <h3 className="text-base font-semibold text-pretty">{lesson.title}</h3>
+    <Surface className="h-full p-5">
+      <div className="flex items-start gap-2.5">
+        <Tile tone="warning" size="sm">
+          <LightbulbIcon />
+        </Tile>
+        <h3 className="text-[15px] leading-snug font-semibold text-pretty">{lesson.title}</h3>
+      </div>
 
-      <dl className="mt-3 space-y-2.5">
+      <dl className="mt-4 space-y-3">
         {(
           [
             ['We assumed', lesson.assumption],
@@ -85,16 +89,16 @@ function LessonCard({ lesson }: { readonly lesson: (typeof lessons)[number] }): 
             ['What changed', lesson.whatChanged],
           ] as const
         ).map(([label, body]) => (
-          <div key={label}>
-            <dt className="text-muted-foreground font-mono text-[10.5px] tracking-[0.1em] uppercase">
+          <div key={label} className="border-t pt-2.5 first:border-t-0 first:pt-0">
+            <dt className="text-muted-foreground font-mono text-[10px] tracking-[0.1em] uppercase">
               {label}
             </dt>
-            <dd className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{body}</dd>
+            <dd className="text-muted-foreground mt-1 text-[12.5px] leading-relaxed">{body}</dd>
           </div>
         ))}
       </dl>
 
-      <p className="border-primary/40 mt-4 border-l-2 pl-3 text-sm leading-snug font-medium">
+      <p className="bg-primary/5 text-primary mt-4 rounded-lg px-3.5 py-2.5 text-[13.5px] leading-snug font-medium">
         {lesson.lesson}
       </p>
 
@@ -111,12 +115,12 @@ function LessonCard({ lesson }: { readonly lesson: (typeof lessons)[number] }): 
             {shown ? 'Hide measurement' : 'See the measurement'}
           </button>
           {shown && (
-            <p className="text-muted-foreground bg-muted/50 mt-2 rounded-md p-3 text-xs leading-relaxed">
+            <p className="text-muted-foreground bg-muted/50 mt-2 rounded-lg p-3 text-[12.5px] leading-relaxed">
               {lesson.measurement}
             </p>
           )}
         </div>
       )}
-    </Card>
+    </Surface>
   )
 }

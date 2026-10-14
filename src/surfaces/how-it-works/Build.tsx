@@ -1,11 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowRightIcon } from 'lucide-react'
+import { ArrowRightIcon, CheckIcon, GitCommitIcon, SparklesIcon, UserRoundIcon } from 'lucide-react'
 import { build as copy, buildingWithAi } from '@/content/how-it-works/copy'
 import { pivots, type Pivot } from '@/content/how-it-works/pivots'
 import metrics from '@/content/how-it-works/build-metrics.json'
-import { Eyebrow, Prose, Reveal } from './parts'
-import { Card } from '@/components/ui/card'
+import { MiniRow, Reveal, SectionHead, StepBadge, Surface, Tile } from './parts'
 import { cn } from '@/lib/utils'
 
 /**
@@ -17,18 +16,16 @@ import { cn } from '@/lib/utils'
  */
 export function Build(): ReactNode {
   return (
-    <section id="build" className="scroll-mt-20 border-b py-10 sm:py-14">
-      <Eyebrow>{copy.eyebrow}</Eyebrow>
-      <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-balance sm:text-3xl">
-        {copy.title}
-      </h2>
-      <Prose className="mt-4">
-        {copy.body.map((paragraph) => (
+    <section id="build" className="scroll-mt-[68px] lg:scroll-mt-[84px] border-t pt-14 pb-14 sm:pt-20 sm:pb-20">
+      <SectionHead
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        lede={copy.body.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
-      </Prose>
+      />
 
-      <ol className="mt-8 space-y-3">
+      <ol className="mt-9 space-y-3">
         {pivots.map((pivot, index) => (
           <li key={pivot.id}>
             <PivotRow pivot={pivot} index={index} />
@@ -49,24 +46,32 @@ function PivotRow({ pivot, index }: { readonly pivot: Pivot; readonly index: num
   const caption = shown === 'before' ? pivot.beforeCaption : pivot.afterCaption
 
   return (
-    <Reveal>
-      <Card className="gap-0 p-5">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+    <Reveal delay={index * 0.03}>
+      <Surface className="p-5 sm:p-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:gap-8">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[10.5px]">
-                {index + 1}
-              </span>
-              <p className="text-muted-foreground font-mono text-[11px] tracking-wide">
-                {pivot.from} <span aria-hidden>→</span> {pivot.to}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <StepBadge n={index + 1} tone="primary" />
+              <p className="text-muted-foreground flex items-center gap-1.5 font-mono text-[11px] tracking-wide">
+                {pivot.from}
+                <ArrowRightIcon aria-hidden className="size-3" />
+                <span className="text-foreground font-semibold">{pivot.to}</span>
               </p>
             </div>
-            <h3 className="mt-2 text-base font-semibold text-pretty">{pivot.headline}</h3>
-            <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{pivot.body}</p>
+            <h3 className="mt-3 text-[17px] leading-snug font-semibold text-pretty">
+              {pivot.headline}
+            </h3>
+            <p className="text-muted-foreground mt-2.5 max-w-[56ch] text-[13.5px] leading-relaxed">
+              {pivot.body}
+            </p>
           </div>
 
-          <div>
-            <div className="mb-2 flex items-center gap-1" role="group" aria-label="Before or after">
+          <div className="bg-muted/40 rounded-xl border p-3.5">
+            <div
+              className="bg-background mb-3 inline-flex rounded-md p-0.5"
+              role="group"
+              aria-label="Before or after"
+            >
               {(['before', 'after'] as const).map((option) => (
                 <button
                   key={option}
@@ -76,46 +81,46 @@ function PivotRow({ pivot, index }: { readonly pivot: Pivot; readonly index: num
                     setShown(option)
                   }}
                   className={cn(
-                    'focus-visible:ring-ring rounded px-2 py-0.5 font-mono text-[10.5px] tracking-[0.1em] uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                    'focus-visible:ring-ring rounded px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none',
                     shown === option
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-primary/10 text-primary font-semibold'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
                   {option}
                 </button>
               ))}
-              {shown === 'before' && (
-                <ArrowRightIcon aria-hidden className="text-muted-foreground ml-1 size-3" />
-              )}
             </div>
 
-            <div className="bg-muted/40 min-h-[7.5rem] rounded-md p-3">
+            <div className="min-h-[7.5rem] space-y-1.5">
               <AnimatePresence mode="popLayout" initial={false}>
                 {items.map((item) => (
-                  <motion.p
+                  <motion.div
                     key={item}
                     layout={!still}
                     {...(still
                       ? {}
                       : {
-                          initial: { opacity: 0, x: 8 },
+                          initial: { opacity: 0, x: 10 },
                           animate: { opacity: 1, x: 0 },
-                          exit: { opacity: 0, x: -8 },
+                          exit: { opacity: 0, x: -10 },
                           transition: { duration: 0.22 },
                         })}
-                    className="bg-card mb-1.5 rounded px-2.5 py-1.5 text-xs last:mb-0"
                   >
-                    {item}
-                  </motion.p>
+                    <MiniRow
+                      label={item}
+                      tone={shown === 'after' ? 'primary' : 'neutral'}
+                      ghost={shown === 'before'}
+                    />
+                  </motion.div>
                 ))}
               </AnimatePresence>
             </div>
 
-            <p className="text-muted-foreground mt-2 text-[11px] leading-snug">{caption}</p>
+            <p className="text-muted-foreground mt-3 text-[11.5px] leading-snug">{caption}</p>
           </div>
         </div>
-      </Card>
+      </Surface>
     </Reveal>
   )
 }
@@ -129,64 +134,61 @@ function PivotRow({ pivot, index }: { readonly pivot: Pivot; readonly index: num
  */
 function BuildingWithAi(): ReactNode {
   const figures = [
-    { value: String(metrics.commits), label: 'commits on main' },
+    { value: String(metrics.commits), label: 'commits on main', icon: <GitCommitIcon /> },
     { value: String(metrics.workingDays), label: 'days with a commit' },
-    { value: String(pivots.length), label: 'pivots, each one deleting work' },
-    { value: String(metrics.elapsedDays), label: 'days from first commit to now' },
+    { value: String(pivots.length), label: 'pivots, each deleting work' },
+    { value: String(metrics.elapsedDays), label: 'days, first commit to now' },
   ]
 
   return (
-    <div className="mt-12">
-      <Eyebrow>{buildingWithAi.eyebrow}</Eyebrow>
-      <h3 className="mt-2 text-xl font-bold tracking-tight text-balance">
-        {buildingWithAi.title}
-      </h3>
-      <Prose className="mt-3">
-        {buildingWithAi.body.map((paragraph) => (
+    <div className="mt-14">
+      <SectionHead
+        eyebrow={buildingWithAi.eyebrow}
+        title={buildingWithAi.title}
+        lede={buildingWithAi.body.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
-      </Prose>
+      />
 
-      <div className="bg-border mt-6 grid gap-px overflow-hidden rounded-md border sm:grid-cols-4">
+      <div className="mt-7 grid gap-3 sm:grid-cols-4">
         {figures.map((figure) => (
-          <div key={figure.label} className="bg-card p-4">
-            <span className="block text-2xl font-bold tracking-tight tabular-nums">
+          <Surface key={figure.label} className="p-4">
+            <p className="text-primary text-[1.75rem] leading-none font-bold tracking-tight tabular-nums">
               {figure.value}
-            </span>
-            <span className="text-muted-foreground mt-1 block text-xs leading-snug">
-              {figure.label}
-            </span>
-          </div>
+            </p>
+            <p className="text-muted-foreground mt-2 text-[12px] leading-snug">{figure.label}</p>
+          </Surface>
         ))}
       </div>
-      <p className="text-muted-foreground mt-2 text-[11px]">
-        Counted from the repository on {metrics.measuredAt}, not written down by hand.
+      <p className="text-muted-foreground mt-2.5 text-[11.5px]">
+        Counted out of the repository on {metrics.measuredAt}, not written down by hand.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {([buildingWithAi.human, buildingWithAi.ai] as const).map((side, index) => (
           <Reveal key={side.title} delay={index * 0.05}>
-            <Card
-              className={cn(
-                'h-full gap-0 p-5',
-                index === 0
-                  ? 'border-t-decides-code border-t-[3px]'
-                  : 'border-t-decides-model border-t-[3px]',
-              )}
-            >
-              <h4 className="text-base font-semibold">{side.title}</h4>
-              <ul className="mt-3 space-y-1.5">
+            <Surface accent={index === 0 ? 'code' : 'model'} className="h-full p-5">
+              <div className="flex items-center gap-2.5">
+                <Tile tone={index === 0 ? 'code' : 'model'} size="sm">
+                  {index === 0 ? <UserRoundIcon /> : <SparklesIcon />}
+                </Tile>
+                <h4 className="text-[15px] font-semibold">{side.title}</h4>
+              </div>
+              <ul className="mt-4 space-y-2">
                 {side.items.map((item) => (
-                  <li key={item} className="text-muted-foreground relative pl-4 text-sm">
-                    <span
+                  <li key={item} className="flex items-start gap-2 text-[13.5px]">
+                    <CheckIcon
                       aria-hidden
-                      className="bg-border absolute top-[0.55em] left-0 size-1.5 rounded-full"
+                      className={cn(
+                        'mt-[3px] size-3.5 shrink-0',
+                        index === 0 ? 'text-decides-code' : 'text-decides-model',
+                      )}
                     />
-                    {item}
+                    <span className="text-muted-foreground">{item}</span>
                   </li>
                 ))}
               </ul>
-            </Card>
+            </Surface>
           </Reveal>
         ))}
       </div>

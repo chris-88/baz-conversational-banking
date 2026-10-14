@@ -3,9 +3,8 @@ import { motion, useReducedMotion } from 'motion/react'
 import { PlayIcon, ShieldOffIcon } from 'lucide-react'
 import { generated } from '@/content/how-it-works/forms'
 import { future } from '@/content/how-it-works/copy'
-import { Claim, Reveal } from './parts'
+import { Claim, Reveal, Surface } from './parts'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 /**
@@ -70,10 +69,10 @@ export function FullReplay(): ReactNode {
   const reached = still ? FRAMES.length - 1 : at
 
   return (
-    <section id="future" className="scroll-mt-20 py-10 sm:py-14">
+    <section id="future" className="scroll-mt-[68px] lg:scroll-mt-[84px] border-t pt-14 sm:pt-20">
       <Reveal>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-2xl font-bold tracking-tight text-balance sm:text-3xl">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className="max-w-[20ch] text-[1.75rem] leading-[1.15] font-bold tracking-tight text-balance sm:text-[2.25rem]">
             One conversation, a whole banking journey underneath
           </h2>
           {!still && (
@@ -85,7 +84,7 @@ export function FullReplay(): ReactNode {
         </div>
       </Reveal>
 
-      <ol className="mt-6 space-y-1.5" aria-label="What happens across one conversation">
+      <ol className="mt-7 space-y-1" aria-label="What happens across one conversation">
         {FRAMES.map((frame, index) => {
           const shown = index <= reached
           return (
@@ -94,16 +93,23 @@ export function FullReplay(): ReactNode {
               {...(still ? {} : { animate: { opacity: shown ? 1 : 0.25 } })}
               transition={{ duration: 0.25 }}
               className={cn(
-                'flex items-baseline gap-3 rounded-md px-3 py-2 transition-colors',
-                index === at && !still && 'bg-primary/5',
+                'relative flex items-baseline gap-3 rounded-lg px-3 py-2.5 transition-colors',
+                index === at && !still && 'bg-primary/5 ring-primary/20 ring-1',
+                index === FRAMES.length - 1 && 'bg-success/5',
               )}
             >
-              <span className="text-muted-foreground w-6 shrink-0 font-mono text-[10.5px] tabular-nums">
-                {String(index + 1).padStart(2, '0')}
+              <span
+                aria-hidden
+                className={cn(
+                  'grid size-5 shrink-0 place-items-center rounded-full font-mono text-[9.5px] font-semibold tabular-nums',
+                  index <= reached ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {index + 1}
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-medium">{frame.label}</span>
-                <span className="text-muted-foreground block text-xs leading-snug">
+                <span className="block text-[13.5px] font-medium">{frame.label}</span>
+                <span className="text-muted-foreground block text-[12px] leading-snug">
                   {frame.detail}
                 </span>
               </span>
@@ -117,35 +123,39 @@ export function FullReplay(): ReactNode {
         transition={{ duration: 0.3 }}
         className="mt-4"
       >
-        <Card className="border-amber-500/40 bg-amber-500/5 p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <ShieldOffIcon aria-hidden className="size-4 text-amber-700 dark:text-amber-400" />
-            <p className="text-base font-semibold">{generated.status}</p>
+        <Surface lift className="border-warning-border bg-warning/50 p-6">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="bg-warning-border/40 text-warning-foreground grid size-8 place-items-center rounded-lg">
+              <ShieldOffIcon aria-hidden className="size-4" />
+            </span>
+            <p className="text-lg font-bold tracking-tight">{generated.status}</p>
             <Claim kind="poc" />
           </div>
-          <p className="text-muted-foreground mt-2 max-w-[62ch] text-sm leading-relaxed">
+          <p className="text-muted-foreground mt-3 max-w-[62ch] text-[13.5px] leading-relaxed">
             The packet is complete and correctly shaped, and there is no code path in this
             prototype that sends it. The endpoint is recorded as the intended destination and
             nothing more.
           </p>
-        </Card>
+        </Surface>
       </motion.div>
 
-      <Reveal className="mt-12">
-        <p className="text-muted-foreground max-w-[62ch] text-sm leading-relaxed">
+      <Reveal className="mt-16 border-t pt-12">
+        <p className="text-muted-foreground max-w-[62ch] text-[15px] leading-relaxed">
           {future.body[0]}
         </p>
-        <p className="text-muted-foreground mt-3 max-w-[62ch] text-sm leading-relaxed">
+        <p className="text-muted-foreground mt-3 max-w-[62ch] text-[15px] leading-relaxed">
           {future.body[1]}
         </p>
 
-        <div className="mt-8">
+        <div className="mt-10">
           {future.close.map((line, index) => (
             <p
               key={line}
               className={cn(
-                'text-xl tracking-tight text-balance sm:text-2xl',
-                index === future.close.length - 1 ? 'font-bold' : 'text-muted-foreground',
+                'text-2xl tracking-tight text-balance sm:text-3xl',
+                index === future.close.length - 1
+                  ? 'text-foreground font-bold'
+                  : 'text-muted-foreground',
               )}
             >
               {line}
