@@ -1344,3 +1344,17 @@ noun cannot be caught by reading, and nobody re-checks a figure that already loo
 specific. Build metrics are generated from git by `npm run metrics:build` rather
 than typed, because the first draft said nine days and 143 commits, which were true
 when written and are now 11 days and 209 commits.
+
+## 2026-10-15: A cached build reloads itself too (§57)
+
+The existing guard catches a tab open across a deploy reaching for a chunk that no
+longer exists. It cannot catch the commoner case, which is what happened here: the
+service worker precaches the whole shell, so a returning visitor is served a
+complete, self-consistent copy of the build they saw last time. Nothing 404s,
+nothing errors, and the page renders yesterday's product on a green deploy.
+
+`autoUpdate` already installs the new worker and claims the page. That fires
+`controllerchange`, which is the signal the assets underneath have changed, so a
+single guarded reload now turns it into the new build being on screen. Ignored when
+there was no controller to begin with, because that is a first visit and reloading
+somebody the instant they arrive is a worse bug than the one being fixed.

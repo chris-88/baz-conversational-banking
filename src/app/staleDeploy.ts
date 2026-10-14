@@ -54,3 +54,39 @@ export function recoverFromStaleDeploy(): boolean {
   window.location.reload()
   return true
 }
+
+/**
+ * A new build has taken over, so show it.
+ *
+ * The preload guard above catches one kind of staleness: a tab that was open across a deploy
+ * and reaches for a chunk that no longer exists. It cannot catch the other kind, which is the
+ * common one. The service worker precaches the whole shell, so a returning visitor is served a
+ * complete and self-consistent copy of the build they saw last time. Nothing 404s, nothing
+ * errors, and the page simply renders yesterday's product on top of today's deploy.
+ *
+ * `autoUpdate` installs the new worker and claims the page, which fires `controllerchange`.
+ * That is the signal that the assets underneath have changed, and a single guarded reload is
+ * what turns it into the new build being on screen.
+ *
+ * Call it once, at start-up. The guard in `recoverFromStaleDeploy` is what stops a worker that
+ * claims repeatedly from putting the page in a loop.
+ */
+export function reloadWhenWorkerTakesOver(): void {
+  if (!('serviceWorker' in navigator)) return
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    /*
+     * Only when there was already a worker. The first registration on a first visit also fires
+     * this, and reloading somebody the instant they arrive is a worse bug than the one being
+     * fixed: they asked for the page, they are looking at the page, nothing is stale.
+     */
+    if (!hadController) return
+    recoverFromStaleDeploy()
+  })
+}
+
+/** Whether this page was being served by a worker when it started. */
+const hadController =
+  typeof navigator !== 'undefined' &&
+  'serviceWorker' in navigator &&
+  navigator.serviceWorker.controller !== null

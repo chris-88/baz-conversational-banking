@@ -5,7 +5,7 @@ import { Providers } from '@/app/providers'
 import { router } from '@/app/router'
 import { initSentry } from '@/lib/sentry'
 import { completeSignIn } from '@/lib/identity'
-import { recoverFromStaleDeploy } from '@/app/staleDeploy'
+import { recoverFromStaleDeploy, reloadWhenWorkerTakesOver } from '@/app/staleDeploy'
 import '@/styles/fonts.css'
 import '@/index.css'
 
@@ -31,6 +31,13 @@ await completeSignIn().catch(() => undefined)
 window.addEventListener('vite:preloadError', (event) => {
   if (recoverFromStaleDeploy()) event.preventDefault()
 })
+
+/*
+ * The other half of the same problem, and the half that bites more often: the service worker
+ * serves a whole cached build, so nothing fails, and the page quietly renders the last version
+ * somebody saw. When the new worker claims the page, reload into it.
+ */
+reloadWhenWorkerTakesOver()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element #root is missing from index.html')
