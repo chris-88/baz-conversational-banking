@@ -24,10 +24,15 @@ export type Scenario = {
   }
   /** Three cells under the reply: what was understood, reused, and still needed. */
   readonly cells: readonly { readonly label: string; readonly value: string }[]
-  /** The system view, which is the same turn described by the engine rather than the model. */
-  readonly system: readonly { readonly label: string; readonly value: string }[]
-  /** Which tools were offered to the model on this turn. Real names from `tools.ts`. */
-  readonly toolsOffered: readonly string[]
+  /**
+   * The same turn as the engine saw it, shaped the way it actually is.
+   *
+   * Rendered as JSON rather than a table of labels, because that is what it is: the gate's own
+   * output, counts read from the database, the persona sliders in force, and the exact list of
+   * tools handed to the model. Keys are the real ones from the codebase, so somebody who goes
+   * looking for `outstanding` or `toolsOffered` finds them.
+   */
+  readonly state: Readonly<Record<string, unknown>>
   readonly note: string
 }
 
@@ -46,14 +51,24 @@ export const scenarios: readonly Scenario[] = [
       { label: 'Reused', value: '6 facts already held' },
       { label: 'Still needed', value: 'Household income, deposit' },
     ],
-    system: [
-      { label: 'Gate', value: 'banking' },
-      { label: 'Goal matched', value: 'buy_first_home' },
-      { label: 'Facts held', value: '6' },
-      { label: 'Outstanding, computed', value: '2' },
-      { label: 'Products offered', value: 'none yet' },
-    ],
-    toolsOffered: ['record_facts', 'show_product_options', 'propose_plan', 'show_mortgage_rates'],
+    state: {
+      gate: { category: 'banking', sensitive: false, profanity: false },
+      case: {
+        authLevel: 'anonymous',
+        goalMatched: 'buy_first_home',
+        factsHeld: 6,
+        outstanding: ['household income', 'deposit saved'],
+        applications: [],
+        productsDeclined: [],
+      },
+      persona: { length: 0.5, humour: 0.3, formality: 0.4 },
+      toolsOffered: [
+        'record_facts',
+        'show_product_options',
+        'propose_plan',
+        'show_mortgage_rates',
+      ],
+    },
     note: 'Nothing is offered on the first turn. What a customer needs is computed from facts, and six facts is not enough to put a product in front of anybody.',
   },
   {
@@ -70,14 +85,18 @@ export const scenarios: readonly Scenario[] = [
       { label: 'Reused', value: '4 facts already held' },
       { label: 'Still needed', value: 'Timeframe, existing commitments' },
     ],
-    system: [
-      { label: 'Gate', value: 'banking' },
-      { label: 'Needs engine', value: 'nothing surfaced yet' },
-      { label: 'Facts held', value: '4' },
-      { label: 'Outstanding, computed', value: '2' },
-      { label: 'Products offered', value: 'none yet' },
-    ],
-    toolsOffered: ['record_facts', 'show_comparison', 'show_quote', 'propose_plan'],
+    state: {
+      gate: { category: 'banking', sensitive: false, profanity: false },
+      case: {
+        authLevel: 'anonymous',
+        goalMatched: null,
+        factsHeld: 4,
+        outstanding: ['timeframe', 'existing commitments'],
+        needsSurfaced: [],
+      },
+      persona: { length: 0.5, humour: 0.3, formality: 0.4 },
+      toolsOffered: ['record_facts', 'show_comparison', 'show_quote', 'propose_plan'],
+    },
     note: 'A product list here would be a guess. The engine has nothing to go on until it knows when the money is needed.',
   },
   {
@@ -94,13 +113,17 @@ export const scenarios: readonly Scenario[] = [
       { label: 'Tone', value: 'Humour forced to zero' },
       { label: 'Products', value: 'Suppressed for this turn' },
     ],
-    system: [
-      { label: 'Gate', value: 'banking · sensitive' },
-      { label: 'Persona', value: 'humour, sarcasm, playfulness → 0' },
-      { label: 'Product offers', value: 'suppressed' },
-      { label: 'Route', value: 'hand off to the arrears team' },
-    ],
-    toolsOffered: ['record_facts', 'show_status'],
+    state: {
+      gate: { category: 'banking', sensitive: true, profanity: false },
+      case: {
+        authLevel: 'authenticated',
+        factsHeld: 11,
+        applications: [{ product: 'mortgage', state: 'info_required' }],
+        productOffersSuppressed: true,
+      },
+      persona: { length: 0.5, humour: 0, sarcasm: 0, playfulness: 0, poetic: 0 },
+      toolsOffered: ['record_facts', 'show_status'],
+    },
     note: 'The sensitive flag is not a prompt instruction. It zeroes the persona sliders and removes the tools that could offer anybody a product, before the model sees the turn.',
   },
 ]
