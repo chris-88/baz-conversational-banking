@@ -46,6 +46,8 @@ export default tseslint.config(
       'scripts/live-probe.mjs',
       // Same: plain ESM, run by hand to push the auth email templates to the hosted project.
       'scripts/push-auth-templates.mjs',
+      // Same again: plain ESM, run by hand to count the build out of git history.
+      'scripts/build-metrics.mjs',
       ...DENO_ENTRYPOINTS,
       // Generated from the linked project by `npm run db:types`.
       'supabase/functions/_shared/db/database.types.ts',

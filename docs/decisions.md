@@ -1314,3 +1314,33 @@ The form's own numeric limits are a third thing again, and are reported
 separately: over €75,000 is not a standard loan, written into the bank's document
 as a conditional rule. That is theirs, it is published, and Baz can state it
 without claiming to have assessed anybody.
+
+## 2026-10-14: `motion` is added to the stack for the explainer page (§63)
+
+The How it works rebuild is an interactive case study whose argument depends on
+state transitions being legible: an architecture replay that moves through five
+stages, a before and after that transforms rather than cross-fades, evidence that
+appears as a reader arrives at it.
+
+CSS transitions would have covered most of it. Shared-layout transitions, where an
+element moves between two different trees, are the part that is genuinely painful
+without a library, and they are the pivot section's whole mechanic.
+
+So `motion` (14.x) is in the stack, approved explicitly. Conditions: reduced motion
+is honoured everywhere, nothing blocks scrolling, and no animation is load-bearing
+for meaning. The page must read correctly with every animation disabled.
+
+## 2026-10-14: The explainer page's numbers live in one content directory (§53)
+
+Every figure on the page carries where it came from, in `src/content/how-it-works/`.
+The mock-ups that prompted this rebuild carried four numbers and three were wrong:
+a cached prefix of 28,087 that appears in no measurement, per-turn costs of
+€0.19/€0.12/€0.09 against a measured €0.174/€0.031/€0.036, and "56% of the product
+catalogue", which was a misreading of a sentence about an earlier published total
+being 56% low.
+
+The last one is the reason for the rule. A plausible number attached to the wrong
+noun cannot be caught by reading, and nobody re-checks a figure that already looks
+specific. Build metrics are generated from git by `npm run metrics:build` rather
+than typed, because the first draft said nine days and 143 commits, which were true
+when written and are now 11 days and 209 commits.
