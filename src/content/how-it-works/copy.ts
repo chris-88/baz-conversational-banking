@@ -31,7 +31,7 @@ export const NAV: readonly { readonly id: ChapterId; readonly label: string }[] 
 export const hero = {
   title: 'How Baz works',
   standfirst:
-    'A look under the hood: what the model is actually doing, what it is deliberately not allowed to do, how the product got here, and what it costs to run.',
+    'A conversational banking layer built on top of capabilities the bank already owns.',
 } as const
 
 export const opportunity = {
