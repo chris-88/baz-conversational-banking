@@ -239,7 +239,7 @@ function CodeReveal(): ReactNode {
             <span className="text-muted-foreground font-mono text-[11px]">a turn, reduced</span>
             <Claim kind="poc" />
           </div>
-          <Code text={codeSample} language="ts" className="p-4" />
+          <Code text={codeSample} language="ts" />
         </Surface>
 
         <ul className="space-y-2.5">

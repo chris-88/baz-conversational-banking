@@ -120,13 +120,11 @@ export function Experience(): ReactNode {
               <Claim kind="poc" />
             </div>
 
-            <div className="bg-muted/40 min-w-0 flex-1">
-              <Code
-                text={JSON.stringify(scenario.state, null, 2)}
-                language="json"
-                className="p-4"
-              />
-            </div>
+            <Code
+              text={JSON.stringify(scenario.state, null, 2)}
+              language="json"
+              className="flex-1"
+            />
           </Surface>
         </motion.div>
       </AnimatePresence>

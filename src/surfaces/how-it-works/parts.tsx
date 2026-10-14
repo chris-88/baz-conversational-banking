@@ -320,18 +320,27 @@ export function Code({
   readonly language: 'json' | 'wire' | 'ts'
   readonly className?: string
 }): ReactNode {
+  /*
+   * Dark, always, whatever the page around it is doing.
+   *
+   * A code block is a quotation from a machine and it should look like one: the page is a light
+   * editorial surface, and the published definition and the wire packet are the two things on it
+   * that are not prose. The `dark` class is how this codebase switches themes, and it redefines
+   * every token beneath it, so the syntax colours here are the dark variants that were tuned
+   * for a dark background rather than a second set picked by hand.
+   */
   return (
-    <pre
-      className={cn('overflow-x-auto font-mono text-[12px] leading-[1.7] whitespace-pre', className)}
-    >
-      <code>
-        {text.split('\n').map((line, index) => (
-          <span key={`${String(index)}-${line}`} className="block">
-            {colour(line, language)}
-          </span>
-        ))}
-      </code>
-    </pre>
+    <div className={cn('dark bg-card min-w-0 overflow-hidden', className)}>
+      <pre className="text-foreground overflow-x-auto p-4 font-mono text-[12px] leading-[1.7] whitespace-pre">
+        <code>
+          {text.split('\n').map((line, index) => (
+            <span key={`${String(index)}-${line}`} className="block">
+              {colour(line, language)}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
   )
 }
 

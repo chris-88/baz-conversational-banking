@@ -112,9 +112,7 @@ function WorkedExample({
           subtitle="GET /api/forms/1940"
           icon={<FileJsonIcon />}
         >
-          <div className="bg-muted/50 max-h-60 overflow-auto rounded-lg">
-            <Code text={definitionExtract} language="json" className="p-3" />
-          </div>
+          <Code text={definitionExtract} language="json" className="max-h-60 overflow-auto rounded-lg" />
           {mapping !== null && (
             <div className="border-primary/40 bg-primary/5 mt-3 rounded-lg border p-3">
               <p className="text-primary font-mono text-[11px] font-medium">
@@ -135,16 +133,15 @@ function WorkedExample({
           subtitle="POST /api/forms/1940"
           icon={<SendIcon />}
         >
-          <div className="space-y-1.5">
+          {/* One dark block, like the other two, with the lit entry picked out inside it. */}
+          <div className="dark bg-card space-y-1 rounded-lg p-3">
             {workedExample.mappings.flatMap((candidate) =>
               candidate.entries.map((entry) => (
                 <code
                   key={entry.key}
                   className={cn(
-                    'block rounded-md px-2.5 py-1.5 font-mono text-[11.5px] transition-colors',
-                    lit === candidate.id
-                      ? 'bg-primary/10 ring-primary/30 ring-1'
-                      : 'bg-muted/50',
+                    'block rounded px-2 py-1 font-mono text-[11.5px] transition-colors',
+                    lit === candidate.id && 'bg-primary/20 ring-primary/40 ring-1',
                   )}
                 >
                   <span className="text-code-key">{entry.key}</span>
