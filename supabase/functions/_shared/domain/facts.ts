@@ -295,6 +295,22 @@ export const factCatalogue = {
     extractable: true,
     label: 'Other annual income',
   },
+  /**
+   * Take-home pay, which is not the gross salary and cannot be derived from it.
+   *
+   * The lending journey asks for net monthly income and Baz holds annual basic, gross. The
+   * gap between them is tax, PRSI, USC, pension and whatever else a payslip carries, none of
+   * which Baz knows. A figure estimated from the gross would be a made-up number on a credit
+   * application, so this is asked once and then reused like anything else.
+   */
+  'income.netMonthly': {
+    schema: positiveEuro,
+    subject: 'person',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Net monthly income',
+  },
 
   // ---- Expenditure (§9) ----
   'expenditure.monthlyRent': {

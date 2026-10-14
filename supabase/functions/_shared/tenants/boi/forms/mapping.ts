@@ -1,5 +1,5 @@
 import type { Product } from '../../../domain/journey.ts'
-import { SUPERSAVER_PREFILL, type Prefill } from './prefill.ts'
+import { LOAN_PREFILL, SUPERSAVER_PREFILL, type Prefill } from './prefill.ts'
 
 /**
  * Which of the bank's digital forms completes which product journey.
@@ -20,6 +20,7 @@ export type FormMapping = {
 
 const BY_PRODUCT: Partial<Readonly<Record<Product, FormMapping>>> = {
   savings: { formId: '1833', prefill: SUPERSAVER_PREFILL },
+  personal_loan: { formId: '1940', prefill: LOAN_PREFILL },
 }
 
 export function formForProduct(product: Product): FormMapping | null {

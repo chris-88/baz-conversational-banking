@@ -4,7 +4,7 @@ import { isFactKey, type FactKey } from '../domain/facts.ts'
 import { isProduct } from '../domain/journey.ts'
 import { formForProduct, type FormMapping } from '../tenants/boi/forms/mapping.ts'
 import { formSnapshot } from '../tenants/boi/forms/snapshots.ts'
-import { resolvePrefill } from '../tenants/boi/forms/prefill.ts'
+import { fillFromFacts } from '../tenants/boi/forms/prefill.ts'
 
 /**
  * Keeps the digital form applications in step with the conversation.
@@ -94,7 +94,7 @@ export async function syncFormApplications(client: Db, caseId: string): Promise<
     // A mapping whose definition has not been snapshotted. Nothing to collect against.
     if (!snapshot) continue
 
-    const resolved = resolvePrefill({
+    const resolved = fillFromFacts({
       definition: snapshot.definition,
       prefill: application.mapping.prefill,
       held: (key) => latest.get(key)?.value,

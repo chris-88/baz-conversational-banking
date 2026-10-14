@@ -1,5 +1,6 @@
 import { formDefinitionSchema, type FormDefinition } from '../../../domain/forms/definition.ts'
 import form1833 from './form-1833.json' with { type: 'json' }
+import form1940 from './form-1940.json' with { type: 'json' }
 
 /**
  * The form definitions Baz has taken a copy of, and where each came from.
@@ -36,9 +37,10 @@ type RawSnapshot = {
 
 const PAGE_LOCATIONS: Readonly<Record<string, string>> = {
   '1833': 'https://digital.bankofireland.com/personal-banking/supersaver/',
+  '1940': 'https://digital.bankofireland.com/consumer-lending/personal-loan',
 }
 
-const RAW: readonly RawSnapshot[] = [form1833]
+const RAW: readonly RawSnapshot[] = [form1833, form1940]
 
 /** Parsed once. The definition is large and does not change between requests. */
 const SNAPSHOTS: ReadonlyMap<string, FormSnapshot> = new Map(
