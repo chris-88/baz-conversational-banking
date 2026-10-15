@@ -82,12 +82,13 @@ export function BazChat({
   /**
    * Where history ends and the live conversation begins, as an index into `entries`.
    *
-   * Set before the loaded history is handed to React, so the first render already knows it.
-   * A card at or past this index arrived during this session and enters with motion; one
-   * before it was already here, and twenty cards rising in sequence on every reload is not an
-   * entrance, it is a loading screen. Null until a case is loaded, which reads as zero.
+   * State rather than a ref, because it is read during render. Set in the same tick as the
+   * loaded history is handed to React, so the two are batched and the first render already
+   * knows it. A card at or past this index arrived during this session and enters with
+   * motion; one before it was already here, and twenty cards rising in sequence on every
+   * reload is not an entrance, it is a loading screen.
    */
-  const liveFrom = useRef<number | null>(null)
+  const [liveFrom, setLiveFrom] = useState(0)
   const atBottom = useRef(true)
   const openingSent = useRef(false)
   const returnSent = useRef(false)
@@ -243,7 +244,7 @@ export function BazChat({
         try {
           const history = await loadHistory(session.caseId)
           if (!cancelled) {
-            liveFrom.current = history.length
+            setLiveFrom(history.length)
             loadFrom(history)
           }
         } finally {
@@ -635,7 +636,7 @@ export function BazChat({
           if (entry.kind === 'card') {
             return (
               <div key={entry.id} className="pl-10">
-                {index >= (liveFrom.current ?? 0) ? (
+                {index >= liveFrom ? (
                   <Reveal mode="mount">
                     <CardRenderer
                       card={entry.card}
