@@ -1,9 +1,10 @@
+import { Code } from '@/components/Code'
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { BracesIcon, MessageSquareIcon } from 'lucide-react'
 import { experience } from '@/content/how-it-works/copy'
 import { scenarios } from '@/content/how-it-works/scenarios'
-import { Claim, Code, Reveal, SectionHead, Surface, Tile } from './parts'
+import { Claim, Reveal, SectionHead, Surface, Tile } from './parts'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { cn } from '@/lib/utils'
 

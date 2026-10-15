@@ -1,3 +1,4 @@
+import { Code } from '@/components/Code'
 import { useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import {
@@ -22,15 +23,7 @@ import {
   workedExample,
   type Mapping,
 } from '@/content/how-it-works/forms'
-import {
-  Claim,
-  Code,
-  Reveal,
-  SectionHead,
-  StepBadge,
-  Surface,
-  Tile,
-} from './parts'
+import { Claim, Reveal, SectionHead, StepBadge, Surface, Tile } from './parts'
 import { cn } from '@/lib/utils'
 
 /**

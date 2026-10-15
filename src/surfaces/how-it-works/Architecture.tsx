@@ -1,3 +1,4 @@
+import { Code } from '@/components/Code'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { ArrowRightIcon, PlayIcon, SparklesIcon, SquareCodeIcon } from 'lucide-react'
@@ -9,7 +10,7 @@ import {
   stages,
   type Stage,
 } from '@/content/how-it-works/architecture'
-import { Claim, Code, Decider, Reveal, SectionHead, StepBadge, Surface, Tile } from './parts'
+import { Claim, Decider, Reveal, SectionHead, StepBadge, Surface, Tile } from './parts'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
