@@ -359,6 +359,79 @@ export async function signOutIdentity(): Promise<void> {
  * Slower than Google by the length of time it takes an email to arrive, and it supplies no
  * name — so Baz cannot promise to fill anything in. It is offered second for both reasons.
  */
+/**
+ * Which confirmation an address went out as, because verifying needs to know.
+ *
+ * An anonymous user gets their address attached to the account they already have, which is an
+ * `email_change`. Anybody else gets an ordinary sign-in, which is an `email`. Same email, same
+ * six digits, different verification type, and getting it wrong is a flat refusal.
+ */
+const OTP_KIND = 'baz.signInOtpKind'
+
+function rememberKind(kind: 'email' | 'email_change'): void {
+  try {
+    window.localStorage.setItem(OTP_KIND, kind)
+  } catch {
+    // Private browsing. The code path falls back to trying both.
+  }
+}
+
+/**
+ * Sign in with the six digits from the email, without leaving the app.
+ *
+ * The reason this exists at all. On an installed PWA a magic link opens in the default
+ * browser, which is a different storage context with a different session, so the customer
+ * watches their conversation disappear and arrives somewhere that looks like being logged out.
+ * There is no way to send them back: iOS has no deep link into an installed web app.
+ *
+ * A code does not have that problem, because nobody goes anywhere. They read six digits in
+ * their mail app, come back, and type them where they were already standing.
+ */
+export async function verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const client = requireSupabase()
+  const token = code.replace(/\D/g, '')
+
+  if (token.length < 6) return { ok: false, message: 'That code is six digits.' }
+
+  let kind: 'email' | 'email_change' = 'email'
+  try {
+    const stored = window.localStorage.getItem(OTP_KIND)
+    if (stored === 'email' || stored === 'email_change') kind = stored
+  } catch {
+    // Nothing remembered, so try the ordinary one first and the other after.
+  }
+
+  const attempt = async (type: 'email' | 'email_change') =>
+    await client.auth.verifyOtp({ email: email.trim(), token, type })
+
+  let result = await attempt(kind)
+
+  /*
+   * One retry as the other kind.
+   *
+   * Which one was sent is remembered in storage, and storage is exactly the thing that is
+   * missing in a private window or after site data is cleared. Trying the other is cheaper
+   * than telling somebody holding a valid code that it is wrong.
+   */
+  if (result.error) {
+    result = await attempt(kind === 'email' ? 'email_change' : 'email')
+  }
+
+  if (result.error) {
+    return {
+      ok: false,
+      message: /expired|invalid/i.test(result.error.message)
+        ? 'That code has expired or does not match. Send another.'
+        : result.error.message,
+    }
+  }
+
+  return { ok: true }
+}
+
 export async function startEmailSignIn(
   email: string,
 ): Promise<{ ok: boolean; message?: string; checkInbox?: boolean }> {
@@ -379,7 +452,10 @@ export async function startEmailSignIn(
       // Site URL, which is the front page, and the customer lands there instead of the chat.
       { emailRedirectTo: returnTo() },
     )
-    if (!error) return { ok: true, checkInbox: true }
+    if (!error) {
+      rememberKind('email_change')
+      return { ok: true, checkInbox: true }
+    }
     console.warn('could not attach the address, sending a sign-in link instead:', error.message)
   }
 
@@ -387,5 +463,9 @@ export async function startEmailSignIn(
     email: trimmed,
     options: { emailRedirectTo: returnTo() },
   })
-  return error ? { ok: false, message: error.message } : { ok: true, checkInbox: true }
+
+  if (error) return { ok: false, message: error.message }
+
+  rememberKind('email')
+  return { ok: true, checkInbox: true }
 }

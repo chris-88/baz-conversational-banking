@@ -3,7 +3,12 @@ import { CheckIcon, LockIcon, MailIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { clearSignInError, lastSignInError, startEmailSignIn } from '@/lib/identity'
+import {
+  clearSignInError,
+  lastSignInError,
+  startEmailSignIn,
+  verifyEmailCode,
+} from '@/lib/identity'
 import { Input } from '@/components/ui/input'
 
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
@@ -47,6 +52,23 @@ export function SignInCard({
    */
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const [code, setCode] = useState('')
+
+  const enterCode = () => {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    void verifyEmailCode(email, code).then((result) => {
+      setBusy(false)
+      if (result.ok) {
+        // The session is live. Reload into it rather than reconciling state by hand: this is
+        // the same page, the same tab and the same conversation, now signed in.
+        window.location.reload()
+        return
+      }
+      setError(result.message ?? 'That did not work.')
+    })
+  }
 
   const sendLink = () => {
     if (busy) return
@@ -80,9 +102,43 @@ export function SignInCard({
 
       <div className="space-y-2 px-4 pb-4">
         {sent ? (
-          <p className="text-center text-sm font-medium">
-            Check your email. There is a link in it that brings you straight back here.
-          </p>
+          /*
+           * The code first, the link second, and that order is the whole point.
+           *
+           * On an installed app a link opens in the browser, which is a different session and
+           * looks exactly like losing the conversation. iOS has no way back into an installed
+           * web app, so the fix is not to leave: read six digits, come back, type them here.
+           */
+          <div className="space-y-2">
+            <p className="text-center text-sm font-medium">
+              Check your email and enter the six digits.
+            </p>
+            <Input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="000000"
+              aria-label="The six digit code from your email"
+              className="text-center text-lg tracking-[0.4em] tabular-nums"
+              value={code}
+              disabled={(disabled ?? false) || busy}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') enterCode()
+              }}
+            />
+            <Button
+              className="w-full"
+              disabled={(disabled ?? false) || busy || code.length < 6}
+              onClick={enterCode}
+            >
+              {busy ? 'Checking…' : 'Continue'}
+            </Button>
+            <p className="text-muted-foreground text-center text-xs leading-relaxed">
+              There is a link in the email too, but it opens a browser. The code keeps you here,
+              in this conversation.
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
             <Input
