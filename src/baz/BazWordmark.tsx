@@ -17,13 +17,25 @@ import { cn } from '@/lib/utils'
  * `[&_svg:not([class*='size-'])]:size-4` on its descendants, which overrides the height and
  * squashes this to sixteen pixels square. Use a plain link styled as one.
  */
-export function BazWordmark({ className }: { readonly className?: string }): ReactNode {
+export function BazWordmark({
+  className,
+  transitionName,
+}: {
+  readonly className?: string
+  /**
+   * A `view-transition-name`, where this wordmark is the same object as one on another page.
+   * The landing page's and the chat header's share one, so the brand travels across the route
+   * change rather than the page swapping underneath it.
+   */
+  readonly transitionName?: string
+}): ReactNode {
   return (
     <svg
       viewBox="0 0 194 72"
       role="img"
       aria-label="Baz"
       className={cn('text-baz-primary h-7 w-auto', className)}
+      {...(transitionName === undefined ? {} : { style: { viewTransitionName: transitionName } })}
     >
       {/* b */}
       <circle cx="32" cy="40" r="24.5" fill="none" stroke="currentColor" strokeWidth="15" />

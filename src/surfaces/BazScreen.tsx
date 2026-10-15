@@ -83,7 +83,7 @@ export function BazScreen(): ReactNode {
             aria-label="Baz home"
             className="hover:bg-accent focus-visible:ring-ring justify-self-center rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            <BazWordmark className="h-9" />
+            <BazWordmark className="h-9" transitionName="baz-wordmark" />
           </Link>
           {/*
             The avatar, once there is one. It renders nothing while anonymous, which is also

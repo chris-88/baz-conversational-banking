@@ -394,3 +394,45 @@
     opacity: 0.6;
   }
 }
+
+/*
+ * View transitions, on the same clock as everything else.
+ *
+ * `baz-avatar` is the opening morph: the mark in the middle of the opening screen becoming the
+ * avatar beside Baz's first reply. `baz-wordmark` carries the brand from the landing page into
+ * the chat header rather than letting the page swap under it. Both were on the browser's
+ * default timing until now, which is a quarter-second linear-ish crossfade that reads as a
+ * glitch next to everything else on the page.
+ *
+ * `withViewTransition` already skips the API under reduced motion; the router's own
+ * transitions do not ask, so the rule at the end stops those too.
+ */
+::view-transition-group(baz-avatar),
+::view-transition-group(baz-wordmark) {
+  animation-duration: var(--motion-slow);
+  animation-timing-function: var(--motion-ease);
+}
+
+::view-transition-old(baz-avatar),
+::view-transition-new(baz-avatar),
+::view-transition-old(baz-wordmark),
+::view-transition-new(baz-wordmark) {
+  animation-duration: var(--motion-slow);
+  animation-timing-function: var(--motion-ease);
+  /* The same object, moved. Not two pictures crossfading into one another. */
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

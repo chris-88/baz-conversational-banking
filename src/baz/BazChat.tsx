@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { MessageText } from '@/baz/MessageText'
 import { pushPermission, subscribeToPush } from '@/lib/push'
 import { TriangleAlertIcon } from 'lucide-react'
@@ -160,8 +161,15 @@ export function BazChat({
     }
 
     setTransitioning(true)
+    /*
+     * `flushSync`, so the customer's bubble and the typing bubble are in the DOM before the
+     * browser takes its "after" snapshot. Without it the state changes were only queued, the
+     * snapshot showed the page as it was, and the designed morph played as a plain fade.
+     */
     withViewTransition(() => {
-      void send(message)
+      flushSync(() => {
+        void send(message)
+      })
     })
     // Long enough for the transition to land; the state machine only uses it to hold the
     // opening screen in place while it does.
@@ -677,7 +685,17 @@ export function BazChat({
           )
         })}
 
-        {thinking && <TypingBubble />}
+        {/*
+          Shown directly during the opening transition, bypassing the minimum-duration hold:
+          the typing bubble is the morph's destination and has to be in the very first commit.
+          The 500 ms dead window after the first send, hero gone and nothing in its place, was
+          this bubble not being rendered until the transition state had already passed.
+        */}
+        {(thinking || uiState === 'first_message_transition') && (
+          <TypingBubble
+            first={!entries.some((entry) => entry.kind === 'message' && entry.author === 'baz')}
+          />
+        )}
 
         {/*
           One region, always mounted, so the announcement is made once rather than every time
@@ -685,7 +703,11 @@ export function BazChat({
           word at a time (§16).
         */}
         <p aria-live="polite" className="sr-only">
-          {uiState === 'baz_thinking' || uiState === 'baz_streaming' ? 'Baz is responding' : ''}
+          {uiState === 'baz_thinking' ||
+          uiState === 'baz_streaming' ||
+          uiState === 'first_message_transition'
+            ? 'Baz is responding'
+            : ''}
         </p>
 
         {/*

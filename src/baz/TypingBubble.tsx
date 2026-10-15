@@ -11,9 +11,15 @@ import { ChatBubble } from '@/baz/ChatBubble'
  * Nothing is announced from here. A node that unmounts the moment the answer begins is the
  * wrong place for a live region, so the announcement lives in a stable one in `BazChat`.
  */
-export function TypingBubble(): ReactNode {
+export function TypingBubble({ first = false }: { first?: boolean }): ReactNode {
   return (
-    <ChatBubble author="baz">
+    /*
+     * `first` is what makes the opening transition land. The mark in the middle of the opening
+     * screen becomes the avatar beside Baz's first reply, and the first reply does not exist
+     * until the first token arrives, a round-trip later. This bubble is on screen at the moment
+     * the browser takes its "after" snapshot, so this is where the name has to be.
+     */
+    <ChatBubble author="baz" first={first}>
       {/*
         Exactly one line of text tall (§7). The dots used to sit in a shorter bubble, so when
         the answer replaced them it arrived fourteen pixels higher — the hard gap the spec asks

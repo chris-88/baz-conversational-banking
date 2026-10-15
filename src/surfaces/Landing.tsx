@@ -29,7 +29,7 @@ export function Landing(): ReactNode {
   return (
     <div className="bg-background min-h-dvh">
       <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-6">
-        <BazWordmark className="h-8" />
+        <BazWordmark className="h-8" transitionName="baz-wordmark" />
         <span className="bg-border hidden h-5 w-px sm:block" />
         <span className="text-muted-foreground hidden text-sm sm:block">
           A personal banker for everyone.
@@ -48,7 +48,7 @@ export function Landing(): ReactNode {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <InstallButton />
             <Button asChild size="lg" variant="outline">
-              <Link to={routes.baz}>
+              <Link to={routes.baz} viewTransition>
                 Try in browser
                 <ArrowRightIcon />
               </Link>

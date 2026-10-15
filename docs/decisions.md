@@ -1499,4 +1499,6 @@ by the one met the other cold. The how-it-works language extends into the app. T
 motion rules do not change: scale, translate and opacity only; everything stops under reduced
 motion; the opening morph stays on View Transitions. What changes is that the chat may use the
 same grammar, through `src/lib/motion.ts` and the `--motion-*` tokens, loaded lazily so a QR
-cold start on conference wifi pays as little as possible for it.
+cold start on conference wifi pays as little as possible for it. Measured: the main chunk went
+from 491.34 kB to 498.66 kB, 154.01 kB to 155.93 kB gzipped, for `LazyMotion` with
+`domAnimation`. Under two kilobytes on the wire, against a budget of fifteen.

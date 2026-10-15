@@ -10,15 +10,22 @@
  * It just happens at once, which is the documented fallback (§14) rather than a degraded path
  * worth apologising for.
  */
-export function withViewTransition(update: () => void): void {
+export function withViewTransition(update: () => void | Promise<void>): void {
   const reduced =
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   if (reduced || typeof document.startViewTransition !== 'function') {
-    update()
+    void update()
     return
   }
 
-  document.startViewTransition(update)
+  /*
+   * The browser snapshots the page, runs `update`, waits for whatever it returns, and snapshots
+   * again. So `update` has to have changed the DOM by the time it settles: an update that only
+   * queues a React state change hands the browser an "after" that looks like the "before",
+   * and the morph it was asked for becomes a plain exit. The caller commits synchronously with
+   * `flushSync` for exactly this reason.
+   */
+  document.startViewTransition(() => update())
 }

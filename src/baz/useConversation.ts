@@ -3,7 +3,12 @@ import type { Card } from '@contracts/cards.ts'
 import { streamBazTurn } from '@/baz/bazTurnClient'
 
 export type TurnEntry =
-  | { readonly kind: 'message'; readonly id: string; readonly author: 'baz' | 'customer'; readonly text: string }
+  | {
+      readonly kind: 'message'
+      readonly id: string
+      readonly author: 'baz' | 'customer'
+      readonly text: string
+    }
   | {
       readonly kind: 'card'
       readonly id: string
@@ -70,6 +75,25 @@ export function useConversation(caseId: string | null) {
       const replyId = nextId()
       let reply = ''
 
+      /*
+       * Cards that arrive before Baz has said anything wait for the reply.
+       *
+       * The server holds the model's own cards until the text is done, so that Baz explains and
+       * then offers. The data notice is emitted by the function before the model speaks, so it
+       * landed above the reply: customer, dashed box, then Baz. Holding it here until the first
+       * token puts the reply first, as the server's own rule intends.
+       */
+      let held: Card[] = []
+      const release = () => {
+        if (held.length === 0) return
+        const releasing = held
+        held = []
+        setEntries((current) => [
+          ...current,
+          ...releasing.map((card): TurnEntry => ({ kind: 'card', id: nextId(), card })),
+        ])
+      }
+
       try {
         await streamBazTurn(
           // `opening` and `return` carry no text; `action` carries what the tap did, which
@@ -83,11 +107,15 @@ export function useConversation(caseId: string | null) {
           (event) => {
             switch (event.type) {
               case 'text_delta': {
+                const firstToken = reply.length === 0
                 reply += event.text
                 setEntries((current) => {
                   const existing = current.find((entry) => entry.id === replyId)
                   if (!existing) {
-                    return [...current, { kind: 'message', id: replyId, author: 'baz', text: reply }]
+                    return [
+                      ...current,
+                      { kind: 'message', id: replyId, author: 'baz', text: reply },
+                    ]
                   }
                   return current.map((entry) =>
                     entry.id === replyId && entry.kind === 'message'
@@ -95,11 +123,19 @@ export function useConversation(caseId: string | null) {
                       : entry,
                   )
                 })
+                if (firstToken) release()
                 break
               }
 
               case 'card':
-                setEntries((current) => [...current, { kind: 'card', id: nextId(), card: event.card }])
+                if (reply.length === 0) {
+                  held.push(event.card)
+                  break
+                }
+                setEntries((current) => [
+                  ...current,
+                  { kind: 'card', id: nextId(), card: event.card },
+                ])
                 break
 
               case 'error':
@@ -115,6 +151,8 @@ export function useConversation(caseId: string | null) {
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Something went wrong.')
       } finally {
+        // A turn with cards and no words still shows its cards.
+        release()
         inFlight.current = false
         setStreaming(false)
       }
