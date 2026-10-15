@@ -112,6 +112,38 @@ function restoreRoute(): void {
 }
 
 /**
+ * That a sign-in has just happened, for the screen that loads next.
+ *
+ * Signing in ends in a reload, which is the simplest way to land in a live session, and a
+ * reload is also how the moment gets lost: the conversation came back with "Signed in" under
+ * the card and Baz saying nothing at all. The customer had just handed over an address and got
+ * silence.
+ *
+ * Session storage rather than local: it is about this tab, right now, and it must not survive
+ * into a later visit and greet somebody twice.
+ */
+const JUST_SIGNED_IN_KEY = 'baz.justSignedIn'
+
+export function noteSignedInMoment(): void {
+  try {
+    window.sessionStorage.setItem(JUST_SIGNED_IN_KEY, '1')
+  } catch {
+    // No storage, so no greeting. The conversation still works.
+  }
+}
+
+/** Reads it and clears it, so the greeting happens once however many times this mounts. */
+export function takeSignedInMoment(): boolean {
+  try {
+    const found = window.sessionStorage.getItem(JUST_SIGNED_IN_KEY) === '1'
+    if (found) window.sessionStorage.removeItem(JUST_SIGNED_IN_KEY)
+    return found
+  } catch {
+    return false
+  }
+}
+
+/**
  * The address this browser last signed in with.
  *
  * The one piece of continuity a browser can offer, and it is worth being exact about how

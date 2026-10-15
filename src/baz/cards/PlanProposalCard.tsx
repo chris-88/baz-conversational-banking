@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { CalendarClockIcon, CheckIcon, FlagIcon, TargetIcon } from 'lucide-react'
+import { SettledCard } from '@/baz/cards/SettledCard'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,25 +32,13 @@ export function PlanProposalCard({
   const [busy, setBusy] = useState(false)
   const [kept, setKept] = useState(false)
 
+  /*
+   * The same component the settled path uses, so the card looks identical the instant it is
+   * tapped and when the conversation is opened again tomorrow. It used to be this shape here
+   * and a greyed-out full card there, which made a reload look like something had changed.
+   */
   if (kept) {
-    return (
-      <Card className="gap-0 p-4">
-        <div className="flex items-start gap-3">
-          <span
-            aria-hidden
-            className="bg-state-done/15 text-state-done grid size-9 shrink-0 place-items-center rounded-xl"
-          >
-            <CheckIcon className="size-4.5" strokeWidth={3} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">{card.title}</span>
-            <span className="text-muted-foreground block text-xs">
-              Saved. You can change or stop it any time.
-            </span>
-          </span>
-        </div>
-      </Card>
-    )
+    return <SettledCard label={card.title} note="Saved. You can change or stop it any time." />
   }
 
   const fraction =

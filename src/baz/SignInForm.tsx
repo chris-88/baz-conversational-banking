@@ -7,6 +7,7 @@ import {
   forgetKnownAddress,
   lastSignInError,
   maskedAddress,
+  noteSignedInMoment,
   startEmailSignIn,
   verifyEmailCode,
 } from '@/lib/identity'
@@ -79,8 +80,16 @@ export function SignInForm({
     void verifyEmailCode(email, code).then((result) => {
       setBusy(false)
       if (result.ok) {
-        // The session is live. Reload into it rather than reconciling state by hand: this is
-        // the same page, the same tab and the same conversation, now signed in.
+        /*
+         * The session is live. Reload into it rather than reconciling state by hand: this is
+         * the same page, the same tab and the same conversation, now signed in.
+         *
+         * The note survives the reload so the screen that comes back knows something just
+         * happened. Without it the conversation reappeared exactly as it was, with "Signed in"
+         * under the card and Baz saying nothing — which reads as the sign-in having gone
+         * nowhere.
+         */
+        noteSignedInMoment()
         window.location.reload()
         return
       }

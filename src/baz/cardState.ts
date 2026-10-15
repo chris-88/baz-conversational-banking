@@ -17,8 +17,15 @@ import type { Card } from '@contracts/cards.ts'
  */
 
 export type Settled = {
-  /** What happened, in the customer's terms. Shown on the card in place of its actions. */
+  /**
+   * What happened, in the customer's terms.
+   *
+   * This replaces the card rather than captioning it, so it has to stand on its own: the
+   * options, the rates and the buttons are no longer on screen to supply the context.
+   */
   readonly label: string
+  /** One line of detail or reassurance, where there is something worth adding. */
+  readonly note?: string
 }
 
 type CaseState = {
@@ -83,14 +90,22 @@ export async function loadCaseState(caseId: string): Promise<CaseState> {
 export function settledState(card: Card, state: CaseState): Settled | undefined {
   switch (card.type) {
     case 'sign_in':
-      return state.signedIn ? { label: 'Signed in' } : undefined
+      return state.signedIn
+        ? {
+            label: 'Signed in',
+            note: 'This conversation is saved, and it will be here on another device.',
+          }
+        : undefined
 
     case 'plan_proposal': {
       const plan = state.plans.find((candidate) => candidate.id === card.planId)
       if (!plan) return undefined
-      if (plan.status === 'active') return { label: 'Plan kept' }
+      if (plan.status === 'active') {
+        // The plan's own title, exactly as the card says it the moment it is tapped.
+        return { label: card.title, note: 'Saved. You can change or stop it any time.' }
+      }
       if (plan.status === 'declined' || plan.status === 'abandoned') {
-        return { label: 'Left for now' }
+        return { label: 'Left for now', note: card.title }
       }
       return undefined
     }
@@ -124,11 +139,19 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
 
       if (answered.length < card.options.length) return undefined
 
+      if (started.length === 0) {
+        return {
+          label: 'Not for now',
+          note: card.options.map((option) => option.displayName).join(' and '),
+        }
+      }
+
       return {
-        label:
-          started.length === 0
-            ? 'Not for now'
-            : `Started ${started.map((option) => option.displayName).join(' and ')}`,
+        label: `Started ${started.map((option) => option.displayName).join(' and ')}`,
+        note:
+          started.length === 1
+            ? 'It is in your list, and you can pick it up whenever you like.'
+            : 'Both are in your list, and you can pick either up whenever you like.',
       }
     }
 
@@ -136,19 +159,23 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
       const application = state.applications.find((candidate) => candidate.id === card.applicationId)
       const submitted = ['submitted', 'under_review', 'approved', 'declined', 'completed']
       return application && submitted.includes(application.state)
-        ? { label: 'Submitted' }
+        ? { label: 'Submitted', note: 'Nothing else is needed from you for now.' }
         : undefined
     }
 
     case 'pause_prompt': {
       const application = state.applications.find((candidate) => candidate.id === card.applicationId)
       if (!application) return undefined
-      return application.state === 'paused' ? { label: 'On hold' } : undefined
+      return application.state === 'paused'
+        ? { label: 'On hold', note: 'Nothing happens on it until you say so.' }
+        : undefined
     }
 
     case 'upload_request': {
       const request = state.requests.find((candidate) => candidate.id === card.requestId)
-      return request && request.status !== 'open' ? { label: 'Sent in' } : undefined
+      return request && request.status !== 'open'
+        ? { label: 'Sent in', note: 'Received, and it will not be asked for again.' }
+        : undefined
     }
 
     case 'form_declarations': {
@@ -158,7 +185,7 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
         ),
       )
       return agreed.length === card.declarations.length && agreed.length > 0
-        ? { label: 'Confirmed' }
+        ? { label: 'Confirmed', note: 'Recorded in the words the form uses.' }
         : undefined
     }
 
@@ -166,7 +193,7 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
       const attached = state.formAnswers.some(
         (answer) => answer.field_id === card.fieldId && answer.source === 'document',
       )
-      return attached ? { label: 'Attached' } : undefined
+      return attached ? { label: 'Attached', note: 'Held against this application.' } : undefined
     }
 
     /*

@@ -16,6 +16,7 @@ import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
+import { takeSignedInMoment } from '@/lib/identity'
 import { loadHistory } from '@/baz/history'
 import { runCaseAction } from '@/lib/caseActions'
 import { callFunctionWithFile } from '@/lib/callFunction'
@@ -272,6 +273,38 @@ export function BazChat({
     returnSent.current = true
     void send('', 'return')
   }, [caseId, loadingHistory, hasUpdates, openingMessage, send])
+
+  /**
+   * Pick the conversation back up after a sign-in.
+   *
+   * Signing in ends in a reload, so nothing was asking Baz to say anything: the transcript
+   * came back with "Signed in" under the card and silence after it. Somebody who has just
+   * handed over an address and typed a code should be met, not left looking at their own last
+   * message.
+   *
+   * It goes through as an `action` rather than a message, for the same reason tapping a card
+   * does: it is something that happened, not something they said, and it should not appear in
+   * their own voice in the record.
+   *
+   * What Baz does next is the stage's business, not this note's. With applications started the
+   * case is in `applying`, where the guidance is already to work through what is outstanding —
+   * which is exactly the identity details a signed-in customer should now be asked for.
+   */
+  const greetedSignIn = useRef(false)
+
+  useEffect(() => {
+    if (caseId === null || loadingHistory || greetedSignIn.current) return
+    if (!takeSignedInMoment()) return
+    greetedSignIn.current = true
+
+    void send('Signed in.', 'action', [
+      'They have just signed in, on this screen, a moment ago.',
+      'Say so in a few words and move straight on. Do not explain what signing in does, do not',
+      'thank them for it, and do not offer it again.',
+      'Then pick up where the case actually is: ask for the next thing outstanding, starting',
+      'with the details every application opens with, and only the ones not already held.',
+    ].join(' '))
+  }, [caseId, loadingHistory, send])
 
   /**
    * Keep the newest turn in view.

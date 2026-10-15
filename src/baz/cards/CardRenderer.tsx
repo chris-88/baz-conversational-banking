@@ -3,7 +3,6 @@ import type { Card } from '@contracts/cards.ts'
 import { ProductOptionsCard, type ProductChoice } from '@/baz/cards/ProductOptionsCard'
 import { QuoteCard } from '@/baz/cards/QuoteCard'
 import type { SubscribeResult } from '@/lib/push'
-import { CheckCircle2Icon } from 'lucide-react'
 import { DataNoticeCard } from '@/baz/cards/DataNoticeCard'
 import { FormDeclarationsCard } from '@/baz/cards/FormDeclarationsCard'
 import { FormUploadCard } from '@/baz/cards/FormUploadCard'
@@ -18,6 +17,7 @@ import { HealthFormCard } from '@/baz/cards/HealthFormCard'
 import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
 import { UploadRequestCard } from '@/baz/cards/UploadRequestCard'
 import { PlanProposalCard } from '@/baz/cards/PlanProposalCard'
+import { SettledCard } from '@/baz/cards/SettledCard'
 
 /**
  * The card registry.
@@ -84,24 +84,15 @@ export function CardRenderer({
   /**
    * What became of this card, where the case knows.
    *
-   * A settled card keeps its content and loses its controls: the customer can still see what
-   * was offered and what they chose, and cannot choose it a second time. Passing no actions is
-   * what disables them, so nothing here depends on each card remembering to check a flag.
+   * A settled card is replaced by what happened to it, rather than kept on screen greyed out
+   * with a note underneath. The old version left the entire offer visible — every option,
+   * every rate, both buttons — in a state that said "this is over" while still reading as
+   * something to decide.
    */
-  settled?: { readonly label: string } | undefined
+  settled?: { readonly label: string; readonly note?: string } | undefined
 }): ReactNode {
   if (settled !== undefined) {
-    return (
-      <div className="relative">
-        <div className="pointer-events-none opacity-70 grayscale-[0.35]">
-          <CardRenderer card={card} disabled />
-        </div>
-        <p className="text-success mt-1.5 flex items-center gap-1.5 text-xs font-medium">
-          <CheckCircle2Icon aria-hidden className="size-3.5" />
-          {settled.label}
-        </p>
-      </div>
-    )
+    return <SettledCard label={settled.label} {...(settled.note === undefined ? {} : { note: settled.note })} />
   }
 
   switch (card.type) {
