@@ -499,6 +499,13 @@ export type CaseDigest = {
    */
   readonly prospect?: readonly string[]
   /**
+   * How the money they have and the money they save each month should be split across
+   * accounts, worked out by the savings engine from the facts held and the published rates
+   * (§40). Present only when there is a kept plan and at least two accounts that fit. The
+   * `show_arrangement` card renders exactly this; your line is why it is shaped that way.
+   */
+  readonly arrangement?: readonly string[]
+  /**
    * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
    * already reasoned about, what is primary, what is worth mentioning once, what is being held
    * and why, and anything two goals are both laying claim to.
@@ -769,6 +776,20 @@ function digestSection(digest: CaseDigest): string {
         '',
       )
     }
+  }
+
+  const arrangement = digest.arrangement ?? []
+  if (arrangement.length > 0) {
+    lines.push(
+      '## How their money would be arranged',
+      'Worked out from what they told you and the published rates, not by you. The lump sum goes',
+      'where it can be locked away for as long as fits before they need it; exactly the monthly',
+      'minimum goes where it earns a bonus; the rest goes where it earns most. `show_arrangement`',
+      'puts this on screen and one tap starts all of it. Say why it is shaped this way, in one',
+      'line, in their terms. Do not restate a figure: they are on the card.',
+      ...arrangement,
+      '',
+    )
   }
 
   lines.push('## Applications')

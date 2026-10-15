@@ -218,6 +218,8 @@ export function buildCaseDigest(
     readonly suitability?: readonly string[]
     /** What applying for the product they have been quoted would involve. */
     readonly prospect?: readonly string[]
+    /** How their money should be arranged across accounts, from the savings engine, as lines. */
+    readonly arrangement?: readonly string[]
   } = {},
 ): CaseDigest {
   const needContext = needContextFor(loaded, {
@@ -299,6 +301,7 @@ export function buildCaseDigest(
     ...(options.goals === undefined ? {} : { goals: options.goals }),
     ...(options.suitability === undefined ? {} : { suitability: options.suitability }),
     ...(options.prospect === undefined ? {} : { prospect: options.prospect }),
+    ...(options.arrangement === undefined ? {} : { arrangement: options.arrangement }),
     ...(options.stage === undefined ? {} : { stage: options.stage }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),

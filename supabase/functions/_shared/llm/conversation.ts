@@ -114,6 +114,22 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
     tools: [...ALWAYS, 'propose_plan', 'show_quote'],
   },
 
+  arranging: {
+    name: 'Arranging',
+    length: 'One line with the card. The card carries the arrangement.',
+    purpose:
+      'Show how the money they have and the money they save each month should be split across accounts, and let them start all of it in one go.',
+    todo: [
+      'Call `show_arrangement`. The server has worked the split out from what they told you: which account takes the lump sum and for how long, what the bonus costs each month, where the rest earns most.',
+      'Say one line about why it is shaped that way, in their terms. Not the figures: those are on the card.',
+    ],
+    notYet: [
+      'No product cards and no comparison. This is the arrangement, not a menu; the single-account offers come after it if they want something different.',
+      'Do not ask anything. They start it with one tap or they say what they would change.',
+    ],
+    tools: [...ALWAYS, 'show_arrangement'],
+  },
+
   choosing: {
     name: 'Choosing',
     length: 'One or two sentences with the card.',
@@ -131,6 +147,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
     ],
     tools: [
       ...ALWAYS,
+      'show_arrangement',
       'show_comparison',
       'show_product_options',
       'show_quote',
@@ -163,6 +180,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'record_form_answers',
       'show_partner_invite',
       'show_pause_prompt',
+      'show_arrangement',
       'show_product_options',
       'show_comparison',
       'show_quote',

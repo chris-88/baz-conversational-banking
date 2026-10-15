@@ -1478,3 +1478,14 @@ Anthropic adapter passes through; the fixture replays a script transcribed from 
 conversation, turn for turn, chosen by `LLM_FIXTURE` and advanced by how many times Baz has
 already spoken on the case. Deliberately not a general LLM abstraction: there is one provider
 and one fixture, and a second provider would be a decision, not a drop-in.
+
+## 2026-10-15 — the arrangement is shown once, between the plan and the products (§40, §63)
+
+On case c77e613f Baz offered a choice of two savings accounts and the customer replied with
+the right arrangement worked out alone: the lump sum locked away, €200 a month for the bonus,
+the rest where it earns most. What Baz had offered was worse, a €32,000 lump sum into an
+account paying 0.5% above its tier. `arranging` is a stage, entered once a plan is kept and
+the engine has an arrangement, and left as soon as the card has been shown, which is read off
+the persisted cards rather than stored. The model passes nothing to `show_arrangement`: every
+figure is the engine's arithmetic on published rates. The term has to end before they need
+the money, which is why c77e613f gets the 6-month term at 1.51% and not the 12-month at 2.15%.

@@ -21,6 +21,10 @@ import {
   worthSigningInFor,
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
+import { arrange } from '../_shared/domain/savings/arrange.ts'
+import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
+import { boiSavingsOptions } from '../_shared/tenants/boi/savings-options.ts'
+import { caseFactReader } from '../_shared/db/fact-reader.ts'
 import { asksSomething } from '../_shared/domain/conversation/turn-shape.ts'
 import { outOfAllowance, runGate } from '../_shared/llm/gate.ts'
 import { refusalFor } from '../_shared/llm/refusals.ts'
@@ -687,12 +691,32 @@ async function handleTurn(request: Request): Promise<Response> {
       ? approachFact.value
       : null
 
+  /*
+   * How their money should be arranged, from the facts held (§40).
+   *
+   * Computed every turn and never stored, like the stage: a corrected balance or a changed
+   * target date changes the arrangement by itself. Null means there is nothing to arrange,
+   * either because the figures are not held yet or because only one account fits, and one
+   * account is a recommendation rather than an arrangement.
+   *
+   * Whether it has been shown is read off the persisted cards, which is what lets the stage
+   * show it exactly once and then move on.
+   */
+  const factReader = caseFactReader(loaded)
+  const arrangement =
+    factReader === null
+      ? null
+      : arrange(situationFrom(factReader, new Date().toISOString().slice(0, 10)), boiSavingsOptions)
+  const arrangementShown = loaded.messages.some((message) => message.cards.includes('arrangement'))
+
   const stage = stageFor({
     customerTurns: loaded.messages.filter((message) => message.role === 'customer').length,
     goalGaps:
       goals.candidates.find((candidate) => candidate.tier === 'primary')?.missing.length ?? 99,
     approach,
     planAccepted: keptPlans.length > 0,
+    arrangement: arrangement !== null,
+    arrangementShown,
     applications: loaded.applications.length,
   })
 
@@ -703,6 +727,7 @@ async function handleTurn(request: Request): Promise<Response> {
     ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
     ...(suitability.length === 0 ? {} : { suitability }),
     ...(prospect.length === 0 ? {} : { prospect: [...prospect] }),
+    ...(arrangement === null ? {} : { arrangement: describeArrangement(arrangement) }),
     ...(revived.length === 0 ? {} : { revived }),
     ...(dueNow === null
       ? {}
@@ -1203,6 +1228,64 @@ async function handleTurn(request: Request): Promise<Response> {
                     'Status card shown, rendered from the case. Say one line about where things ' +
                     'stand — what just moved, or what is next. A card on its own, with nothing ' +
                     'said, reads as the conversation having dropped.',
+                  card,
+                }
+              }
+
+              /*
+               * The arrangement, from the engine, with nothing from the model.
+               *
+               * Every figure is `arrange()`'s arithmetic on the published rates; the model's
+               * only part is the sentence it says beside the card. Each allocation carries the
+               * journey product and the catalogue id separately, because nine savings accounts
+               * share one `savings` journey and one tap has to start the right ones.
+               */
+              case 'show_arrangement': {
+                if (arrangement === null) {
+                  return {
+                    result:
+                      'There is nothing to arrange yet. Either what they have saved and what ' +
+                      'they can put away each month are not held, or only one account fits. ' +
+                      'Ask for the figures if they are missing; otherwise offer products one ' +
+                      'at a time.',
+                  }
+                }
+
+                const card: Card = {
+                  type: 'arrangement',
+                  title: 'How your money would be arranged',
+                  allocations: arrangement.allocations.map((allocation) => ({
+                    product: 'savings',
+                    catalogueId: allocation.productId,
+                    name: allocation.name,
+                    amount: allocation.amount,
+                    cadence: allocation.cadence,
+                    termMonths: allocation.termMonths,
+                    rate:
+                      `${formatRate(allocation.annualRate)} AER` +
+                      (allocation.termMonths === null
+                        ? ''
+                        : ` fixed for ${String(allocation.termMonths)} months`),
+                    job: allocation.job,
+                    watch: [...allocation.watch],
+                  })),
+                  firstYearInterest: arrangement.firstYearInterest,
+                  bonus:
+                    arrangement.bonus === null
+                      ? null
+                      : {
+                          amount: arrangement.bonus.amount,
+                          conditions: [...arrangement.bonus.conditions],
+                        },
+                  notes: [...arrangement.notes],
+                }
+
+                return {
+                  result:
+                    'Arrangement shown, worked out by the server from the facts held. Say one ' +
+                    'line about why it is shaped this way, in their terms, and stop. Do not ' +
+                    'restate a figure and do not ask anything: one tap starts every account ' +
+                    'on it.',
                   card,
                 }
               }

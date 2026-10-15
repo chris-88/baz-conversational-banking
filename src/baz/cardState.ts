@@ -155,6 +155,22 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
       }
     }
 
+    /*
+     * Settled once every account on it has been started. One tap starts all of them, so a
+     * partial start means the tap failed partway, and the card should stay open to try again.
+     */
+    case 'arrangement': {
+      const started = card.allocations.filter((allocation) =>
+        state.applications.some((application) => application.catalogue_id === allocation.catalogueId),
+      )
+      if (started.length < card.allocations.length) return undefined
+
+      return {
+        label: `Started ${started.map((allocation) => allocation.name).join(', ')}`,
+        note: 'All of them are in your list, each doing its own job.',
+      }
+    }
+
     case 'review': {
       const application = state.applications.find((candidate) => candidate.id === card.applicationId)
       const submitted = ['submitted', 'under_review', 'approved', 'declined', 'completed']

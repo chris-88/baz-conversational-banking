@@ -94,7 +94,7 @@ Postgres
 
 1. **Load** the case: facts, applications, outstanding requirements (computed, not remembered), advisories, product interests including declined ones, persona, domain config.
 2. **Gate** the latest message, with the previous Baz turn as context so short answers ("about 92k", "yes", "Emma") classify correctly. Out of scope: canned response, `request_blocked` event, stop. The Baz model never sees blocked input.
-2b. **Compute the stage** from the case: `opening`, `direction`, `discovering`, `planning`, `choosing`, `applying`. Ordered, first match wins, never stored and never chosen by the model, so correcting a fact moves the conversation back by itself. The stage decides the guidance, the declared reply length, and which tools the turn is offered (§6, §63).
+2b. **Compute the stage** from the case: `opening`, `direction`, `discovering`, `planning`, `arranging`, `choosing`, `applying`. Ordered, first match wins, never stored and never chosen by the model, so correcting a fact moves the conversation back by itself. The stage decides the guidance, the declared reply length, and which tools the turn is offered (§6, §63).
 3. **Generate** with the system prompt in fixed order: policy (immutable) → domain → product catalogue → persona style → case digest. Stable prefix first for prompt caching. Stream over SSE.
 4. **Persist** messages, validated facts and events. Recompute requirements.
 
@@ -254,7 +254,12 @@ Every tool input is Zod-validated before any effect. Invalid input returns a too
   term. All four required, so the model must ask rather than quote a range. The server decides
   which rates are shown and computes the repayments.
 
-Fifteen tools. **Which ones a turn is offered is decided by the conversation's stage** - the
+- `show_arrangement`: how the money they hold and the money they save each month should be
+  split across savings accounts, from `_shared/domain/savings/arrange.ts`. Takes nothing; the
+  server reads the facts and the published rates. One tap starts every account on it through
+  `select_products`.
+
+Sixteen tools. **Which ones a turn is offered is decided by the conversation's stage** - the
 form tools are gated further on a form existing. Withholding a tool is enforcement; telling the
 model not to use one is advice.
 

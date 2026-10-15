@@ -84,6 +84,49 @@ export const comparisonCardSchema = z.object({
 })
 
 /**
+ * How the customer's money should be split across several accounts, from the engine (§40).
+ *
+ * Distinct from `comparison`, which puts accounts side by side for the customer to choose
+ * between, and from `product_options`, which offers kinds of thing. This is an arrangement:
+ * this much here because it can be locked away, exactly this much there because that is what
+ * the bonus costs, the rest where it earns most. Every figure is `arrange()`'s arithmetic on
+ * published rates; the model passes nothing and the card reads nothing from it.
+ *
+ * One tap starts every account on it, through `select_products`, which is why each allocation
+ * carries the journey product and the catalogue id separately: nine savings accounts share one
+ * `savings` journey.
+ */
+export const arrangementCardSchema = z.object({
+  type: z.literal('arrangement'),
+  title: z.string(),
+  allocations: z
+    .array(
+      z.object({
+        product: z.enum(PRODUCTS),
+        catalogueId: z.string().min(1).max(80),
+        name: z.string(),
+        amount: z.number().positive(),
+        cadence: z.enum(['once', 'monthly']),
+        termMonths: z.number().int().positive().nullable(),
+        /** The rate as the card says it, e.g. "1.51% AER fixed for 6 months". */
+        rate: z.string(),
+        /** What this money is doing here, from the engine. */
+        job: z.string(),
+        watch: z.array(z.string()),
+      }),
+    )
+    .min(2)
+    .max(4),
+  /** Twelve months of interest across the arrangement, at the rates as published. */
+  firstYearInterest: z.number().nonnegative(),
+  /** Stated separately from the interest, always: it is conditional. */
+  bonus: z
+    .object({ amount: z.number().positive(), conditions: z.array(z.string()).min(1) })
+    .nullable(),
+  notes: z.array(z.string()),
+})
+
+/**
  * Three or more ways to do the same thing, with the trade-off visible (§51).
  *
  * Every figure is computed by the quote engine from the catalogue, never by the model. The card
@@ -378,6 +421,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   healthFormCardSchema,
   productOptionCardSchema,
   comparisonCardSchema,
+  arrangementCardSchema,
   statusCardSchema,
   reviewCardSchema,
   pausePromptCardSchema,
@@ -394,6 +438,7 @@ export type CardType = Card['type']
 export const CARD_TYPES = [
   'quote',
   'comparison',
+  'arrangement',
   'plan_proposal',
   'product_options',
   'status',
@@ -426,6 +471,7 @@ export const CARD_TYPES = [
  */
 export const AWAITING_CARDS = [
   'comparison',
+  'arrangement',
   'plan_proposal',
   'product_options',
   'review',

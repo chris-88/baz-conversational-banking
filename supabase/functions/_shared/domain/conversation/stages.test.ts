@@ -6,6 +6,8 @@ const base: StageContext = {
   goalGaps: 5,
   approach: null,
   planAccepted: false,
+  arrangement: false,
+  arrangementShown: false,
   applications: 0,
 }
 
@@ -50,6 +52,27 @@ describe('where a conversation has got to', () => {
     expect(at({ approach: 'plan', planAccepted: true, goalGaps: 9 })).toBe('choosing')
   })
 
+  /**
+   * The moment a live conversation got the wrong way round: Baz offered a choice of two
+   * savings accounts and the customer replied with the right arrangement worked out alone.
+   * With a kept plan and an arrangement to show, it is shown before any single product is.
+   */
+  it('arranges the money once, between keeping the plan and choosing', () => {
+    expect(at({ approach: 'plan', planAccepted: true, arrangement: true })).toBe('arranging')
+    expect(at({ approach: 'plan', planAccepted: true, arrangement: true, arrangementShown: true })).toBe(
+      'choosing',
+    )
+  })
+
+  it('does not arrange without a kept plan, however much it could', () => {
+    expect(at({ approach: 'plan', goalGaps: 0, arrangement: true })).toBe('planning')
+    expect(at({ approach: 'product', arrangement: true })).toBe('choosing')
+  })
+
+  it('still lets an application win over an unshown arrangement', () => {
+    expect(at({ planAccepted: true, arrangement: true, applications: 1 })).toBe('applying')
+  })
+
   it('applies once anything is started, whatever came before it', () => {
     expect(at({ applications: 1 })).toBe('applying')
     expect(at({ customerTurns: 1, applications: 1 })).toBe('applying')
@@ -73,6 +96,7 @@ describe('what a stage permits', () => {
     expect(mayOfferProducts('direction')).toBe(false)
     expect(mayOfferProducts('discovering')).toBe(false)
     expect(mayOfferProducts('planning')).toBe(false)
+    expect(mayOfferProducts('arranging')).toBe(true)
     expect(mayOfferProducts('choosing')).toBe(true)
     expect(mayOfferProducts('applying')).toBe(true)
   })
@@ -87,6 +111,6 @@ describe('what a stage permits', () => {
     for (const stage of STAGES) {
       expect(typeof mayOfferProducts(stage)).toBe('boolean')
     }
-    expect(STAGES).toHaveLength(6)
+    expect(STAGES).toHaveLength(7)
   })
 })

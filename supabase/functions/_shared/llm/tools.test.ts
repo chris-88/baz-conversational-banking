@@ -74,11 +74,17 @@ describe('the model has no tool that takes an action', () => {
     // size cap out of the published control. A file arrives through `upload`, not through
     // this, and what reaches the packet is a reference with the production signature fields
     // left empty.
+    //
+    // `show_arrangement` is the sixteenth and takes nothing at all. The server reads the facts
+    // it holds and the published rates and works the split out; the model cannot pass a figure
+    // because there is no figure it could pass that it did not make up. One tap on the card
+    // starts every account on it, through `select_products` like any other start.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
       'record_form_answers',
       'request_upload',
+      'show_arrangement',
       'show_comparison',
       'show_form',
       'show_form_declarations',

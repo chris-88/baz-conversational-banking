@@ -104,6 +104,12 @@ export const showProductOptionsInput = z.object({
 
 export const showReviewInput = z.object({ applicationId })
 export const showPausePromptInput = z.object({ applicationId })
+/**
+ * Nothing. The server works the arrangement out from the facts it holds and the catalogue it
+ * reads; there is no number the model could pass that would not be a number the model made up.
+ */
+export const showArrangementInput = z.object({})
+
 export const showStatusInput = z.object({
   /** Omit for every application on the case. */
   applicationId: applicationId.optional(),
@@ -228,6 +234,7 @@ export const TOOL_INPUTS = {
   request_upload: requestUploadInput,
   show_partner_invite: showPartnerInviteInput,
   show_status: showStatusInput,
+  show_arrangement: showArrangementInput,
   show_form: showFormInput,
 } as const
 
@@ -379,6 +386,18 @@ export const TOOLS: readonly ToolDefinition[] = [
       'Show the status card for one application, or for all of them. The card renders from the ' +
       'case, independently of whatever you write alongside it.',
     schema: showStatusInput,
+  },
+  {
+    name: 'show_arrangement',
+    description:
+      'Show how the money the customer already has and the money they save each month should ' +
+      'be split across savings accounts: the lump sum locked away for as long as fits before ' +
+      'they need it, exactly the monthly minimum that earns a bonus, the rest where it earns ' +
+      'most. The server works all of it out from the facts held and the published rates; you ' +
+      'pass nothing and quote none of the figures. One tap starts every account on it. One ' +
+      'line of your own before it and nothing after: do not ask the customer anything in the ' +
+      'turn you show it.',
+    schema: showArrangementInput,
   },
 ]
 

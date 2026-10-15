@@ -9,6 +9,7 @@ import { FormUploadCard } from '@/baz/cards/FormUploadCard'
 import { SignInCard } from '@/baz/cards/SignInCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
+import { ArrangementCard } from '@/baz/cards/ArrangementCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
 import { ReviewCard } from '@/baz/cards/ReviewCard'
 import { PausePromptCard } from '@/baz/cards/PausePromptCard'
@@ -161,6 +162,15 @@ export function CardRenderer({
           card={card}
           {...(actions.onSelectProducts ? { onSelect: actions.onSelectProducts } : {})}
           {...(actions.onDeclineProducts ? { onDecline: actions.onDeclineProducts } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'arrangement':
+      return (
+        <ArrangementCard
+          card={card}
+          {...(actions.onSelectProducts ? { onSelect: actions.onSelectProducts } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )

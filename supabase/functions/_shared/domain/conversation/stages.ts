@@ -23,6 +23,11 @@ export const STAGES = [
   'discovering',
   /** Enough of the picture to put a plan together. Build it, show it, let them decide. */
   'planning',
+  /**
+   * The plan is theirs and the engine knows how their money should be arranged across
+   * accounts. Show that, once, before offering anything one account at a time.
+   */
+  'arranging',
   /** Put the options in front of them: the kind of thing first, then the ones inside it. */
   'choosing',
   /** Something is started. Collect what it needs and get it submitted. */
@@ -49,6 +54,15 @@ export type StageContext = {
   readonly approach: Approach | null
   /** A plan they have kept, as opposed to one merely proposed. */
   readonly planAccepted: boolean
+  /**
+   * The savings engine has an arrangement for their money, from the facts held.
+   *
+   * Only true when there is a lump sum or a monthly amount to arrange and at least two
+   * accounts that fit; one account is a recommendation, and the comparison card does those.
+   */
+  readonly arrangement: boolean
+  /** It has already been put on screen. Derived from the persisted cards, never stored. */
+  readonly arrangementShown: boolean
   /** Applications on the case, in any state. */
   readonly applications: number
 }
@@ -62,6 +76,19 @@ export type StageContext = {
 export function stageFor(context: StageContext): Stage {
   // Something is under way. Everything else is behind them.
   if (context.applications > 0) return 'applying'
+
+  /*
+   * A plan they kept, and money the engine knows how to arrange: that comes before any
+   * single product is offered.
+   *
+   * This is the moment a live conversation got the wrong way round. Baz offered a choice of
+   * two savings accounts, and the customer replied with the right answer worked out alone:
+   * the lump sum locked away, €200 a month for the bonus, the rest where it earns most. The
+   * bank should not need to be told. Once, because the card persists and the stage reads it.
+   */
+  if (context.planAccepted && context.arrangement && !context.arrangementShown) {
+    return 'arranging'
+  }
 
   // They have a plan they kept, or they said they just want the product. Either way, choose.
   if (context.planAccepted || context.approach === 'product') return 'choosing'
@@ -95,7 +122,7 @@ const MAX_GAPS_FOR_PLAN = 2
 
 /** Whether a stage is allowed to put a product in front of somebody. */
 export function mayOfferProducts(stage: Stage): boolean {
-  return stage === 'choosing' || stage === 'applying'
+  return stage === 'arranging' || stage === 'choosing' || stage === 'applying'
 }
 
 /** Whether a stage is allowed to propose a plan. */
