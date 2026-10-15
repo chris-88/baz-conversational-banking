@@ -53,6 +53,10 @@ jobs:
         if: steps.check.outputs.configured == 'true'
         run: supabase db push
 
+      # `--use-api` bundles server-side. Without it the CLI pulls the edge-runtime image from
+      # ECR Public to bundle locally, anonymously, and that is rate limited: two deploys failed
+      # on `toomanyrequests` in one afternoon, each needing a manual rerun. The deploy does not
+      # need Docker on the runner, so it should not depend on being able to pull one.
       - name: Deploy functions
         if: steps.check.outputs.configured == 'true'
-        run: supabase functions deploy
+        run: supabase functions deploy --use-api
