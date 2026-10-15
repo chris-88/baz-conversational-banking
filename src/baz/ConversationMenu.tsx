@@ -13,7 +13,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { queryKeys } from '@/lib/queryKeys'
 import { listCases, startNewCase, switchCase } from '@/lib/session'
-import { pushPermission, subscribeToPush } from '@/lib/push'
+import { pushPermission, subscribeToPush, type SubscribeResult } from '@/lib/push'
 import { ANONYMOUS, currentIdentity, lastKnownAddress, signOutIdentity } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
 import { supabase } from '@/lib/supabase'
@@ -207,17 +207,52 @@ export function ConversationMenu({
               </p>
             )}
 
-            {permission !== 'granted' && permission !== 'unsupported' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 w-full"
-                disabled={enablePush.isPending || caseId === null}
-                onClick={() => enablePush.mutate()}
-              >
-                <BellRing className="size-4" />
-                {permission === 'denied' ? 'Notifications are blocked' : 'Tell me when things move'}
-              </Button>
+            {/*
+              Offered even when the browser has already granted it.
+
+              It used to hide itself on `granted`, which is the one state where somebody most
+              needs it: the permission lives in the browser and the subscription lives on the
+              server, and when the server's copy goes — a purge, a reset, a different case —
+              the phone still says yes and there is no way left to tell the server so. A
+              notification sent to a real phone went nowhere for exactly that reason.
+            */}
+            {permission !== 'unsupported' && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full"
+                  disabled={enablePush.isPending || caseId === null || permission === 'denied'}
+                  onClick={() => enablePush.mutate()}
+                >
+                  <BellRing className="size-4" />
+                  {permission === 'denied'
+                    ? 'Notifications are blocked'
+                    : permission === 'granted'
+                      ? 'Check this device is registered'
+                      : 'Tell me when things move'}
+                </Button>
+
+                {/* What actually happened. Silence here is how the last one was missed. */}
+                {enablePush.data !== undefined && (
+                  <p
+                    className={cn(
+                      'mt-2 text-xs leading-relaxed',
+                      enablePush.data.state === 'subscribed'
+                        ? 'text-success'
+                        : 'text-muted-foreground',
+                    )}
+                  >
+                    {subscribeMessage(enablePush.data)}
+                  </p>
+                )}
+
+                {permission === 'denied' && (
+                  <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                    Turn them back on for this site in your browser settings, then try again.
+                  </p>
+                )}
+              </>
             )}
           </section>
 
@@ -339,4 +374,18 @@ export function ConversationMenu({
       </SheetContent>
     </Sheet>
   )
+}
+
+/** What to say about a subscription attempt, in the customer's terms rather than the API's. */
+function subscribeMessage(result: SubscribeResult): string {
+  switch (result.state) {
+    case 'subscribed':
+      return 'This device is registered. Baz can reach you here.'
+    case 'denied':
+      return 'Your browser refused. Nothing will be sent until you allow it for this site.'
+    case 'unsupported':
+      return result.reason
+    case 'failed':
+      return result.reason
+  }
 }

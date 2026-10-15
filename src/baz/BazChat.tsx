@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { MessageText } from '@/baz/MessageText'
-import { subscribeToPush } from '@/lib/push'
+import { pushPermission, subscribeToPush } from '@/lib/push'
 import { TriangleAlertIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -273,6 +273,31 @@ export function BazChat({
     returnSent.current = true
     void send('', 'return')
   }, [caseId, loadingHistory, hasUpdates, openingMessage, send])
+
+  /**
+   * Keep this device registered for notifications, without ever asking again.
+   *
+   * A push subscription lives in two places and only one of them is visible to the browser:
+   * the permission, which the browser remembers, and the row on the server, which it does not.
+   * The two come apart easily — a purge between run-throughs, a case that was reset, a
+   * conversation switched from the menu — and when they do, the phone believes notifications
+   * are on, the menu hides its own switch because permission is granted, and the server has
+   * nowhere to send anything. A notification was sent to a real phone and went nowhere for
+   * exactly this reason: `push_subscriptions` was empty while the phone said yes.
+   *
+   * So the registration is re-asserted whenever a case loads. Only when permission has already
+   * been granted, so nobody is ever prompted by this, and the server upserts on the endpoint,
+   * so doing it on every load costs one request and changes nothing.
+   */
+  const registeredPush = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (caseId === null || registeredPush.current === caseId) return
+    if (pushPermission() !== 'granted') return
+    registeredPush.current = caseId
+
+    void subscribeToPush(caseId)
+  }, [caseId])
 
   /**
    * Pick the conversation back up after a sign-in.
