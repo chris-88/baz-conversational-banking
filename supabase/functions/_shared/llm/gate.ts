@@ -260,10 +260,20 @@ export async function runGate(input: string, deps: GateDeps): Promise<GateResult
 
   const outcome = await classifyWithin(input, deps)
 
-  // Timeout, error or unparseable output all fail closed with a short retry message.
+  /*
+   * Timeout, error or unparseable output all fail closed. What they are told differs.
+   *
+   * Nearly all of these are worth retrying and usually work second time. Running out of
+   * allowance is not, and telling somebody to try again sends them round a loop that cannot
+   * end — which is exactly what happened in front of a real tester, on the first message of a
+   * conversation, with no way to tell from the screen that the prototype was simply out of
+   * credit until somebody went and read the events table.
+   */
   if (!outcome.ok) {
+    const reason = outOfAllowance(outcome.failure) ? 'allowance_reached' : 'classifier_unavailable'
+
     return {
-      ...blocked('unsupported', 'classifier_unavailable', tone, injectionFlagged),
+      ...blocked('unsupported', reason, tone, injectionFlagged),
       classifierFailure: outcome.failure,
     }
   }
@@ -279,3 +289,22 @@ export async function runGate(input: string, deps: GateDeps): Promise<GateResult
 
   return routeClassification(classification, deps.domainConfig, { tone, injectionFlagged })
 }
+
+/**
+ * Whether the model refused because there is no allowance left, rather than because something
+ * went wrong.
+ *
+ * Matched on the message, because that is the only place the distinction appears: Anthropic
+ * returns both a spend limit and a malformed request as a 400 `invalid_request_error`, so the
+ * status and the type say nothing useful. A rate limit is deliberately not in here — a 429 is
+ * the one failure where trying again shortly is exactly the right advice.
+ */
+export function outOfAllowance(failure: ClassifierFailure | string): boolean {
+  if (typeof failure === 'string') return looksLikeNoAllowance(failure)
+  if (failure.kind !== 'error') return false
+
+  return looksLikeNoAllowance(failure.detail)
+}
+
+const looksLikeNoAllowance = (detail: string): boolean =>
+  /usage limits|credit balance (is )?too low|insufficient (credit|quota)|billing/i.test(detail)

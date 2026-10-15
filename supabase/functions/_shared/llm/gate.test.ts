@@ -4,11 +4,13 @@ import {
   GATE_CATEGORIES,
   MAX_INPUT_LENGTH,
   deterministicPreCheck,
+  outOfAllowance,
   routeClassification,
   runGate,
   type Classification,
   type GateDeps,
 } from './gate.ts'
+import { refusalFor } from './refusals.ts'
 
 const classify = (result: Classification) => () => Promise.resolve(result)
 
@@ -235,5 +237,55 @@ describe('a classifier that does not answer', () => {
     if (result.allowed) return
     expect(result.classifierFailure?.kind).toBe('error')
     expect(result.classifierFailure?.detail).toContain('credit balance')
+  })
+})
+
+describe('telling "out of credit" apart from "something went wrong"', () => {
+  /**
+   * The exact body the live project returned, on the first message of a real conversation.
+   *
+   * Pinned verbatim rather than paraphrased: this is matched on a message, which is the only
+   * place the distinction shows up, so the test has to break if the wording moves.
+   */
+  const spendLimit =
+    'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":' +
+    '"You have reached your specified API usage limits. You will regain access on 2026-11-01 ' +
+    'at 00:00 UTC."},"request_id":"req_011Cg3zruLopTy63kEHnikYf"}'
+
+  it('recognises a spend limit', () => {
+    expect(outOfAllowance({ kind: 'error', detail: spendLimit })).toBe(true)
+  })
+
+  it('recognises an empty balance', () => {
+    expect(
+      outOfAllowance({
+        kind: 'error',
+        detail: 'Error: 400 {"error":{"message":"Your credit balance is too low to access the API"}}',
+      }),
+    ).toBe(true)
+  })
+
+  /** A 429 is the one failure where "try again" is the right advice. */
+  it('leaves a rate limit alone', () => {
+    expect(
+      outOfAllowance({
+        kind: 'error',
+        detail: 'Error: 429 {"error":{"type":"rate_limit_error","message":"Number of requests has exceeded your rate limit"}}',
+      }),
+    ).toBe(false)
+  })
+
+  it('leaves an ordinary failure alone', () => {
+    expect(outOfAllowance({ kind: 'error', detail: 'Error: 500 internal' })).toBe(false)
+    expect(outOfAllowance({ kind: 'timeout', detail: 'deadline' })).toBe(false)
+    expect(outOfAllowance({ kind: 'unparseable', detail: 'not json' })).toBe(false)
+  })
+
+  /**
+   * The two messages give opposite advice, which is the whole point of separating them.
+   */
+  it('says the opposite thing about trying again', () => {
+    expect(refusalFor('classifier_unavailable', 'neutral')).toMatch(/try that again/i)
+    expect(refusalFor('allowance_reached', 'neutral')).toMatch(/will not help/i)
   })
 })

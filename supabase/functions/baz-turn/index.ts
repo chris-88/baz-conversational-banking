@@ -22,7 +22,8 @@ import {
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { asksSomething } from '../_shared/domain/conversation/turn-shape.ts'
-import { runGate } from '../_shared/llm/gate.ts'
+import { outOfAllowance, runGate } from '../_shared/llm/gate.ts'
+import { refusalFor } from '../_shared/llm/refusals.ts'
 import { stageFor, type Stage } from '../_shared/domain/conversation/stages.ts'
 import { CONVERSATION } from '../_shared/llm/conversation.ts'
 import { syncFormApplications } from '../_shared/db/form-applications.ts'
@@ -2143,11 +2144,26 @@ async function handleTurn(request: Request): Promise<Response> {
         send({ type: 'status', caseId: turn.caseId, invalidate: ['case', 'facts', 'applications'] })
         send({ type: 'done', messageId, gateCategory: gate.category })
       } catch (error) {
+        /*
+         * Whatever went wrong, the customer does not read the upstream's words.
+         *
+         * A turn driven by a tap skips the gate, so this is the only place a model failure is
+         * handled — and it was sending `error.message` straight to the screen. When the API
+         * allowance runs out that message is a JSON body containing a billing date and a
+         * request id, rendered in a chat bubble to somebody who asked about a savings account.
+         *
+         * Out of allowance gets the same honest line the gate gives, because the advice is the
+         * same: trying again will not help. Everything else keeps the generic one.
+         */
+        const detail = error instanceof Error ? error.message : String(error)
+
         send({
           type: 'error',
           error: {
             code: 'upstream_unavailable',
-            message: error instanceof Error ? error.message : 'Something went wrong.',
+            message: outOfAllowance(detail)
+              ? refusalFor('allowance_reached', tone)
+              : 'Something went wrong on my side. Try that again?',
           },
         })
       } finally {

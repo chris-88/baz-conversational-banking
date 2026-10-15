@@ -21,6 +21,15 @@ export type RefusalReason =
   | 'empty'
   | 'too_long'
   | 'classifier_unavailable'
+  /**
+   * The API allowance is gone, as opposed to something having gone wrong.
+   *
+   * Separate from `classifier_unavailable` because the advice is the opposite. A timeout or a
+   * bad response is worth retrying and usually works second time; a spend limit is not, and
+   * "try that again?" sends somebody round a loop that cannot end. A real customer sat in front
+   * of this and tried again, because that is what it told them to do.
+   */
+  | 'allowance_reached'
   | 'demo_paused'
 
 type RefusalSet = Readonly<Record<ToneBucket, string>>
@@ -71,6 +80,16 @@ const REFUSALS: Readonly<Record<RefusalReason, RefusalSet>> = {
     formal: 'I was unable to process that request. Please try again.',
     neutral: 'Something went wrong on my side. Try that again?',
     playful: 'That one tripped me up. Try again?',
+  },
+  allowance_reached: {
+    formal:
+      'Baz is unavailable. This prototype has reached the usage limit set for it, so trying ' +
+      'again will not help.',
+    neutral:
+      'Baz is out of action for now. The prototype has reached the usage limit set for it, so ' +
+      'trying again will not help, I am afraid.',
+    playful:
+      'I am out of credit, genuinely. Trying again will not fix it, which is the annoying part.',
   },
   demo_paused: {
     formal: 'This demonstration is currently paused.',
