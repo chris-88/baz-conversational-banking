@@ -6,6 +6,7 @@ import { stateLabel } from '../domain/state-machine.ts'
 import type { CaseDigest, DigestApplication, DigestFact, DigestNeeds } from '../llm/prompt.ts'
 import { needContextFor } from './needs.ts'
 import { formDigestSection, formDigests } from './form-digest.ts'
+import type { Stage } from '../domain/conversation/stages.ts'
 import { deferred, evaluateNeeds, nextToClarify, readyToSurface } from '../domain/needs/engine.ts'
 import { buildPlan } from '../domain/needs/plan.ts'
 import type { DigestPlan } from '../llm/prompt.ts'
@@ -204,6 +205,8 @@ export function buildCaseDigest(
   loaded: LoadedCase,
   options: {
     readonly sensitiveDisclosure?: boolean
+    /** Where the conversation has got to, from `stageFor`. Governs what this turn may do. */
+    readonly stage?: Stage
     /** Plans already loaded, described by the plan engine. Kept out of here so the digest
      *  stays synchronous and the database round trip happens once, in the caller. */
     readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
@@ -296,6 +299,7 @@ export function buildCaseDigest(
     ...(options.goals === undefined ? {} : { goals: options.goals }),
     ...(options.suitability === undefined ? {} : { suitability: options.suitability }),
     ...(options.prospect === undefined ? {} : { prospect: options.prospect }),
+    ...(options.stage === undefined ? {} : { stage: options.stage }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

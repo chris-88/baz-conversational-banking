@@ -465,6 +465,25 @@ export const factCatalogue = {
     label: 'How much they put away each month',
   },
   /** Roughly when they expect to be ready. Drives the follow-up, so it is a date not a mood. */
+  /**
+   * How they want to get there, once they have been asked.
+   *
+   * The fork the whole conversation turns on. Somebody buying a house either wants a plan for
+   * it, with the products falling out of the plan, or wants the obvious account today and will
+   * come back for the rest. Both are reasonable, the choice is theirs, and before this existed
+   * nobody was asked: the conversation went from questions straight to a product card.
+   *
+   * A fact rather than a column because it is a thing the customer said about what they want,
+   * and because they can change their mind by saying so.
+   */
+  'goals.approach': {
+    schema: z.enum(['plan', 'product']),
+    subject: 'household',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Plan or straight to a product',
+  },
   'goals.targetDate': {
     schema: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/, 'expected YYYY-MM or YYYY-MM-DD'),
     subject: 'household',

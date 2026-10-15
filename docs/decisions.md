@@ -1358,3 +1358,27 @@ nothing errors, and the page renders yesterday's product on a green deploy.
 single guarded reload now turns it into the new build being on screen. Ignored when
 there was no controller to begin with, because that is a first visit and reloading
 somebody the instant they arrive is a worse bug than the one being fixed.
+
+## 2026-10-15: The conversation has a shape, and the shape is computed (§6, §63)
+
+Case 4c070455 asked eight fact questions in a row and then produced a product card,
+having never named a goal, never proposed a plan, and never once asked the customer
+which of those they wanted. Nothing was broken: the model did what it was told.
+
+What it was told was the problem. The digest said what was known and what was
+available, the voice said how to sound, and one bullet in the tool guidance pushed
+toward offering early. Nothing anywhere knew where a conversation had got to, so
+nothing could say "not products, not yet".
+
+So the arc is a state machine like everything else here. `stageFor` derives the
+stage from the case, `conversation.ts` declares what each stage is for and what
+belongs to a later one, and the tools a turn is offered are the tools that stage
+allows. A product card cannot appear during discovery because there is no tool to
+produce one with, which is the difference between a rule and a request.
+
+The stage is never stored. It is read off the case every turn, so a customer who
+corrects a fact or changes their mind moves the conversation back by itself.
+
+The fork is a fact, `goals.approach`. Somebody who wants a plan gets a plan and the
+products fall out of it; somebody who says "just the savings account" is taken at
+their word. Before this, nobody was asked.

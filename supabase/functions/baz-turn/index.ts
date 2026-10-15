@@ -20,6 +20,8 @@ import {
   worthSigningInFor,
 } from '../_shared/llm/sign-in-prompt.ts'
 import { runGate } from '../_shared/llm/gate.ts'
+import { stageFor, type Stage } from '../_shared/domain/conversation/stages.ts'
+import { CONVERSATION } from '../_shared/llm/conversation.ts'
 import { syncFormApplications } from '../_shared/db/form-applications.ts'
 import { recordFormAnswers } from '../_shared/db/record-form-answers.ts'
 import { formForProduct } from '../_shared/tenants/boi/forms/mapping.ts'
@@ -83,24 +85,29 @@ import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case
  * next turn reads is what actually happened.
  */
 
-/** The partner and upload tools arrive with M5, so they are not offered yet. */
-const ENABLED_TOOLS: readonly ToolName[] = [
-  'record_facts',
-  'record_form_answers',
-  'show_form_declarations',
-  'show_form_upload',
-  'show_product_options',
-  'show_status',
-  'show_review',
-  'show_pause_prompt',
-  'show_form',
-  'show_partner_invite',
-  'request_upload',
-  'propose_plan',
-  'show_quote',
-  'show_comparison',
-  'show_mortgage_rates',
-]
+/**
+ * Which tools a turn is offered, from the stage it is in.
+ *
+ * Enforcement rather than advice, and the reason this feature is not another paragraph of
+ * prompt. Telling a model "no products yet" works most of the time; withholding
+ * `show_product_options` works every time. A conversation that is still finding out what
+ * somebody wants cannot produce a product card, because there is no tool to produce one with.
+ *
+ * The form tools are further gated on there actually being a form. A tool the model can see is
+ * a tool it will eventually try, and on a case with no form-backed application every call
+ * would be refused by the server and spend a whole round doing it.
+ */
+function toolsForTurn(stage: Stage, hasForm: boolean): readonly ToolName[] {
+  const allowed = CONVERSATION[stage].tools
+  if (hasForm) return allowed
+
+  return allowed.filter(
+    (tool) =>
+      tool !== 'record_form_answers' &&
+      tool !== 'show_form_declarations' &&
+      tool !== 'show_form_upload',
+  )
+}
 
 /** How far back a card still counts as "on screen" rather than scrolled into history. */
 const INVITE_CARD_WINDOW = 8
@@ -616,8 +623,35 @@ async function handleTurn(request: Request): Promise<Response> {
           productInfo(quotedProduct).name,
         )
 
+  /*
+   * Where this conversation has got to, worked out from the case.
+   *
+   * Read every turn and never stored, so a customer who corrects something moves the
+   * conversation back by itself rather than carrying on from a position the case no longer
+   * supports. What it governs is in `conversation.ts`: what to do in this stage, what belongs
+   * to a later one, and which tools the turn is offered at all.
+   */
+  const approachFact = loaded.facts.find(
+    (fact) => fact.key === 'goals.approach' && fact.supersededBy === null,
+  )
+  const approach =
+    approachFact?.value === 'plan' || approachFact?.value === 'product'
+      ? approachFact.value
+      : null
+
+  const stage = stageFor({
+    customerTurns: loaded.messages.filter((message) => message.role === 'customer').length,
+    goalNamed: goals.candidates.some((candidate) => candidate.tier === 'primary'),
+    goalGaps:
+      goals.candidates.find((candidate) => candidate.tier === 'primary')?.missing.length ?? 99,
+    approach,
+    planAccepted: keptPlans.length > 0,
+    applications: loaded.applications.length,
+  })
+
   const digest = buildCaseDigest(loaded, {
     sensitiveDisclosure: gate.suppressHumour,
+    stage,
     plans: keptPlans,
     ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
     ...(suitability.length === 0 ? {} : { suitability }),
@@ -781,14 +815,7 @@ async function handleTurn(request: Request): Promise<Response> {
            * form-backed application every call would be refused by the server and spend a
            * round doing it. The digest and the tool list agree with each other this way.
            */
-          enabledTools: digest.forms === undefined
-            ? ENABLED_TOOLS.filter(
-                (tool) =>
-                  tool !== 'record_form_answers' &&
-                  tool !== 'show_form_declarations' &&
-                  tool !== 'show_form_upload',
-              )
-            : ENABLED_TOOLS,
+          enabledTools: toolsForTurn(stage, digest.forms !== undefined),
           onToolRejected: (rejection) => rejections.push(rejection),
           onToolCalled: (name) => called.push(name),
           onUsage: recordModel,

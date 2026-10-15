@@ -10,6 +10,8 @@ import type { Product } from '../domain/journey.ts'
 import type { ApplicationState } from '../domain/state-machine.ts'
 import type { DomainConfig } from '../tenants/boi/domain-config.ts'
 import { applySensitivity, composePersona, type PersonaSliders } from './persona.ts'
+import { stageSection } from './conversation.ts'
+import type { Stage } from '../domain/conversation/stages.ts'
 
 /**
  * The system prompt, composed in a fixed order (CLAUDE.md > A Baz turn):
@@ -132,7 +134,12 @@ captured, and if what you offer is something they can act on.
   have told you. When they have asked how to proceed and handed over what it takes, a name, a
   date of birth, an address, they are ready. Offer the card. Anything still worth knowing can be
   asked after it is on screen, and a question asked instead of acting is the thing people leave
-  a bank over.`
+  a bank over.
+- All of which is governed by the stage the case says this conversation is in, at the top of the
+  section below. That decides what this turn is for, and the tools you have been given this turn
+  are the ones it allows. If something above is not available to you, it belongs to a later part
+  of the conversation and the answer is to get on with the part you are in, never to describe
+  the thing you cannot do.`
 
 /**
  * How an application is actually conducted here.
@@ -433,6 +440,13 @@ export type CaseDigest = {
   readonly declinedProducts: readonly Product[]
   readonly advisories: readonly { readonly title: string; readonly explanation: string }[]
   /**
+   * Where the conversation has got to, worked out from the case by `stageFor`.
+   *
+   * Rendered first, before anything else about this customer, because it is the rule that
+   * governs the turn and a rule read last is a rule already broken.
+   */
+  readonly stage?: Stage
+  /**
    * What the bank's own digital form still wants, already rendered as prose.
    *
    * Composed in `form-digest.ts` and passed through, because the engine that works out which
@@ -588,6 +602,16 @@ function digestSection(digest: CaseDigest): string {
       : 'They are not signed in, so nothing is held about them yet.',
     '',
   )
+
+  /*
+   * First, because it decides what the rest of this is for.
+   *
+   * Everything below tells the model what is known and what is available. Without this, nothing
+   * told it what it should be doing with any of that right now, and a transcript could run
+   * eight questions deep and then produce a product card having never named a goal, proposed a
+   * plan, or asked the customer which of those they wanted.
+   */
+  if (digest.stage !== undefined) lines.push(stageSection(digest.stage), '')
 
   lines.push('## What you already know')
   lines.push(
