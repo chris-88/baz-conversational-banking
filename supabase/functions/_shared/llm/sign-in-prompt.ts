@@ -37,8 +37,8 @@ export function signInPromptCard(whyHref: string): Card {
       'Hear from Baz when something moves',
     ],
     /*
-     * Said plainly, because the moment somebody sees a bank's name beside a Google button is
-     * the moment they wonder what they are actually agreeing to.
+     * Said plainly, because the moment somebody is asked for an address by something wearing a
+     * bank's name is the moment they wonder what they are actually agreeing to.
      */
     reassurance: 'This does not open a Bank of Ireland account or apply for anything.',
     whyHref,

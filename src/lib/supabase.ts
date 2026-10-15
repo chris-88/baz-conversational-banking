@@ -13,9 +13,9 @@ export const supabase: SupabaseClient | null = env
         persistSession: true,
         autoRefreshToken: true,
         /**
-         * The OAuth return must not land in the fragment.
+         * A sign-in must not come back in the fragment.
          *
-         * The default flow is `implicit`, which comes back as `#access_token=…`. This app is
+         * The default flow is `implicit`, which returns `#access_token=…`. This app is
          * hash-routed, so that fragment is also where the route lives: the router would see a
          * pile of token parameters instead of `/baz`, and the tokens would sit in the address
          * bar and the browser history. PKCE returns `?code=…` in the query string instead,

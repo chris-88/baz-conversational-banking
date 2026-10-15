@@ -99,11 +99,11 @@ export function Privacy(): ReactNode {
 
         <Section title="If you sign in">
           <p>
-            Signing in with Google tells us the email address and name on that account, so Baz
-            can recognise you on another device and pick the conversation back up. That is all it
-            is used for. It is not shared, and it does not connect to any real banking
-            relationship. You can sign out at any time, which returns you to being an anonymous
-            visitor.
+            Signing in means giving Baz an email address and entering the code sent to it. The
+            address is what lets Baz recognise you on another device and pick the conversation
+            back up, and that is all it is used for. It is not shared, no password is involved,
+            and it does not connect to any real banking relationship. You can sign out at any
+            time, which returns you to being an anonymous visitor.
           </p>
         </Section>
 

@@ -56,8 +56,6 @@ export type CardActions = {
    * somebody who has just said hello.
    */
   readonly onEnableNotifications?: () => Promise<SubscribeResult>
-  /** Begin signing in. Resolves only on failure; success navigates to Google. */
-  readonly onSignIn?: () => Promise<{ ok: boolean; message?: string }> | void
   /** Resolves true only when the server accepted the plan. */
   readonly onConfirmPlan?: (planId: string) => Promise<boolean> | boolean
   readonly onDeclinePlan?: (planId: string) => Promise<void> | void
@@ -119,11 +117,7 @@ export function CardRenderer({
 
     case 'sign_in':
       return (
-        <SignInCard
-          card={card}
-          {...(actions.onSignIn ? { onSignIn: actions.onSignIn } : {})}
-          {...(disabled === undefined ? {} : { disabled })}
-        />
+        <SignInCard card={card} {...(disabled === undefined ? {} : { disabled })} />
       )
 
     case 'data_notice':

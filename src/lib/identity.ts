@@ -10,8 +10,8 @@ import { claimPriorConversation, rememberPriorUser } from '@/lib/session'
  * applications and every fact carry over with nothing to move and nothing to reconcile.
  *
  * It was once believed that was the only path, and it is not. Attaching fails whenever the
- * Google account or the email address already belongs to a user — a second device, or anybody
- * signing in twice — and the fall-through signs them into that account instead. Different
+ * address already belongs to a user — a second device, or anybody signing in twice — and the
+ * fall-through signs them into that account instead. Different
  * `auth.uid()`, no mapping, and a conversation that has disappeared at the precise moment it
  * was meant to be made safe. A live case was orphaned exactly this way.
  *
@@ -61,7 +61,7 @@ export async function currentIdentity(): Promise<Identity> {
 }
 
 /**
- * Where Google sends them back.
+ * Where the link in the email comes back to.
  *
  * Deliberately the bare origin and base path, with no fragment. Supabase appends `?code=…` to
  * whatever this is, and appending a query to a URL that already has a `#/baz` on the end
@@ -112,92 +112,13 @@ function restoreRoute(): void {
 }
 
 /**
- * Begin signing in. Redirects away, so nothing after this runs.
+ * Why the last attempt failed, left for whatever is on screen next.
  *
- * Linking is tried first, because that is the case that keeps the conversation. It fails when
- * the Google account is already attached to a user — which is exactly what happens on a second
- * device — and signing in normally is then the right answer, because the account it finds is
- * the one holding their case.
- */
-export async function startGoogleSignIn(): Promise<{ ok: boolean; message?: string }> {
-  const client = requireSupabase()
-  const redirectTo = returnTo()
-  rememberRoute()
-
-  const { data: userData } = await client.auth.getUser()
-
-  /*
-   * Noted before anything can change it, because the fall-through below changes it.
-   *
-   * `signInWithOAuth` on a second device signs them into the account that already exists,
-   * which is a different `auth.uid()` from the one holding this conversation. The id is the
-   * only way back to it afterwards.
-   */
-  if (userData.user) rememberPriorUser(userData.user.id)
-
-  if (userData.user?.is_anonymous === true) {
-    const linked = await client.auth.linkIdentity({
-      provider: 'google',
-      options: { redirectTo },
-    })
-    if (!linked.error) return { ok: true }
-
-    /*
-     * Falling through to `signInWithOAuth` is right on a second device, where the account
-     * already exists and holds their case. It is wrong everywhere else, because it creates a
-     * new user and leaves this conversation behind — which is what happened when manual
-     * linking was switched off at the project. Worth knowing it happened.
-     */
-    console.warn('could not link identity, signing in instead:', linked.error.message)
-  }
-
-  const { error } = await client.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo },
-  })
-  return error ? { ok: false, message: error.message } : { ok: true }
-}
-
-/**
- * Finish a sign-in that has just come back from Google.
- *
- * Called once on boot. Does nothing unless there is a `?code=` to redeem, and clears it from
- * the address bar either way so a refresh cannot try to redeem it twice.
- */
-/**
- * Where the last sign-in attempt's failure is left for the UI to find.
- *
- * `completeSignIn` runs before React mounts, so it has nothing to render into. The first
- * version discarded the result entirely, which turned every OAuth failure into the screen
- * jumping away and coming back with no explanation — the single least debuggable outcome
- * available, and exactly what it did in front of somebody.
+ * A sign-in that fails on the way back from the inbox fails before React mounts, so there is
+ * no component to hand the reason to. Session storage rather than local: it is about this
+ * attempt, in this tab, and it should not outlive either.
  */
 const FAILURE_KEY = 'baz.signInError'
-
-/**
- * Set while a link has been downgraded to an ordinary sign-in, so it happens once.
- *
- * Without it, an account that cannot be linked would bounce between Google and here forever.
- */
-const RETRIED_KEY = 'baz.signInRetried'
-
-/**
- * Whether Supabase refused the link because that Google account already belongs to somebody.
- *
- * This is the ordinary second-device case: they signed in on a laptop, opened Baz on a phone,
- * and tapped sign in from a fresh anonymous session. Linking is impossible — the identity is
- * taken — and signing in is the right answer, because the account it finds is the one holding
- * their conversation.
- *
- * It cannot be caught where it is raised. `linkIdentity` does not fail locally; it redirects,
- * and Supabase rejects it during the callback, so the refusal arrives as a parameter on the
- * way back rather than as a rejected promise.
- */
-function identityTaken(reason: string): boolean {
-  return /identity_already_exists|already linked|already been linked|already registered/i.test(
-    reason,
-  )
-}
 
 export function lastSignInError(): string | null {
   try {
@@ -216,30 +137,6 @@ export function clearSignInError(): void {
   }
 }
 
-function alreadyRetried(): boolean {
-  try {
-    return window.sessionStorage.getItem(RETRIED_KEY) === '1'
-  } catch {
-    return true
-  }
-}
-
-function markRetried(): void {
-  try {
-    window.sessionStorage.setItem(RETRIED_KEY, '1')
-  } catch {
-    // Without storage the retry cannot be bounded, so it is not attempted at all.
-  }
-}
-
-function clearRetried(): void {
-  try {
-    window.sessionStorage.removeItem(RETRIED_KEY)
-  } catch {
-    // Nothing to clear.
-  }
-}
-
 function rememberFailure(message: string): void {
   try {
     window.sessionStorage.setItem(FAILURE_KEY, message)
@@ -251,8 +148,8 @@ function rememberFailure(message: string): void {
 /**
  * A session handed back in the URL fragment rather than as a code.
  *
- * `updateUser` is not an OAuth flow and creates no PKCE verifier, so the link in a
- * confirmation email comes back the old way: `#access_token=…&refresh_token=…`. That is also
+ * `updateUser` creates no PKCE verifier, so the link in a confirmation email comes back the
+ * other way: `#access_token=…&refresh_token=…`. That is also
  * exactly where this app keeps its route, so without this the router is handed a pile of token
  * parameters, nothing reads the session, and somebody who just clicked "Open Baz" lands on the
  * front page signed out. Which is what happened.
@@ -285,7 +182,11 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
   if (!supabase) return { signedIn: false }
 
   /*
-   * The email link arrives this way; the Google redirect arrives as `?code=`.
+   * A link from the inbox comes back one of two ways, and both are email.
+   *
+   * `updateUser` is not a PKCE flow, so its confirmation hands the session back in the
+   * fragment. `signInWithOtp` is, so its link comes back as `?code=`. Both have to work,
+   * because which one a person gets depends on whether the address was already known.
    *
    * Routed on either outcome. Somebody who followed a link from their inbox should end up in
    * the conversation whether or not the token in it was still good, because the alternative is
@@ -293,19 +194,16 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
    */
   const fromFragment = await sessionFromFragment()
   if (fromFragment !== 'none') {
-    if (fromFragment === 'ok') {
-      clearRetried()
-      await claimPriorConversation()
-    }
+    if (fromFragment === 'ok') await claimPriorConversation()
     restoreRoute()
     return { signedIn: fromFragment === 'ok' }
   }
 
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
-  const oauthError = params.get('error_description') ?? params.get('error')
+  const refusal = params.get('error_description') ?? params.get('error')
 
-  if (code === null && oauthError === null) return { signedIn: false }
+  if (code === null && refusal === null) return { signedIn: false }
 
   const clean = () => {
     params.delete('code')
@@ -319,36 +217,16 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
 
   if (code === null) {
     clean()
-
-    if (oauthError !== null && identityTaken(oauthError) && !alreadyRetried()) {
-      /*
-       * Linking was refused because the account exists. Go straight back to Google as a plain
-       * sign-in rather than returning them to a card that can only fail the same way again.
-       */
-      markRetried()
-      const client = requireSupabase()
-      const { error } = await client.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: returnTo() },
-      })
-      if (!error) return { signedIn: false }
-      rememberFailure(error.message)
-    } else if (oauthError !== null) {
-      console.error('sign-in refused:', oauthError)
-      rememberFailure(oauthError)
-    }
-
+    console.error('sign-in refused:', refusal)
+    if (refusal !== null) rememberFailure(refusal)
     restoreRoute()
-    return { signedIn: false, ...(oauthError === null ? {} : { error: oauthError }) }
+    return { signedIn: false, ...(refusal === null ? {} : { error: refusal }) }
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   clean()
   restoreRoute()
-  if (!error) {
-    clearRetried()
-    await claimPriorConversation()
-  }
+  if (!error) await claimPriorConversation()
   if (error) {
     console.error('sign-in exchange failed:', error.message)
     rememberFailure(error.message)
@@ -370,16 +248,15 @@ export async function signOutIdentity(): Promise<void> {
 }
 
 /**
- * The same thing by email, for somebody who does not want to involve Google.
+ * Send an address the code, and the link beside it.
  *
- * Structured exactly like the Google path and for the same reason: an anonymous visitor is
- * CONVERTED rather than replaced, so the conversation they are in the middle of survives.
- * `updateUser` attaches the address to the user that already exists and keeps `auth.uid()`;
- * `signInWithOtp` creates or finds a separate one, which is right only when they already have
- * an account somewhere else.
+ * An anonymous visitor is CONVERTED rather than replaced, so the conversation they are in the
+ * middle of survives: `updateUser` attaches the address to the user that already exists and
+ * keeps `auth.uid()`. `signInWithOtp` creates or finds a separate one, which is right only
+ * when the address already has an account — and when it does, the claim carries the
+ * conversation across.
  *
- * Slower than Google by the length of time it takes an email to arrive, and it supplies no
- * name — so Baz cannot promise to fill anything in. It is offered second for both reasons.
+ * It supplies no name, so Baz cannot promise to fill anything in on the strength of it.
  */
 /**
  * Which confirmation an address went out as, because verifying needs to know.
@@ -483,7 +360,7 @@ export async function startEmailSignIn(
   rememberRoute()
   const { data: userData } = await client.auth.getUser()
 
-  // Same reason as the Google path: `signInWithOtp` below may land on a different user.
+  // Noted before anything can change it: `signInWithOtp` below may land on a different user.
   if (userData.user) rememberPriorUser(userData.user.id)
 
   if (userData.user?.is_anonymous === true) {

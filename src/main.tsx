@@ -12,10 +12,10 @@ import '@/index.css'
 initSentry()
 
 /*
- * Redeem a sign-in that has just come back from Google, before React mounts.
+ * Redeem a sign-in that has just come back from the inbox, before React mounts.
  *
  * It has to happen first: `session start` runs on mount and decides which case this browser
- * gets, and running it against the anonymous session a moment before the Google one lands
+ * gets, and running it against the anonymous session a moment before the signed-in one lands
  * would hand them the wrong conversation and then quietly correct it.
  */
 await completeSignIn().catch(() => undefined)

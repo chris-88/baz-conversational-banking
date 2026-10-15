@@ -225,7 +225,7 @@ export async function loadCase(
    * The synthetic bank record first, then whatever the person is actually called.
    *
    * `customers` only holds the seeded demonstration customer. Somebody who signed in with
-   * Google has a real name on their participant and no customer row at all, and Baz greeting
+   * signed in has a name on their participant and no customer row at all, and Baz greeting
    * them as nobody would be the one obvious hole in "it knows who you are".
    */
   const customerName =

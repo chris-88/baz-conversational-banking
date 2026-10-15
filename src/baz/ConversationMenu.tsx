@@ -14,12 +14,8 @@ import { Separator } from '@/components/ui/separator'
 import { queryKeys } from '@/lib/queryKeys'
 import { listCases, startNewCase, switchCase } from '@/lib/session'
 import { pushPermission, subscribeToPush } from '@/lib/push'
-import {
-  ANONYMOUS,
-  currentIdentity,
-  signOutIdentity,
-  startGoogleSignIn,
-} from '@/lib/identity'
+import { ANONYMOUS, currentIdentity, signOutIdentity } from '@/lib/identity'
+import { SignInForm } from '@/baz/SignInForm'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -117,7 +113,6 @@ export function ConversationMenu({
     initialData: ANONYMOUS,
   })
 
-  const signIn = useMutation({ mutationFn: () => startGoogleSignIn() })
   const signOut = useMutation({
     mutationFn: () => signOutIdentity(),
     // A different person now, so every case-shaped thing on screen belongs to somebody else.
@@ -291,23 +286,21 @@ export function ConversationMenu({
 
           {identity.data.anonymous ? (
             <>
+              {/*
+                * The way back in, for somebody who has been here before.
+                *
+                * The same two steps as the card Baz offers in the conversation, and the only
+                * place to reach them without being offered: a person returning on a new
+                * phone, or after clearing their browser, has no card on screen and no
+                * conversation to be offered one in. An address they have used before brings
+                * the conversation with it.
+                */}
               <p className="text-muted-foreground mb-2.5 text-xs leading-relaxed">
                 Sign in and this conversation follows you — the same one on your phone, your
-                laptop and anywhere else you open Baz.
+                laptop and anywhere else you open Baz. Been here before? Use the address you
+                used then.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                disabled={signIn.isPending}
-                onClick={() => signIn.mutate()}
-              >
-                <LogIn className="size-4" />
-                Continue with Google
-              </Button>
-              {signIn.data?.ok === false && (
-                <p className="text-destructive mt-2 text-xs">{signIn.data.message}</p>
-              )}
+              <SignInForm />
             </>
           ) : (
             <>

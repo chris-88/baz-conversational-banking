@@ -125,7 +125,7 @@ export async function startNewCase(mode: 'new' | 'known' = 'new'): Promise<Sessi
  * Written before the identity changes and read after, because afterwards there is no way to
  * find out: the anonymous user is simply gone from the client's point of view, and with it the
  * only link to the conversation it was holding. Local storage is the right place for exactly
- * one reason — it survives a redirect to Google and back, which a variable does not.
+ * one reason — it survives leaving for the inbox and coming back, which a variable does not.
  */
 const PRIOR_USER_KEY = 'baz.priorAuthUser'
 

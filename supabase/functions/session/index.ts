@@ -114,11 +114,12 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
   /**
    * Somebody who has signed in since they last called.
    *
-   * Signing in attaches a Google identity to the anonymous user that is already here, so the
-   * auth id never changes and there is nothing to migrate — but the case still says
+   * Signing in attaches an address to the anonymous user that is already here, so the auth id
+   * usually does not change and there is nothing to migrate — but the case still says
    * `anonymous` and the participant is still called nobody. This is where that catches up, on
-   * the first call after the redirect, rather than through an action the client has to
-   * remember to send.
+   * the first call afterwards, rather than through an action the client has to remember to
+   * send. When the id *did* change, `claim_participant` has already moved the participant and
+   * this runs on the far side of it.
    *
    * The name goes on the participant rather than into `facts`: it is not something the customer
    * told Baz, and `identity.fullName` is a fact with a provenance that would be a lie here.
@@ -144,9 +145,9 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         'the case',
       )
       /*
-       * The provider as the token actually states it, not as this function once assumed.
-       * Google was the only way in when this was written; it is now one of three, and an
-       * events row is where §53 counts things from.
+       * The provider as the token actually states it, rather than the one this function used
+       * to name unconditionally. An events row is where §53 counts things from, so it should
+       * say how somebody actually got in.
        */
       const provider = (user.app_metadata as Record<string, unknown> | null)?.['provider']
       await writeEventRow(admin, caseId, 'customer_signed_in', {
@@ -180,12 +181,12 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
      * participant record is how Baz greets somebody; a name in `facts` is what satisfies the
      * requirement every journey opens with.
      *
-     * `system_derived`, because nobody stated it: it came from the identity provider. Not
-     * `verified` — Google confirms the account, not that the person is who the name says, and
-     * a bank reading `verified: true` would take it to mean something it does not.
+     * `system_derived`, because nobody stated it: it came from the account. Not `verified` —
+     * confirming an address confirms the address, not that the person is who the name says,
+     * and a bank reading `verified: true` would take it to mean something it does not.
      *
      * Never overwrites. Somebody who has already told Baz their name has told Baz their name,
-     * and a display name from Google is not grounds to correct them.
+     * and a name off an account is not grounds to correct them.
      */
     const existing = await admin
       .from('facts')
@@ -361,9 +362,9 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
    * The conversation follows the person across a change of auth user (§12, §28).
    *
    * The comment above `adoptIdentity` used to be the whole story: signing in attaches an
-   * identity to the user already here, the id never changes, nothing to migrate. That is true
-   * of Google and of an address Supabase has not seen. It is false the moment the address
-   * already has an account — Supabase cannot attach it twice, so the person is signed into the
+   * address to the user already here, the id never changes, nothing to migrate. That is true
+   * of an address Supabase has not seen. It is false the moment the address already has an
+   * account — Supabase cannot attach it twice, so the person is signed into the
    * account that exists, lands on a different `auth.uid()`, and the participant holding their
    * conversation is left behind on the anonymous user. It happened on a live case: thirteen
    * facts, a plan and a transcript, all still there, and an empty screen in front of the
