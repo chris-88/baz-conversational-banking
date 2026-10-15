@@ -15,15 +15,15 @@
  */
 
 export const STAGES = [
-  /** The first reply. React to what happened to them, ask one opening question. */
+  /** The first reply: react, say what this involves, and put the fork to them. */
   'opening',
-  /** Work out the shape of the situation. No products, no plan, no solutions. */
-  'discovering',
-  /** Enough is known to name where they are going. Ask how they want to get there. */
+  /** The fork is open and unanswered. Keep it open. */
   'direction',
-  /** They want a plan. Build it, show it, let them decide. */
+  /** They want a plan, so now the discovery is worth doing. Life first, products later. */
+  'discovering',
+  /** Enough of the picture to put a plan together. Build it, show it, let them decide. */
   'planning',
-  /** Put the options in front of them: categories first, then the ones inside a category. */
+  /** Put the options in front of them: the kind of thing first, then the ones inside it. */
   'choosing',
   /** Something is started. Collect what it needs and get it submitted. */
   'applying',
@@ -37,9 +37,13 @@ export type Approach = 'plan' | 'product'
 export type StageContext = {
   /** How many times the customer has spoken. One means this is the first reply. */
   readonly customerTurns: number
-  /** Whether the goal engine can name what they came in about. */
-  readonly goalNamed: boolean
-  /** Facts the primary goal still wants. The fork is premature while this is large. */
+  /**
+   * Facts the primary goal still wants.
+   *
+   * Only consulted on the plan branch, where it decides whether there is enough of a picture
+   * to put a plan together. It has no say over the fork: asking somebody whether they want a
+   * plan costs them one sentence and does not require knowing anything about them.
+   */
   readonly goalGaps: number
   /** `goals.approach`, once they have answered the fork. */
   readonly approach: Approach | null
@@ -59,35 +63,35 @@ export function stageFor(context: StageContext): Stage {
   // Something is under way. Everything else is behind them.
   if (context.applications > 0) return 'applying'
 
-  // The very first reply is its own thing: it is the only turn with nothing to go on.
-  if (context.customerTurns <= 1) return 'opening'
-
-  // They have either asked for a plan and got one, or said they just want the product.
+  // They have a plan they kept, or they said they just want the product. Either way, choose.
   if (context.planAccepted || context.approach === 'product') return 'choosing'
 
-  if (context.approach === 'plan') return 'planning'
-
   /*
-   * The fork, once there is something to fork about.
+   * The plan branch, and the only branch that earns a discovery.
    *
-   * `goalGaps` is the brake. Asking "shall we make a plan, or do you just want the account"
-   * the moment somebody mentions a house, before anyone knows when, with whom or on what, is
-   * the same mistake as offering the product: it skips the part where they are understood.
+   * This used to run before the fork, which is how a conversation about buying a first home
+   * became four turns of mortgage qualification: price, deposit, monthly saving, salary
+   * accounts, gifted deposit, incomes, existing loans. All reasonable questions, none of them
+   * asked for by anybody. Somebody who only wanted a savings account had to sit through the
+   * lot before being offered one.
    */
-  if (context.goalNamed && context.goalGaps <= MAX_GAPS_FOR_DIRECTION) return 'direction'
+  if (context.approach === 'plan') {
+    return context.goalGaps > MAX_GAPS_FOR_PLAN ? 'discovering' : 'planning'
+  }
 
-  return 'discovering'
+  // Nothing chosen yet. The first reply opens it; anything after that is still the fork.
+  return context.customerTurns <= 1 ? 'opening' : 'direction'
 }
 
 /**
- * How much may still be unknown when the fork is put to them.
+ * How much may still be unknown when a plan is put together.
  *
- * Two, measured against the goal catalogue: a first-home goal wants a timeframe, a deposit, an
- * income and a price, and holding the fork until all four are in produces the interrogation
- * this engine exists to prevent. Two outstanding is enough to describe where somebody is going
- * without knowing everything about how they get there.
+ * Two, measured against the goal catalogue. A plan is not an application: it needs enough of
+ * the picture to be worth the paper, not every figure the eventual products will want. Holding
+ * out for all of them turns the one branch somebody actively asked for into the interrogation
+ * they were trying to avoid.
  */
-const MAX_GAPS_FOR_DIRECTION = 2
+const MAX_GAPS_FOR_PLAN = 2
 
 /** Whether a stage is allowed to put a product in front of somebody. */
 export function mayOfferProducts(stage: Stage): boolean {
@@ -96,5 +100,5 @@ export function mayOfferProducts(stage: Stage): boolean {
 
 /** Whether a stage is allowed to propose a plan. */
 export function mayProposePlan(stage: Stage): boolean {
-  return stage === 'planning' || stage === 'direction'
+  return stage === 'planning'
 }

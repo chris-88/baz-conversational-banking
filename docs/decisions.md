@@ -1382,3 +1382,21 @@ corrects a fact or changes their mind moves the conversation back by itself.
 The fork is a fact, `goals.approach`. Somebody who wants a plan gets a plan and the
 products fall out of it; somebody who says "just the savings account" is taken at
 their word. Before this, nobody was asked.
+
+## 2026-10-15: The fork comes first, and discovery is the plan branch (§6)
+
+The first build of the stage machine put discovery before the fork, so case
+103ef551 spent four turns on price, deposit, monthly saving, salary accounts,
+gifted deposits and incomes before anybody was asked what they wanted. No product
+card appeared, which was the improvement, but somebody who only wanted a savings
+account still had to sit through a mortgage qualification to be offered one.
+
+Asking whether they want a plan costs one sentence and requires knowing nothing
+about them. So it happens in the opening reply, after the reaction and a line about
+what the thing actually involves, and nothing about the case can delay it.
+
+Discovery moves inside the plan branch, where it is something the customer asked
+for, and it changes character with its position: how they bank between them, what
+else is coming in the next two years, whether they would want the mortgage here.
+Life, not a mortgage file. A first-home conversation that never becomes a plan never
+needs any of it.

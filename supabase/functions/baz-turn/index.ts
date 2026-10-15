@@ -641,7 +641,6 @@ async function handleTurn(request: Request): Promise<Response> {
 
   const stage = stageFor({
     customerTurns: loaded.messages.filter((message) => message.role === 'customer').length,
-    goalNamed: goals.candidates.some((candidate) => candidate.tier === 'primary'),
     goalGaps:
       goals.candidates.find((candidate) => candidate.tier === 'primary')?.missing.length ?? 99,
     approach,
