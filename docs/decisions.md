@@ -1435,3 +1435,25 @@ Baz offers the card unprompted once, when there is something to protect. It also
 whenever somebody says they have been here before — phrase-matched narrowly in
 `soundsLikeReturning`, which is built to miss, because the menu carries the same thing
 permanently and a false positive is a login wall in front of a new customer.
+
+## 2026-10-15 — a card that waits for a tap owns the turn (§14, Invariant 2)
+
+Baz put a comparison of two savings accounts on screen and, underneath it, asked what the
+customer paid in rent and whether they banked jointly day to day. Three things asked at
+once. The customer can answer the sentence or answer the card, and whichever they choose
+the rest is left hanging — so the turn loses the answer, the tap, or both. It happened on
+three of the last four Baz turns of case c77e613f.
+
+`AWAITING_CARDS` names the cards this applies to, exhaustively, so a new card type has to
+be classified rather than defaulting into the quiet half. A status, a set of published
+rates and the data notice are things to read and compete with nothing.
+
+Declared in two places the model reads at the point of deciding — the stage section and
+the descriptions of the three tools that draw these cards — and checked afterwards by
+`asksSomething`, which writes a `question_with_card` event. The check keys on auxiliary
+inversion rather than a question mark: the turn that caused this was written once without
+one and read exactly the same way.
+
+The same rule covers reciting the card. The rate, the limits and the features are on it
+already; the model's line is why this is in front of this person, which is the one thing
+the card cannot say.

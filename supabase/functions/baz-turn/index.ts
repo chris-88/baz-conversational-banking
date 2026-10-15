@@ -6,6 +6,7 @@ import type { Database } from '../_shared/db/database.types.ts'
 import { bazTurnRequestSchema } from '../_shared/contracts/baz-turn.ts'
 import { fail, statusFor } from '../_shared/contracts/common.ts'
 import { toSseFrame, type StreamEvent } from '../_shared/contracts/stream.ts'
+import { awaitsCustomer } from '../_shared/contracts/cards.ts'
 import type { Card } from '../_shared/contracts/cards.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { evaluateAdvisories } from '../_shared/domain/advisories.ts'
@@ -20,6 +21,7 @@ import {
   worthSigningInFor,
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
+import { asksSomething } from '../_shared/domain/conversation/turn-shape.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { stageFor, type Stage } from '../_shared/domain/conversation/stages.ts'
 import { CONVERSATION } from '../_shared/llm/conversation.ts'
@@ -2040,6 +2042,35 @@ async function handleTurn(request: Request): Promise<Response> {
             type: 'card_promised_not_shown',
             actor: 'model',
             payload: { said: text.slice(0, 200) },
+          })
+        }
+
+        /*
+         * A card waiting for a tap, and a question competing with it.
+         *
+         * Baz put two savings accounts on screen and asked, underneath them, what the customer
+         * paid in rent and whether they banked jointly. Three things asked at once: the reply
+         * could answer the text or answer the card, and whichever it did the rest was left
+         * hanging. It happened on three of the last four turns of that conversation.
+         *
+         * The rule is stated in the stage guides and in the tool descriptions, which is where
+         * it can actually prevent anything. This is the half that notices, so a turn that
+         * breaks it leaves a row rather than only a screenshot.
+         */
+        const waiting = shown.flatMap((card) => {
+          const type =
+            typeof card === 'object' && card !== null
+              ? (card as { type?: unknown }).type
+              : undefined
+          return typeof type === 'string' && awaitsCustomer(type) ? [type] : []
+        })
+
+        if (waiting.length > 0 && asksSomething(text)) {
+          await writeEvent(admin, {
+            caseId: turn.caseId,
+            type: 'question_with_card',
+            actor: 'model',
+            payload: { cards: waiting, said: text.slice(-200) },
           })
         }
 

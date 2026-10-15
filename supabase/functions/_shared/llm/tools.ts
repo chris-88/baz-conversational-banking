@@ -280,7 +280,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       'anything by calling this. When you mean a particular product from the catalogue, set ' +
       'catalogueId to its id (for example savings.supersaver) — several products share one ' +
       'kind, and without the id two different savings accounts are one row offered twice and ' +
-      'one application started.',
+      'one application started. One line of your own before it and nothing after: do not ask ' +
+      'the customer anything in the turn you show it, because they cannot answer you and the ' +
+      'card at the same time.',
     schema: showProductOptionsInput,
   },
   {
@@ -313,7 +315,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       'milestones and a check-in. Use it when what the customer wants takes months rather ' +
       'than one conversation — saving towards something, or a purchase some way off. The ' +
       'card is how they accept; nothing is kept until they tap it. Do not propose a plan for ' +
-      'something they can simply do today.',
+      'something they can simply do today. One line of your own before it and nothing after: ' +
+      'do not ask the customer anything in the turn you show it, because they cannot answer ' +
+      'you and the card at the same time.',
     schema: proposePlanInput,
   },
   {
@@ -339,7 +343,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       'sentence would make the customer hold four descriptions in their head. Pass catalogue ' +
       'ids exactly as written, and one line each on why this one is in front of this person. ' +
       'Everything else beside each option is read from the catalogue. Nothing is started by ' +
-      'tapping one, so this is not the card that begins an application.',
+      'tapping one, so this is not the card that begins an application. One line of your own ' +
+      'before it and nothing after: do not ask the customer anything in the turn you show it, ' +
+      'because they cannot answer you and the card at the same time.',
     schema: showComparisonInput,
   },
   {

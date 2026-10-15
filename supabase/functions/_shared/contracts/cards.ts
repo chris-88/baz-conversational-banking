@@ -409,3 +409,46 @@ export const CARD_TYPES = [
   'data_notice',
   'sign_in',
 ] as const satisfies readonly CardType[]
+
+/**
+ * Cards that are waiting for the customer to do something.
+ *
+ * A card that asks for a tap is the question of that turn, and a turn is allowed one question.
+ * Baz was putting a comparison of two savings accounts on screen and, in the same breath,
+ * asking what the customer paid in rent and whether they banked jointly — so the reply could
+ * answer the text or answer the card, but not both, and whichever they did the other was left
+ * hanging. The customer rightly read it as being asked three things at once.
+ *
+ * Listed rather than derived, and exhaustively, so that a new card type has to be thought
+ * about here rather than defaulting into the quiet half. The quiet half is genuinely quiet: a
+ * status, a quote's figures, published rates and the data notice are things to read, and a
+ * question alongside them competes with nothing.
+ */
+export const AWAITING_CARDS = [
+  'comparison',
+  'plan_proposal',
+  'product_options',
+  'review',
+  'pause_prompt',
+  'partner_invite',
+  'upload_request',
+  'consent',
+  'form_declarations',
+  'form_upload',
+  'health_form',
+  'quote',
+  'sign_in',
+] as const satisfies readonly CardType[]
+
+const AWAITING: ReadonlySet<string> = new Set(AWAITING_CARDS)
+
+/**
+ * Whether this card is waiting on the customer, and therefore owns the turn.
+ *
+ * Takes a plain string rather than a `CardType`, because the places that need to ask have a
+ * card they have not narrowed yet, and a cast to make the signature fit would be a lie told to
+ * the compiler to avoid one honest set lookup.
+ */
+export function awaitsCustomer(type: string): boolean {
+  return AWAITING.has(type)
+}
