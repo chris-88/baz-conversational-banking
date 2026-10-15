@@ -14,6 +14,7 @@ import { useMinimumDuration } from '@/baz/useMinimumDuration'
 import { withViewTransition } from '@/lib/viewTransition'
 import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
+import { Reveal } from '@/components/Primitives'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
 import { takeSignedInMoment } from '@/lib/identity'
@@ -78,6 +79,15 @@ export function BazChat({
   /** Whether they were reading the newest turn, remembered from before the keyboard opens. */
   /** Whether the first paint has already put the newest message on screen. */
   const landed = useRef(false)
+  /**
+   * Where history ends and the live conversation begins, as an index into `entries`.
+   *
+   * Set before the loaded history is handed to React, so the first render already knows it.
+   * A card at or past this index arrived during this session and enters with motion; one
+   * before it was already here, and twenty cards rising in sequence on every reload is not an
+   * entrance, it is a loading screen. Null until a case is loaded, which reads as zero.
+   */
+  const liveFrom = useRef<number | null>(null)
   const atBottom = useRef(true)
   const openingSent = useRef(false)
   const returnSent = useRef(false)
@@ -232,7 +242,10 @@ export function BazChat({
         // Show what was said before, so the screen matches what the model remembers.
         try {
           const history = await loadHistory(session.caseId)
-          if (!cancelled) loadFrom(history)
+          if (!cancelled) {
+            liveFrom.current = history.length
+            loadFrom(history)
+          }
         } finally {
           if (!cancelled) setLoadingHistory(false)
         }
@@ -322,13 +335,17 @@ export function BazChat({
     if (!takeSignedInMoment()) return
     greetedSignIn.current = true
 
-    void send('Signed in.', 'action', [
-      'They have just signed in, on this screen, a moment ago.',
-      'Say so in a few words and move straight on. Do not explain what signing in does, do not',
-      'thank them for it, and do not offer it again.',
-      'Then pick up where the case actually is: ask for the next thing outstanding, starting',
-      'with the details every application opens with, and only the ones not already held.',
-    ].join(' '))
+    void send(
+      'Signed in.',
+      'action',
+      [
+        'They have just signed in, on this screen, a moment ago.',
+        'Say so in a few words and move straight on. Do not explain what signing in does, do not',
+        'thank them for it, and do not offer it again.',
+        'Then pick up where the case actually is: ask for the next thing outstanding, starting',
+        'with the details every application opens with, and only the ones not already held.',
+      ].join(' '),
+    )
   }, [caseId, loadingHistory, send])
 
   /**
@@ -618,26 +635,41 @@ export function BazChat({
           if (entry.kind === 'card') {
             return (
               <div key={entry.id} className="pl-10">
-                <CardRenderer
-                  card={entry.card}
-                  actions={actions}
-                  disabled={streaming}
-                  settled={entry.settled}
-                />
+                {index >= (liveFrom.current ?? 0) ? (
+                  <Reveal mode="mount">
+                    <CardRenderer
+                      card={entry.card}
+                      actions={actions}
+                      disabled={streaming}
+                      settled={entry.settled}
+                    />
+                  </Reveal>
+                ) : (
+                  <CardRenderer
+                    card={entry.card}
+                    actions={actions}
+                    disabled={streaming}
+                    settled={entry.settled}
+                  />
+                )}
               </div>
             )
           }
 
           // Only the last bubble in a run of same-author messages carries the avatar.
           const next = entries[index + 1]
-          const endsRun = next === undefined || next.kind !== 'message' || next.author !== entry.author
+          const endsRun =
+            next === undefined || next.kind !== 'message' || next.author !== entry.author
 
           return (
             <ChatBubble
               key={entry.id}
               author={entry.author}
               showAvatar={endsRun}
-              first={entry.author === 'baz' && entries.findIndex((e) => e.kind === 'message' && e.author === 'baz') === index}
+              first={
+                entry.author === 'baz' &&
+                entries.findIndex((e) => e.kind === 'message' && e.author === 'baz') === index
+              }
             >
               <MessageText text={entry.text} />
             </ChatBubble>
@@ -698,7 +730,6 @@ export function BazChat({
             <AlertDescription>Not connected to a backend.</AlertDescription>
           </Alert>
         )}
-
       </div>
 
       {footer !== undefined && caseId !== null && entries.length > 0 && (

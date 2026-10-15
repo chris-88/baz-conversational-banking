@@ -1489,3 +1489,14 @@ the engine has an arrangement, and left as soon as the card has been shown, whic
 the persisted cards rather than stored. The model passes nothing to `show_arrangement`: every
 figure is the engine's arithmetic on published rates. The term has to end before they need
 the money, which is why c77e613f gets the 6-month term at 1.51% and not the 12-month at 2.15%.
+
+## 2026-10-15 — one design language, and motion enters the conversation (§63)
+
+`docs/design/motion.md` said `motion` was for the explainer only and the conversation stayed on
+CSS and View Transitions. That rule produced two products: an explainer with elevation, entry
+motion and provenance labels, and a chat with none of them, so a reader who had been persuaded
+by the one met the other cold. The how-it-works language extends into the app. The three
+motion rules do not change: scale, translate and opacity only; everything stops under reduced
+motion; the opening morph stays on View Transitions. What changes is that the chat may use the
+same grammar, through `src/lib/motion.ts` and the `--motion-*` tokens, loaded lazily so a QR
+cold start on conference wifi pays as little as possible for it.

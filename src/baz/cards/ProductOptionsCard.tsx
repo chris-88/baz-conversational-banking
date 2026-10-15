@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ProductIcon } from '@/components/ProductIcon'
+import { Settling } from '@/baz/cards/Settling'
+import type { Settled } from '@/baz/cardState'
 import { cn } from '@/lib/utils'
 
 type Payload = Extract<CardPayload, { type: 'product_options' }>
@@ -41,6 +43,18 @@ export function ProductOptionsCard({
 }): ReactNode {
   const [chosen, setChosen] = useState<readonly string[]>([])
   const [busy, setBusy] = useState(false)
+  /**
+   * What became of the card, the moment it did.
+   *
+   * The same shape `cardState` works out from the database on reload, so the card settles to
+   * the identical thing whether the tap landed a second ago or a day ago.
+   */
+  const [done, setDone] = useState<Settled | undefined>(undefined)
+
+  const named = (keys: readonly string[]): readonly string[] =>
+    card.options
+      .filter((option) => keys.includes(identify(option)))
+      .map((option) => option.displayName)
 
   const toggle = (key: string) =>
     setChosen((current) =>
@@ -58,6 +72,7 @@ export function ProductOptionsCard({
   const run = (
     fn: ((products: readonly ProductChoice[]) => Promise<void> | void) | undefined,
     products: readonly ProductChoice[],
+    outcome: Settled,
   ) => {
     if (!fn || products.length === 0 || busy) return
     setBusy(true)
@@ -70,79 +85,98 @@ export function ProductOptionsCard({
      * and the card stays in the transcript afterwards as a record of what was decided. Only a
      * failure gives it back, because then nothing was decided.
      */
-    void Promise.resolve(fn(products)).catch(() => {
-      setBusy(false)
-    })
+    void Promise.resolve(fn(products))
+      .then(() => setDone(outcome))
+      .catch(() => {
+        setBusy(false)
+      })
   }
 
   return (
-    <Card className="gap-0 overflow-hidden p-0">
-      <ul className="divide-y">
-        {card.options.map((option) => {
-          const key = identify(option)
-          const selected = chosen.includes(key)
+    <Settling settled={done}>
+      <Card className="gap-0 overflow-hidden p-0">
+        <ul className="divide-y">
+          {card.options.map((option) => {
+            const key = identify(option)
+            const selected = chosen.includes(key)
 
-          return (
-            <li key={key}>
-              <label
-                className={cn(
-                  'flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors',
-                  selected ? 'bg-accent/40' : 'hover:bg-muted/50',
-                )}
-              >
-                <ProductIcon product={option.product} />
+            return (
+              <li key={key}>
+                <label
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors',
+                    selected ? 'bg-accent/40' : 'hover:bg-muted/50',
+                  )}
+                >
+                  <ProductIcon product={option.product} />
 
-                <span className="min-w-0 flex-1 space-y-0.5">
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-balance">{option.displayName}</span>
-                    {option.previouslyDeclined && (
-                      <Badge variant="secondary" className="text-2xs shrink-0">
-                        Declined before
-                      </Badge>
-                    )}
+                  <span className="min-w-0 flex-1 space-y-0.5">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-balance">
+                        {option.displayName}
+                      </span>
+                      {option.previouslyDeclined && (
+                        <Badge variant="secondary" className="text-2xs shrink-0">
+                          Declined before
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="text-muted-foreground block text-xs">{option.oneLine}</span>
+                    <span className="text-foreground/75 block text-xs">{option.reason}</span>
                   </span>
-                  <span className="text-muted-foreground block text-xs">{option.oneLine}</span>
-                  <span className="text-foreground/75 block text-xs">{option.reason}</span>
-                </span>
 
-                <Checkbox
-                  className="mt-1"
-                  checked={selected}
-                  onCheckedChange={() => toggle(key)}
-                  disabled={disabled ?? busy}
-                  aria-label={`Choose ${option.displayName}`}
-                />
-              </label>
-            </li>
-          )
-        })}
-      </ul>
+                  <Checkbox
+                    className="mt-1"
+                    checked={selected}
+                    onCheckedChange={() => toggle(key)}
+                    disabled={disabled ?? busy}
+                    aria-label={`Choose ${option.displayName}`}
+                  />
+                </label>
+              </li>
+            )
+          })}
+        </ul>
 
-      <div className="bg-muted/40 space-y-2 border-t p-3">
-        <Button
-          size="sm"
-          className="w-full"
-          disabled={(disabled ?? busy) || chosen.length === 0}
-          onClick={() => run(onSelect, choices(chosen))}
-        >
-          {chosen.length === 0
-            ? 'Choose what to look at'
-            : `Start ${String(chosen.length)} ${chosen.length === 1 ? 'application' : 'applications'}`}
-          <ArrowRightIcon />
-        </Button>
-
-        {onDecline !== undefined && (
+        <div className="bg-muted/40 space-y-2 border-t p-3">
           <Button
             size="sm"
-            variant="ghost"
-            className="text-muted-foreground w-full"
-            disabled={disabled ?? busy}
-            onClick={() => run(onDecline, choices(card.options.map(identify)))}
+            className="w-full"
+            disabled={(disabled ?? busy) || chosen.length === 0}
+            onClick={() =>
+              run(onSelect, choices(chosen), {
+                label: `Started ${named(chosen).join(' and ')}`,
+                note:
+                  chosen.length === 1
+                    ? 'It is in your list, and you can pick it up whenever you like.'
+                    : 'They are all in your list, and you can pick any of them up whenever you like.',
+              })
+            }
           >
-            Not right now
+            {chosen.length === 0
+              ? 'Choose what to look at'
+              : `Start ${String(chosen.length)} ${chosen.length === 1 ? 'application' : 'applications'}`}
+            <ArrowRightIcon />
           </Button>
-        )}
-      </div>
-    </Card>
+
+          {onDecline !== undefined && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground w-full"
+              disabled={disabled ?? busy}
+              onClick={() =>
+                run(onDecline, choices(card.options.map(identify)), {
+                  label: 'Not for now',
+                  note: card.options.map((option) => option.displayName).join(' and '),
+                })
+              }
+            >
+              Not right now
+            </Button>
+          )}
+        </div>
+      </Card>
+    </Settling>
   )
 }

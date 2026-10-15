@@ -151,7 +151,7 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
         note:
           started.length === 1
             ? 'It is in your list, and you can pick it up whenever you like.'
-            : 'Both are in your list, and you can pick either up whenever you like.',
+            : 'They are all in your list, and you can pick any of them up whenever you like.',
       }
     }
 

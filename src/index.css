@@ -14,6 +14,17 @@
 :root {
   /* Radius, from tokens.json: control 12, card 16, feature 24, chat 18. */
   --radius: 0.75rem;
+  --radius-chat: 1.125rem;
+
+  /*
+   * Motion, the same four numbers `src/lib/motion.ts` exports for Framer. Here for the few
+   * places CSS does the moving (the opening morph, a transition utility), so the two cannot
+   * drift. Scale, translate and opacity only, and everything stops under reduced motion.
+   */
+  --motion-fast: 0.2s;
+  --motion-base: 0.3s;
+  --motion-slow: 0.45s;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Slate, the neutral spine. */
   --slate-900: oklch(0.21 0.034 264);
@@ -235,6 +246,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* `rounded-chat`: the bubble. 18px in tokens.json, and until now a Tailwind default that bypassed the token. */
+  --radius-chat: var(--radius-chat);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

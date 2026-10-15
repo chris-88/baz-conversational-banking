@@ -56,11 +56,18 @@ and `currentColor` lets the same component be the brand blue, a muted header and
 
 ## The `motion` library
 
-Added to the stack on 2026-10-14, for the explainer page only. Recorded in `docs/decisions.md`.
+Added to the stack on 2026-10-14 for the explainer page, and extended to the conversation on
+2026-10-15. Both decisions are in `docs/decisions.md`.
 
-`/#/how-it-works` is a scroll-driven case study where the page demonstrates the qualities it
-describes, and hand-rolling scroll-linked sequencing for it would have been a bad use of the
-time. It is not used in the conversation, which stays on CSS and View Transitions.
+The explainer settled the grammar by use: four durations, one easing curve, entries that rise
+a few pixels as they fade in. `src/lib/motion.ts` names those numbers and `index.css` mirrors
+them as `--motion-*` tokens, so Framer and CSS cannot drift. `src/components/Primitives.tsx`
+holds the shared pieces (`Surface`, `Reveal`, `Claim`, `Tile`, `Stat`), built on `m` under the
+`LazyMotion` root in `providers.tsx`, so the conversation's chunk carries only the
+`domAnimation` features rather than the whole library.
+
+The three rules above do not change. The opening morph, the mark becoming the avatar, stays
+on View Transitions and not on the library.
 
 ## Where the spec lives
 

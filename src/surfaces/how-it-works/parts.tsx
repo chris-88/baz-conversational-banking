@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
+import type { Decides } from '@/components/Primitives'
+
+/*
+ * The pieces that turned out to be the product's, not the page's, live in
+ * `src/components/Primitives.tsx` now and are re-exported here so nothing on this page had to
+ * change to keep using them. What remains in this file is specific to the explainer.
+ */
+export { Claim, Reveal, Stat, Surface, Tile } from '@/components/Primitives'
+export type { ClaimKind, Decides } from '@/components/Primitives'
 
 /**
  * The pieces the explainer is built from.
@@ -19,9 +27,6 @@ import { cn } from '@/lib/utils'
  *     kind of claim it is, which product;
  *   - nothing is only legible once it has animated.
  */
-
-/** Which half of the system makes a decision. The page's whole argument, as a type. */
-export type Decides = 'code' | 'model'
 
 export function Eyebrow({ children }: { readonly children: ReactNode }): ReactNode {
   return (
@@ -69,40 +74,6 @@ export function SectionHead({
   )
 }
 
-/**
- * A white card on the page's tinted surface.
- *
- * The elevation is the point: it is what makes a panel read as a specimen rather than as more
- * copy. `lift` is for the two or three things a reader should land on first.
- */
-export function Surface({
-  children,
-  className,
-  lift,
-  accent,
-}: {
-  readonly children: ReactNode
-  readonly className?: string
-  readonly lift?: boolean
-  readonly accent?: Decides
-}): ReactNode {
-  return (
-    <div
-      className={cn(
-        'bg-card rounded-xl border',
-        lift === true
-          ? 'shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_28px_-14px_rgba(16,24,40,0.22)]'
-          : 'shadow-xs',
-        accent === 'code' && 'border-t-decides-code border-t-[3px]',
-        accent === 'model' && 'border-t-decides-model border-t-[3px]',
-        className,
-      )}
-    >
-      {children}
-    </div>
-  )
-}
-
 /** A small label saying which half of the system owns something. */
 export function Decider({
   decides,
@@ -139,67 +110,6 @@ export function Decider({
  * glance: something the prototype does, something a production system would do, and a number
  * somebody worked out.
  */
-export type ClaimKind = 'poc' | 'production' | 'illustrative' | 'synthetic' | 'measured'
-
-const CLAIM: Readonly<Record<ClaimKind, { readonly text: string; readonly tone: string }>> = {
-  poc: { text: 'POC', tone: 'bg-primary/10 text-primary' },
-  production: { text: 'Production direction', tone: 'bg-muted text-muted-foreground' },
-  illustrative: { text: 'Illustrative', tone: 'bg-warning-border/30 text-warning-foreground' },
-  synthetic: { text: 'Synthetic example', tone: 'bg-muted text-muted-foreground' },
-  measured: { text: 'Measured', tone: 'bg-success/10 text-success' },
-}
-
-export function Claim({ kind }: { readonly kind: ClaimKind }): ReactNode {
-  const claim = CLAIM[kind]
-  return (
-    <span
-      className={cn(
-        'inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold tracking-[0.08em] uppercase',
-        claim.tone,
-      )}
-    >
-      {claim.text}
-    </span>
-  )
-}
-
-/**
- * An editorial reveal that does nothing when motion is not wanted.
- *
- * Reduced motion gets the final state immediately rather than a faster animation: somebody who
- * asked for no movement has not asked for quicker movement.
- */
-export function Reveal({
-  children,
-  delay = 0,
-  className,
-}: {
-  readonly children: ReactNode
-  readonly delay?: number
-  readonly className?: string
-}): ReactNode {
-  const still = useReducedMotion() === true
-
-  /*
-   * `min-w-0` because this is nearly always a grid or flex child, and a grid child defaults to
-   * a minimum of its content. One `truncate` line inside a card, which is `white-space: nowrap`,
-   * then sets the column's minimum to the full length of the string it was supposed to be
-   * truncating, and the page gains a horizontal scrollbar on a phone.
-   */
-  if (still) return <div className={cn('min-w-0', className)}>{children}</div>
-
-  return (
-    <motion.div
-      className={cn('min-w-0', className)}
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.45, delay, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {children}
-    </motion.div>
-  )
-}
 
 /** The numbered badge that fronts a step, a stage or a panel. */
 export function StepBadge({
@@ -221,86 +131,6 @@ export function StepBadge({
     >
       {n}
     </span>
-  )
-}
-
-/** The tinted tile that fronts anything worth noticing. Tones are tokens, never invented. */
-export function Tile({
-  children,
-  tone = 'primary',
-  size = 'md',
-}: {
-  readonly children: ReactNode
-  readonly tone?: 'primary' | 'success' | 'deep' | 'warning' | 'code' | 'model' | 'savings' | 'loan'
-  readonly size?: 'sm' | 'md'
-}): ReactNode {
-  const tones: Readonly<Record<string, string>> = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
-    deep: 'bg-brand-deep/10 text-brand-deep',
-    warning: 'bg-warning-border/30 text-warning-foreground',
-    code: 'bg-decides-code/10 text-decides-code',
-    model: 'bg-decides-model/10 text-decides-model',
-    savings: 'bg-product-savings/10 text-product-savings',
-    loan: 'bg-product-personal-loan/10 text-product-personal-loan',
-  }
-
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'grid shrink-0 place-items-center rounded-lg',
-        size === 'sm' ? 'size-7 [&>svg]:size-3.5' : 'size-9 [&>svg]:size-4',
-        tones[tone],
-      )}
-    >
-      {children}
-    </span>
-  )
-}
-
-/**
- * A measured figure, sized so it is read before the sentence beside it.
- *
- * The basis sits on the card rather than in a footnote, because a number whose provenance is
- * somewhere else is a number nobody checks.
- */
-export function Stat({
-  value,
-  label,
-  basis,
-  icon,
-  tone = 'primary',
-}: {
-  readonly value: string
-  readonly label: string
-  readonly basis?: string
-  readonly icon?: ReactNode
-  readonly tone?: 'primary' | 'success' | 'deep' | 'warning'
-}): ReactNode {
-  return (
-    <Surface className="h-full p-5">
-      {icon ? (
-        <div className="mb-3">
-          <Tile tone={tone}>{icon}</Tile>
-        </div>
-      ) : null}
-      <p
-        className={cn(
-          'text-[1.75rem] leading-none font-bold tracking-tight tabular-nums',
-          tone === 'success' && 'text-success',
-          tone === 'primary' && 'text-primary',
-          tone === 'deep' && 'text-brand-deep',
-          tone === 'warning' && 'text-warning-foreground',
-        )}
-      >
-        {value}
-      </p>
-      <p className="mt-2 text-[13px] leading-snug font-medium">{label}</p>
-      {basis === undefined ? null : (
-        <p className="text-muted-foreground mt-1.5 text-[11.5px] leading-snug">{basis}</p>
-      )}
-    </Surface>
   )
 }
 

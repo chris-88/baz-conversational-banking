@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react'
+import { LazyMotion, domAnimation } from 'motion/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import * as Sentry from '@sentry/react'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -23,12 +24,20 @@ export function Providers({ children }: { children: ReactNode }): ReactNode {
 
   return (
     <Sentry.ErrorBoundary fallback={<Fallback />}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          {children}
-          <Toaster position="top-center" />
-        </TooltipProvider>
-      </QueryClientProvider>
+      {/*
+        The conversation animates through `m` components, which only pick up features from a
+        `LazyMotion` root. `domAnimation` is the small set: animate, exit, in-view. The explainer
+        still uses the full `motion` import inside its own lazy chunk, which is why this is not
+        `strict`.
+      */}
+      <LazyMotion features={domAnimation}>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            {children}
+            <Toaster position="top-center" />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </LazyMotion>
     </Sentry.ErrorBoundary>
   )
 }

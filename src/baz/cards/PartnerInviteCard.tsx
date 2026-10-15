@@ -45,7 +45,7 @@ export function PartnerInviteCard({
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-semibold">Invite your second applicant</p>
           <p className="text-muted-foreground text-xs">
-            They&rsquo;ll only see their own tasks for {card.applicationNames.join(' and ')}.
+            They&rsquo;ll only see their own tasks for {card.applicationNames.join(' and ')},
             never your conversation or your details.
           </p>
         </div>

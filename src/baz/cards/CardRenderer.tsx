@@ -18,7 +18,7 @@ import { HealthFormCard } from '@/baz/cards/HealthFormCard'
 import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
 import { UploadRequestCard } from '@/baz/cards/UploadRequestCard'
 import { PlanProposalCard } from '@/baz/cards/PlanProposalCard'
-import { SettledCard } from '@/baz/cards/SettledCard'
+import { Settling } from '@/baz/cards/Settling'
 
 /**
  * The card registry.
@@ -92,10 +92,23 @@ export function CardRenderer({
    */
   settled?: { readonly label: string; readonly note?: string } | undefined
 }): ReactNode {
-  if (settled !== undefined) {
-    return <SettledCard label={settled.label} {...(settled.note === undefined ? {} : { note: settled.note })} />
-  }
+  return (
+    <Settling settled={settled}>
+      <LiveCard card={card} actions={actions} {...(disabled === undefined ? {} : { disabled })} />
+    </Settling>
+  )
+}
 
+/** The card as it was offered, before anything became of it. */
+function LiveCard({
+  card,
+  actions,
+  disabled,
+}: {
+  card: Card
+  actions: CardActions
+  disabled?: boolean
+}): ReactNode {
   switch (card.type) {
     case 'plan_proposal':
       return (
@@ -108,9 +121,7 @@ export function CardRenderer({
       )
 
     case 'sign_in':
-      return (
-        <SignInCard card={card} {...(disabled === undefined ? {} : { disabled })} />
-      )
+      return <SignInCard card={card} {...(disabled === undefined ? {} : { disabled })} />
 
     case 'data_notice':
       return <DataNoticeCard card={card} />
@@ -128,9 +139,7 @@ export function CardRenderer({
       return (
         <FormDeclarationsCard
           card={card}
-          {...(actions.onConfirmDeclarations
-            ? { onConfirm: actions.onConfirmDeclarations }
-            : {})}
+          {...(actions.onConfirmDeclarations ? { onConfirm: actions.onConfirmDeclarations } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )

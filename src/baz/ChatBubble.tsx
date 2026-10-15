@@ -48,7 +48,7 @@ export function ChatBubble({
 
       <div
         className={cn(
-          'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
+          'max-w-[85%] rounded-chat px-3.5 py-2.5 text-sm leading-relaxed',
           isBaz
             ? 'bg-muted text-foreground rounded-bl-sm'
             : 'bg-primary text-primary-foreground rounded-br-sm',
