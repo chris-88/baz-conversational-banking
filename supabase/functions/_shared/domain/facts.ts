@@ -583,6 +583,25 @@ export const factCatalogue = {
     extractable: true,
     label: 'Mortgage amount sought',
   },
+  /**
+   * Whether the mortgage is going to be taken here.
+   *
+   * The discovery guide has asked "would they want the mortgage here" since stages landed, and
+   * there was nowhere to put the answer, so it was asked and dropped every time. It decides
+   * whether a €2,000 first-time-buyer bonus is reachable, which makes it the single most
+   * valuable boolean in a first-home conversation.
+   *
+   * `confirm` rather than `auto`: it is an intention rather than a fact about the world, and
+   * somebody who said yes in October may have shopped around by March.
+   */
+  'mortgage.withThisBank': {
+    schema: z.boolean(),
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Intends to mortgage with this bank',
+  },
   'mortgage.termYears': {
     schema: z.number().int().min(5).max(35),
     subject: 'household',
