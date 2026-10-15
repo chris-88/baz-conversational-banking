@@ -127,6 +127,40 @@ export const arrangementCardSchema = z.object({
 })
 
 /**
+ * What the customer was never asked, because the bank already knew (§53).
+ *
+ * The product's central claim, and until now the one thing it never showed. Starting
+ * applications writes a `context_reused` event for every requirement satisfied by a fact that
+ * was bank-held or captured earlier; this card is those events, read back from the database
+ * with the fact's current value and where it came from. The model writes none of it.
+ *
+ * Something to read, not something to decide: it is not in `AWAITING_CARDS`, and a question
+ * beside it competes with nothing.
+ */
+export const reuseCardSchema = z.object({
+  type: z.literal('reuse'),
+  title: z.string(),
+  /** The applications that were started, in the order they were started. */
+  started: z.array(z.string()).min(1),
+  items: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        /** Formatted for a screen, and masked where the value is the kind that should be. */
+        value: z.string(),
+        /** Where the bank got it: the fact's source, for the pill's tone. */
+        source: z.string(),
+        /** The same, as the card says it. */
+        provenance: z.string(),
+        /** Which of the started applications it satisfied something in. */
+        usedFor: z.array(z.string()).min(1),
+      }),
+    )
+    .min(1),
+})
+
+/**
  * Three or more ways to do the same thing, with the trade-off visible (§51).
  *
  * Every figure is computed by the quote engine from the catalogue, never by the model. The card
@@ -422,6 +456,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   productOptionCardSchema,
   comparisonCardSchema,
   arrangementCardSchema,
+  reuseCardSchema,
   statusCardSchema,
   reviewCardSchema,
   pausePromptCardSchema,
@@ -439,6 +474,7 @@ export const CARD_TYPES = [
   'quote',
   'comparison',
   'arrangement',
+  'reuse',
   'plan_proposal',
   'product_options',
   'status',

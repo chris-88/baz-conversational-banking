@@ -22,6 +22,7 @@ import {
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { arrange } from '../_shared/domain/savings/arrange.ts'
+import { describeReused, type ReuseEvent } from '../_shared/domain/reuse.ts'
 import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
 import { boiSavingsOptions } from '../_shared/tenants/boi/savings-options.ts'
 import { caseFactReader } from '../_shared/db/fact-reader.ts'
@@ -392,6 +393,63 @@ async function handleTurn(request: Request): Promise<Response> {
         payload: {},
       })
       pendingNotice = dataNoticeCard(`${env('APP_BASE_URL')}#/privacy`)
+    }
+  }
+
+  /**
+   * What the tap saved them, as a card (§53).
+   *
+   * Starting applications writes a `context_reused` event for every requirement satisfied by a
+   * fact that was already held. Until now the only trace on the customer's screen was a
+   * sentence the model was told and usually paraphrased away; the count lived in the admin
+   * console. This reads the rows the tap just wrote and puts them on screen before the model
+   * speaks, with the live value of each fact and where it came from. The model writes none of
+   * it (Invariant 2).
+   *
+   * Bounded by the last thing Baz said, so a tap shows what that tap reused and not the history
+   * of the case. A sign-in is an action turn too, and the one row it produces, the email the
+   * account supplied, is the first thing a signed-in customer is not asked for.
+   */
+  let pendingReuse: Card | undefined
+  if (turn.trigger === 'action') {
+    const lastBaz = [...loaded.messages].reverse().find((message) => message.role === 'baz')
+    let query = admin
+      .from('events')
+      .select('payload')
+      .eq('case_id', turn.caseId)
+      .eq('type', 'context_reused')
+      .order('created_at', { ascending: true })
+    if (lastBaz !== undefined) query = query.gt('created_at', lastBaz.createdAt)
+
+    const rows = ((await query).data ?? []) as { payload: Record<string, unknown> }[]
+    const events = rows.flatMap((row): ReuseEvent[] => {
+      const name = row.payload['applicationName']
+      if (typeof name !== 'string') return []
+      const key = row.payload['key']
+      const source = row.payload['source']
+      return [{
+        key: typeof key === 'string' ? key : null,
+        source: typeof source === 'string' ? source : null,
+        applicationName: name,
+      }]
+    })
+    const items = describeReused(events, loaded.facts)
+
+    if (items.length > 0) {
+      const started = [...new Set(events.map((event) => event.applicationName))]
+      pendingReuse = {
+        type: 'reuse',
+        title: `${String(items.length)} ${items.length === 1 ? 'thing' : 'things'} you never had to type`,
+        started,
+        items: items.map((item) => ({
+          key: item.key,
+          label: item.label,
+          value: item.value,
+          source: item.source,
+          provenance: item.provenance,
+          usedFor: [...item.usedFor],
+        })),
+      }
     }
   }
 
@@ -2070,6 +2128,12 @@ async function handleTurn(request: Request): Promise<Response> {
             }
           },
         })
+
+        // First, so it is what the customer sees happen; the model's sentence follows it.
+        if (pendingReuse !== undefined) {
+          shown.push(pendingReuse)
+          send({ type: 'card', card: pendingReuse })
+        }
 
         for await (const event of events) {
           if (event.type === 'text_delta') spoken.push(event.text)

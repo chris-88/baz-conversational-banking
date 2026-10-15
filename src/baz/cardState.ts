@@ -40,20 +40,39 @@ type CaseState = {
   readonly requests: readonly { readonly id: string; readonly status: string }[]
   readonly formAnswers: readonly { readonly field_id: string; readonly source: string }[]
   readonly signedIn: boolean
+  /** Requirements satisfied without asking, per application: the §53 count, from `events`. */
+  readonly reusedBy: ReadonlyMap<string, number>
 }
 
 /** Everything a card might need to know about, in one round of parallel reads. */
 export async function loadCaseState(caseId: string): Promise<CaseState> {
   const supabase = requireSupabase()
 
-  const [applications, interests, plans, requests, formApplications, user] = await Promise.all([
-    supabase.from('applications').select('id, product, state, catalogue_id').eq('case_id', caseId),
-    supabase.from('product_interests').select('product, status').eq('case_id', caseId),
-    supabase.from('plans').select('id, status').eq('case_id', caseId),
-    supabase.from('application_requests').select('id, status'),
-    supabase.from('form_applications').select('id').eq('case_id', caseId),
-    supabase.auth.getUser(),
-  ])
+  const [applications, interests, plans, requests, formApplications, user, reused] =
+    await Promise.all([
+      supabase
+        .from('applications')
+        .select('id, product, state, catalogue_id')
+        .eq('case_id', caseId),
+      supabase.from('product_interests').select('product, status').eq('case_id', caseId),
+      supabase.from('plans').select('id, status').eq('case_id', caseId),
+      supabase.from('application_requests').select('id, status'),
+      supabase.from('form_applications').select('id').eq('case_id', caseId),
+      supabase.auth.getUser(),
+      // The same rows the admin's "questions avoided" metric counts (§53), under the customer's
+      // own RLS. A settled card can then say what it saved them rather than only what it started.
+      supabase
+        .from('events')
+        .select('application_id')
+        .eq('case_id', caseId)
+        .eq('type', 'context_reused'),
+    ])
+
+  const reusedBy = new Map<string, number>()
+  for (const row of (reused.data ?? []) as { application_id: string | null }[]) {
+    if (row.application_id === null) continue
+    reusedBy.set(row.application_id, (reusedBy.get(row.application_id) ?? 0) + 1)
+  }
 
   /*
    * Form answers hang off the form application, not the case, so they need the ids first.
@@ -78,6 +97,7 @@ export async function loadCaseState(caseId: string): Promise<CaseState> {
     requests: requests.data ?? [],
     formAnswers,
     signedIn: user.data.user !== null && user.data.user.is_anonymous !== true,
+    reusedBy,
   }
 }
 
@@ -122,8 +142,7 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
         const started = state.applications.some(
           (application) =>
             application.product === option.product &&
-            (option.catalogueId === undefined ||
-              application.catalogue_id === option.catalogueId),
+            (option.catalogueId === undefined || application.catalogue_id === option.catalogueId),
         )
         const declined = state.interests.some(
           (interest) => interest.product === option.product && interest.status === 'declined',
@@ -146,12 +165,22 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
         }
       }
 
+      /*
+       * The count is the product's whole claim and it used to be dropped here. A settled card
+       * that only said what was started had nothing to say about what it saved.
+       */
+      const carried = state.applications
+        .filter((application) => started.some((option) => option.product === application.product))
+        .reduce((sum, application) => sum + (state.reusedBy.get(application.id) ?? 0), 0)
+
       return {
         label: `Started ${started.map((option) => option.displayName).join(' and ')}`,
         note:
-          started.length === 1
-            ? 'It is in your list, and you can pick it up whenever you like.'
-            : 'They are all in your list, and you can pick any of them up whenever you like.',
+          carried > 0
+            ? `${String(carried)} ${carried === 1 ? 'thing' : 'things'} carried over from what Baz already knew.`
+            : started.length === 1
+              ? 'It is in your list, and you can pick it up whenever you like.'
+              : 'They are all in your list, and you can pick any of them up whenever you like.',
       }
     }
 
@@ -161,7 +190,9 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
      */
     case 'arrangement': {
       const started = card.allocations.filter((allocation) =>
-        state.applications.some((application) => application.catalogue_id === allocation.catalogueId),
+        state.applications.some(
+          (application) => application.catalogue_id === allocation.catalogueId,
+        ),
       )
       if (started.length < card.allocations.length) return undefined
 
@@ -172,7 +203,9 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
     }
 
     case 'review': {
-      const application = state.applications.find((candidate) => candidate.id === card.applicationId)
+      const application = state.applications.find(
+        (candidate) => candidate.id === card.applicationId,
+      )
       const submitted = ['submitted', 'under_review', 'approved', 'declined', 'completed']
       return application && submitted.includes(application.state)
         ? { label: 'Submitted', note: 'Nothing else is needed from you for now.' }
@@ -180,7 +213,9 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
     }
 
     case 'pause_prompt': {
-      const application = state.applications.find((candidate) => candidate.id === card.applicationId)
+      const application = state.applications.find(
+        (candidate) => candidate.id === card.applicationId,
+      )
       if (!application) return undefined
       return application.state === 'paused'
         ? { label: 'On hold', note: 'Nothing happens on it until you say so.' }
@@ -220,6 +255,7 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
      * forever.
      */
     case 'comparison':
+    case 'reuse':
     case 'consent':
     case 'data_notice':
     case 'health_form':

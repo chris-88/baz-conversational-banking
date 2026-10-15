@@ -1,4 +1,5 @@
-import { mustWrite } from '../_shared/db/case-repository.ts'
+import { loadCase, mustWrite } from '../_shared/db/case-repository.ts'
+import { evaluateFor, recordReuse } from '../_shared/db/applications.ts'
 import { serveJson } from '../_shared/http/serve.ts'
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from '@supabase/supabase-js'
@@ -226,6 +227,23 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       mustWrite(await admin.from('facts').insert(rows as never), 'the signed-in details')
       for (const row of rows) {
         await writeEventRow(admin, caseId, 'context_captured', { key: row['key'] })
+      }
+
+      /*
+       * What the account just saved them typing, recorded where the reuse metric reads (§53).
+       *
+       * An open application that wanted an email address no longer needs to ask for one. That
+       * is a requirement satisfied without asking, and the same kind of row that starting an
+       * application writes; without it the first question a signed-in customer is not asked
+       * would happen silently. Only these keys: everything else the application reuses was
+       * recorded when it started.
+       */
+      const justAdded = new Set(rows.map((row) => String(row['key'])))
+      const reloaded = await loadCase(admin, caseId)
+      if (reloaded !== null) {
+        for (const application of reloaded.applications) {
+          await recordReuse(admin, reloaded, application, evaluateFor(reloaded, application), justAdded)
+        }
       }
     }
   }

@@ -29,15 +29,22 @@ hand-rolling one later.
 
 ## Conversation cards
 
-`src/baz/cards/` — 18 cards, plus `CardRenderer.tsx` which maps a card type to its component.
+`src/baz/cards/` — 21 cards, plus `CardRenderer.tsx` which maps a card type to its component
+and `Settling.tsx`, which cross-fades any of them into `SettledCard` once its decision is made.
 
 ```text
 ProductOptionsCard   ComparisonCard      QuoteCard         MortgageRatesCard
 ReviewCard           ConfirmationCard    StatusCard        PausePromptCard
 PartnerInviteCard    PlanProposalCard    ConsentCard       HealthFormCard
 UploadRequestCard    FormUploadCard      FormDeclarationsCard
-SignInCard           DataNoticeCard
+SignInCard           DataNoticeCard      ArrangementCard   ReuseCard
+SettledCard
 ```
+
+`ArrangementCard` and `ReuseCard` are the two the engine writes every word of: the first is
+how the customer's money should be split across accounts, the second is what they were never
+asked because the bank already knew. `SettledCard` is what every card becomes once its
+decision is made, on the spot and on reload alike.
 
 Three things are true of every one of them:
 

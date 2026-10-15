@@ -256,8 +256,17 @@ export async function recordReuse(
   loaded: LoadedCase,
   application: Application,
   evaluation: JourneyEvaluation,
+  /**
+   * Record only reuse of these keys. For the moment a sign-in puts an address on file and an
+   * open application stops needing to ask for it: everything else that application reuses was
+   * recorded when it started, and recording it again would count it twice (§53).
+   */
+  only?: ReadonlySet<string>,
 ): Promise<number> {
-  const reused = evaluation.satisfied.filter((item) => item.reused)
+  const reused = evaluation.satisfied.filter(
+    (item) =>
+      item.reused && (only === undefined || (item.fact !== null && only.has(item.fact.key))),
+  )
 
   for (const item of reused) {
     await writeEvent(client, {
@@ -269,6 +278,14 @@ export async function recordReuse(
         requirementId: item.requirement.id,
         label: item.requirement.label,
         applicationName: journeyFor(application.product).displayName,
+        /*
+         * Which fact satisfied it and where that fact came from. Added so the reuse card can
+         * be built from these rows alone: the value is read from the facts table at render
+         * time rather than copied here, because an events row is a record of what happened
+         * and not a second home for personal data.
+         */
+        key: item.fact?.key ?? null,
+        source: item.fact?.source ?? null,
       },
     })
   }

@@ -10,6 +10,7 @@ import { SignInCard } from '@/baz/cards/SignInCard'
 import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
 import { ArrangementCard } from '@/baz/cards/ArrangementCard'
+import { ReuseCard } from '@/baz/cards/ReuseCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
 import { ReviewCard } from '@/baz/cards/ReviewCard'
 import { PausePromptCard } from '@/baz/cards/PausePromptCard'
@@ -183,6 +184,9 @@ function LiveCard({
           {...(disabled === undefined ? {} : { disabled })}
         />
       )
+
+    case 'reuse':
+      return <ReuseCard card={card} />
 
     case 'status':
       return (

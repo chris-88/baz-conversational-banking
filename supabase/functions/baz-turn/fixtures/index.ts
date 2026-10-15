@@ -1,5 +1,6 @@
 import { fixtureScriptSchema, type FixtureScript } from '../../_shared/llm/fixture-provider.ts'
 import opening from './opening.json' with { type: 'json' }
+import reuse from './reuse.json' with { type: 'json' }
 
 /**
  * The scripts a fixture run can replay, by name.
@@ -14,6 +15,7 @@ import opening from './opening.json' with { type: 'json' }
  */
 const SCRIPTS: Readonly<Record<string, unknown>> = {
   opening,
+  reuse,
 }
 
 export function fixtureScript(name: string): FixtureScript {
