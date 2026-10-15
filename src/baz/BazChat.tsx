@@ -17,6 +17,8 @@ import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { Reveal } from '@/components/Primitives'
 import { useCaseUpdates } from '@/baz/useCaseUpdates'
+import { useInstallOffer } from '@/baz/useInstallOffer'
+import { InstallCard } from '@/baz/InstallCard'
 import { BellRingIcon } from 'lucide-react'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
@@ -383,6 +385,7 @@ export function BazChat({
    * conversation after time away, so what Baz then says is what it would have said anyway.
    */
   const updates = useCaseUpdates(caseId)
+  const installOffer = useInstallOffer()
   const catchUp = () => {
     updates.acknowledge()
     void send('', 'return')
@@ -771,6 +774,19 @@ export function BazChat({
           The 500 ms dead window after the first send, hero gone and nothing in its place, was
           this bubble not being rendered until the transition state had already passed.
         */}
+        {/*
+          Offered once per device, to somebody signed in, in a conversation, in a browser tab.
+          It follows the sign-in beat because that is when they decided this was worth keeping,
+          and it is what leads into the move to the installed app on the big screen.
+        */}
+        {installOffer.offer && entries.length > 0 && !streaming && (
+          <div className="pl-10">
+            <Reveal mode="mount">
+              <InstallCard onDismiss={installOffer.dismiss} />
+            </Reveal>
+          </div>
+        )}
+
         {(thinking || uiState === 'first_message_transition') && (
           <TypingBubble
             first={!entries.some((entry) => entry.kind === 'message' && entry.author === 'baz')}

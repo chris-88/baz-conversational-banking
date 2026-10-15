@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { DownloadIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ArrowRightIcon, DownloadIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -9,30 +10,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { routes } from '@/app/routes'
+import { platform, useInstallPrompt, useInstalled } from '@/lib/installed'
 
 /**
- * Installing the app.
+ * Installing the app, from the landing page.
  *
  * Chrome and Edge fire `beforeinstallprompt` and will show a real install dialog, so when that
- * is on offer the button does exactly that. Safari never fires it and iOS has no API at all, so
- * everywhere else the button explains the two taps instead of pretending to be broken.
+ * is on offer the button does exactly that. Safari never fires it and iOS has no API at all,
+ * so there the button explains the two taps, and only the two taps for the device in hand:
+ * a list of three platforms is an instruction for one person and noise for the other two.
+ *
+ * And once Baz is installed it says so. There was no `standalone` check anywhere, so the
+ * installed app advertised installing itself.
  */
-type InstallPrompt = Event & { prompt: () => Promise<void> }
-
 export function InstallButton(): ReactNode {
-  const [prompt, setPrompt] = useState<InstallPrompt | null>(null)
+  const installed = useInstalled()
+  const prompt = useInstallPrompt()
+  const where = platform()
 
-  useEffect(() => {
-    const capture = (event: Event) => {
-      // Keeping the event is the whole trick: it can only be used later if the default is
-      // prevented now, and browsers fire it once, early.
-      event.preventDefault()
-      setPrompt(event as InstallPrompt)
-    }
-
-    window.addEventListener('beforeinstallprompt', capture)
-    return () => window.removeEventListener('beforeinstallprompt', capture)
-  }, [])
+  if (installed) {
+    return (
+      <Button asChild size="lg">
+        <Link to={routes.baz} viewTransition>
+          Open Baz
+          <ArrowRightIcon />
+        </Link>
+      </Button>
+    )
+  }
 
   if (prompt !== null) {
     return (
@@ -55,22 +61,30 @@ export function InstallButton(): ReactNode {
         <DialogHeader>
           <DialogTitle>Add Baz to your home screen</DialogTitle>
           <DialogDescription>
-            Two taps, and it opens like any other app — no app store involved.
+            Two taps, and it opens like any other app. No app store involved.
           </DialogDescription>
         </DialogHeader>
         <ol className="list-decimal space-y-2 pl-5 text-sm">
-          <li>
-            <span className="font-medium">iPhone:</span> tap Share, then{' '}
-            <span className="font-medium">Add to Home Screen</span>.
-          </li>
-          <li>
-            <span className="font-medium">Android:</span> tap the menu, then{' '}
-            <span className="font-medium">Install app</span>.
-          </li>
-          <li>
-            <span className="font-medium">Desktop:</span> look for the install icon in the address
-            bar.
-          </li>
+          {where === 'ios' ? (
+            <>
+              <li>
+                Tap <span className="font-medium">Share</span> at the bottom of Safari.
+              </li>
+              <li>
+                Then <span className="font-medium">Add to Home Screen</span>.
+              </li>
+            </>
+          ) : where === 'android' ? (
+            <>
+              <li>Tap the browser menu.</li>
+              <li>
+                Then <span className="font-medium">Install app</span> or{' '}
+                <span className="font-medium">Add to Home screen</span>.
+              </li>
+            </>
+          ) : (
+            <li>Look for the install icon at the right of the address bar.</li>
+          )}
         </ol>
       </DialogContent>
     </Dialog>
