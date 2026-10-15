@@ -394,7 +394,14 @@ export async function verifyEmailCode(
   const client = requireSupabase()
   const token = code.replace(/\D/g, '')
 
-  if (token.length < 6) return { ok: false, message: 'That code is six digits.' }
+  /*
+   * Short enough that it cannot be a code at all. Not an exact length.
+   *
+   * The length is set in the hosted auth config, which this bundle cannot read, and it was on
+   * eight while everything here assumed six. Checking for "at least a plausible code" and
+   * letting the server decide is the difference between a wrong code and a locked door.
+   */
+  if (token.length < 6) return { ok: false, message: 'That code looks too short.' }
 
   let kind: 'email' | 'email_change' = 'email'
   try {

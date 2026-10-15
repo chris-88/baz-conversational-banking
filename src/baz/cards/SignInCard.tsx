@@ -14,6 +14,17 @@ import { Input } from '@/components/ui/input'
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
 
 /**
+ * How many digits the field will take.
+ *
+ * Supabase allows six to ten and the project is pushed to six, so six is what the copy says.
+ * The range is here rather than a single number because the authority for the real length is
+ * the hosted auth config, which this bundle cannot read: accepting the range means a config
+ * that drifts produces a rejected code with a reason, rather than a code silently cut short.
+ */
+const MIN_CODE = 6
+const MAX_CODE = 10
+
+/**
  * §28 — offered once, at the point where signing in protects something that already exists.
  *
  * Deliberately not a wall. Everything on screen stays usable, there is no "maybe later" to
@@ -116,20 +127,33 @@ export function SignInCard({
             <Input
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
+              /*
+               * Six is what the project sends and what the copy says, and the field still
+               * takes more than six.
+               *
+               * How long the code is lives in the hosted auth config, not in this bundle, and
+               * it was quietly on eight while every number here was six: the email sent eight
+               * digits, the input dropped the last two, and signing in was impossible. The
+               * length is pushed from `scripts/push-auth-templates.mjs` now, so the two agree
+               * — but a field that truncates cannot tell anybody what went wrong, and a field
+               * that accepts the whole code lets the server reject it with a reason.
+               */
+              maxLength={MAX_CODE}
               placeholder="000000"
-              aria-label="The six digit code from your email"
+              aria-label="The code from your email"
               className="text-center text-lg tracking-[0.4em] tabular-nums"
               value={code}
               disabled={(disabled ?? false) || busy}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(event) =>
+                setCode(event.target.value.replace(/\D/g, '').slice(0, MAX_CODE))
+              }
               onKeyDown={(event) => {
                 if (event.key === 'Enter') enterCode()
               }}
             />
             <Button
               className="w-full"
-              disabled={(disabled ?? false) || busy || code.length < 6}
+              disabled={(disabled ?? false) || busy || code.length < MIN_CODE}
               onClick={enterCode}
             >
               {busy ? 'Checking…' : 'Continue'}

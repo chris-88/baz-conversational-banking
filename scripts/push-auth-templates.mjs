@@ -57,10 +57,22 @@ if (image) {
   console.log(`image ok: ${image}`)
 }
 
+/*
+ * The length of the code, pushed rather than clicked.
+ *
+ * `supabase/config.toml` has said `otp_length = 6` since the day it was generated, but that
+ * file configures a local stack and the hosted project keeps its own copy. The hosted one was
+ * on 8, which is its default, so the email sent eight digits into an input that accepted six
+ * and nobody could sign in at all. The declared value and the live value have to be the same
+ * value, so it travels with the template that quotes it.
+ */
+const OTP_LENGTH = 6
+
 const body = {
   mailer_templates_magic_link_content: html,
   mailer_templates_confirmation_content: html,
   mailer_templates_email_change_content: html,
+  mailer_otp_length: OTP_LENGTH,
 }
 
 const response = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {
@@ -74,4 +86,4 @@ if (!response.ok) {
   process.exit(1)
 }
 
-console.log('pushed: magic link, confirmation, email change')
+console.log(`pushed: magic link, confirmation, email change, ${String(OTP_LENGTH)}-digit code`)
