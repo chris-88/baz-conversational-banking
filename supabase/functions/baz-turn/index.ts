@@ -19,6 +19,7 @@ import {
   signInPromptCard,
   worthSigningInFor,
 } from '../_shared/llm/sign-in-prompt.ts'
+import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { runGate } from '../_shared/llm/gate.ts'
 import { stageFor, type Stage } from '../_shared/domain/conversation/stages.ts'
 import { CONVERSATION } from '../_shared/llm/conversation.ts'
@@ -1971,15 +1972,36 @@ async function handleTurn(request: Request): Promise<Response> {
          */
         {
           const after = await loadCase(admin, turn.caseId)
-          if (after && worthSigningInFor(after)) {
-            const alreadyOffered = await caseHasEvent(admin, turn.caseId, SIGN_IN_PROMPT_EVENT)
 
-            if (!alreadyOffered) {
+          /*
+           * Somebody who has just said they were here before.
+           *
+           * Not subject to the once-per-case gate above, and not subject to there being
+           * anything worth protecting yet: they have asked for the way back, and the way back
+           * is an address and a code. The gate exists to stop an *unprompted* offer returning
+           * every turn; answering a question is not that.
+           *
+           * Phrase-matched rather than inferred, deliberately narrowly, because a card
+           * appearing is not a judgement to leave to a reading of a sentence. It misses more
+           * than it catches and the menu carries the same thing permanently.
+           */
+          const asking =
+            isCustomerTurn &&
+            after !== null &&
+            after.authLevel !== 'authenticated' &&
+            soundsLikeReturning(customerMessage)
+
+          if (after && (asking || worthSigningInFor(after))) {
+            // Only an unprompted offer is held to once per case, and only it pays for the read.
+            const suppressed =
+              !asking && (await caseHasEvent(admin, turn.caseId, SIGN_IN_PROMPT_EVENT))
+
+            if (!suppressed) {
               await writeEvent(admin, {
                 caseId: turn.caseId,
                 type: SIGN_IN_PROMPT_EVENT,
                 actor: 'system',
-                payload: {},
+                payload: asking ? { reason: 'returning_cue' } : {},
               })
               const card = signInPromptCard(`${env('APP_BASE_URL')}#/privacy`)
               shown.push(card)

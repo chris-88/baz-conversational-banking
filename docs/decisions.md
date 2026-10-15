@@ -1400,3 +1400,38 @@ for, and it changes character with its position: how they bank between them, wha
 else is coming in the next two years, whether they would want the mortgage here.
 Life, not a mortgage file. A first-home conversation that never becomes a plan never
 needs any of it.
+
+## 2026-10-15 — Google is removed entirely, not hidden (§28)
+
+It was taken off the sign-in card earlier and left everywhere else: the provider code,
+the link-then-fall-back dance, a live button in the conversation menu, and a data
+protection notice telling people their name came from a Google account. Identity at the
+bank will not go through Google, so a prototype that still can is a prototype that
+demonstrates the wrong architecture. Email and a six-digit code is the only way in.
+
+`exchangeCodeForSession` stays: `?code=` is the PKCE return shape rather than an OAuth
+one, and the link from `signInWithOtp` arrives that way while `updateUser` arrives in the
+fragment. Both are email and both have to work.
+
+## 2026-10-15 — a returning customer is recognised by address, never by cookie (§12, §28)
+
+Returning in the same browser already works, because the anonymous user is in storage.
+Three returns do not — storage cleared, a new device, and Safari against an installed app
+on the same phone — and a cookie fixes none of them, because a cookie lives in exactly the
+storage that is missing. The only thing that crosses a storage boundary is the address the
+person is carrying.
+
+So: the address this browser last signed in with is remembered after a sign-in succeeds
+and offered masked on the opening screen, with "not me" beside it. It is offered nowhere
+else and to nobody else — a first visit sees the opening screen exactly as before, because
+a sign-in on arrival is the login wall this product exists not to be.
+
+`claim_participant` carries the conversation across a change of auth user, and `landingFor`
+decides which of the two then opens: the account's own, because that is what somebody
+signing in is reaching for. The one they created by arriving is attached when it has
+anything in it, so it is in the switcher rather than lost.
+
+Baz offers the card unprompted once, when there is something to protect. It also offers it
+whenever somebody says they have been here before — phrase-matched narrowly in
+`soundsLikeReturning`, which is built to miss, because the menu carries the same thing
+permanently and a false positive is a login wall in front of a new customer.

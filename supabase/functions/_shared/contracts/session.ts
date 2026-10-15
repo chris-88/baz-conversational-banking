@@ -45,6 +45,11 @@ export const sessionRequestSchema = z.discriminatedUnion('action', [
    * So the browser says who it was, and the server moves the participant onto who it is now.
    * `participant_sessions` is a many-to-one map already, for the same reason in a different
    * disguise: one person, several auth users.
+   *
+   * Which conversation then *opens* is a separate question, decided by `landingFor`: somebody
+   * signing in is reaching for a conversation they already had, so the account's own wins over
+   * the empty one they created by arriving. The arriving one is still attached when it has
+   * anything in it, so it is in the switcher rather than gone.
    */
   z.object({ action: z.literal('claim_participant'), priorAuthUserId: z.uuid() }),
 ])

@@ -112,6 +112,79 @@ function restoreRoute(): void {
 }
 
 /**
+ * The address this browser last signed in with.
+ *
+ * The one piece of continuity a browser can offer, and it is worth being exact about how
+ * little it does. It cannot help on a new device, because nothing stored here exists there.
+ * What it does is turn the same-browser case — storage cleared, session expired, the installed
+ * app opened for the first time — from "type your address again" into one tap.
+ *
+ * Stored only after a sign-in actually succeeded, so a typo never sticks, and never displayed
+ * in full: `maskedAddress` is what goes on screen, and `forgetKnownAddress` is wired to a
+ * "not me" beside it. A demo device gets passed around, and the next person should be able to
+ * get rid of it without signing in as somebody else first.
+ */
+const KNOWN_ADDRESS_KEY = 'baz.knownAddress'
+
+export function rememberKnownAddress(address: string): void {
+  const trimmed = address.trim()
+  if (trimmed.length === 0) return
+  try {
+    window.localStorage.setItem(KNOWN_ADDRESS_KEY, trimmed)
+  } catch {
+    // Private browsing. The prompt simply does not appear and the menu still works.
+  }
+}
+
+export function lastKnownAddress(): string | null {
+  try {
+    const stored = window.localStorage.getItem(KNOWN_ADDRESS_KEY)
+    return stored === null || stored.trim().length === 0 ? null : stored
+  } catch {
+    return null
+  }
+}
+
+export function forgetKnownAddress(): void {
+  try {
+    window.localStorage.removeItem(KNOWN_ADDRESS_KEY)
+  } catch {
+    // Nothing to forget if it could never be stored.
+  }
+}
+
+/**
+ * Enough of an address to recognise your own, and not enough to read somebody else's.
+ *
+ * The first character and the domain. `t•••@chrisquinn.ie` is unmistakable to the person it
+ * belongs to and close to useless to anybody else, which is the whole requirement.
+ */
+export function maskedAddress(address: string): string {
+  const at = address.lastIndexOf('@')
+  if (at <= 0) return '•••'
+  const local = address.slice(0, at)
+  const first = local.slice(0, 1)
+  return `${first}•••${address.slice(at)}`
+}
+
+/**
+ * Note the address off the live session, once signing in has worked.
+ *
+ * Read from the session rather than from the field they typed: the link path never had a field,
+ * and the address on the account is the one that will work next time.
+ */
+async function noteSignedInAddress(): Promise<void> {
+  if (!supabase) return
+  try {
+    const { data } = await supabase.auth.getUser()
+    const address = data.user?.email
+    if (typeof address === 'string') rememberKnownAddress(address)
+  } catch {
+    // Not worth failing a sign-in over.
+  }
+}
+
+/**
  * Why the last attempt failed, left for whatever is on screen next.
  *
  * A sign-in that fails on the way back from the inbox fails before React mounts, so there is
@@ -194,7 +267,10 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
    */
   const fromFragment = await sessionFromFragment()
   if (fromFragment !== 'none') {
-    if (fromFragment === 'ok') await claimPriorConversation()
+    if (fromFragment === 'ok') {
+      await noteSignedInAddress()
+      await claimPriorConversation()
+    }
     restoreRoute()
     return { signedIn: fromFragment === 'ok' }
   }
@@ -226,7 +302,10 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   clean()
   restoreRoute()
-  if (!error) await claimPriorConversation()
+  if (!error) {
+    await noteSignedInAddress()
+    await claimPriorConversation()
+  }
   if (error) {
     console.error('sign-in exchange failed:', error.message)
     rememberFailure(error.message)
@@ -243,6 +322,8 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
  */
 export async function signOutIdentity(): Promise<void> {
   const client = requireSupabase()
+  // Signing out is the clearest possible "not me", so the remembered address goes with it.
+  forgetKnownAddress()
   await client.auth.signOut()
   await client.auth.signInAnonymously()
 }
@@ -343,6 +424,7 @@ export async function verifyEmailCode(
    * one, and without this the conversation stays behind on the anonymous user — which is how a
    * live case ended up orphaned while its owner looked at an empty screen.
    */
+  await noteSignedInAddress()
   await claimPriorConversation()
 
   return { ok: true }

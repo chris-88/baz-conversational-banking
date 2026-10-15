@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   clearSignInError,
+  forgetKnownAddress,
   lastSignInError,
+  maskedAddress,
   startEmailSignIn,
   verifyEmailCode,
 } from '@/lib/identity'
@@ -31,7 +33,20 @@ import {
 const MIN_CODE = 6
 const MAX_CODE = 10
 
-export function SignInForm({ disabled }: { disabled?: boolean }): ReactNode {
+export function SignInForm({
+  disabled,
+  knownAddress,
+}: {
+  disabled?: boolean
+  /**
+   * The address this browser signed in with before, if it has.
+   *
+   * Turns the first step into one tap on a masked address instead of typing it again, with a
+   * way out: a demo device gets handed around, and "not me" has to be reachable without
+   * signing in as the previous person first.
+   */
+  knownAddress?: string
+}): ReactNode {
   const [busy, setBusy] = useState(false)
 
   /*
@@ -44,9 +59,18 @@ export function SignInForm({ disabled }: { disabled?: boolean }): ReactNode {
    */
   const [error, setError] = useState<string | null>(() => lastSignInError())
 
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(knownAddress ?? '')
   const [sent, setSent] = useState(false)
   const [code, setCode] = useState('')
+
+  /** Dropped when they say it is not them, or when they ask to type a different one. */
+  const [known, setKnown] = useState<string | null>(knownAddress ?? null)
+
+  const notMe = () => {
+    forgetKnownAddress()
+    setKnown(null)
+    setEmail('')
+  }
 
   const enterCode = () => {
     if (busy) return
@@ -124,6 +148,24 @@ export function SignInForm({ disabled }: { disabled?: boolean }): ReactNode {
             There is a link in the email too, but it opens a browser. The code keeps you here, in
             this conversation.
           </p>
+        </>
+      ) : known !== null ? (
+        <>
+          <Button
+            className="w-full"
+            disabled={(disabled ?? false) || busy}
+            onClick={sendCode}
+          >
+            <MailIcon className="size-4" />
+            {busy ? 'Sending…' : `Send a code to ${maskedAddress(known)}`}
+          </Button>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground w-full text-center text-xs underline"
+            onClick={notMe}
+          >
+            Not me, or a different address
+          </button>
         </>
       ) : (
         <>

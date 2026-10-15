@@ -8,6 +8,11 @@ import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { sessionRequestSchema, type SessionResponse } from '../_shared/contracts/session.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { NARRATABLE_EVENTS } from '../_shared/db/digest.ts'
+import {
+  landingFor,
+  worthCarrying,
+  type CaseSubstance,
+} from '../_shared/domain/continuity.ts'
 
 /**
  * Attaches an anonymous visitor to a case (§12, §28).
@@ -410,29 +415,83 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     const held = (mapping.data ?? [])[0] as any
     if (!held?.participants) return errorResponse('not_found', 'Nothing to carry over.')
 
-    mustWrite(
-      await admin.from('participant_sessions').upsert(
-        {
-          participant_id: held.participants.id,
-          auth_user_id: authUserId,
-          last_used_at: new Date().toISOString(),
-        },
-        { onConflict: 'participant_id,auth_user_id' },
-      ),
-      'the session',
+    /*
+     * What this account already has, read before anything is attached to it.
+     *
+     * Order matters: attaching first would make every claim look like an account that already
+     * had a conversation, and every returning customer would land on the empty case they
+     * created by arriving.
+     */
+    const own = await admin
+      .from('participant_sessions')
+      .select('participant_id, last_used_at, participants!inner(id, case_id, role)')
+      .eq('auth_user_id', authUserId)
+      .order('last_used_at', { ascending: false })
+
+    const mine = ((own.data ?? []) as any[]).find(
+      (row) => row.participants.case_id !== held.participants.case_id,
     )
+
+    const heldCase = held.participants.case_id as string
+
+    const [messages, facts, applications, plans] = await Promise.all([
+      admin
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('case_id', heldCase)
+        .eq('role', 'customer'),
+      admin
+        .from('facts')
+        .select('id', { count: 'exact', head: true })
+        .eq('case_id', heldCase)
+        .is('superseded_by', null),
+      admin.from('applications').select('id', { count: 'exact', head: true }).eq('case_id', heldCase),
+      admin.from('plans').select('id', { count: 'exact', head: true }).eq('case_id', heldCase),
+    ])
+
+    const substance: CaseSubstance = {
+      customerMessages: messages.count ?? 0,
+      facts: facts.count ?? 0,
+      applications: applications.count ?? 0,
+      plans: plans.count ?? 0,
+    }
+
+    const landing = landingFor({ prior: substance, accountHasConversation: mine !== undefined })
+
+    /*
+     * Attached when it is worth keeping, and also whenever it is the one being opened: a case
+     * on screen with no row mapping it to this user is a case that disappears again on the
+     * next call, which is the bug this whole action exists to fix.
+     */
+    if (worthCarrying(substance) || landing.on === 'prior') {
+      mustWrite(
+        await admin.from('participant_sessions').upsert(
+          {
+            participant_id: held.participants.id,
+            auth_user_id: authUserId,
+            last_used_at: new Date().toISOString(),
+          },
+          { onConflict: 'participant_id,auth_user_id' },
+        ),
+        'the session',
+      )
+    }
 
     /*
      * The anonymous row is left where it is. It costs nothing, and it is the only record that
      * these two auth users were the same person — which is the thing that was missing when a
      * case went missing.
      */
-    return await sessionFor(
-      held.participants.id,
-      held.participants.case_id,
-      held.participants.role,
-      false,
-    )
+    if (landing.on === 'account' && mine !== undefined) {
+      return await sessionFor(
+        mine.participants.id,
+        mine.participants.case_id,
+        mine.participants.role,
+        false,
+      )
+    }
+
+    return await sessionFor(held.participants.id, heldCase, held.participants.role, false)
   }
 
   if (parsed.data.action === 'switch_case') {

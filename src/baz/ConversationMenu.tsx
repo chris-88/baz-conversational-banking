@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { queryKeys } from '@/lib/queryKeys'
 import { listCases, startNewCase, switchCase } from '@/lib/session'
 import { pushPermission, subscribeToPush } from '@/lib/push'
-import { ANONYMOUS, currentIdentity, signOutIdentity } from '@/lib/identity'
+import { ANONYMOUS, currentIdentity, lastKnownAddress, signOutIdentity } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -112,6 +112,9 @@ export function ConversationMenu({
     queryFn: () => currentIdentity(),
     initialData: ANONYMOUS,
   })
+
+  /** Read on render rather than held in state, so "not me" in the form takes effect here too. */
+  const known = lastKnownAddress()
 
   const signOut = useMutation({
     mutationFn: () => signOutIdentity(),
@@ -300,7 +303,7 @@ export function ConversationMenu({
                 laptop and anywhere else you open Baz. Been here before? Use the address you
                 used then.
               </p>
-              <SignInForm />
+              <SignInForm {...(known === null ? {} : { knownAddress: known })} />
             </>
           ) : (
             <>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { CheckIcon, LockIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
+import { lastKnownAddress } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
 
 type Payload = Extract<CardPayload, { type: 'sign_in' }>
@@ -39,7 +40,13 @@ export function SignInCard({
       </div>
 
       <div className="space-y-2 px-4 pb-4">
-        <SignInForm {...(disabled === undefined ? {} : { disabled })} />
+        <SignInForm
+          {...(disabled === undefined ? {} : { disabled })}
+          {...(() => {
+            const known = lastKnownAddress()
+            return known === null ? {} : { knownAddress: known }
+          })()}
+        />
 
         <p className="text-muted-foreground text-center text-xs leading-relaxed">
           {card.reassurance}

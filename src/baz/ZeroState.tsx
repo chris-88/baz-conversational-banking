@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { BazMark } from '@/baz/BazMark'
+import { ReturningPrompt } from '@/baz/ReturningPrompt'
 import { cn } from '@/lib/utils'
 
 /**
@@ -44,6 +45,12 @@ export function ZeroState({ focused }: { readonly focused: boolean }): ReactNode
       <p className="text-muted-foreground mt-3 max-w-xs text-xs">
         home · family · saving · borrowing · retirement · everyday money
       </p>
+
+      {/*
+        Renders nothing unless this browser has signed in here before and is not signed in now,
+        so a first visit sees exactly what it saw: one question, and nothing to press.
+      */}
+      <ReturningPrompt />
     </section>
   )
 }
