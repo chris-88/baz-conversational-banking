@@ -31,6 +31,22 @@ export const sessionRequestSchema = z.discriminatedUnion('action', [
 
   /** Leave the current conversation where it is and begin a fresh one. */
   z.object({ action: z.literal('new_case'), mode: z.enum(['new', 'known']).default('new') }),
+
+  /**
+   * Carry the conversation across a change of auth user (§12, §28).
+   *
+   * Signing in does not always keep the user you had. An anonymous visitor who gives an
+   * address Supabase has already seen cannot have it attached to the account they are on, so
+   * they are signed into the existing one instead — a different `auth.uid()`, no row in
+   * `participant_sessions`, and a conversation that has vanished at the exact moment it was
+   * meant to be protected. One live case was orphaned this way: the anonymous user still held
+   * it, and the person was standing in a new account looking at an empty screen.
+   *
+   * So the browser says who it was, and the server moves the participant onto who it is now.
+   * `participant_sessions` is a many-to-one map already, for the same reason in a different
+   * disguise: one person, several auth users.
+   */
+  z.object({ action: z.literal('claim_participant'), priorAuthUserId: z.uuid() }),
 ])
 
 export type SessionRequest = z.infer<typeof sessionRequestSchema>

@@ -118,3 +118,57 @@ export async function switchCase(caseId: string): Promise<SessionResponse> {
 export async function startNewCase(mode: 'new' | 'known' = 'new'): Promise<SessionResponse> {
   return sessionResponseSchema.parse(await invoke({ action: 'new_case', mode }))
 }
+
+/**
+ * Who this browser was before it signed in.
+ *
+ * Written before the identity changes and read after, because afterwards there is no way to
+ * find out: the anonymous user is simply gone from the client's point of view, and with it the
+ * only link to the conversation it was holding. Local storage is the right place for exactly
+ * one reason — it survives a redirect to Google and back, which a variable does not.
+ */
+const PRIOR_USER_KEY = 'baz.priorAuthUser'
+
+export function rememberPriorUser(authUserId: string): void {
+  try {
+    window.localStorage.setItem(PRIOR_USER_KEY, authUserId)
+  } catch {
+    // Private browsing. The claim is skipped and the sign-in still works; what is lost is the
+    // conversation following them, which is the thing worth logging if this ever matters.
+  }
+}
+
+/**
+ * Move the conversation onto whoever this browser is now.
+ *
+ * Safe to call on every sign-in and deliberately quiet about failing. The common case is that
+ * the auth id never changed and there is nothing to do; the case this exists for is the one
+ * where it did, and a visitor who has just signed in should not be shown an error about
+ * plumbing. Returns the session when something was carried over, so the caller can refresh.
+ */
+export async function claimPriorConversation(): Promise<SessionResponse | null> {
+  const prior = ((): string | null => {
+    try {
+      return window.localStorage.getItem(PRIOR_USER_KEY)
+    } catch {
+      return null
+    }
+  })()
+
+  if (prior === null) return null
+
+  try {
+    const response = sessionResponseSchema.parse(
+      await invoke({ action: 'claim_participant', priorAuthUserId: prior }),
+    )
+    try {
+      window.localStorage.removeItem(PRIOR_USER_KEY)
+    } catch {
+      // Harmless: claiming the same participant twice is an upsert.
+    }
+    return response
+  } catch (error) {
+    console.warn('could not carry the conversation over:', error)
+    return null
+  }
+}

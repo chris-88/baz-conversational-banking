@@ -143,7 +143,15 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         await admin.from('cases').update({ auth_level: 'authenticated' }).eq('id', caseId),
         'the case',
       )
-      await writeEventRow(admin, caseId, 'customer_signed_in', { provider: 'google' })
+      /*
+       * The provider as the token actually states it, not as this function once assumed.
+       * Google was the only way in when this was written; it is now one of three, and an
+       * events row is where §53 counts things from.
+       */
+      const provider = (user.app_metadata as Record<string, unknown> | null)?.['provider']
+      await writeEventRow(admin, caseId, 'customer_signed_in', {
+        provider: typeof provider === 'string' ? provider : 'unknown',
+      })
     }
 
     if (named !== undefined) {
@@ -347,6 +355,83 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     const worthShowing = summaries.filter((row) => row.messages > 0 || row.current)
 
     return json(ok({ cases: worthShowing, presenter }), 200)
+  }
+
+  /**
+   * The conversation follows the person across a change of auth user (§12, §28).
+   *
+   * The comment above `adoptIdentity` used to be the whole story: signing in attaches an
+   * identity to the user already here, the id never changes, nothing to migrate. That is true
+   * of Google and of an address Supabase has not seen. It is false the moment the address
+   * already has an account — Supabase cannot attach it twice, so the person is signed into the
+   * account that exists, lands on a different `auth.uid()`, and the participant holding their
+   * conversation is left behind on the anonymous user. It happened on a live case: thirteen
+   * facts, a plan and a transcript, all still there, and an empty screen in front of the
+   * person they belonged to.
+   *
+   * Two conditions make this safe to do on a bare id. The caller must have just become
+   * somebody, because an anonymous caller claiming a conversation is how one visitor walks
+   * into another's. And the conversation must still be held by an anonymous session: once an
+   * account has claimed a participant it belongs to that account, and producing an old id does
+   * not take it back.
+   */
+  if (parsed.data.action === 'claim_participant') {
+    const prior = parsed.data.priorAuthUserId
+
+    /*
+     * The id did not change, so there is nothing to move.
+     *
+     * Answered rather than refused: the client cannot know in advance which of the two sign-in
+     * shapes it got, and making it find out is how it ends up not asking.
+     */
+    if (prior === authUserId) {
+      const here = await currentMapping()
+      if (!here) return errorResponse('not_found', 'Nothing to carry over.')
+      return await sessionFor(here.participantId, here.caseId, here.role, false)
+    }
+
+    if (caller.data.user.is_anonymous === true) {
+      return errorResponse('forbidden', 'Sign in before carrying a conversation over.')
+    }
+
+    const was = await admin.auth.admin.getUserById(prior)
+    if (was.error || !was.data.user || was.data.user.is_anonymous !== true) {
+      return errorResponse('forbidden', 'That conversation is not available to carry over.')
+    }
+
+    const mapping = await admin
+      .from('participant_sessions')
+      .select('participant_id, last_used_at, participants!inner(id, case_id, role)')
+      .eq('auth_user_id', prior)
+      .order('last_used_at', { ascending: false })
+      .limit(1)
+
+    const held = (mapping.data ?? [])[0] as any
+    if (!held?.participants) return errorResponse('not_found', 'Nothing to carry over.')
+
+    mustWrite(
+      await admin.from('participant_sessions').upsert(
+        {
+          participant_id: held.participants.id,
+          auth_user_id: authUserId,
+          last_used_at: new Date().toISOString(),
+        },
+        { onConflict: 'participant_id,auth_user_id' },
+      ),
+      'the session',
+    )
+
+    /*
+     * The anonymous row is left where it is. It costs nothing, and it is the only record that
+     * these two auth users were the same person — which is the thing that was missing when a
+     * case went missing.
+     */
+    return await sessionFor(
+      held.participants.id,
+      held.participants.case_id,
+      held.participants.role,
+      false,
+    )
   }
 
   if (parsed.data.action === 'switch_case') {

@@ -1,17 +1,23 @@
 import { requireSupabase, supabase } from '@/lib/supabase'
+import { claimPriorConversation, rememberPriorUser } from '@/lib/session'
 
 /**
  * Signing in, so the conversation follows the person rather than the browser.
  *
  * Every visitor already has an anonymous Supabase user, and `participant_sessions` maps that
- * user to their participant on a case. Signing in therefore does not create an account and
- * migrate anything into it — it **attaches** a Google identity to the anonymous user that is
- * already there. `auth.uid()` does not change, so the case, the conversation, the applications
- * and every fact carry over with nothing to move and nothing to reconcile.
+ * user to their participant on a case. The good path **attaches** an identity to the anonymous
+ * user that is already there: `auth.uid()` does not change, so the case, the conversation, the
+ * applications and every fact carry over with nothing to move and nothing to reconcile.
  *
- * On a second device the same Google account resolves to that same user, `session start` finds
- * the existing mapping, and the conversation is simply there. That is the whole point: a
- * customer who starts on a laptop and picks up their phone should not begin again.
+ * It was once believed that was the only path, and it is not. Attaching fails whenever the
+ * Google account or the email address already belongs to a user — a second device, or anybody
+ * signing in twice — and the fall-through signs them into that account instead. Different
+ * `auth.uid()`, no mapping, and a conversation that has disappeared at the precise moment it
+ * was meant to be made safe. A live case was orphaned exactly this way.
+ *
+ * So both paths note who this browser was before they begin, and both claim the participant
+ * afterwards. `participant_sessions` is many-to-one by design, which is the same fact wearing
+ * a different hat: one person, several auth users, one conversation.
  */
 
 export type Identity = {
@@ -119,6 +125,16 @@ export async function startGoogleSignIn(): Promise<{ ok: boolean; message?: stri
   rememberRoute()
 
   const { data: userData } = await client.auth.getUser()
+
+  /*
+   * Noted before anything can change it, because the fall-through below changes it.
+   *
+   * `signInWithOAuth` on a second device signs them into the account that already exists,
+   * which is a different `auth.uid()` from the one holding this conversation. The id is the
+   * only way back to it afterwards.
+   */
+  if (userData.user) rememberPriorUser(userData.user.id)
+
   if (userData.user?.is_anonymous === true) {
     const linked = await client.auth.linkIdentity({
       provider: 'google',
@@ -277,7 +293,10 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
    */
   const fromFragment = await sessionFromFragment()
   if (fromFragment !== 'none') {
-    if (fromFragment === 'ok') clearRetried()
+    if (fromFragment === 'ok') {
+      clearRetried()
+      await claimPriorConversation()
+    }
     restoreRoute()
     return { signedIn: fromFragment === 'ok' }
   }
@@ -326,7 +345,10 @@ export async function completeSignIn(): Promise<{ signedIn: boolean; error?: str
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   clean()
   restoreRoute()
-  if (!error) clearRetried()
+  if (!error) {
+    clearRetried()
+    await claimPriorConversation()
+  }
   if (error) {
     console.error('sign-in exchange failed:', error.message)
     rememberFailure(error.message)
@@ -436,6 +458,16 @@ export async function verifyEmailCode(
     }
   }
 
+  /*
+   * The conversation follows them, whichever user they ended up as.
+   *
+   * A no-op when the address was attached to the user already here, which is the ordinary
+   * case. It matters when the address already had an account: Supabase signs them into that
+   * one, and without this the conversation stays behind on the anonymous user — which is how a
+   * live case ended up orphaned while its owner looked at an empty screen.
+   */
+  await claimPriorConversation()
+
   return { ok: true }
 }
 
@@ -450,6 +482,9 @@ export async function startEmailSignIn(
 
   rememberRoute()
   const { data: userData } = await client.auth.getUser()
+
+  // Same reason as the Google path: `signInWithOtp` below may land on a different user.
+  if (userData.user) rememberPriorUser(userData.user.id)
 
   if (userData.user?.is_anonymous === true) {
     // Keeps the conversation: same user, now with an address on it.
