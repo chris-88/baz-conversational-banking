@@ -64,7 +64,7 @@ card type fails to compile until the renderer handles it.
 | Where | What belongs there |
 |---|---|
 | `src/components/ui/` | shadcn-generated. Do not hand-edit |
-| `src/components/` | Shared app components: `NotFound`, `StatusDot`, `StatusBadge`, `NotificationCard` |
+| `src/components/` | Shared app components: `Code`, `IconTile`, `NotFound`, `Primitives`, `ProductIcon`, `ProgressBar`, `StatusBadge`, `StatusDot`. `Primitives` holds the pieces the explainer and the conversation now share; `Code` is the one code-block renderer for both |
 | `src/baz/` | The portable conversation UI. **May not import a tenant or a shell** |
 | `src/baz/cards/` | Cards and the renderer |
 | `src/surfaces/` | Whole screens |
