@@ -1501,7 +1501,9 @@ motion; the opening morph stays on View Transitions. What changes is that the ch
 same grammar, through `src/lib/motion.ts` and the `--motion-*` tokens, loaded lazily so a QR
 cold start on conference wifi pays as little as possible for it. Measured: the main chunk went
 from 491.34 kB to 498.66 kB, 154.01 kB to 155.93 kB gzipped, for `LazyMotion` with
-`domAnimation`. Under two kilobytes on the wire, against a budget of fifteen.
+`domAnimation`. Under two kilobytes on the wire, against a budget of fifteen. After the whole
+of the first interaction, reuse, sign-in, live updates and install moments landed on it:
+510.92 kB, 159.31 kB gzipped. Five and a third kilobytes for all of it.
 
 ## 2026-10-15 — an open screen notices the bank moving (§35, §36)
 

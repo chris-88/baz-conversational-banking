@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2Icon, UsersIcon } from 'lucide-react'
+import { AnimatePresence, m } from 'motion/react'
+import { fade, useStill } from '@/lib/motion'
 import type { PartnerTask, PartnerView } from '@contracts/partner.ts'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -124,8 +126,8 @@ export function PartnerJoin(): ReactNode {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Invitations last a day and can only be used once. Whoever invited you can send a
-              fresh one from their own conversation.
+              Invitations last a day and can only be used once. Whoever invited you can send a fresh
+              one from their own conversation.
             </p>
             <Button asChild variant="outline" className="w-full">
               <Link to={routes.baz}>Talk to Baz yourself</Link>
@@ -155,7 +157,10 @@ export function PartnerJoin(): ReactNode {
                 <h2 className="text-sm font-semibold">What you&rsquo;re on</h2>
                 <Card className="gap-0 divide-y p-0">
                   {view.applications.map((application) => (
-                    <div key={application.displayName} className="flex items-center gap-3 px-4 py-3">
+                    <div
+                      key={application.displayName}
+                      className="flex items-center gap-3 px-4 py-3"
+                    >
                       <span className="min-w-0 flex-1 text-sm font-medium text-pretty">
                         {application.displayName}
                       </span>
@@ -183,14 +188,20 @@ export function PartnerJoin(): ReactNode {
                     key={task.id}
                     task={task}
                     value={answers[task.id]}
-                    onChange={(value) => setAnswers((current) => ({ ...current, [task.id]: value }))}
+                    onChange={(value) =>
+                      setAnswers((current) => ({ ...current, [task.id]: value }))
+                    }
                     disabled={saving}
                   />
                 ))}
               </Card>
 
               {outstanding.length > 0 && (
-                <Button className="w-full" disabled={!ready || saving} onClick={() => void submit()}>
+                <Button
+                  className="w-full"
+                  disabled={!ready || saving}
+                  onClick={() => void submit()}
+                >
                   {saving ? 'Saving…' : 'Send these'}
                 </Button>
               )}
@@ -213,6 +224,8 @@ function TaskRow({
   onChange: (value: string | boolean) => void
   disabled: boolean
 }): ReactNode {
+  const still = useStill()
+
   return (
     <div className="space-y-2 px-4 py-3">
       <div className="flex items-start gap-2">
@@ -220,21 +233,42 @@ function TaskRow({
           <Label htmlFor={task.id} className="text-sm font-normal">
             {task.label}
           </Label>
-          {/* The whole point of §6 Stage 9: one answer, several journeys. */}
-          <p className="text-muted-foreground mt-0.5 text-2xs">
-            Used for {task.appliesTo.join(' and ')}
+          {/*
+            The whole point of §6 Stage 9: one answer, several journeys. As pills rather than a
+            footnote, so one answer visibly serving three applications reads as the point.
+          */}
+          <p className="mt-1 flex flex-wrap items-center gap-1">
+            <span className="text-muted-foreground text-2xs">Used for</span>
+            {task.appliesTo.map((name) => (
+              <span
+                key={name}
+                className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+              >
+                {name}
+              </span>
+            ))}
           </p>
         </div>
-        {task.done && (
-          <Badge variant="secondary" className="text-2xs shrink-0">
-            <CheckCircle2Icon className="size-3" />
-            Done
-          </Badge>
-        )}
+        {/*
+          Settles in place. The list used to be replaced wholesale on submit, so every row that
+          had just been answered flashed from an input to a badge; the row stays mounted now,
+          keyed on the task, and the badge fades in where the input was.
+        */}
+        <AnimatePresence initial={false}>
+          {task.done && (
+            <m.span key="done" className="shrink-0" {...(still ? {} : fade)}>
+              <Badge variant="secondary" className="text-2xs">
+                <CheckCircle2Icon className="size-3" />
+                Done
+              </Badge>
+            </m.span>
+          )}
+        </AnimatePresence>
       </div>
 
-      {!task.done && task.kind === 'fact' && (
-        task.inputKind === 'select' ? (
+      {!task.done &&
+        task.kind === 'fact' &&
+        (task.inputKind === 'select' ? (
           <Select
             {...(typeof value === 'string' ? { value } : {})}
             onValueChange={onChange}
@@ -267,8 +301,7 @@ function TaskRow({
             onChange={(event) => onChange(event.target.value)}
             disabled={disabled}
           />
-        )
-      )}
+        ))}
 
       {!task.done && task.kind !== 'fact' && (
         <p className="text-muted-foreground text-xs">
