@@ -18,7 +18,10 @@ import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { Reveal } from '@/components/Primitives'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
-import { takeSignedInMoment } from '@/lib/identity'
+import { noteSignedInMoment, takeSignedInMoment } from '@/lib/identity'
+import { useQueryClient } from '@tanstack/react-query'
+import { loadCaseState } from '@/baz/cardState'
+import { useSignInSignal } from '@/baz/signInSignal'
 import { loadHistory } from '@/baz/history'
 import { runCaseAction } from '@/lib/caseActions'
 import { callFunctionWithFile } from '@/lib/callFunction'
@@ -33,6 +36,15 @@ import { cn } from '@/lib/utils'
  * Both the public website and the app render this — the only difference is the chrome around
  * it, which is the point of §32: Baz is the same capability wherever it is placed.
  */
+/** What Baz is told on the turn after a sign-in. The stage decides what it asks for next. */
+const SIGNED_IN_NOTE = [
+  'They have just signed in, on this screen, a moment ago.',
+  'Say so in a few words and move straight on. Do not explain what signing in does, do not',
+  'thank them for it, and do not offer it again.',
+  'Then pick up where the case actually is: ask for the next thing outstanding, starting',
+  'with the details every application opens with, and only the ones not already held.',
+].join(' ')
+
 export function BazChat({
   openingMessage,
   onStarted,
@@ -65,7 +77,7 @@ export function BazChat({
   const [caseId, setCaseId] = useState<string | null>(null)
   const [joining, setJoining] = useState(isBackendConfigured)
   const [joinError, setJoinError] = useState<string | null>(null)
-  const { entries, streaming, error, send, loadFrom, reset } = useConversation(caseId)
+  const { entries, streaming, error, send, loadFrom, resettle, reset } = useConversation(caseId)
 
   /**
    * The fork offered after a quote option has been talked through.
@@ -344,18 +356,54 @@ export function BazChat({
     if (!takeSignedInMoment()) return
     greetedSignIn.current = true
 
-    void send(
-      'Signed in.',
-      'action',
-      [
-        'They have just signed in, on this screen, a moment ago.',
-        'Say so in a few words and move straight on. Do not explain what signing in does, do not',
-        'thank them for it, and do not offer it again.',
-        'Then pick up where the case actually is: ask for the next thing outstanding, starting',
-        'with the details every application opens with, and only the ones not already held.',
-      ].join(' '),
-    )
+    void send('Signed in.', 'action', SIGNED_IN_NOTE)
   }, [caseId, loadingHistory, send])
+
+  /**
+   * Signing in, without leaving the page.
+   *
+   * The form signals; this does what a reload used to do by force. Refresh the identity so
+   * the badge appears; re-run the session so the server attaches the address, marks the case
+   * authenticated and records what the account saved them typing; settle the cards on screen
+   * in place, so the sign-in card cross-fades into "Signed in" rather than being replaced;
+   * then have Baz pick up.
+   *
+   * One case where the reload stays: the account already had a different conversation and
+   * the server landed on it. Everything on this screen belongs to the other one, and a clean
+   * load is the honest way to change conversations.
+   */
+  const queryClient = useQueryClient()
+  const signedInAt = useSignInSignal((signal) => signal.signedInAt)
+  const acknowledge = useSignInSignal((signal) => signal.acknowledge)
+
+  useEffect(() => {
+    if (signedInAt === null || caseId === null) return
+
+    let cancelled = false
+    void (async () => {
+      await queryClient.invalidateQueries({ queryKey: ['identity'] })
+      const session = await startSession(mode)
+      if (cancelled) return
+
+      if (session.caseId !== caseId) {
+        noteSignedInMoment()
+        window.location.reload()
+        return
+      }
+
+      resettle(await loadCaseState(caseId))
+      acknowledge()
+      void send('Signed in.', 'action', SIGNED_IN_NOTE)
+    })().catch(() => {
+      // The sign-in itself succeeded. If the follow-through fails, a reload is the fallback.
+      noteSignedInMoment()
+      window.location.reload()
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [signedInAt, caseId, mode, queryClient, resettle, acknowledge, send])
 
   /**
    * Keep the newest turn in view.

@@ -1,3 +1,5 @@
+import { m } from 'motion/react'
+import { fade, useStill } from '@/lib/motion'
 import { type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { LogOut, UserRound } from 'lucide-react'
@@ -43,75 +45,87 @@ export function IdentityBadge({ className }: { className?: string }): ReactNode 
       .slice(0, 2)
       .toUpperCase() || '?'
 
+  /*
+   * Fades in rather than appearing. It is the one thing that changes in the header when
+   * somebody signs in, and until now it popped into place beside a card that had just
+   * cross-faded, which made the two look like different events.
+   */
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button
-          type="button"
-          aria-label="Your account"
-          className={cn(
-            'focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none',
-            className,
-          )}
-        >
-          <Avatar className="size-8">
-            {identity.data.avatarUrl !== null && (
-              <AvatarImage src={identity.data.avatarUrl} alt="" />
+    <Entrance>
+      <Sheet>
+        <SheetTrigger asChild>
+          <button
+            type="button"
+            aria-label="Your account"
+            className={cn(
+              'focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none',
+              className,
             )}
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-          </Avatar>
-        </button>
-      </SheetTrigger>
-
-      <SheetContent side="right" className="w-[19rem] gap-0 p-0 sm:w-[21rem]">
-        <SheetHeader className="p-4 pb-3">
-          <span className="flex items-center gap-3">
-            <Avatar className="size-11">
+          >
+            <Avatar className="size-8">
               {identity.data.avatarUrl !== null && (
                 <AvatarImage src={identity.data.avatarUrl} alt="" />
               )}
-              <AvatarFallback>{initials}</AvatarFallback>
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
-            <span className="min-w-0">
-              <SheetTitle className="truncate text-base">{name}</SheetTitle>
-              {identity.data.email !== null && (
-                <SheetDescription className="truncate text-xs">
-                  {identity.data.email}
-                </SheetDescription>
-              )}
+          </button>
+        </SheetTrigger>
+
+        <SheetContent side="right" className="w-[19rem] gap-0 p-0 sm:w-[21rem]">
+          <SheetHeader className="p-4 pb-3">
+            <span className="flex items-center gap-3">
+              <Avatar className="size-11">
+                {identity.data.avatarUrl !== null && (
+                  <AvatarImage src={identity.data.avatarUrl} alt="" />
+                )}
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <span className="min-w-0">
+                <SheetTitle className="truncate text-base">{name}</SheetTitle>
+                {identity.data.email !== null && (
+                  <SheetDescription className="truncate text-xs">
+                    {identity.data.email}
+                  </SheetDescription>
+                )}
+              </span>
             </span>
-          </span>
-        </SheetHeader>
+          </SheetHeader>
 
-        <Separator />
+          <Separator />
 
-        <div className="p-4">
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Baz keeps this conversation against your account, so it is waiting for you on any
-            device you open it on.
-          </p>
+          <div className="p-4">
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Baz keeps this conversation against your account, so it is waiting for you on any
+              device you open it on.
+            </p>
 
-          <Button asChild variant="ghost" size="sm" className="mt-3 w-full justify-start px-2">
-            <a href={routes.privacy}>
-              <UserRound className="size-4" />
-              What Baz knows about you
-            </a>
-          </Button>
+            <Button asChild variant="ghost" size="sm" className="mt-3 w-full justify-start px-2">
+              <a href={routes.privacy}>
+                <UserRound className="size-4" />
+                What Baz knows about you
+              </a>
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground w-full justify-start px-2"
-            onClick={() => {
-              // Back to being a stranger, and a reload so nothing of theirs stays on screen.
-              void signOutIdentity().then(() => window.location.reload())
-            }}
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground w-full justify-start px-2"
+              onClick={() => {
+                // Back to being a stranger, and a reload so nothing of theirs stays on screen.
+                void signOutIdentity().then(() => window.location.reload())
+              }}
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </Entrance>
   )
+}
+
+function Entrance({ children }: { readonly children: ReactNode }): ReactNode {
+  const still = useStill()
+  return still ? <>{children}</> : <m.div {...fade}>{children}</m.div>
 }

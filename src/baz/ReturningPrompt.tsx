@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ANONYMOUS, currentIdentity, lastKnownAddress, maskedAddress } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
+import { Reveal } from '@/components/Primitives'
 
 /**
  * The way back, offered to the one person it applies to.
@@ -36,9 +37,9 @@ export function ReturningPrompt(): ReactNode {
 
   if (open) {
     return (
-      <div className="mt-8 w-full max-w-xs text-left">
+      <Reveal mode="mount" className="mt-8 w-full max-w-xs text-left">
         <SignInForm knownAddress={address} />
-      </div>
+      </Reveal>
     )
   }
 

@@ -28,7 +28,7 @@ export type Settled = {
   readonly note?: string
 }
 
-type CaseState = {
+export type CaseState = {
   readonly applications: readonly {
     readonly id: string
     readonly product: string

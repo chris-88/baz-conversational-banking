@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { Card } from '@contracts/cards.ts'
 import { streamBazTurn } from '@/baz/bazTurnClient'
+import { settledState, type CaseState } from '@/baz/cardState'
 
 export type TurnEntry =
   | {
@@ -171,5 +172,22 @@ export function useConversation(caseId: string | null) {
     setEntries(persisted)
   }, [])
 
-  return { entries, streaming, error, send, loadFrom, reset }
+  /**
+   * Re-reads what became of every card on screen, without replacing the entries.
+   *
+   * Replacing them would give each card a fresh key, and a card with a fresh key is a card
+   * that unmounts and remounts rather than cross-fading into its outcome. Mapping in place
+   * keeps the keys, so the sign-in card settles where it stands.
+   */
+  const resettle = useCallback((state: CaseState) => {
+    setEntries((current) =>
+      current.map((entry) => {
+        if (entry.kind !== 'card') return entry
+        const settled = settledState(entry.card, state)
+        return settled === undefined ? entry : { ...entry, settled }
+      }),
+    )
+  }, [])
+
+  return { entries, streaming, error, send, loadFrom, resettle, reset }
 }
