@@ -567,7 +567,12 @@ export function BazChat({
           if (entry.kind === 'card') {
             return (
               <div key={entry.id} className="pl-10">
-                <CardRenderer card={entry.card} actions={actions} disabled={streaming} />
+                <CardRenderer
+                  card={entry.card}
+                  actions={actions}
+                  disabled={streaming}
+                  settled={entry.settled}
+                />
               </div>
             )
           }

@@ -4,7 +4,18 @@ import { streamBazTurn } from '@/baz/bazTurnClient'
 
 export type TurnEntry =
   | { readonly kind: 'message'; readonly id: string; readonly author: 'baz' | 'customer'; readonly text: string }
-  | { readonly kind: 'card'; readonly id: string; readonly card: Card }
+  | {
+      readonly kind: 'card'
+      readonly id: string
+      readonly card: Card
+      /**
+       * What became of it, when the conversation is loaded back.
+       *
+       * Absent on a card that has just streamed: nothing has happened to it yet, and the whole
+       * point of it arriving is that the customer can act on it.
+       */
+      readonly settled?: { readonly label: string }
+    }
 
 /**
  * Drives one conversation.

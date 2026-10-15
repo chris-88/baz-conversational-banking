@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { requireSupabase } from '@/lib/supabase'
 import { cardSchema, type Card } from '@contracts/cards.ts'
+import { loadCaseState, settledState, type Settled } from '@/baz/cardState'
 
 /**
  * Loads the conversation so far.
@@ -21,17 +22,34 @@ const messageSchema = z.object({
 
 export type HistoryEntry =
   | { readonly kind: 'message'; readonly id: string; readonly author: 'baz' | 'customer'; readonly text: string }
-  | { readonly kind: 'card'; readonly id: string; readonly card: Card }
+  | {
+      readonly kind: 'card'
+      readonly id: string
+      readonly card: Card
+      /** What became of it, where that is a thing the case knows. */
+      readonly settled?: Settled
+    }
 
 export async function loadHistory(caseId: string): Promise<readonly HistoryEntry[]> {
   const supabase = requireSupabase()
 
-  const { data, error } = await supabase
-    .from('messages')
-    .select('id, role, content, cards')
-    .eq('case_id', caseId)
-    .order('created_at', { ascending: true })
-    .limit(100)
+  /*
+   * The transcript and the state of the case, together.
+   *
+   * A card is stored as what was offered, not as what happened next, so reloading a
+   * conversation put every decision back on screen as though it were still open: the plan
+   * could be kept again, the products chosen again, a sign-in requested by somebody already
+   * signed in. Resolving them here is Invariant 2 applied to history.
+   */
+  const [{ data, error }, state] = await Promise.all([
+    supabase
+      .from('messages')
+      .select('id, role, content, cards')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: true })
+      .limit(100),
+    loadCaseState(caseId),
+  ])
 
   if (error) throw new Error(error.message)
 
@@ -49,9 +67,17 @@ export async function loadHistory(caseId: string): Promise<readonly HistoryEntry
       },
       ...message.cards.flatMap((raw, index): HistoryEntry[] => {
         const parsed = cardSchema.safeParse(raw)
-        return parsed.success
-          ? [{ kind: 'card', id: `${message.id}-card-${String(index)}`, card: parsed.data }]
-          : []
+        if (!parsed.success) return []
+
+        const settled = settledState(parsed.data, state)
+        return [
+          {
+            kind: 'card',
+            id: `${message.id}-card-${String(index)}`,
+            card: parsed.data,
+            ...(settled === undefined ? {} : { settled }),
+          },
+        ]
       }),
     ])
 }
