@@ -1,4 +1,7 @@
 import { factCatalogue, type Fact } from '../domain/facts.ts'
+import { describeEvent } from '../domain/narration.ts'
+export { NARRATABLE_EVENTS } from '../domain/narration.ts'
+export type { NarratableEvent } from '../domain/narration.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
 import { evaluateJourney, type OutstandingItem, type RequirementContext } from '../domain/requirements.ts'
 import { evaluateAdvisories } from '../domain/advisories.ts'
@@ -143,64 +146,6 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
  * Sending the notification is not itself news: a return summary opening with "we sent you a
  * message" is worse than not opening at all.
  */
-export const NARRATABLE_EVENTS = [
-  'application_received',
-  'information_requested',
-  'document_received',
-  'application_approved',
-  'application_declined',
-  'application_completed',
-  'partner_completed',
-  'savings_target_reached',
-  'plan_milestone_reached',
-  'checkin_due',
-] as const
-
-export type NarratableEvent = (typeof NARRATABLE_EVENTS)[number]
-
-function describeEvent(event: { type: string; payload: Record<string, unknown> }): string | null {
-  const name = typeof event.payload.applicationName === 'string' ? event.payload.applicationName : 'An application'
-
-  switch (event.type) {
-    case 'application_submitted':
-      return `${name} was submitted.`
-    case 'application_received':
-      return `${name} was received and is being assessed.`
-    case 'information_requested':
-      return typeof event.payload.detail === 'string'
-        ? `${name}: the team asked for ${event.payload.detail}.`
-        : `${name}: the team asked for more information.`
-    case 'application_approved':
-      return `${name} was approved.`
-    case 'application_declined':
-      return `${name} was not approved.`
-    case 'application_completed':
-      return `${name} is complete.`
-    case 'plan_milestone_reached':
-      return typeof event.payload.label === 'string'
-        ? `You reached a step on your plan: ${event.payload.label}.`
-        : 'You reached a step on your plan.'
-    case 'checkin_due':
-      return typeof event.payload.purpose === 'string'
-        ? `It is time for the ${String(event.payload.purpose).toLowerCase()} you asked me to come back for.`
-        : 'It is time for the review you asked me to come back for.'
-    case 'savings_target_reached':
-      return typeof event.payload.target === 'number'
-        ? `Your savings reached €${event.payload.target.toLocaleString('en-IE')} — the amount you were building towards.`
-        : 'Your savings reached the amount you were building towards.'
-    case 'partner_completed':
-      return typeof event.payload.partnerName === 'string'
-        ? `${event.payload.partnerName} completed their part.`
-        : 'Your partner completed their part.'
-    case 'document_received':
-      return `${name}: a document was received.`
-    default:
-      // Unknown event types are omitted rather than guessed at, so the model never narrates
-      // something nobody wrote copy for.
-      return null
-  }
-}
-
 export function buildCaseDigest(
   loaded: LoadedCase,
   options: {

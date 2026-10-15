@@ -32,6 +32,23 @@ export function BazScreen(): ReactNode {
    * which is where the thing it unlocks is actually needed.
    */
   const presenter = searchParams.get('presenter')
+
+  /*
+   * The notification link's token, taken out of the address bar the same way.
+   *
+   * A push notification opens `#/baz?n=<code>`. The code was once redeemed by a handoff that
+   * no longer exists, so it does nothing now, and a parameter that does nothing should not sit
+   * in the address bar looking like it might. Under hash routing this is a fragment-only
+   * change, so nothing remounts: the conversation notices the update it was sent about
+   * through Realtime and the focus check instead.
+   */
+  const notification = searchParams.get('n')
+  useEffect(() => {
+    if (notification === null) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('n')
+    setSearchParams(next, { replace: true })
+  }, [notification, searchParams, setSearchParams])
   useEffect(() => {
     if (presenter === null || presenter === '') return
     rememberPresenterKey(presenter)

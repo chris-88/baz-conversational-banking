@@ -1502,3 +1502,18 @@ same grammar, through `src/lib/motion.ts` and the `--motion-*` tokens, loaded la
 cold start on conference wifi pays as little as possible for it. Measured: the main chunk went
 from 491.34 kB to 498.66 kB, 154.01 kB to 155.93 kB gzipped, for `LazyMotion` with
 `domAnimation`. Under two kilobytes on the wire, against a budget of fifteen.
+
+## 2026-10-15 — an open screen notices the bank moving (§35, §36)
+
+Realtime was wired to the admin console and nowhere else. The presenter simulated "assessment
+approved" on the console and the phone on the big screen did nothing; the customer found out
+on their next turn, on a reload, or from a push. And a tapped push could not help an open app:
+`#/baz?n=` is a fragment-only change under hash routing, so nothing remounted and the return
+turn never fired. The customer's screen now subscribes to its own events, scoped by RLS on the
+socket, and checks again on coming back to the tab. It does not fire a turn by itself; a reply
+arriving while somebody is mid-thought is worse than a pill they can tap. The pill uses the
+digest's own sentence for the event, moved to `_shared/domain/narration.ts` so the client can
+phrase it without the server digest in its bundle, and the tap is the ordinary `return` turn.
+Older status cards in a transcript settle into "where things stood at the time", so two cannot
+disagree without saying which is current. `NotificationCard.tsx`, a filming fallback nothing
+rendered, is deleted: push arrives on a real phone.

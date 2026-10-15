@@ -16,6 +16,8 @@ import { withViewTransition } from '@/lib/viewTransition'
 import { QUOTE_FOLLOW_UPS } from '@/baz/suggestions'
 import { CardRenderer } from '@/baz/cards/CardRenderer'
 import { Reveal } from '@/components/Primitives'
+import { useCaseUpdates } from '@/baz/useCaseUpdates'
+import { BellRingIcon } from 'lucide-react'
 import { useConversation } from '@/baz/useConversation'
 import { startSession } from '@/lib/session'
 import { noteSignedInMoment, takeSignedInMoment } from '@/lib/identity'
@@ -372,6 +374,20 @@ export function BazChat({
    * the server landed on it. Everything on this screen belongs to the other one, and a clean
    * load is the honest way to change conversations.
    */
+  /**
+   * The bank moving while the screen is open (§35, §36).
+   *
+   * Realtime on this customer's own events, and a check on coming back to the tab. Nothing
+   * fires a turn by itself: the pill says what happened, in the digest's own words, and the
+   * customer taps it when they are ready. The tap is the same `return` turn that opens a
+   * conversation after time away, so what Baz then says is what it would have said anyway.
+   */
+  const updates = useCaseUpdates(caseId)
+  const catchUp = () => {
+    updates.acknowledge()
+    void send('', 'return')
+  }
+
   const queryClient = useQueryClient()
   const signedInAt = useSignInSignal((signal) => signal.signedInAt)
   const acknowledge = useSignInSignal((signal) => signal.acknowledge)
@@ -686,6 +702,22 @@ export function BazChat({
           zeroState ? 'flex flex-col' : 'space-y-3',
         )}
       >
+        {updates.update !== null && !streaming && (
+          <div className="sticky top-0 z-10 flex justify-center">
+            <Reveal mode="mount">
+              <button
+                type="button"
+                onClick={catchUp}
+                className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex max-w-full items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium shadow-md focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <BellRingIcon aria-hidden className="size-3.5 shrink-0" />
+                <span className="truncate">{updates.update.text}</span>
+                <span className="shrink-0 opacity-80">· Catch up</span>
+              </button>
+            </Reveal>
+          </div>
+        )}
+
         {zeroState && <ZeroState focused={composerFocused} />}
 
         {entries.map((entry, index) => {

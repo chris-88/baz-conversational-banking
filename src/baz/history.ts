@@ -21,7 +21,12 @@ const messageSchema = z.object({
 })
 
 export type HistoryEntry =
-  | { readonly kind: 'message'; readonly id: string; readonly author: 'baz' | 'customer'; readonly text: string }
+  | {
+      readonly kind: 'message'
+      readonly id: string
+      readonly author: 'baz' | 'customer'
+      readonly text: string
+    }
   | {
       readonly kind: 'card'
       readonly id: string
@@ -53,7 +58,7 @@ export async function loadHistory(caseId: string): Promise<readonly HistoryEntry
 
   if (error) throw new Error(error.message)
 
-  return messageSchema
+  const entries = messageSchema
     .array()
     .parse(data ?? [])
     // System messages are internal: they belong in the event log, not the conversation.
@@ -80,4 +85,33 @@ export async function loadHistory(caseId: string): Promise<readonly HistoryEntry
         ]
       }),
     ])
+
+  return supersedeOlderStatus(entries)
+}
+
+/**
+ * Only the newest status card is current. The others say so.
+ *
+ * A status card renders the payload it was streamed with, which is the application state at
+ * that moment. Left alone, two of them from different turns sit in one transcript disagreeing
+ * about where things stand, with nothing to say which is right. The newest is the case as it
+ * is; the rest settle into a line that says they were how it was.
+ */
+function supersedeOlderStatus(entries: readonly HistoryEntry[]): readonly HistoryEntry[] {
+  const statuses = entries.flatMap((entry, index) =>
+    entry.kind === 'card' && entry.card.type === 'status' ? [index] : [],
+  )
+  const newest = statuses[statuses.length - 1]
+
+  return entries.map((entry, index) =>
+    statuses.includes(index) && index !== newest
+      ? {
+          ...entry,
+          settled: {
+            label: 'Where things stood at the time',
+            note: 'Things have moved since. The current status is further down.',
+          },
+        }
+      : entry,
+  )
 }
