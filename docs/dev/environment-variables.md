@@ -59,6 +59,8 @@ configuration.
 |---|---|
 | `AUDIENCE_MAX_CASES` | A cap on customer cases created in a rolling 24 hours — a rate, not a lifetime total. Cases tagged `kind = 'test'` are excluded |
 | `PRESENTER_KEY` | Unset means nobody can open the all-conversations switcher. Set it on one device and only that device gets it |
+| `LLM_PROVIDER` | Unset means Anthropic. `fixture` replays a script from `baz-turn/fixtures/` and constructs nothing Anthropic-shaped, so no key is needed |
+| `LLM_FIXTURE` | Which script, when the provider is `fixture`. Defaults to `opening` |
 
 ### Set on the project, read nowhere
 
@@ -70,7 +72,6 @@ hosted project; they do nothing.
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | SMS was never built, and there is no plan to. Web Push needs no per-message charge and no sender registration |
 | `SENTRY_DSN` | Edge Functions have no Sentry. Failures surface as `events` rows and function logs |
 | `AUDIENCE_MAX_TURNS` | Declared, never implemented. There is no per-conversation turn limit |
-| `LLM_PROVIDER` | Declared, never implemented. There is no fixture provider, which is why no test can drive a conversation |
 
 If you delete them from the project, nothing changes. That is the point of listing them.
 

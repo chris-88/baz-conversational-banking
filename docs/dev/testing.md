@@ -14,21 +14,24 @@ sources:
 
 Three layers, and one deliberate hole you need to know about before you trust the suite.
 
-## The hole
+## The fixture provider
 
-**There is no fixture LLM provider.** `LLM_PROVIDER` appears in the environment and is read
-nowhere. Nothing in this repository can drive a conversation in a test without calling the real
-model and paying for it.
+`LLM_PROVIDER=fixture` replays a script instead of calling Anthropic. `runBazTurn` takes a
+`ModelProvider` (`supabase/functions/_shared/llm/model.ts`): the Anthropic adapter passes
+requests through, and the fixture (`fixture-provider.ts`) replays one scripted round per model
+call. Scripts live in `supabase/functions/baz-turn/fixtures/`, named by `LLM_FIXTURE`, and are
+transcribed from real conversations turn for turn; the turn to replay is chosen by how many
+times Baz has already spoken on the case.
 
-That is why the Playwright specs check routes and rendering rather than turns, and it is why the
-output-ceiling, data-notice and product-collapse bugs all reached a person before a test caught
-them. Building a fixture provider is the single change that would most improve what this suite
-can catch.
+This was the hole in the suite until 2026-10-15. The output-ceiling, data-notice and
+product-collapse bugs all reached a person before a test, because nothing could drive a
+conversation without paying for it. The `runBazTurn` unit tests now run against the fixture,
+and a Playwright spec that drives a whole conversation through it is the next thing to write.
 
-Until it exists, the discipline has to come from the person: a live model is for checking what
-the model does, and nothing else.
+The discipline still holds for the live model: it is for checking what the model itself does,
+and nothing else.
 
-## Vitest — 779 tests in 61 files
+## Vitest — 788 tests in 62 files
 
 The layer that carries the weight. Everything deterministic is tested here, and domain logic is
 written test-first.

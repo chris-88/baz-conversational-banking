@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { Card } from '../contracts/cards.ts'
 import type { StreamEvent } from '../contracts/stream.ts'
 import type { ModelUsage } from '../domain/cost.ts'
+import type { ModelProvider } from './model.ts'
 import { composeSystemPrompt, type PromptInput } from './prompt.ts'
 import { TOOLS, validateToolCall, type ToolName } from './tools.ts'
 
@@ -39,7 +40,11 @@ export type ToolExecutor = (
 ) => Promise<{ readonly result: string; readonly card?: Card }>
 
 export type BazTurnOptions = {
-  readonly client: Anthropic
+  /**
+   * The model behind the seam. The real one is `anthropicProvider(client)`; a test hands in
+   * `fixtureProvider(turn)` and the loop cannot tell which it has.
+   */
+  readonly provider: ModelProvider
   readonly model: string
   readonly prompt: PromptInput
   /** Oldest first. The customer's new message is already the last entry. */
@@ -168,7 +173,7 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     let spokenThisRound = false
 
-    const stream = options.client.messages.stream({
+    const stream = options.provider.stream({
       model: options.model,
       max_tokens: ceiling,
       system,
@@ -179,16 +184,16 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
     // Read deltas straight off the stream, so the customer sees the answer forming rather
     // than waiting for the whole turn to finish.
     for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+      if (chunk.type === 'text_delta') {
         if (spokenThisRound) {
-          yield { type: 'text_delta', text: chunk.delta.text }
+          yield { type: 'text_delta', text: chunk.text }
           continue
         }
 
         // Nothing said yet this round. Whitespace before the first word is dropped rather
         // than opening the message with a blank line, and a round that only ever emits
         // whitespace does not count as the model having spoken.
-        const opening = chunk.delta.text.replace(/^\s+/, '')
+        const opening = chunk.text.replace(/^\s+/, '')
         if (opening === '') continue
 
         if (spoken) yield { type: 'text_delta', text: '\n\n' }
@@ -205,15 +210,10 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
      * called back with a tool result, which is what makes the number of rounds the thing that
      * actually drives cost rather than the size of the prompt.
      */
-    options.onUsage?.({
-      input: message.usage.input_tokens,
-      output: message.usage.output_tokens,
-      cacheRead: message.usage.cache_read_input_tokens ?? 0,
-      cacheWrite: message.usage.cache_creation_input_tokens ?? 0,
-    })
+    options.onUsage?.(message.usage)
 
     const toolUses = message.content.filter(
-      (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
+      (block): block is Anthropic.ToolUseBlockParam => block.type === 'tool_use',
     )
 
     if (message.stop_reason !== 'tool_use' || toolUses.length === 0) {

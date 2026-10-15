@@ -54,8 +54,9 @@ appears. See [debugging](debugging.md).
 
 ## Working on the conversation
 
-Every turn costs money. There is no fixture provider, so there is no way to exercise a
-conversation without calling Anthropic.
+Every live turn costs money. `LLM_PROVIDER=fixture` in `supabase/.env.local` replays a script
+from `supabase/functions/baz-turn/fixtures/` instead, with no key needed; `LLM_FIXTURE` picks
+the script. Use it for anything that is not about what the model itself does.
 
 The discipline that follows is not optional:
 

@@ -18,8 +18,8 @@
  *
  * Live probing is the exception, not the default. Reach for the live model only to check what
  * the model itself does: token counts, tool-calling and truncation are that; layout and copy are
- * not. There is no fixture provider to verify against instead — `LLM_PROVIDER` is declared and
- * read nowhere — so until one exists the discipline is the person's, not the harness's.
+ * not. For those, `LLM_PROVIDER=fixture` replays a script and costs nothing; this file is for
+ * the cases where only the real model will do.
  */
 
 import fs from 'node:fs'

@@ -1467,3 +1467,14 @@ one and read exactly the same way.
 The same rule covers reciting the card. The rate, the limits and the features are on it
 already; the model's line is why this is in front of this person, which is the one thing
 the card cannot say.
+
+## 2026-10-15 — a model seam, and a fixture behind it
+
+`runBazTurn` took an `Anthropic` client, so the only way to run a turn was to pay for one. The
+output-ceiling, data-notice and product-collapse bugs all reached a person before a test
+because no test could drive a conversation. `ModelProvider` is the seam: exactly the shape the
+loop reads (one request, one streamed delta, one final message) and nothing wider. The
+Anthropic adapter passes through; the fixture replays a script transcribed from a real
+conversation, turn for turn, chosen by `LLM_FIXTURE` and advanced by how many times Baz has
+already spoken on the case. Deliberately not a general LLM abstraction: there is one provider
+and one fixture, and a second provider would be a decision, not a drop-in.

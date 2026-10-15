@@ -12,6 +12,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { runBazTurn } from '../supabase/functions/_shared/llm/baz.ts'
+import { anthropicProvider } from '../supabase/functions/_shared/llm/anthropic-provider.ts'
 import type { PromptInput } from '../supabase/functions/_shared/llm/prompt.ts'
 import { slidersFor } from '../supabase/functions/_shared/llm/persona.ts'
 import { boiDomainConfig } from '../supabase/functions/_shared/tenants/boi/domain-config.ts'
@@ -93,7 +94,7 @@ for (const model of models) {
     const started = Date.now()
 
     const events = runBazTurn({
-      client,
+      provider: anthropicProvider(client),
       model,
       prompt,
       enabledTools: ['record_facts', 'show_product_options', 'show_status'],

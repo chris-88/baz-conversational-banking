@@ -397,11 +397,13 @@ npm run e2e                  # Playwright: route and render checks only (see bel
 npm run eval:guardrails      # live gate against the adversarial set
 ```
 
-**There is no fixture LLM provider.** `LLM_PROVIDER` is listed in the environment and read
-nowhere. Nothing can drive a conversation in a test without calling the real model and paying
-for it, which is why the Playwright specs check routes and rendering rather than turns, and why
-the output-ceiling, data-notice and product-collapse bugs all reached a person before a test.
-Building it is the single change that would most improve what the suite can catch.
+**The fixture LLM provider.** `LLM_PROVIDER=fixture` replays a script from
+`supabase/functions/baz-turn/fixtures/` instead of calling Anthropic, so a conversation can be
+driven with no key and no bill. `LLM_FIXTURE` names the script; the turn within it is chosen by
+how many times Baz has already spoken on the case, so a scripted conversation advances as a real
+one does. Scripts are transcribed from real conversations, turn for turn. `runBazTurn` takes a
+`ModelProvider` (`_shared/llm/model.ts`); the Anthropic adapter and the fixture are the only two
+implementations, and `_shared` reads no environment to choose between them.
 
 ## Environment
 
@@ -411,9 +413,12 @@ Edge Function secrets, as actually read: `ANTHROPIC_API_KEY`, `BAZ_MODEL`, `GATE
 `APP_BASE_URL`, `AUDIENCE_MAX_CASES`, `PRESENTER_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_D`,
 `VAPID_SUBJECT`.
 
-Set on the project but read nowhere: `TWILIO_*` and `SENTRY_DSN` (never built),
-`AUDIENCE_MAX_TURNS` and `LLM_PROVIDER` (declared, never implemented). Removed from the
-`.env.example` files on 2026-10-15; `docs/dev/environment-variables.md` is the full reference.
+Soft-read, unset in production: `LLM_PROVIDER` (`fixture` replays a script) and `LLM_FIXTURE`
+(which one).
+
+Set on the project but read nowhere: `TWILIO_*` and `SENTRY_DSN` (never built) and
+`AUDIENCE_MAX_TURNS` (declared, never implemented). Removed from the `.env.example` files on
+2026-10-15; `docs/dev/environment-variables.md` is the full reference.
 
 GitHub: repo vars for the `VITE_*` values; secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`.
 
@@ -427,8 +432,8 @@ GitHub: repo vars for the `VITE_*` values; secrets `SUPABASE_ACCESS_TOKEN`, `SUP
 ## Testing
 
 - **Vitest, required**: requirement engine, reuse policies, subject matching, state machine (every legal and illegal transition), advisories, questions-avoided, persona composer, gate routing given fixed classifier outputs, token issue and redeem.
-- **Playwright**: route, render and disclosure checks at iPhone viewport. It does not drive a
-  conversation, because there is no fixture provider to drive one against.
+- **Playwright**: route, render and disclosure checks at iPhone viewport. It does not yet drive
+  a conversation; the fixture provider (`LLM_PROVIDER=fixture`) now makes that possible.
 - **Guardrail evals**: `evals/guardrails/cases.jsonl` holds a must-block set (§22, §24, §47: trivia, jokes, competitors, excessive output, injection, persona escape) and a must-allow set (profane banking questions, short contextual answers, sensitive but in-scope disclosures). 100% on both before any presentation.
 
 ## Build order
@@ -460,7 +465,7 @@ Each milestone ends deployed.
   including its changelog. The numbers in it are measured; do not revise them from memory.
 - A live model is for checking what the model does. Layout, card ordering and copy placement
   are not that, and running a full conversation to check them is how an API budget disappears.
-  There is no fixture provider to fall back on, so the discipline has to come from the person.
+  Check those against `LLM_PROVIDER=fixture`, which costs nothing.
 
 ## Open items
 

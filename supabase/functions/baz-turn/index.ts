@@ -31,7 +31,11 @@ import { recordFormAnswers } from '../_shared/db/record-form-answers.ts'
 import { formForProduct } from '../_shared/tenants/boi/forms/mapping.ts'
 import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
 import { resolveFormState } from '../_shared/domain/forms/state.ts'
-import { createClassifier } from '../_shared/llm/classifier.ts'
+import { createClassifier, type Classifier } from '../_shared/llm/classifier.ts'
+import { anthropicProvider } from '../_shared/llm/anthropic-provider.ts'
+import { FIXTURE_BANKING, fixtureProvider } from '../_shared/llm/fixture-provider.ts'
+import type { ModelProvider } from '../_shared/llm/model.ts'
+import { fixtureScript } from './fixtures/index.ts'
 import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
 import { runBazTurn } from '../_shared/llm/baz.ts'
 import { toneBucket } from '../_shared/llm/persona.ts'
@@ -79,7 +83,7 @@ import { planDraftFor } from '../_shared/domain/goals/plan.ts'
 import { describeGoals, goalContextFor } from '../_shared/db/goals.ts'
 import { depositGap } from '../_shared/domain/needs/catalogue.ts'
 import type { PlanGoal } from '../_shared/domain/plans/types.ts'
-import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case.ts'
+import { participantFor, previousAssistantTurn, type LoadedCase } from '../_shared/db/loaded-case.ts'
 import { env } from '../_shared/env.ts'
 
 /**
@@ -170,6 +174,71 @@ function errorResponse(code: Parameters<typeof statusFor>[0], message: string): 
  * headers, so the browser blocks the response and the customer sees "Load failed" with no
  * clue what failed. A turn is allowed to fail; it is not allowed to fail silently.
  */
+/** A variable that may be unset, where unset is a valid configuration. `env()` throws. */
+const softEnv = (name: string): string | undefined =>
+  (globalThis as { Deno?: { env?: { get(key: string): string | undefined } } }).Deno?.env?.get(name)
+
+/**
+ * The model this turn runs against, and the classifier that gates it.
+ *
+ * `LLM_PROVIDER=fixture` replays a script instead of calling Anthropic, which is how a test
+ * drives an entire conversation with no key and no bill. The script is named by `LLM_FIXTURE`
+ * and the turn within it is chosen by how many times Baz has already spoken on this case, so a
+ * scripted conversation advances exactly as a real one does. Nothing Anthropic-shaped is
+ * constructed on that branch, so `ANTHROPIC_API_KEY` and `BAZ_MODEL` need not be set.
+ *
+ * Soft-read, like `PRESENTER_KEY`: unset means Anthropic, which is what production is.
+ */
+function modelFor(
+  loaded: LoadedCase,
+  onGateUsage: (used: ModelUsage) => void,
+): { readonly provider: ModelProvider; readonly model: string; readonly classify: Classifier } {
+  if ((softEnv('LLM_PROVIDER') ?? 'anthropic') === 'fixture') {
+    const name = softEnv('LLM_FIXTURE') ?? 'opening'
+    const script = fixtureScript(name)
+    const ordinal = loaded.messages.filter((message) => message.role === 'baz').length
+    const turn = script.turns[ordinal]
+
+    if (turn === undefined) {
+      throw new Error(
+        `Fixture "${name}" has ${String(script.turns.length)} turn(s) and this is turn ${String(ordinal + 1)}.`,
+      )
+    }
+
+    return {
+      provider: fixtureProvider(turn),
+      model: `fixture:${name}`,
+      classify: () => Promise.resolve(turn.gate ?? FIXTURE_BANKING),
+    }
+  }
+
+  /*
+   * Bounded, because the SDK default is ten minutes.
+   *
+   * That is far longer than this function is allowed to live, so a stalled API call does not
+   * time out — it holds the connection until the platform kills the whole invocation, and the
+   * customer is left watching a stream that will never say anything. A turn that has not
+   * finished in ninety seconds has failed; failing as an error beats failing as a hang.
+   */
+  const anthropic = new Anthropic({
+    apiKey: env('ANTHROPIC_API_KEY'),
+    timeout: 90_000,
+    maxRetries: 1,
+  })
+
+  return {
+    provider: anthropicProvider(anthropic),
+    model: env('BAZ_MODEL'),
+    classify: createClassifier({
+      apiKey: env('ANTHROPIC_API_KEY'),
+      model: env('GATE_MODEL'),
+      domainConfig: boiDomainConfig,
+      client: anthropic,
+      onUsage: onGateUsage,
+    }),
+  }
+}
+
 serveJson(CORS, async (request: Request): Promise<Response> => {
   try {
     return await handleTurn(request)
@@ -232,19 +301,6 @@ async function handleTurn(request: Request): Promise<Response> {
   const tone = toneBucket(loaded.persona)
 
   // ---- Gate -------------------------------------------------------------
-  /**
-   * Bounded, because the SDK default is ten minutes.
-   *
-   * That is far longer than this function is allowed to live, so a stalled API call does not
-   * time out — it holds the connection until the platform kills the whole invocation, and the
-   * customer is left watching a stream that will never say anything. A turn that has not
-   * finished in ninety seconds has failed; failing as an error beats failing as a hang.
-   */
-  const anthropic = new Anthropic({
-    apiKey: env('ANTHROPIC_API_KEY'),
-    timeout: 90_000,
-    maxRetries: 1,
-  })
   /*
    * What this turn consumed, accumulated as it happens.
    *
@@ -270,13 +326,7 @@ async function handleTurn(request: Request): Promise<Response> {
   const rejections: { name: string; error: string }[] = []
   const called: string[] = []
 
-  const classify = createClassifier({
-    apiKey: env('ANTHROPIC_API_KEY'),
-    model: env('GATE_MODEL'),
-    domainConfig: boiDomainConfig,
-    client: anthropic,
-    onUsage: recordGate,
-  })
+  const { provider, model, classify } = modelFor(loaded, recordGate)
 
   const customerMessage = turn.message ?? ''
   const isCustomerTurn = turn.trigger === 'message'
@@ -803,8 +853,8 @@ async function handleTurn(request: Request): Promise<Response> {
 
       try {
         const events = runBazTurn({
-          client: anthropic,
-          model: env('BAZ_MODEL'),
+          provider,
+          model,
           /*
            * The form tool is offered only when there is a form to answer.
            *

@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import type Anthropic from '@anthropic-ai/sdk'
 import { boiDomainConfig } from '../tenants/boi/domain-config.ts'
 import { knowledgeBaseSection } from '../tenants/boi/kb-prompt.ts'
 import { runBazTurn, type BazTurnOptions } from './baz.ts'
+import { fixtureProvider, fixtureTurnSchema } from './fixture-provider.ts'
+import type { ModelProvider, ModelRequest } from './model.ts'
 import { slidersFor } from './persona.ts'
 import type { PromptInput } from './prompt.ts'
 
 /**
- * A scripted stand-in for the SDK's streaming client: each entry is one round's reply, as the
- * text it streams plus whatever tool it asks for.
+ * One round's reply, as these tests have always described it: the text it streams plus
+ * whatever tool it asks for. Mapped onto the fixture provider, so the tests here exercise the
+ * same replay that drives a scripted conversation end to end.
  */
 type Round = {
   readonly text: string
@@ -18,60 +20,28 @@ type Round = {
   readonly truncated?: boolean
 }
 
-function clientReturning(rounds: readonly Round[]): Anthropic {
-  let round = -1
+function providerReturning(rounds: readonly Round[]): ModelProvider {
+  return fixtureProvider(
+    fixtureTurnSchema.parse({
+      rounds: rounds.map((round) => ({
+        deltas: [round.text],
+        // Tool input is validated before anything runs, so a card only appears when a round
+        // supplies input the schema accepts.
+        toolUses: round.tool === undefined ? [] : [{ name: round.tool, input: round.input ?? {} }],
+        ...(round.truncated === true ? { stopReason: 'max_tokens' } : {}),
+      })),
+    }),
+  )
+}
 
+/** The same provider, with every request it is sent kept for inspection. */
+function observing(inner: ModelProvider, seen: ModelRequest[]): ModelProvider {
   return {
-    messages: {
-      stream: () => {
-        round += 1
-        const current = rounds[round] ?? { text: '' }
-
-        const content: Anthropic.ContentBlock[] = [
-          { type: 'text', text: current.text, citations: null },
-          ...(current.tool
-            ? [
-                {
-                  type: 'tool_use',
-                  id: `t${String(round)}`,
-                  name: current.tool,
-                  // Tool input is validated before anything runs, so a card only appears when a
-                  // round supplies input the schema accepts.
-                  input: current.input ?? {},
-                } as Anthropic.ContentBlock,
-              ]
-            : []),
-        ]
-
-        const deltas = [
-          { type: 'content_block_delta', delta: { type: 'text_delta', text: current.text } },
-        ]
-
-        return {
-          [Symbol.asyncIterator]: () => {
-            let index = 0
-            return {
-              next: () =>
-                Promise.resolve(
-                  index < deltas.length
-                    ? { value: deltas[index++], done: false }
-                    : { value: undefined, done: true },
-                ),
-            }
-          },
-          finalMessage: () =>
-            Promise.resolve({
-              content: current.truncated ? [] : content,
-              stop_reason: current.truncated
-                ? 'max_tokens'
-                : current.tool
-                  ? 'tool_use'
-                  : 'end_turn',
-            }),
-        }
-      },
+    stream: (request) => {
+      seen.push(request)
+      return inner.stream(request)
     },
-  } as unknown as Anthropic
+  }
 }
 
 const prompt: PromptInput = {
@@ -92,7 +62,7 @@ const prompt: PromptInput = {
 
 function options(rounds: readonly Round[], withCard = false): BazTurnOptions {
   return {
-    client: clientReturning(rounds),
+    provider: providerReturning(rounds),
     model: 'test-model',
     prompt,
     history: [{ role: 'user', content: 'I want to buy my first home' }],
@@ -120,24 +90,18 @@ async function textOf(rounds: readonly Round[], withCard = false): Promise<strin
  */
 describe('prompt caching', () => {
   const paramsOf = async (history: BazTurnOptions['history']) => {
-    const seen: Record<string, unknown>[] = []
+    const seen: ModelRequest[] = []
     const base = options([{ text: 'Right.' }])
-    const client = {
-      messages: {
-        stream: (params: Record<string, unknown>) => {
-          seen.push(params)
-          return (base.client as unknown as { messages: { stream: () => unknown } }).messages.stream()
-        },
-      },
-    } as unknown as Anthropic
 
-    for await (const _ of runBazTurn({ ...base, client, history })) { /* drain */ }
-    return seen[0] ?? {}
+    for await (const _ of runBazTurn({ ...base, provider: observing(base.provider, seen), history })) {
+      /* drain */
+    }
+    return seen[0]
   }
 
   it('caches the stable prefix for an hour, and nothing after it', async () => {
     const params = await paramsOf([{ role: 'user', content: 'hello' }])
-    const system = params.system as { text: string; cache_control?: { ttl?: string } }[]
+    const system = params?.system ?? []
 
     expect(system).toHaveLength(2)
     // An hour because the prefix is shared by every case: one write covers a whole session.
@@ -152,7 +116,7 @@ describe('prompt caching', () => {
       { role: 'assistant', content: 'second' },
       { role: 'user', content: 'third' },
     ])
-    const messages = params.messages as { content: unknown }[]
+    const messages = params?.messages ?? []
 
     // Everything before the marker is read at a tenth of the price; only the newest message
     // is written. Without it the whole window was re-read at full price, every round.
@@ -165,7 +129,7 @@ describe('prompt caching', () => {
 
   it('leaves a history of one alone rather than breaking on nothing', async () => {
     const params = await paramsOf([{ role: 'user', content: 'only' }])
-    const messages = params.messages as { content: unknown }[]
+    const messages = params?.messages ?? []
 
     expect(messages).toHaveLength(1)
     expect(messages[0]?.content).toEqual([
@@ -245,28 +209,19 @@ describe('runBazTurn', () => {
  */
 describe('running out of room', () => {
   const ceilingsUsed = async (rounds: readonly Round[]) => {
-    const ceilings: number[] = []
+    const seen: ModelRequest[] = []
     const base = options(rounds)
-    const inner = (base.client as unknown as { messages: { stream: () => unknown } }).messages
-    const client = {
-      messages: {
-        stream: (params: { max_tokens: number }) => {
-          ceilings.push(params.max_tokens)
-          return inner.stream()
-        },
-      },
-    } as unknown as Anthropic
 
     const said: string[] = []
     const rejected: { name: string; error: string }[] = []
     for await (const event of runBazTurn({
       ...base,
-      client,
+      provider: observing(base.provider, seen),
       onToolRejected: (rejection) => rejected.push(rejection),
     })) {
       if (event.type === 'text_delta') said.push(event.text)
     }
-    return { ceilings, said: said.join(''), rejected }
+    return { ceilings: seen.map((request) => request.max_tokens), said: said.join(''), rejected }
   }
 
   it('goes again with double the room when a round produces nothing at all', async () => {

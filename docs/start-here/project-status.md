@@ -40,7 +40,7 @@ These are choices, not gaps waiting to be filled.
 
 | Thing | Why |
 |---|---|
-| **A fixture LLM provider** | `LLM_PROVIDER` is declared and read nowhere. Nothing can drive a conversation in a test without paying the real model. This is the most consequential gap in the project — the output-ceiling, data-notice and product-collapse bugs all reached a person before a test did |
+| A Playwright spec that drives a conversation | The fixture provider now exists (`LLM_PROVIDER=fixture`, 2026-10-15), so one is possible; none is written yet |
 | SMS | Never built. Web Push needs no per-message charge and no sender registration |
 | Server-side Sentry | Edge Functions have no error reporting. Failures surface as `events` rows and function logs |
 | Output re-classification | Not in v1. To be added only if evals show leaks |
