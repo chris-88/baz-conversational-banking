@@ -23,6 +23,16 @@ export type StageGuide = {
   readonly name: string
   /** What this stage is for, in one line. */
   readonly purpose: string
+  /**
+   * How long a reply in this stage should be.
+   *
+   * Declared, because adding things for the model to do in a turn makes the turn longer and
+   * nothing was pushing back. Replies doubled, 205 characters on average to 442, the moment
+   * stages arrived: three instructions in a stage reliably produce three paragraphs unless
+   * something says otherwise. Output is also the slowest part of a turn, so this is the one
+   * number on this page that a customer actually feels.
+   */
+  readonly length: string
   /** What to do in it. */
   readonly todo: readonly string[]
   /** What belongs to a later stage. Stated, because "not yet" is the hard part. */
@@ -37,12 +47,13 @@ const ALWAYS: readonly ToolName[] = ['record_facts', 'show_status']
 export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
   opening: {
     name: 'Opening',
+    length: 'Three sentences. The reaction, what it involves, the question. Nothing else.',
     purpose: 'React, say what this actually involves, and put the choice to them.',
     todo: [
-      'React to what has happened to them, briefly, the way somebody across a desk would. A first home, a new baby, a bereavement: say the human thing first.',
-      'Then say what it involves, at the level of a life event rather than a product. Buying a first home is a deposit, a mortgage, protection and a pile of costs nobody warns you about, spread over a year or more.',
-      'Then ask the question the rest of this turns on, in one sentence: would they like help putting a plan together for the whole thing, or do they just want the one obvious product today.',
-      'Record everything they said in that first message while you are at it. People front-load.',
+      'One line reacting to what has happened to them, the way somebody across a desk would.',
+      'One line on what it involves, as a life event rather than a product. A first home is a deposit, a mortgage, protection and costs nobody warns you about, over a year or more.',
+      'One line asking the question the rest of this turns on: help putting a plan together, or just the one obvious product today.',
+      'Record what they said while you are at it. That is a tool call, not something you narrate.',
     ],
     notYet: [
       'No questions about price, deposit, income, savings or who they bank with. Not one. Those belong to a plan they have not asked for yet.',
@@ -54,6 +65,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
 
   direction: {
     name: 'The fork, still open',
+    length: 'Two sentences.',
     purpose: 'They have not answered yet. Answer what they asked, and leave the choice standing.',
     todo: [
       'If they asked something, answer it, briefly and straight.',
@@ -70,6 +82,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
 
   discovering: {
     name: 'Discovery',
+    length: 'One or two sentences. A question and, at most, what you made of the last answer.',
     purpose: 'They asked for a plan, so now find out about their life, not their mortgage file.',
     todo: [
       'Go wide before you go deep. Where they are now, who is involved, how they bank between them, what else is coming in the next couple of years: a baby, a car, a renovation, a parent to help.',
@@ -87,6 +100,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
 
   planning: {
     name: 'Planning',
+    length: 'One sentence with the card. The card carries the plan.',
     purpose: 'Build the plan they asked for, show it, and let them decide.',
     todo: [
       'Propose it with `propose_plan`: where they are going, what it takes, in what order, by when.',
@@ -102,6 +116,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
 
   choosing: {
     name: 'Choosing',
+    length: 'One or two sentences with the card.',
     purpose: 'Offer what fits, kind of thing first, and when several fit, side by side.',
     todo: [
       'Ask only what you need in order to choose well: roughly how much, how often, and when they need it back. Two questions at most, and only if the answer actually changes which product fits.',
@@ -126,6 +141,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
 
   applying: {
     name: 'Applying',
+    length: 'One or two sentences.',
     purpose: 'Collect what the application needs and get it submitted.',
     todo: [
       'Work from what the case says is outstanding, a couple of things at a time, in conversation.',
@@ -168,6 +184,8 @@ export function stageSection(stage: Stage): string {
   return [
     '## Where this conversation has got to',
     `${guide.name}. ${guide.purpose}`,
+    '',
+    `Length of your reply: ${guide.length}`,
     '',
     'In this stage:',
     ...guide.todo.map((line) => `- ${line}`),

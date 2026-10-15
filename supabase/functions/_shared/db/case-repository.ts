@@ -135,6 +135,8 @@ export async function loadCase(
     domainData,
     overridesData,
     formApplicationsData,
+    customerNameResult,
+    eventsSinceLastSeen,
   ] = await Promise.all([
     client.from('participants').select('id, role, display_name').eq('case_id', caseId),
     client
@@ -176,6 +178,16 @@ export async function loadCase(
       .from('form_applications')
       .select('id, form_id, answers')
       .eq('case_id', caseId),
+    /*
+     * These two used to run after the batch, one after the other.
+     *
+     * Both need only the case row, which is already in hand, so waiting for twelve other
+     * queries to finish before starting them bought nothing and cost two round trips on the
+     * critical path of every single turn. The customer is watching an empty stream for that
+     * whole time.
+     */
+    loadCustomerName(client, theCase.customer_id),
+    loadEventsSince(client, caseId, theCase.last_seen_at),
   ])
 
   /*
@@ -217,7 +229,7 @@ export async function loadCase(
    * them as nobody would be the one obvious hole in "it knows who you are".
    */
   const customerName =
-    (await loadCustomerName(client, theCase.customer_id)) ??
+    customerNameResult ??
     (participants.find((participant) => participant.role === 'primary')?.displayName?.split(' ')[0] ??
       null)
 
@@ -273,8 +285,6 @@ export async function loadCase(
 
   const persona = parsePersona(unwrap(personaData, 'persona'))
   const domainConfig = unwrap(domainData, 'domain config')
-
-  const eventsSinceLastSeen = await loadEventsSince(client, caseId, theCase.last_seen_at)
 
   return {
     caseId: theCase.id,

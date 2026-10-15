@@ -42,26 +42,44 @@ const PAGE_LOCATIONS: Readonly<Record<string, string>> = {
 
 const RAW: readonly RawSnapshot[] = [form1833, form1940]
 
-/** Parsed once. The definition is large and does not change between requests. */
-const SNAPSHOTS: ReadonlyMap<string, FormSnapshot> = new Map(
-  RAW.map((raw) => [
-    raw.formId,
-    {
-      formId: raw.formId,
-      source: raw.source,
-      retrievedAt: raw.retrievedAt,
-      version: raw.version,
-      sourceHash: raw.sourceHash,
-      definition: formDefinitionSchema.parse(raw.definition),
-      pageLocation: PAGE_LOCATIONS[raw.formId] ?? '',
-    },
-  ]),
-)
+/**
+ * Parsed on first use, not on import.
+ *
+ * These are 707KB and 434KB of JSON, and validating both through Zod costs about 150ms. That
+ * was being paid at module load, which on a serverless runtime means every cold start of every
+ * function that touches this file, including a turn of conversation that has nothing to do with
+ * forms. Now a definition is parsed the first time somebody asks for it and kept for the life
+ * of the isolate, so the ordinary turn pays nothing and a form turn pays for one form.
+ */
+const parsed = new Map<string, FormSnapshot>()
 
-export function formSnapshot(formId: string): FormSnapshot | undefined {
-  return SNAPSHOTS.get(formId)
+function parse(raw: RawSnapshot): FormSnapshot {
+  return {
+    formId: raw.formId,
+    source: raw.source,
+    retrievedAt: raw.retrievedAt,
+    version: raw.version,
+    sourceHash: raw.sourceHash,
+    definition: formDefinitionSchema.parse(raw.definition),
+    pageLocation: PAGE_LOCATIONS[raw.formId] ?? '',
+  }
 }
 
+export function formSnapshot(formId: string): FormSnapshot | undefined {
+  const already = parsed.get(formId)
+  if (already) return already
+
+  const raw = RAW.find((candidate) => candidate.formId === formId)
+  if (!raw) return undefined
+
+  const snapshot = parse(raw)
+  parsed.set(formId, snapshot)
+  return snapshot
+}
+
+/** Every form, which does parse all of them. Only the console asks for this. */
 export function allFormSnapshots(): readonly FormSnapshot[] {
-  return [...SNAPSHOTS.values()]
+  return RAW.map((raw) => formSnapshot(raw.formId)).filter(
+    (snapshot): snapshot is FormSnapshot => snapshot !== undefined,
+  )
 }
