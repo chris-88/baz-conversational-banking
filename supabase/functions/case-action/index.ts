@@ -26,6 +26,7 @@ import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
 import { resolveFormState } from '../_shared/domain/forms/state.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { knowledgeProduct } from '../_shared/tenants/boi/kb-prompt.ts'
+import { env } from '../_shared/env.ts'
 import {
   createApplications,
   evaluateFor,
@@ -54,11 +55,6 @@ const json = (body: unknown, status: number) =>
 const errorResponse = (code: Parameters<typeof statusFor>[0], message: string) =>
   json(fail(code, message), statusFor(code))
 
-function env(name: string): string {
-  const value = (globalThis as any).Deno?.env?.get(name)
-  if (typeof value !== 'string' || value.length === 0) throw new Error(`Missing ${name}`)
-  return value
-}
 
 serveJson(CORS, async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })

@@ -16,9 +16,10 @@
  * happened twice in one morning — still leaks a case, and rule 1 means a leaked case costs
  * nothing but a row.
  *
- * Live probing is the exception, not the default. CLAUDE.md is explicit: verify with
- * LLM_PROVIDER=fixture, and reach for the live model only to check what the model itself does.
- * Token counts, tool-calling and truncation are that. Layout and copy are not.
+ * Live probing is the exception, not the default. Reach for the live model only to check what
+ * the model itself does: token counts, tool-calling and truncation are that; layout and copy are
+ * not. There is no fixture provider to verify against instead — `LLM_PROVIDER` is declared and
+ * read nowhere — so until one exists the discipline is the person's, not the harness's.
  */
 
 import fs from 'node:fs'

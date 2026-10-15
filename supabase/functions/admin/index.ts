@@ -72,6 +72,7 @@ import { contentionIn, evaluateGoals, matchedClusters } from '../_shared/domain/
 import { goalContextFor } from '../_shared/db/goals.ts'
 import { buildHandoffNote, handoffAsText } from '../_shared/db/handoff.ts'
 import { buildPlan } from '../_shared/domain/needs/plan.ts'
+import { env } from '../_shared/env.ts'
 
 /**
  * The presenter console (§37 to §44).
@@ -92,11 +93,6 @@ const json = (body: unknown, status: number) =>
 const errorResponse = (code: Parameters<typeof statusFor>[0], message: string) =>
   json(fail(code, message), statusFor(code))
 
-function env(name: string): string {
-  const value = (globalThis as any).Deno?.env?.get(name)
-  if (typeof value !== 'string' || value.length === 0) throw new Error(`Missing ${name}`)
-  return value
-}
 
 /**
  * What each one-click move means, in transitions.

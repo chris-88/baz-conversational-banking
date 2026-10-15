@@ -1,3 +1,14 @@
+---
+title: What a conversational assistant costs to run
+status: current
+scope: shared
+last_verified: 2026-10-15
+note: >-
+  Living document. The figures are measured, not estimated. Any change that moves the
+  cost of a turn updates this and its changelog, with a new measurement. Never revise
+  these numbers from memory.
+---
+
 # What a conversational assistant costs to run
 
 **Baz POC — technical lessons learned**
@@ -297,8 +308,13 @@ mostly on **development testing**, not on customer conversations.
 
 Verifying that a badge wrapped correctly, that cards appeared in the right order, that a
 calculation used the right opening balance — each of these was checked by running a full live
-conversation against the production model. A fixture-backed provider existed for exactly this
-and was not being used.
+conversation against the production model. None of them needed one.
+
+An earlier version of this section said a fixture-backed provider existed and was not being used.
+That was wrong, and the correction matters more than the original claim: **no fixture provider has
+ever existed in this repository.** `LLM_PROVIDER` is declared in the environment and read nowhere.
+There was no stand-in to reach for, which is why the discipline had to be the author's and why it
+failed under time pressure.
 
 > **Transferable lesson.** Decide early which tests need a real model and which need a
 > deterministic stand-in, and make the stand-in the default. Model behaviour needs the model.
@@ -370,4 +386,5 @@ This document is updated whenever a change lands that moves the cost of a turn.
 | 2026-10-15 | Conversation stages: a stage section after the cache breakpoint, and a declared reply length per stage | The section is about 250 uncached tokens a turn. The length budget is the reason it is here at all: adding stages doubled the average reply, 205 characters to 442 and roughly 500 output tokens to 950, because three instructions in a stage reliably produce three paragraphs. Output is the most expensive token and the slowest, so a stage that adds work has to say how long its answer is |
 | 2026-10-15 | `loadCustomerName` and `loadEventsSince` folded into the existing parallel batch | Two round trips off the critical path of every turn. Both only ever needed the case row, which was already in hand |
 | 2026-10-14 | Digital forms: three tool definitions added to the cached prefix, and a form section added to the case digest, which sits after the cache breakpoint | Prefix: roughly 600 tokens, read once per conversation rather than per turn, so a fraction of a cent across a conversation. Digest: 208 tokens measured on a live personal-loan case, charged on every round of every turn while a form-backed application is open. On a 12-turn conversation with 1.5 rounds a turn that is about 3,700 uncached input tokens, under half a cent. The section is capped at five questions for this reason: the same case has 27 outstanding, and listing them all would cost five times as much and produce an interrogation |
+| 2026-10-15 | Corrected "The largest cost was not the product": it claimed a fixture-backed provider existed. None ever has — `LLM_PROVIDER` is read nowhere. No figures affected | No cost change. The lesson is unchanged and now accurate: the stand-in that should have been the default was never built |
 | 2026-10-15 | A card is the question: an 18-line rule in the stage section and one sentence added to three tool descriptions (`show_comparison`, `show_product_options`, `propose_plan`) | Not yet measured. The stage section sits after the cache breakpoint, so the rule is charged on every round of every turn; the three sentences are in the cached prefix and read once a conversation. Both are small and both point the same way as finding 7: the rule exists to stop a turn asking two questions alongside a card, and a turn that asks nothing extra is a shorter turn. Re-measure the prefix on the next live reading rather than estimating it here |

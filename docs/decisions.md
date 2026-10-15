@@ -1,3 +1,13 @@
+---
+title: Decisions log
+status: current
+scope: poc
+last_verified: 2026-10-15
+note: >-
+  Append-only. Every choice made where the spec was silent, with its date and the
+  section it serves. Cited by path from CLAUDE.md and from source comments.
+---
+
 # Decisions
 
 Where the spec is silent, the fastest credible option wins (§68). One line each: date, decision,

@@ -1,3 +1,13 @@
+---
+title: Asset pack
+status: current
+scope: poc
+last_verified: 2026-10-15
+sources:
+  - src/assets/
+  - docs/design/asset-inventory.csv
+---
+
 # Baz / BOI POC Asset Pack
 
 Developer-ready SVG and PNG assets derived from the POC visual direction.

@@ -1,3 +1,13 @@
+---
+title: Using the brand artwork
+status: current
+scope: poc
+last_verified: 2026-10-15
+sources:
+  - docs/brand/baz-icon.svg
+  - docs/brand/baz-name.svg
+---
+
 # The brand
 
 `baz-icon.svg` and `baz-name.svg` are the artwork. They are the source of truth: if a component

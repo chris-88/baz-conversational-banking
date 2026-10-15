@@ -9,7 +9,12 @@ Source of truth, in `docs/`:
 - `03-baz-conversational-banking-poc-requirements.md`: the spec. Cite sections as §N.
 - `01-conversational-banking-poc-vision.md`: intent and tone.
 
-Where they conflict, the requirements doc wins.
+Where they conflict, the requirements doc wins. Both are gitignored (the repo is public) and
+both are still retrievable from the public git history - see
+`docs/security/public-repository-review.md`.
+
+`docs/README.md` is the map of everything else. This file is the operational summary; where it
+and a document under `docs/` disagree, check the code - this file has been the stale one before.
 
 The only test that matters is §67: a customer comes for a mortgage, Baz discovers the wider life event, the customer picks products, facts are reused across applications, the customer moves from public web to the app without restarting, the spouse joins separately and advances several applications, the personal loan is deliberately held, the customer leaves, the bank moves, a notification arrives, the customer returns and Baz knows exactly what changed.
 
@@ -48,34 +53,48 @@ Models are env-configured. Defaults: `BAZ_MODEL=claude-sonnet-5-5`, `GATE_MODEL=
 
 ```
 Browser: one SPA on GitHub Pages
-  /#/                public BOI site + Baz entry
-  /#/app/*           authenticated mobile banking shell (PWA)
+  /#/                landing page
+  /#/baz             Baz itself - the same screen in a tab and in the installed PWA
+  /#/how-it-works    the explainer, for somebody evaluating the work
+  /#/privacy         what happens to what you type
   /#/join/:token     partner experience
-  /#/try             audience entry (QR)
   /#/admin/*         presenter console
+  /#/app/*, /#/try   redirect to /#/baz (old links and printed QR codes)
     reads:  supabase-js under RLS (primary customer and admin only)
     writes: Edge Functions only
     live:   Realtime -> TanStack Query invalidation
+
+The replica BOI public site and the authenticated app shell behind a simulated login were
+deleted on 2026-10-06 (`9569094`): scaffolding around the only part worth showing. There is no
+signed-in version of Baz that knows more about you. `src/app/routes.ts` explains the pivot.
 
 Edge Functions (service role; hold ANTHROPIC_API_KEY, VAPID keys, PRESENTER_KEY)
   baz-turn      gate -> Baz model with tools -> SSE stream -> persist
   case-action   UI-committed actions: select products, submit, pause/resume,
                 consent, invite partner, upload complete
-  session       anonymous start, handoff codes, simulated BOI login
+  session       anonymous start, case listing and switching, participant claiming
   partner       join via invite, scoped DTO reads, partner task submission
+  upload        the only way a document enters a case
   admin         simulate events, send notification, reset, persona/domain
                 config, case inspection, metrics
 
 Postgres
-  cases, participants, participant_sessions, customers (synthetic bank-held),
-  facts, applications, application_requests, documents, product_interests,
-  messages, events, consents, tokens, persona_config, domain_config
+  26 tables. Core: cases, participants, participant_sessions, customers
+  (synthetic bank-held), facts, messages, events, consents, tokens.
+  Applications: applications, application_requests, application_confirmations,
+  documents, product_interests.
+  Plans and discovery: plans, plan_milestones, plan_checkins, plan_watches,
+  need_decisions.
+  Forms: form_applications, form_answers.
+  Config and ops: persona_config, domain_config, catalogue_overrides,
+  admin_users, push_subscriptions.
 ```
 
 ### A Baz turn (`baz-turn`)
 
 1. **Load** the case: facts, applications, outstanding requirements (computed, not remembered), advisories, product interests including declined ones, persona, domain config.
 2. **Gate** the latest message, with the previous Baz turn as context so short answers ("about 92k", "yes", "Emma") classify correctly. Out of scope: canned response, `request_blocked` event, stop. The Baz model never sees blocked input.
+2b. **Compute the stage** from the case: `opening`, `direction`, `discovering`, `planning`, `choosing`, `applying`. Ordered, first match wins, never stored and never chosen by the model, so correcting a fact moves the conversation back by itself. The stage decides the guidance, the declared reply length, and which tools the turn is offered (§6, §63).
 3. **Generate** with the system prompt in fixed order: policy (immutable) → domain → product catalogue → persona style → case digest. Stable prefix first for prompt caching. Stream over SSE.
 4. **Persist** messages, validated facts and events. Recompute requirements.
 
@@ -148,7 +167,8 @@ export const creditCard = defineJourney({
 });
 ```
 
-Products: `mortgage`, `joint_account`, `credit_card`, `personal_loan`, `protection` (§7).
+Products: `mortgage`, `joint_account`, `credit_card`, `personal_loan`, `protection`,
+`current_account`, `savings` (§7). Seven journeys, all `status: 'draft'`.
 
 ### Application state machine
 
@@ -223,6 +243,20 @@ Every tool input is Zod-validated before any effect. Invalid input returns a too
   to tick. The model supplies no text.
 - `show_form_upload`: the next document the form wants, with the control's own size and type
   limits.
+- `show_form`: the next form an application needs. The model names the application only; which
+  form is due is decided for it.
+- `propose_plan`: offers to keep a goal that outlives any one application. Nothing is kept until
+  the customer taps.
+- `show_comparison`: two to four catalogue products side by side. Nothing is started by tapping.
+- `show_quote`: what something costs, pays or takes. Any two of amount, months and monthly is
+  enough; the server works out the third. The model never does the arithmetic.
+- `show_mortgage_rates`: the published rate table, indexed by customer type, BER, amount and
+  term. All four required, so the model must ask rather than quote a range. The server decides
+  which rates are shown and computes the repayments.
+
+Fifteen tools. **Which ones a turn is offered is decided by the conversation's stage** - the
+form tools are gated further on a form existing. Withholding a tool is enforcement; telling the
+model not to use one is advice.
 
 Stream events are a Zod discriminated union: `text_delta | card | status | done | error`.
 
@@ -322,14 +356,17 @@ Gate output:
 ## Repo layout
 
 ```
-docs/                       vision, requirements, decisions.md
+docs/                       README.md is the map; start-here, dev, architecture,
+                            design, features, journeys, decisions, learnings,
+                            security, operations, archive
 src/
-  app/                      router, providers
-  baz/                      portable chat UI, card registry, hooks
-  shells/boi/               public site, mobile banking shell, theme, assets
-  partner/  admin/  audience/
+  app/                      router, providers, lazy boundaries, stale-deploy
+  baz/                      portable chat UI, cards/, card registry, hooks
+  surfaces/                 Landing, BazScreen, HowItWorks, Privacy
+  content/                  the explainer's figures, every one sourced
+  partner/  admin/
   components/ui/            shadcn generated
-  lib/                      supabase client, query client, queryKeys, sentry
+  lib/                      supabase client, query client, queryKeys, identity, sentry
 supabase/
   migrations/
   functions/
@@ -351,9 +388,11 @@ evals/guardrails/           cases.jsonl + runner
 npm run dev                  # Vite
 npx supabase start           # local Supabase
 npx supabase functions serve --env-file supabase/.env.local
+npm run check                # the pre-merge gate: typecheck, lint, seed, test, build, bundle scan
 npm run typecheck
 npm run lint
 npm run test                 # Vitest
+npm run typecheck:functions  # deno check; needs Deno. `tsc` cannot see the Edge Functions
 npm run e2e                  # Playwright: route and render checks only (see below)
 npm run eval:guardrails      # live gate against the adversarial set
 ```
@@ -373,7 +412,8 @@ Edge Function secrets, as actually read: `ANTHROPIC_API_KEY`, `BAZ_MODEL`, `GATE
 `VAPID_SUBJECT`.
 
 Set on the project but read nowhere: `TWILIO_*` and `SENTRY_DSN` (never built),
-`AUDIENCE_MAX_TURNS` and `LLM_PROVIDER` (declared, never implemented).
+`AUDIENCE_MAX_TURNS` and `LLM_PROVIDER` (declared, never implemented). Removed from the
+`.env.example` files on 2026-10-15; `docs/dev/environment-variables.md` is the full reference.
 
 GitHub: repo vars for the `VITE_*` values; secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`.
 
@@ -413,6 +453,8 @@ Each milestone ends deployed.
 - Where the spec is silent, choose the fastest credible option (§68) and add one line to `docs/decisions.md`: date, decision, §.
 - Ask before adding any dependency outside the stack.
 - When a journey is matched against its recording, set `status: 'final'` and fill `source`.
+- A change that invalidates a document under `docs/` updates it in the same change, and bumps its
+  `last_verified`. Never describe something unbuilt in the present tense.
 - Any change that moves what a turn costs — prompt size, cache breakpoints or TTLs, model
   choice, tool rounds, reply length — updates `docs/04-cost-of-running-a-conversational-assistant.md`,
   including its changelog. The numbers in it are measured; do not revise them from memory.

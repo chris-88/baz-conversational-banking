@@ -20,6 +20,7 @@ import {
 } from '../_shared/db/case-repository.ts'
 import { evaluateFor, recomputeApplications } from '../_shared/db/applications.ts'
 import type { LoadedCase } from '../_shared/db/loaded-case.ts'
+import { env } from '../_shared/env.ts'
 
 /**
  * The partner's own surface (§6 Stage 9, §33, Invariant 7).
@@ -42,11 +43,6 @@ const json = (body: unknown, status: number) =>
 const errorResponse = (code: Parameters<typeof statusFor>[0], message: string) =>
   json(fail(code, message), statusFor(code))
 
-function env(name: string): string {
-  const value = (globalThis as any).Deno?.env?.get(name)
-  if (typeof value !== 'string' || value.length === 0) throw new Error(`Missing ${name}`)
-  return value
-}
 
 async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))

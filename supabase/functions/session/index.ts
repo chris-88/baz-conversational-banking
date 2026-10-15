@@ -8,6 +8,7 @@ import { fail, ok, statusFor } from '../_shared/contracts/common.ts'
 import { sessionRequestSchema, type SessionResponse } from '../_shared/contracts/session.ts'
 import { canonicalCase } from '../_shared/domain/seed/canonical.ts'
 import { NARRATABLE_EVENTS } from '../_shared/db/digest.ts'
+import { env } from '../_shared/env.ts'
 import {
   landingFor,
   worthCarrying,
@@ -36,11 +37,6 @@ const json = (body: unknown, status: number) =>
 const errorResponse = (code: Parameters<typeof statusFor>[0], message: string) =>
   json(fail(code, message), statusFor(code))
 
-function env(name: string): string {
-  const value = (globalThis as any).Deno?.env?.get(name)
-  if (typeof value !== 'string' || value.length === 0) throw new Error(`Missing ${name}`)
-  return value
-}
 
 /**
  * §36 — did anything happen that is worth leading with?

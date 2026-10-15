@@ -7,6 +7,7 @@ import {
   writeEvent,
 } from '../_shared/db/case-repository.ts'
 import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
+import { env } from '../_shared/env.ts'
 
 /**
  * `upload` — the only way a document enters a case (§6 Stage 7, §10).
@@ -37,13 +38,6 @@ const json = (body: unknown, status: number) =>
 const errorResponse = (code: Parameters<typeof statusFor>[0], message: string) =>
   json(fail(code, message), statusFor(code))
 
-function env(name: string): string {
-  const value = (globalThis as any).Deno?.env?.get(name)
-  if (typeof value !== 'string' || value.length === 0) {
-    throw new Error(`Missing environment variable ${name}`)
-  }
-  return value
-}
 
 serveJson(CORS, async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })

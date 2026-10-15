@@ -80,6 +80,7 @@ import { describeGoals, goalContextFor } from '../_shared/db/goals.ts'
 import { depositGap } from '../_shared/domain/needs/catalogue.ts'
 import type { PlanGoal } from '../_shared/domain/plans/types.ts'
 import { participantFor, previousAssistantTurn } from '../_shared/db/loaded-case.ts'
+import { env } from '../_shared/env.ts'
 
 /**
  * `baz-turn` — gate, then model, then persist (CLAUDE.md > A Baz turn).
@@ -162,13 +163,6 @@ function errorResponse(code: Parameters<typeof statusFor>[0], message: string): 
   })
 }
 
-function env(name: string): string {
-  const value = (globalThis as any).Deno?.env?.get(name)
-  if (typeof value !== 'string' || value.length === 0) {
-    throw new Error(`Missing environment variable ${name}`)
-  }
-  return value
-}
 
 /**
  * Anything thrown before the stream opens would otherwise be answered by the runtime's own

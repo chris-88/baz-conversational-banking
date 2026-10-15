@@ -1,3 +1,12 @@
+---
+title: The return of relationship banking
+status: current
+scope: shared
+last_verified: 2026-10-15
+note: >-
+  A publication: the argument for the product, written for a reader outside the project.
+---
+
 # The Return of Relationship Banking
 
 **How AI can make a personal banker available to every retail customer**

@@ -1,3 +1,13 @@
+---
+title: Mortgage rates provenance
+status: current
+scope: poc
+last_verified: 2026-10-15
+sources:
+  - docs/baz-boi-mortgage-rates.zip
+  - scripts/generate-mortgage-rates.ts
+---
+
 # BOI Mortgage Rates for Baz
 
 Snapshot retrieved from Bank of Ireland's public mortgage-rates page on **2026-10-09**.

@@ -16,6 +16,9 @@ const DENO_ENTRYPOINTS = [
   // `_shared/http` is Deno-only too: it calls `Deno.serve`, so it cannot go in a folder the
   // app compiles, and no tsconfig covers it for the project service to lint against.
   'supabase/functions/_shared/http/**',
+  // Same for `_shared/env.ts`: it reads `Deno.env`, so it sits outside the app's tsconfig
+  // include list and the project service has no project to lint it against.
+  'supabase/functions/_shared/env.ts',
 ]
 
 /** Invariant 11: Baz is portable. §32 */
