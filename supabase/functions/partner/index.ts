@@ -180,31 +180,42 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       .eq('kind', 'partner_invite')
       .maybeSingle()
 
+    /*
+     * Voided, or expired where a token carries an expiry, and unknown all read the same from
+     * outside. The partner invite carries none and is not used up by being opened: the same
+     * link works that evening, next week, and from the second phone, each opening attaching
+     * one more browser to the same partner participant. It stops working when the customer
+     * invites again, which voids it (`case-action`).
+     */
     const token = found.data as any
-    if (!token || token.consumed_at || new Date(token.expires_at) < new Date()) {
-      return errorResponse('not_found', 'That invitation has expired. Ask for a new one.')
+    const expired = token?.expires_at !== null && new Date(token?.expires_at) < new Date()
+    if (!token || token.consumed_at || expired) {
+      return errorResponse('not_found', 'That invitation is no longer valid. Ask for a new one.')
     }
 
-    mustWrite(
-      await admin.from('tokens').update({ consumed_at: new Date().toISOString() }).eq('id', token.id),
-      'the link',
-    )
-    mustWrite(
-      await admin
-        .from('participant_sessions')
-        .upsert(
-          { participant_id: token.participant_id, auth_user_id: authUserId },
-          { onConflict: 'participant_id,auth_user_id' },
-        ),
-      'the session',
-    )
+    const known = await admin
+      .from('participant_sessions')
+      .select('id')
+      .eq('participant_id', token.participant_id)
+      .eq('auth_user_id', authUserId)
+      .maybeSingle()
 
-    await writeEvent(admin, {
-      caseId: token.case_id,
-      type: 'partner_joined',
-      actor: 'partner',
-      payload: {},
-    })
+    if (known.data === null) {
+      mustWrite(
+        await admin
+          .from('participant_sessions')
+          .insert({ participant_id: token.participant_id, auth_user_id: authUserId }),
+        'the session',
+      )
+
+      // Once per browser, not once per tap: reopening a link is not joining again.
+      await writeEvent(admin, {
+        caseId: token.case_id,
+        type: 'partner_joined',
+        actor: 'partner',
+        payload: {},
+      })
+    }
   }
 
   // ---- Everything else needs an existing partner session ----------------

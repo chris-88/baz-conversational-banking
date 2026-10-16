@@ -52,12 +52,12 @@ export function PartnerJoin(): ReactNode {
         if (!cancelled) setView(result)
       })
       .catch(() => {
-        // Whatever went wrong underneath — malformed, expired, already used — it is the same
-        // thing from here: this link will not get them in.
+        // Whatever went wrong underneath — malformed, voided by a newer invitation, or a
+        // case that is gone — it is the same thing from here: this link will not get them in.
         if (!cancelled) {
           setError(
-            'That invitation link isn’t valid. It may have expired or already been used. Ask ' +
-              'for a new one.',
+            'That invitation link isn’t valid. If a newer one was sent, use that; otherwise ' +
+              'ask for a new one.',
           )
         }
       })
@@ -117,7 +117,7 @@ export function PartnerJoin(): ReactNode {
         {error !== null && (
           /*
            * A dead end used to be the whole page: the message, then half a screen of nothing.
-           * Somebody who followed an expired link is not at fault and has somewhere to go —
+           * Somebody who followed a dead link is not at fault and has somewhere to go —
            * the person who sent it, or Baz itself.
            */
           <section className="space-y-4">
@@ -126,8 +126,8 @@ export function PartnerJoin(): ReactNode {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Invitations last a day and can only be used once. Whoever invited you can send a fresh
-              one from their own conversation.
+              An invitation keeps working until a newer one is sent. Whoever invited you can send
+              a fresh one from their own conversation.
             </p>
             <Button asChild variant="outline" className="w-full">
               <Link to={routes.baz}>Talk to Baz yourself</Link>

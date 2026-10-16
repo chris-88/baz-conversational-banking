@@ -110,7 +110,7 @@ Never weaken one of these to make a demo step work. Fix the data or the flow ins
 5. **Persona is style only.** Persona composes into a labelled style block after policy. It cannot change scope, tools, rules or protections (§18). Sensitive turns force humour, sarcasm, playfulness and poetic to zero.
 6. **No sensitive inference.** Protection health data is collected only through an explicit structured form with consent. `record_facts` rejects any fact marked `extractable: false` (§7.5, §11).
 7. **Partner isolation.** The partner never reads tables directly. `partner` returns scoped DTOs: their own tasks, their own facts, the names and states of applications they are party to. Never the primary's conversation or facts (§33).
-8. **Nothing sensitive in URLs.** Links carry opaque single-use tokens: 128-bit random, stored hashed, short TTL, consumed on redemption (§29, §58).
+8. **Nothing sensitive in URLs.** Links carry opaque tokens: 128-bit random, stored hashed (§29, §58). Handoff codes and notification links are single-use with a short TTL, consumed on redemption. The partner invite is the exception: it neither expires nor is used up, because the second applicant opens it when they get to it and on whichever phone they have; inviting again voids every earlier link for the case.
 9. **Everything significant writes an event.** Every item in §52 is an `events` row with actor (`customer | partner | model | admin | system`). Metrics are derived from events.
 10. **Synthetic data only.** No real credentials, no real BOI auth, no real customer data. The simulated login accepts anything and says so.
 11. **Baz is portable.** `src/baz/**` and `_shared/domain/**` never import from `src/shells/boi/**` or `_shared/tenants/boi/**`. Tenant config is injected. Enforced with ESLint `no-restricted-imports` (§32).
@@ -303,7 +303,7 @@ Gate output:
 
 ## Partner (§6 Stage 9, §33)
 
-- Invite link carries a single-use token. Redemption creates a partner participant with its own anonymous session.
+- Invite link carries an opaque token that does not expire and is not used up. Each opening attaches that browser's anonymous session to the same partner participant, so the partner can move between phones. Inviting again voids the earlier links.
 - v1 partner experience: task list with RHF forms and uploads. Baz in partner mode is a stretch goal.
 - One partner answer (e.g. income, employment) writes one fact that satisfies requirements in every application the partner is party to. The demo must show this.
 - Partner completion writes events and updates the primary's case via Realtime.

@@ -28,7 +28,7 @@ real bank.
 | Customer plans | Plans, milestones, check-ins and watches |
 | Needs and goals | Catalogue-driven discovery with recorded decisions |
 | Digital forms | Two published form definitions (1833, 1940) parsed, branched, calculated |
-| Partner | Invite by single-use token, scoped DTOs, own session |
+| Partner | Invite by a token that does not expire, scoped DTOs, own session per browser |
 | Notifications | Web Push, hand-written, confirmed delivering to a real phone |
 | Admin console | 8 sections: cases, case inspector, guardrails, persona, engine, analytics, forms, profile |
 | Explainer | `/how-it-works`, an interactive case study |

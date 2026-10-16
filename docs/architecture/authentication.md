@@ -80,12 +80,18 @@ device holds it. Leave it unset and nobody can open it.
 
 ## Tokens
 
-Any link that grants access carries an opaque token: 128-bit random, stored only as a hash, short
-TTL, consumed on redemption. Expired, consumed and unknown all return the same message, so a
-caller learns nothing about which part was wrong.
+Any link that grants access carries an opaque token: 128-bit random, stored only as a hash.
+Handoff codes and notification links have a short TTL and are consumed on redemption. Expired,
+voided and unknown all return the same message, so a caller learns nothing about which part was
+wrong.
 
-Nothing sensitive is ever in a URL. The partner invite and the notification link both work this
-way.
+The partner invite is the exception. It neither expires nor is used up: the second applicant
+opens it when they get to it, and from whichever phone they have, and each opening attaches that
+browser's anonymous user to the same partner participant. What keeps it honest is that only the
+latest one works: inviting again voids every earlier link for the case, which is also how the
+customer revokes one.
+
+Nothing sensitive is ever in a URL.
 
 ## Synthetic only
 

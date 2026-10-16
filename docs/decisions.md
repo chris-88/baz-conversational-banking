@@ -1557,3 +1557,16 @@ whole catalogue the next turn reads. "Edited" is decided by comparing canonical 
 jsonb returns keys in its own order and the file's order is not an edit. Restoring something the
 file never had removes it. The rate table's date moves to the latest edit, so a figure is never
 cited "as at" a day before it was changed.
+
+## 2026-10-16 — the partner invite does not expire and is not used up (§6 Stage 9, §33)
+
+A second applicant opens the link when they get to it: that evening, at the weekend, from a
+different phone than the one they first read it on. A link that died after a day, or after one
+tap, was failing them for being normal, and on iOS the second tap was often the same person
+opening the installed app. So `tokens.expires_at` is nullable and null means never, the partner
+invite is issued with none, and redeeming it does not consume it: each opening attaches that
+browser's anonymous user to the same partner participant, and `partner_joined` is written once
+per browser rather than once per tap. What keeps it honest is that only the latest link works:
+inviting again voids every earlier invite for the case, which is also how a customer revokes one.
+Handoff codes and notification links keep their short TTLs and single use; they are used by the
+person who just made them, in the next minute. Invariant 8 now says so.

@@ -33,7 +33,7 @@ tables; the `partner` function returns scoped DTOs.
 | `messages` | The conversation, with usage recorded per message |
 | `events` | Everything significant, with an actor. Metrics derive from here |
 | `consents` | Granted consents, with the wording shown at the time |
-| `tokens` | Opaque single-use link credentials, stored hashed |
+| `tokens` | Opaque link credentials, stored hashed. `expires_at` null means the link does not expire, which only the partner invite uses |
 
 ### Applications
 

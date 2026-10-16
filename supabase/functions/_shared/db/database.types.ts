@@ -1181,7 +1181,7 @@ export type Database = {
           case_id: string
           consumed_at: string | null
           created_at: string
-          expires_at: string
+          expires_at: string | null
           id: string
           kind: string
           participant_id: string | null
@@ -1191,7 +1191,7 @@ export type Database = {
           case_id: string
           consumed_at?: string | null
           created_at?: string
-          expires_at: string
+          expires_at: string | null
           id?: string
           kind: string
           participant_id?: string | null
@@ -1201,7 +1201,7 @@ export type Database = {
           case_id?: string
           consumed_at?: string | null
           created_at?: string
-          expires_at?: string
+          expires_at?: string | null
           id?: string
           kind?: string
           participant_id?: string | null

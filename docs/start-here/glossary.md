@@ -80,7 +80,7 @@ do say which.
 | Term | Meaning |
 |---|---|
 | **Event** | A row in `events` with an actor: `customer`, `partner`, `model`, `admin` or `system`. Everything significant writes one, and metrics are derived from them |
-| **Token** | A 128-bit random single-use link credential, stored hashed, short TTL, consumed on redemption. Nothing sensitive ever goes in a URL. Table: `tokens` |
+| **Token** | A 128-bit random link credential, stored hashed. Handoff and notification tokens are single-use with a short TTL, consumed on redemption; the partner invite neither expires nor is used up. Nothing sensitive ever goes in a URL. Table: `tokens` |
 | **Presenter key** | The secret that unlocks the all-conversations switcher on one device. Unset means nobody can open it |
 | **Canonical case** | The seeded presenter case that a reset restores, from `domain/seed/canonical.ts` |
 | **Kill switch** | The global flag that makes the gate return "demo paused" |

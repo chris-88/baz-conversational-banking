@@ -477,8 +477,24 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         )
       }
 
-      // Opaque, hashed, single-use, and good for a day — longer than a handoff because the
-      // customer has to pass it to someone else (§58, Invariant 8).
+      /*
+       * Opaque and hashed, like every link (§58, Invariant 8), but this one neither expires
+       * nor is used up: the second applicant opens it when they get to it, and on whichever
+       * phone they have in hand, and a link that died after a day or after one tap was failing
+       * them for being normal. What keeps it honest is that only the latest one works. Inviting
+       * again voids every earlier link for this case, so "ask for a new one" is also how the
+       * customer revokes one.
+       */
+      mustWrite(
+        await admin
+          .from('tokens')
+          .update({ consumed_at: new Date().toISOString() })
+          .eq('case_id', caseId)
+          .eq('kind', 'partner_invite')
+          .is('consumed_at', null),
+        'the earlier links',
+      )
+
       const token = crypto.randomUUID().replaceAll('-', '')
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
       const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -489,7 +505,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
           kind: 'partner_invite',
           token_hash: hash,
           participant_id: partnerId,
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          expires_at: null,
         }),
         'the link',
       )
