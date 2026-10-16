@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
-import { m } from 'motion/react'
-import { ShareIcon, SmartphoneIcon, SquarePlusIcon } from 'lucide-react'
+import { SmartphoneIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { IconTile } from '@/components/IconTile'
 import { platform, useInstallPrompt } from '@/lib/installed'
-import { DURATION, EASE, useStill } from '@/lib/motion'
+import { InstallSteps } from '@/baz/InstallSteps'
 
 /**
  * Keep Baz on the home screen.
@@ -20,7 +19,6 @@ import { DURATION, EASE, useStill } from '@/lib/motion'
  */
 export function InstallCard({ onDismiss }: { readonly onDismiss: () => void }): ReactNode {
   const prompt = useInstallPrompt()
-  const still = useStill()
   const where = platform()
 
   const install = () => {
@@ -44,37 +42,9 @@ export function InstallCard({ onDismiss }: { readonly onDismiss: () => void }): 
       </div>
 
       {where === 'ios' ? (
-        <ol className="divide-y border-t">
-          <li className="flex items-center gap-3 px-4 py-3">
-            {/* Breathes so the eye finds the glyph it is about to look for on the toolbar. */}
-            <m.span
-              aria-hidden
-              className="bg-primary/10 text-primary grid size-9 shrink-0 place-items-center rounded-lg"
-              {...(still
-                ? {}
-                : {
-                    animate: { scale: [1, 1.08, 1], opacity: [1, 0.75, 1] },
-                    transition: { duration: DURATION.slow * 4, ease: EASE, repeat: Infinity },
-                  })}
-            >
-              <ShareIcon className="size-4" />
-            </m.span>
-            <p className="text-sm leading-snug">
-              Tap <span className="font-semibold">Share</span> at the bottom of Safari.
-            </p>
-          </li>
-          <li className="flex items-center gap-3 px-4 py-3">
-            <span
-              aria-hidden
-              className="bg-primary/10 text-primary grid size-9 shrink-0 place-items-center rounded-lg"
-            >
-              <SquarePlusIcon className="size-4" />
-            </span>
-            <p className="text-sm leading-snug">
-              Then <span className="font-semibold">Add to Home Screen</span>.
-            </p>
-          </li>
-        </ol>
+        <div className="border-t">
+          <InstallSteps />
+        </div>
       ) : (
         <div className="border-t p-3">
           <Button className="w-full" disabled={prompt === null} onClick={install}>
@@ -85,7 +55,7 @@ export function InstallCard({ onDismiss }: { readonly onDismiss: () => void }): 
 
       <div className="bg-muted/40 flex items-center justify-between gap-3 border-t px-4 py-2.5">
         <p className="text-muted-foreground text-xs leading-relaxed">
-          Open it from there and pick up where you left off.
+          Open it from there, sign in with the same address, and your conversation is waiting.
         </p>
         <Button
           variant="ghost"

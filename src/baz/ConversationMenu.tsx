@@ -16,6 +16,8 @@ import { listCases, startNewCase, switchCase } from '@/lib/session'
 import { pushPermission, subscribeToPush, type SubscribeResult } from '@/lib/push'
 import { ANONYMOUS, currentIdentity, lastKnownAddress, signOutIdentity } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
+import { InstallSteps } from '@/baz/InstallSteps'
+import { isInstalled, platform } from '@/lib/installed'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -234,18 +236,25 @@ export function ConversationMenu({
                 </Button>
 
                 {/* What actually happened. Silence here is how the last one was missed. */}
-                {enablePush.data !== undefined && (
-                  <p
-                    className={cn(
-                      'mt-2 text-xs leading-relaxed',
-                      enablePush.data.state === 'subscribed'
-                        ? 'text-success'
-                        : 'text-muted-foreground',
-                    )}
-                  >
-                    {subscribeMessage(enablePush.data)}
-                  </p>
-                )}
+                {enablePush.data !== undefined &&
+                  (enablePush.data.state === 'unsupported' &&
+                  platform() === 'ios' &&
+                  !isInstalled() ? (
+                    <div className="-mx-4 mt-2 border-t">
+                      <InstallSteps lead="Notifications need Baz on your home screen first. Two taps:" />
+                    </div>
+                  ) : (
+                    <p
+                      className={cn(
+                        'mt-2 text-xs leading-relaxed',
+                        enablePush.data.state === 'subscribed'
+                          ? 'text-success'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {subscribeMessage(enablePush.data)}
+                    </p>
+                  ))}
 
                 {permission === 'denied' && (
                   <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
@@ -264,9 +273,7 @@ export function ConversationMenu({
               Conversations
             </h3>
 
-            {cases.isPending && (
-              <p className="text-muted-foreground text-xs">Looking them up…</p>
-            )}
+            {cases.isPending && <p className="text-muted-foreground text-xs">Looking them up…</p>}
 
             <ul className="space-y-1">
               {(cases.data?.cases ?? []).map((item) => (
@@ -325,18 +332,17 @@ export function ConversationMenu({
           {identity.data.anonymous ? (
             <>
               {/*
-                * The way back in, for somebody who has been here before.
-                *
-                * The same two steps as the card Baz offers in the conversation, and the only
-                * place to reach them without being offered: a person returning on a new
-                * phone, or after clearing their browser, has no card on screen and no
-                * conversation to be offered one in. An address they have used before brings
-                * the conversation with it.
-                */}
+               * The way back in, for somebody who has been here before.
+               *
+               * The same two steps as the card Baz offers in the conversation, and the only
+               * place to reach them without being offered: a person returning on a new
+               * phone, or after clearing their browser, has no card on screen and no
+               * conversation to be offered one in. An address they have used before brings
+               * the conversation with it.
+               */}
               <p className="text-muted-foreground mb-2.5 text-xs leading-relaxed">
-                Sign in and this conversation follows you — the same one on your phone, your
-                laptop and anywhere else you open Baz. Been here before? Use the address you
-                used then.
+                Sign in and this conversation follows you — the same one on your phone, your laptop
+                and anywhere else you open Baz. Been here before? Use the address you used then.
               </p>
               <SignInForm {...(known === null ? {} : { knownAddress: known })} />
             </>
@@ -367,9 +373,7 @@ export function ConversationMenu({
             <Plus className="size-4" />
             Start a new conversation
           </Button>
-          {begin.isError && (
-            <p className="text-destructive mt-2 text-xs">{begin.error.message}</p>
-          )}
+          {begin.isError && <p className="text-destructive mt-2 text-xs">{begin.error.message}</p>}
         </div>
       </SheetContent>
     </Sheet>

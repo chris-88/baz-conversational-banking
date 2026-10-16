@@ -1519,3 +1519,14 @@ phrase it without the server digest in its bundle, and the tap is the ordinary `
 Older status cards in a transcript settle into "where things stood at the time", so two cannot
 disagree without saying which is current. `NotificationCard.tsx`, a filming fallback nothing
 rendered, is deleted: push arrives on a real phone.
+
+## 2026-10-16 — there is no silent hand-off into the installed app, so the way in leads
+
+A home-screen web app on iOS has its own storage, separate from Safari: no session, no
+remembered address, nothing carried across. The installed app therefore opened cold, with the
+way back in hidden in a menu, moments after somebody had been told to open it from the home
+screen. The one thing known for certain is that they came from a conversation, so the installed
+app's first open leads with the sign-in form and says why; the install card says beforehand
+that the same address will be asked for. And asking for notifications in Safari on an iPhone
+now shows the two taps that install the app, in place, rather than a sentence saying they are
+needed: the person has just said what they want, and the taps are the only thing in the way.

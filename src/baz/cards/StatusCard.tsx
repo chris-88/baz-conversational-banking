@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { BellIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { pushPermission, type SubscribeResult } from '@/lib/push'
+import { isInstalled, platform } from '@/lib/installed'
+import { InstallSteps } from '@/baz/InstallSteps'
 import { CheckIcon, ClockIcon, UsersIcon } from 'lucide-react'
 import type { Card as CardPayload } from '@contracts/cards.ts'
 import { Card } from '@/components/ui/card'
@@ -87,7 +89,15 @@ function NotifyRow({ onEnable }: { onEnable: () => Promise<SubscribeResult> }): 
           Notifications are blocked for this site. Your browser settings can turn them back on.
         </p>
       ) : null}
-      {state.state === 'unsupported' || state.state === 'failed' ? (
+      {state.state === 'unsupported' && platform() === 'ios' && !isInstalled() ? (
+        /*
+         * The person has just asked for notifications, and on an iPhone in Safari the only
+         * thing between them and it is two taps. Show the taps, not a sentence about them.
+         */
+        <div className="-mx-3 -mb-3 border-t">
+          <InstallSteps lead="Notifications need Baz on your home screen first. Two taps:" />
+        </div>
+      ) : state.state === 'unsupported' || state.state === 'failed' ? (
         <p className="text-muted-foreground text-xs">{state.reason}</p>
       ) : null}
     </div>

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ANONYMOUS, currentIdentity, lastKnownAddress, maskedAddress } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
 import { Reveal } from '@/components/Primitives'
+import { isInstalled } from '@/lib/installed'
 
 /**
  * The way back, offered to the one person it applies to.
@@ -32,26 +33,43 @@ export function ReturningPrompt(): ReactNode {
   })
 
   const address = lastKnownAddress()
+  const installed = isInstalled()
 
-  if (address === null || !identity.data.anonymous) return null
+  if (!identity.data.anonymous) return null
+  if (address === null && !installed) return null
 
-  if (open) {
+  /*
+   * The installed app's first open.
+   *
+   * A home-screen web app on iOS has its own storage, separate from Safari: no session, no
+   * remembered address, nothing carried across. That is the platform's rule, and it meant the
+   * installed app opened cold, with the way back in hidden in a menu, moments after somebody
+   * had signed in and been told to open it from the home screen. The one thing known for
+   * certain is that they came from a conversation, because that is why anybody installs. So
+   * the form is open already, and the address field is the first thing on screen.
+   */
+  if (open || (installed && address === null)) {
     return (
       <Reveal mode="mount" className="mt-8 w-full max-w-xs text-left">
-        <SignInForm knownAddress={address} />
+        {address === null && (
+          <p className="text-muted-foreground mb-3 text-center text-xs leading-relaxed">
+            Baz is on your home screen. Sign in with the address you used in Safari and your
+            conversation is here.
+          </p>
+        )}
+        <SignInForm {...(address === null ? {} : { knownAddress: address })} />
       </Reveal>
     )
   }
+
+  // Only reachable with an address: an installed app without one opened the form above.
+  if (address === null) return null
 
   return (
     <div className="text-muted-foreground mt-8 max-w-xs text-xs leading-relaxed">
       <p>
         Been here before?{' '}
-        <button
-          type="button"
-          className="text-foreground underline"
-          onClick={() => setOpen(true)}
-        >
+        <button type="button" className="text-foreground underline" onClick={() => setOpen(true)}>
           Pick up where you left off
         </button>{' '}
         and Baz will send a code to {maskedAddress(address)}.
