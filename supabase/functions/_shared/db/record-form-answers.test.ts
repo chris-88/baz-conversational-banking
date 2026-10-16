@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { recordFormAnswers } from './record-form-answers.ts'
 import type { Db } from './case-repository.ts'
+import { resolveFormState } from '../domain/forms/state.ts'
+import { formSnapshot } from '../tenants/boi/forms/snapshots.ts'
 
 /**
  * Stands in for the database, so the rules can be tested without one.
@@ -142,5 +144,91 @@ describe('what a conversation can never record', () => {
 
     expect(loan.outcome.accepted).toEqual([])
     expect(loan.outcome.rejected[0]?.reason).toMatch(/works that one out/)
+  })
+})
+
+/**
+ * The model copies the id from the digest; when it does not, the label is the next best key.
+ *
+ * Every answer to the bank's form was lost for two days because the digest showed labels and
+ * this only knew ids. The id is still the key, and an id copied with its brackets still counts.
+ * A label is accepted when exactly one live question carries it, and a refusal now says which
+ * ids would have worked, so the model can put it right on the next round instead of guessing.
+ */
+describe('an answer named by label rather than id', () => {
+  it('accepts an id copied with its brackets from the digest', async () => {
+    const { outcome, written } = await run('savings', [{ fieldId: '[id 1174]', value: 'Dave' }])
+
+    expect(outcome.accepted).toEqual(['1174'])
+    expect(written[0]).toMatchObject({ field_id: '1174', value: 'Dave' })
+  })
+
+  it('resolves a label that exactly one live question carries', async () => {
+    const { outcome, written } = await run('savings', [{ fieldId: 'Title', value: 'Ms' }])
+
+    expect(outcome.accepted).toEqual(['380'])
+    expect(written[0]).toMatchObject({ field_id: '380', value: 'Ms', source: 'customer' })
+  })
+
+  it('matches the label trimmed, whatever the case, with or without the digest’s full stop', async () => {
+    const { outcome, written } = await run('savings', [
+      { fieldId: '  country of RESIDENCE. ', value: 'Ireland' },
+    ])
+
+    expect(outcome.accepted).toEqual(['478'])
+    expect(written[0]).toMatchObject({ field_id: '478', value: 'Ireland' })
+  })
+
+  it('still checks a choice reached by label against what the form offers', async () => {
+    const { outcome, written } = await run('savings', [{ fieldId: 'Title', value: 'Captain' }])
+
+    expect(outcome.accepted).toEqual([])
+    expect(outcome.rejected[0]?.reason).toMatch(/must be one of: Mr, Mrs, Ms/)
+    expect(written).toHaveLength(0)
+  })
+
+  it('refuses a label that several live questions share, and names them', async () => {
+    // SuperSaver asks the US citizen question once per applicant, and both are live.
+    const { outcome, written } = await run('savings', [
+      { fieldId: 'Are you a US citizen?', value: 'No' },
+    ])
+
+    expect(outcome.accepted).toEqual([])
+    expect(outcome.rejected[0]?.reason).toBe(
+      'ambiguous; use one of: 36: Are you a US citizen?, 426: Are you a US citizen?',
+    )
+    expect(written).toHaveLength(0)
+  })
+
+  it('lists the open questions when nothing matches, so the next round can be right', async () => {
+    const { outcome, written } = await run('savings', [{ fieldId: 'Shoe size', value: '42' }])
+
+    expect(outcome.accepted).toEqual([])
+    const reason = outcome.rejected[0]?.reason ?? ''
+    expect(reason).toMatch(/^no such field on this form; the questions still open are: /)
+    expect(reason).toContain('1147: Do you use 365 online?')
+    expect(reason).toContain('380: Title')
+    // Up to eight, counted by the id-colon pairs rather than the commas a label may contain.
+    expect(reason.match(/\b\d{1,4}: /g)).toHaveLength(8)
+    expect(written).toHaveLength(0)
+  })
+
+  it('refuses a declaration reached by its label, exactly as by its id', async () => {
+    // The loan's declarations carry their wording as the label; SuperSaver's first few do not.
+    const snapshot = formSnapshot('1940')
+    const consent = snapshot
+      ? resolveFormState(snapshot.definition, {}).active.find(
+          (field) => field.type === 'checkbox' && field.label.trim() !== '',
+        )
+      : undefined
+    expect(consent).toBeDefined()
+
+    const { outcome, written } = await run('personal_loan', [
+      { fieldId: consent?.label ?? '', value: 'Yes' },
+    ])
+
+    expect(outcome.accepted).toEqual([])
+    expect(outcome.rejected[0]?.reason).toMatch(/needs an explicit tap/)
+    expect(written).toHaveLength(0)
   })
 })

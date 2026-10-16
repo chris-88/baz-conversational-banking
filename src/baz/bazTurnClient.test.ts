@@ -124,3 +124,42 @@ describe('a turn that is thinking', () => {
     expect(seen).toEqual(reply)
   })
 })
+
+/**
+ * A round the server took back.
+ *
+ * The frame carries a count of characters, and the client's only job is to deliver it intact
+ * and in order: what to do with it is the conversation's decision, not the transport's.
+ */
+describe('a round that was withdrawn', () => {
+  it('delivers the retract with its length, between the words and the rewrite', async () => {
+    const reply: StreamEvent[] = [
+      { type: 'text_delta', text: 'Payslip first, then.' },
+      { type: 'retract', length: 'Payslip first, then.'.length },
+      { type: 'text_delta', text: 'There is no document to send yet.' },
+      { type: 'done', messageId: '11111111-2222-4333-8444-555555555555', gateCategory: 'banking' },
+    ]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(framed(reply)))
+
+    const seen: StreamEvent[] = []
+    await streamBazTurn({ caseId: 'c1', message: 'hello' }, (event) => seen.push(event))
+
+    expect(seen).toEqual(reply)
+  })
+
+  it('drops a retract that names no characters rather than passing it on', async () => {
+    const done: StreamEvent = {
+      type: 'done',
+      messageId: '11111111-2222-4333-8444-555555555555',
+      gateCategory: 'banking',
+    }
+    // Shaped like a retract, but the contract says a withdrawal is never empty.
+    const empty = { type: 'retract', length: 0 } as StreamEvent
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(framed([empty, done])))
+
+    const seen: StreamEvent[] = []
+    await streamBazTurn({ caseId: 'c1', message: 'hello' }, (event) => seen.push(event))
+
+    expect(seen).toEqual([done])
+  })
+})

@@ -49,6 +49,12 @@ trigger check-in, reach savings target, set savings balance.
 
 No random timers. A presenter presses a button.
 
+**Information requested** does more than move the state: it opens a real `application_requests`
+row carrying the wording the presenter typed (the default is "one more payslip"), so the customer
+has something to answer. Baz offers the upload against that row, and the upload moves the
+application back to assessment. **Information supplied** closes any request still open. See
+[document upload](document-upload.md).
+
 ### Notification
 
 Sending a notification is a **separate, explicit action** from simulating the event. The console

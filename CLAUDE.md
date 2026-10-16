@@ -220,6 +220,12 @@ names out of 120 and 154, and a name is not unique within a form either, so dest
 resolve against the live branch. Never prefill a `hidden` field. Where several fields share a
 name, required ones win.
 
+The digest lists each outstanding question with its field id in brackets, and
+`record_form_answers` matches by that id first and by label second (one match accepted, several
+refused as ambiguous with their ids, none refused with the open questions). The feature recorded
+nothing for two days because the digest showed labels and the tool wanted ids; the detector is a
+count of `form_answers` rows.
+
 Answers that are not facts (a form-specific question, a declaration, a document reference) live
 in `form_answers`, with the wording for consents. `form_applications.answers` is the merge,
 facts last.
@@ -236,8 +242,8 @@ Every tool input is Zod-validated before any effect. Invalid input returns a too
 - `show_product_options`: product ids plus one-line reasons tied to what the customer said. Selection happens in the card.
 - `show_review`: application id. The server builds the review content from DB data, not model text.
 - `show_pause_prompt`: application id. Customer confirms in the card.
-- `request_upload`: an existing open `application_request` only.
-- `show_partner_invite`: application ids the partner is needed for.
+- `request_upload`: an existing open `application_request` only, including one the console opened with "information requested" (`bank:<slug>`), which the requirement engine treats as an outstanding document until the upload fulfils it.
+- `show_partner_invite`: application ids the partner is needed for. Refused when none of them has an outstanding partner-subject requirement.
 - `show_status`: renders the DB status card.
 - `record_form_answers`: an answer to the bank form's own question. Server checks the field is
   live, is a question, and that a choice value is one the form offers. Refuses declarations and
@@ -266,7 +272,7 @@ Sixteen tools. **Which ones a turn is offered is decided by the conversation's s
 form tools are gated further on a form existing. Withholding a tool is enforcement; telling the
 model not to use one is advice.
 
-Stream events are a Zod discriminated union: `text_delta | card | status | done | error`.
+Stream events are a Zod discriminated union: `text_delta | retract | card | status | done | error`. A round that spoke and then had a tool refused is withdrawn: `retract` takes its characters back off the screen and out of the record, and the refused result tells the model to write again. A handler marks a refusal with `refused: true`; partial rejections from the two recording tools are not refusals.
 
 ## Guardrails (§19 to §27, §39, §47)
 
@@ -307,6 +313,7 @@ Gate output:
 - v1 partner experience: task list with RHF forms and uploads. Baz in partner mode is a stretch goal.
 - One partner answer (e.g. income, employment) writes one fact that satisfies requirements in every application the partner is party to. The demo must show this.
 - Partner completion writes events and updates the primary's case via Realtime.
+- What the primary says their partner earns is `income.partnerAnnualStated`, a household-level hearsay fact that never satisfies the partner's own requirement.
 
 ## Events, notifications, return (§6 Stages 11 to 13, §35, §36, §42)
 
@@ -321,7 +328,7 @@ Gate output:
 ## Admin console (§37 to §44)
 
 - Case inspector: context with provenance, partner, applications, outstanding requirements, conversation, events.
-- Event simulator: buttons for §41 events, each a state-machine transition.
+- Event simulator: buttons for §41 events, each a state-machine transition. "Information requested" also opens an `application_requests` row with the wording, so the customer has something to upload to.
 - Notify, persona sliders and presets, domain category view, audience metrics.
 - Reset restores the canonical presenter case from `_shared/domain/seed/canonical.ts`. Build a minimal reset in M1; you will need it constantly.
 - Purge audience cases. Global kill switch that makes the gate return a "demo paused" response.

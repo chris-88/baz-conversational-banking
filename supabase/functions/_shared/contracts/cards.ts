@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { PRODUCTS } from '../domain/journey.ts'
+import { DOCUMENT_TYPES, PRODUCTS } from '../domain/journey.ts'
 import { APPLICATION_STATES } from '../domain/state-machine.ts'
 
 /**
@@ -305,13 +305,8 @@ export const uploadRequestCardSchema = z.object({
   applicationId,
   /** The journey's own words for this document, never the model's. */
   label: z.string(),
-  documentType: z.enum([
-    'payslip',
-    'bank_statement',
-    'photo_id',
-    'proof_of_address',
-    'salary_certificate',
-  ]),
+  /** The domain's list, so a type the engine can produce is one the card can carry. */
+  documentType: z.enum(DOCUMENT_TYPES),
   /** Which application it is for, so a card in a long transcript still makes sense. */
   applicationName: z.string(),
 })

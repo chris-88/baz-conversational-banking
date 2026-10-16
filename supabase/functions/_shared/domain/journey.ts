@@ -34,6 +34,11 @@ export const DOCUMENT_TYPES = [
   'photo_id',
   'proof_of_address',
   'salary_certificate',
+  /**
+   * Whatever the bank asked for after the application went in (`bank-requests.ts`). Never in
+   * a journey file, and never named by the model: the request row says what it is.
+   */
+  'bank_request',
 ] as const
 export type DocumentType = (typeof DOCUMENT_TYPES)[number]
 

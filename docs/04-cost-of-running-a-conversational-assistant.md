@@ -277,6 +277,39 @@ used to take three attempts now take one.
 
 ---
 
+## Finding 9: a tool list that changes is a cache key that changes
+
+Which tools a turn is offered is decided by the conversation's stage: `opening`, `direction`
+and `discovering` get two, `planning` four, `arranging` three, `choosing` eight, `applying`
+thirteen. Withholding a tool is enforcement, which is why it is done this way (CLAUDE.md,
+"Baz model tools"). The tools are also the first thing in every request, ahead of the system
+prompt, and the cache is keyed on everything in front of the breakpoint. So each stage has its
+own cached prefix, and a conversation that moves through five stages can write the prefix five
+times.
+
+Measured on one real conversation (case aed80555, 16 October, 36 Baz turns, €1.69 at the
+prices above, which is €0.047 a turn and in line with the headline). The three turns where the
+stage moved to `planning`, `arranging` and `choosing` each report cache read equal to cache
+write: 28,259, 27,910 and 30,295 tokens, a miss on the first round and a hit on the second.
+That is 86,464 cache-write tokens, **€0.30 of the €1.69**, for three stage changes. The
+`discovering` and `applying` prefixes were hits from the first round only because other
+conversations had used those stages within the hour: the prefix is shared across cases
+(Finding 2), and so is the warming.
+
+We are keeping the stage-dependent lists. The alternative, one constant list with the server
+refusing out-of-stage calls, is also enforcement, but it turns every attempt into a refused
+round (Finding 8) and gives the model thirteen tools to consider on a turn that can use two. At
+roughly €0.10 per cold transition, the cost is bounded, it falls with every conversation that
+runs ahead of this one, and the pre-warm step before a presentation now covers each stage
+rather than the opening alone.
+
+> **Transferable lesson.** Count the prefixes, not the prefix. Anything that varies between
+> requests ahead of the breakpoint, tool lists included, makes a separate cache entry, and the
+> cost of a "stable" prefix is the number of distinct ones you actually send multiplied by how
+> often each goes cold.
+
+---
+
 ## What we deliberately did not do
 
 Just as useful as the list of changes.
@@ -367,7 +400,7 @@ nobody had a reason to check it. The figures were wrong by more than half.
 | Move volatile sections behind the breakpoint | Avoids a full re-write on sensitive turns | ~20 lines |
 | Shorter replies (style configuration) | ~€0.004 per turn | configuration |
 | Cancel abandoned requests | Small, but pure waste | ~10 lines |
-| Pre-warm the cache before a demo | Turns every take's first turn into a hit | one throwaway request |
+| Pre-warm the cache before a demo, one request per stage | Turns every take's first turn, and every stage change, into a hit | one throwaway conversation through the stages |
 | Raise a tool bound the model keeps hitting | ~€0.019 per dense turn | 1 line |
 | Raise an output ceiling that truncates real answers | ~€0.023 per failed turn, plus the retry | 1 line |
 
@@ -391,3 +424,9 @@ This document is updated whenever a change lands that moves the cost of a turn.
 | 2026-10-15 | Signing in now fires a turn, so Baz picks the conversation back up instead of going silent | One extra turn per sign-in, at most once a conversation. At the measured €0.55 per twelve turns that is roughly €0.05, and it buys the moment the sign-in was asked for: the reply names what is outstanding and does not re-ask for the email, which `adoptIdentity` has just recorded from the account |
 | 2026-10-15 | `show_arrangement`: one tool definition in the cached prefix, one stage section (`arranging`, shown once), and an arrangement section in the digest whenever the engine has one | Not yet measured. The tool definition is read once a conversation; the digest section is a few hundred uncached tokens on the turns where a kept plan and the figures coincide, which is a minority of turns. It replaces a comparison turn and a product-options turn with one card, so on the conversations it applies to it is likely a net saving. Re-measure the prefix on the next live reading |
 | 2026-10-16 | The product catalogue and the mortgage rate table are read from `product_catalogue` and `mortgage_rates` rows at the start of every turn, when any exist, and the prompt prefix is built from them | Two small queries, in the same parallel batch as the case load, so nothing on the critical path. The prefix stays byte-identical turn to turn as long as the rows do, so the cache is untouched until a presenter edits something, when it rewrites once: one uncached read of the prefix, roughly 28k tokens at the last measured size, per edit. A disabled product shortens the prefix. Not re-measured |
+| 2026-10-16 | Measured, no change: one cached prefix per conversation stage, because the stage decides the tool list and the tools sit ahead of the breakpoint (Finding 9) | Three stage changes in case aed80555 wrote 86,464 cache tokens, €0.30 of a €1.69 conversation. Bounded at about €0.10 per cold transition and shared across cases, so it falls as the day goes on. The pre-warm step before a presentation now runs one request per stage |
+| 2026-10-16 | Field ids on every line of the form digest section, a four-line recording instruction, and "or N others" on cut choice lists | Estimate, not measured. The section is after the breakpoint, so charged every round while a form-backed application is open: about 5 tokens an id across at most five lines and about 60 for the instruction, roughly +85 uncached tokens a round against the 208 measured on 2026-10-14. Before this the section bought nothing, since no answer it elicited was ever recorded. Re-measure on the next live reading |
+| 2026-10-16 | A bank request (information requested from the console) is an outstanding document: one line per open request in the application's digest entry | Estimate: about 40 uncached tokens per open request per turn, only while the application sits in `info_required`. It replaces a failed `request_upload` round (a call, a refusal, a second model round) with one that renders the card, so a saving on the turns it applies to |
+| 2026-10-16 | "A card is waiting": a short section after the stage section on turns where an earlier card is still untapped, computed from the case | Estimate: about 60 uncached tokens a round on those turns and nothing otherwise. Four lines added to the card rule in the stage section are charged every round. The turn it replaces, discovery for an application that did not exist, ran twelve minutes and six turns in aed80555 |
+| 2026-10-16 | Withdrawn rounds: a round that spoke and then had a tool refused is taken back and the model writes again | A refused turn pays that round's output twice. On aed80555 that was 4 of 36 turns, each round's withdrawn text in the tens of tokens, so under a cent a conversation at €0.0138 per thousand output tokens; nothing on turns with no refusal. The refusals themselves are now rarer, since three of the four causes in that case are fixed (bank requests, partner invite, review naming) |
+| 2026-10-16 | `income.partnerAnnualStated` and a sentence about partner facts in the prompt prefix; refusal wording that says not to retry | About 60 to 80 tokens in the cached prefix, read once a cache window. The point is fewer rounds: the same refusal came back five turns running in aed80555 |

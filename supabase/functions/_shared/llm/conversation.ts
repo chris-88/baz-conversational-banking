@@ -1,4 +1,5 @@
 import type { Stage } from '../domain/conversation/stages.ts'
+import type { AwaitingCard, AwaitingCardType } from '../domain/conversation/awaiting.ts'
 import type { ToolName } from './tools.ts'
 
 /**
@@ -228,5 +229,63 @@ export function stageSection(stage: Stage): string {
     '',
     'Do not read the card out either. The rate, the limits and the features are on it already.',
     'Your line is why this is in front of this person, which is the one thing the card cannot say.',
+    '',
+    'And when they answer the card in words on the next turn ("great", "yes", "sounds good"),',
+    'the words are not the tap. Nothing has started. Say so in a line and point at the card;',
+    'do not ask for anything the thing on the card would need, because until they tap it there',
+    'is nothing to need it. If they ask for something else, answer that, then point back.',
+  ].join('\n')
+}
+
+/** `product_options` is "product options" to the model, and so on. Exhaustive, so a new card is named. */
+export function plainCardName(type: AwaitingCardType): string {
+  switch (type) {
+    case 'product_options':
+      return 'product options'
+    case 'arrangement':
+      return 'arrangement'
+    case 'plan_proposal':
+      return 'plan'
+    case 'review':
+      return 'review'
+    case 'pause_prompt':
+      return 'pause'
+    case 'partner_invite':
+      return 'invitation'
+    case 'upload_request':
+      return 'upload'
+    case 'consent':
+      return 'consent'
+    case 'form_declarations':
+      return 'declarations'
+    case 'form_upload':
+      return 'form upload'
+    case 'health_form':
+      return 'health form'
+    case 'sign_in':
+      return 'sign-in'
+    case 'comparison':
+      return 'comparison'
+    case 'quote':
+      return 'quote'
+  }
+}
+
+/**
+ * The card still waiting, as a short section after the stage.
+ *
+ * Computed from the case (`awaitingCard`), never remembered by the model: the model is the
+ * thing that took "Great" for a tap and spent twelve minutes collecting for an application
+ * that did not exist. Kept short because it sits after the cache breakpoint and is read on
+ * every round of every turn a card is waiting.
+ */
+export function awaitingSection(awaiting: AwaitingCard): string {
+  const ago = awaiting.turnsAgo === 1 ? 'your last reply' : `${String(awaiting.turnsAgo)} replies ago`
+  return [
+    '## A card is waiting',
+    '',
+    `The ${plainCardName(awaiting.type)} card from ${ago} has not been tapped. If they answer it in`,
+    'words, say nothing has started yet and point at the card; ask nothing new. If they ask for',
+    'something else, answer that, then point back at it.',
   ].join('\n')
 }

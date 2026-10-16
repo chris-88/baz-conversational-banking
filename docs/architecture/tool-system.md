@@ -2,11 +2,12 @@
 title: Tool system
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/functions/_shared/llm/tools.ts
   - supabase/functions/_shared/contracts/cards.ts
   - supabase/functions/case-action/index.ts
+  - supabase/functions/baz-turn/index.ts
 ---
 
 # Tool system
@@ -39,11 +40,11 @@ None of them change state. That is the whole design; see [the AI boundary](ai-bo
 
 | Tool | Notes |
 |---|---|
-| `show_review` | Takes an application id. The server builds the review content from the database, not from model text |
+| `show_review` | Takes an application id. The server builds the review content from the database, not from model text. The card is headed with the name stored on the application row (`SuperSaver`), not the journey's generic name, and values are printed as the reuse card prints them: money as money, a PPS number masked |
 | `show_pause_prompt` | Takes an application id. The customer confirms in the card |
-| `show_status` | Renders from the case, independently of whatever the model writes alongside it |
+| `show_status` | Renders from the case, independently of whatever the model writes alongside it. Each row carries the application's own name |
 | `request_upload` | Must point at an existing open `application_request` |
-| `show_partner_invite` | The invitation is sent only when the customer taps |
+| `show_partner_invite` | The invitation is sent only when the customer taps. Refused unless at least one of the named applications has an outstanding requirement for the second applicant: a savings journey asks a partner for nothing, so there is nobody to invite for it |
 | `propose_plan` | Offers to keep a goal that outlives any one application. Nothing is kept until they tap |
 
 ### The bank's own forms
@@ -86,8 +87,15 @@ and scrolling past the card. `turn-shape.ts` computes what else a turn is allowe
 Everything the model produces reaches the browser as a Zod discriminated union:
 
 ```ts
-text_delta | card | status | done | error
+text_delta | retract | card | status | done | error
 ```
+
+A `retract` takes back what a round said before a tool it then called was refused, so a sentence
+introducing a card that never came does not stand on screen. A handler marks a refusal by
+returning `refused: true` with its reason: a show or propose call that showed nothing. "Already on
+screen, point at it" is not one, and neither is a `record_facts` or `record_form_answers` call
+that took some of what it was sent. [The conversation runtime](conversation-runtime.md) has the
+mechanics.
 
 Card payloads are validated against `_shared/contracts/cards.ts` on the way out, which also means
 any card can be rendered from a fixture object in a test without a model call.
@@ -100,6 +108,8 @@ any card can be rendered from a fixture object in a test without a model call.
 3. Build the card in `src/baz/cards/` and register it with the card renderer.
 4. If tapping it must change something, add a `case-action` action with its own validation.
    **Do not shortcut this by letting the tool write.**
-5. Decide which stages may offer it.
-6. Write the tests: input validation, server-side refusal of the thing it must not do, and the
+5. Wherever the handler can show nothing, return `refused: true` with the reason. The words the
+   model wrote beside the call are withdrawn and it writes again from the result.
+6. Decide which stages may offer it.
+7. Write the tests: input validation, server-side refusal of the thing it must not do, and the
    card rendering from a fixture.

@@ -39,7 +39,7 @@ import {
 } from '../_shared/db/catalogue.ts'
 import { caseStatus, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
-import { journeyFor } from '../_shared/domain/journeys/index.ts'
+import { BANK_REQUEST_PREFIX, bankRequirementId } from '../_shared/domain/bank-requests.ts'
 import type { Product } from '../_shared/domain/journey.ts'
 import { asApplicationId } from '../_shared/domain/facts.ts'
 import { stateLabel, transition, type ApplicationState, type TransitionEvent } from '../_shared/domain/state-machine.ts'
@@ -53,7 +53,7 @@ import {
   type Insert,
   writeEvent,
 } from '../_shared/db/case-repository.ts'
-import { evaluateFor } from '../_shared/db/applications.ts'
+import { applicationName, evaluateFor } from '../_shared/db/applications.ts'
 import { needContextFor, revivableNeeds } from '../_shared/db/needs.ts'
 import { describeAdminEvent } from '../_shared/db/admin-events.ts'
 import { catalogueOverrideRow, toOverride, toUsage } from '../_shared/db/rows.ts'
@@ -164,6 +164,77 @@ const json = (body: unknown, status: number) =>
 const errorResponse = (code: Parameters<typeof statusFor>[0], message: string) =>
   json(fail(code, message), statusFor(code))
 
+/**
+ * §41: a request for information is something the customer can answer.
+ *
+ * The simulated event alone moved the application to `info_required` and told Baz what the
+ * team wanted, and that was all it did: there was no row to upload against, so Baz offered a
+ * document the handler then said nobody was waiting for. The event now opens a real
+ * `application_requests` row, which is what the upload card is rendered from and what the
+ * upload fulfils. Its requirement id is derived from the wording, so asking for the same thing
+ * again reuses the open row rather than stacking a second.
+ */
+async function openBankRequest(
+  admin: ReturnType<typeof createClient<Database>>,
+  input: { caseId: string; applicationId: string; detail: string },
+): Promise<string> {
+  const requirementId = bankRequirementId(input.detail)
+
+  const existing = await admin
+    .from('application_requests')
+    .select('id')
+    .eq('application_id', input.applicationId)
+    .eq('requirement_id', requirementId)
+    .eq('status', 'open')
+    .limit(1)
+  const open = ((existing.data ?? []) as { id: string }[])[0]
+  if (open) return open.id
+
+  // The bank asks the applicant, not the second applicant.
+  const primary = await admin
+    .from('participants')
+    .select('id')
+    .eq('case_id', input.caseId)
+    .eq('role', 'primary')
+    .maybeSingle()
+
+  const created = mustWrite(
+    await admin
+      .from('application_requests')
+      .insert({
+        application_id: input.applicationId,
+        requirement_id: requirementId,
+        requested_of: (primary.data as { id: string } | null)?.id ?? null,
+        kind: 'document',
+        status: 'open',
+        detail: input.detail,
+      })
+      .select('id')
+      .single(),
+    'the request',
+  )
+
+  return (created.data as { id: string }).id
+}
+
+/**
+ * What the bank was asking for, once the presenter says it has been supplied. Left open, the
+ * status card would go on listing a document against an application back under review.
+ */
+async function closeBankRequests(
+  admin: ReturnType<typeof createClient<Database>>,
+  applicationId: string,
+): Promise<void> {
+  mustWrite(
+    await admin
+      .from('application_requests')
+      .update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() })
+      .eq('application_id', applicationId)
+      .eq('status', 'open')
+      .like('requirement_id', `${BANK_REQUEST_PREFIX}%`),
+    'the requests',
+  )
+}
 
 /**
  * What each one-click move means, in transitions.
@@ -1404,7 +1475,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     case 'simulate_event': {
       const found = await admin
         .from('applications')
-        .select('id, case_id, product, state, resume_to')
+        .select('id, case_id, product, state, resume_to, catalogue_id, display_name')
         .eq('id', action.applicationId)
         .maybeSingle()
 
@@ -1436,14 +1507,37 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         completed: 'application_completed',
       }
 
+      // The ask is a row the customer can answer, not only a line in an event (§41). The
+      // default wording is supplied here rather than by the schema, so no other event carries
+      // it.
+      let detail = action.detail
+      let requestId: string | null = null
+      if (action.event === 'information_requested') {
+        detail = action.detail ?? 'one more payslip'
+        requestId = await openBankRequest(admin, {
+          caseId: row.case_id,
+          applicationId: action.applicationId,
+          detail,
+        })
+      }
+      if (action.event === 'information_supplied') {
+        await closeBankRequests(admin, action.applicationId)
+      }
+
       await writeEvent(admin, {
         caseId: row.case_id,
         type: names[action.event],
         actor: 'admin',
         applicationId: action.applicationId,
         payload: {
-          applicationName: journeyFor(row.product).displayName,
-          ...(action.detail === undefined ? {} : { detail: action.detail }),
+          // The name the customer knows it by, so the event reads as they would say it.
+          applicationName: applicationName({
+            product: row.product,
+            catalogueId: row.catalogue_id,
+            displayName: row.display_name,
+          }),
+          ...(detail === undefined ? {} : { detail }),
+          ...(requestId === null ? {} : { requestId }),
         },
       })
 
@@ -1798,7 +1892,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
       const found = await admin
         .from('applications')
-        .select('id, case_id, product, state, resume_to')
+        .select('id, case_id, product, state, resume_to, catalogue_id, display_name')
         .eq('case_id', action.caseId)
         .eq('product', move.product)
         .maybeSingle()
@@ -1831,14 +1925,29 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
           assessment_approved: 'application_approved',
         }
 
+        // The same ask the single-event path opens: a row the customer can upload against.
+        const requestId =
+          step === 'information_requested'
+            ? await openBankRequest(admin, {
+                caseId: action.caseId,
+                applicationId: row.id,
+                detail: 'one more payslip',
+              })
+            : null
+
         await writeEvent(admin, {
           caseId: action.caseId,
           type: names[step] ?? 'application_state_changed',
           actor: 'admin',
           applicationId: row.id,
           payload: {
-            applicationName: journeyFor(row.product).displayName,
+            applicationName: applicationName({
+              product: row.product,
+              catalogueId: row.catalogue_id,
+              displayName: row.display_name,
+            }),
             ...(step === 'information_requested' ? { detail: 'one more payslip' } : {}),
+            ...(requestId === null ? {} : { requestId }),
           },
         })
       }
@@ -2490,7 +2599,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         applications: loaded.applications.map((application) => ({
           id: String(application.id),
           product: application.product,
-          displayName: journeyFor(application.product).displayName,
+          displayName: applicationName(application),
           state: application.state,
           stateLabel: stateLabel(application.state),
           outstanding: evaluateFor(loaded, application)

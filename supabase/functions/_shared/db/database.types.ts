@@ -155,6 +155,7 @@ export type Database = {
           case_id: string
           catalogue_id: string | null
           created_at: string
+          display_name: string | null
           id: string
           plan_id: string | null
           product: string
@@ -167,6 +168,7 @@ export type Database = {
           case_id: string
           catalogue_id?: string | null
           created_at?: string
+          display_name?: string | null
           id?: string
           plan_id?: string | null
           product: string
@@ -179,6 +181,7 @@ export type Database = {
           case_id?: string
           catalogue_id?: string | null
           created_at?: string
+          display_name?: string | null
           id?: string
           plan_id?: string | null
           product?: string

@@ -5,12 +5,18 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../_shared/db/database.types.ts'
 import { bazTurnRequestSchema } from '../_shared/contracts/baz-turn.ts'
 import { fail, statusFor } from '../_shared/contracts/common.ts'
-import { toSseFrame, type StreamEvent } from '../_shared/contracts/stream.ts'
+import { toSseFrame, withdraw, type StreamEvent } from '../_shared/contracts/stream.ts'
 import { awaitsCustomer } from '../_shared/contracts/cards.ts'
 import type { Card } from '../_shared/contracts/cards.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { evaluateAdvisories } from '../_shared/domain/advisories.ts'
-import { evaluateFor, findApplication, recomputeApplications } from '../_shared/db/applications.ts'
+import {
+  applicationName,
+  evaluateFor,
+  findApplication,
+  recomputeApplications,
+  type NameFor,
+} from '../_shared/db/applications.ts'
 import { confirmationsForReview, readyForReview } from '../_shared/domain/requirements.ts'
 import { factCatalogue } from '../_shared/domain/facts.ts'
 import { stateLabel } from '../_shared/domain/state-machine.ts'
@@ -22,11 +28,12 @@ import {
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { arrange } from '../_shared/domain/savings/arrange.ts'
-import { describeReused, type ReuseEvent } from '../_shared/domain/reuse.ts'
+import { describeReused, formatFactValue, type ReuseEvent } from '../_shared/domain/reuse.ts'
 import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
 import { savingsOptionsFrom } from '../_shared/tenants/boi/savings-options.ts'
 import { caseFactReader } from '../_shared/db/fact-reader.ts'
 import { asksSomething } from '../_shared/domain/conversation/turn-shape.ts'
+import { isRepeatedMessage } from '../_shared/domain/conversation/repeat.ts'
 import { outOfAllowance, runGate } from '../_shared/llm/gate.ts'
 import { refusalFor } from '../_shared/llm/refusals.ts'
 import { stageFor, type Stage } from '../_shared/domain/conversation/stages.ts'
@@ -321,6 +328,15 @@ async function handleTurn(request: Request): Promise<Response> {
   if (!loaded) return errorResponse('not_found', 'That case does not exist.')
   const savingsOptions = savingsOptionsFrom(kb.products)
 
+  /*
+   * What to call an application whose row carries no name: one created before names were
+   * stored (`applicationName`). The catalogue is in hand on every turn, so a SuperSaver from
+   * last week is still SuperSaver on a card rather than "Savings account".
+   */
+  const nameFor: NameFor = (product, catalogueId) =>
+    (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
+    journeyFor(product).displayName
+
   const tone = toneBucket(loaded.persona)
 
   // ---- Gate -------------------------------------------------------------
@@ -394,6 +410,29 @@ async function handleTurn(request: Request): Promise<Response> {
       content: customerMessage,
       gateCategory: gate.category,
     })
+
+    /*
+     * The same message again, within ten minutes, is the customer saying the last answer did
+     * not land. Twice in one live case, and the transcript showed two ordinary turns. Written
+     * as an event so the stall is visible in the console. Nothing else about the turn changes.
+     *
+     * `loaded` was read before the save above, so its last customer message is the previous
+     * one, not the one just written.
+     */
+    const previousCustomerMessage = [...loaded.messages]
+      .reverse()
+      .find((message) => message.role === 'customer')
+    if (
+      previousCustomerMessage !== undefined &&
+      isRepeatedMessage(customerMessage, previousCustomerMessage, Date.now())
+    ) {
+      await writeEvent(admin, {
+        caseId: turn.caseId,
+        type: 'customer_repeated',
+        actor: 'customer',
+        payload: { said: customerMessage.trim().slice(0, 120) },
+      })
+    }
 
     const alreadyShown = await admin
       .from('events')
@@ -1177,6 +1216,7 @@ async function handleTurn(request: Request): Promise<Response> {
                       `Still unknown: ${ask}. Ask about those, in their language and a couple at a time, ` +
                       'and record what they tell you. Offer once you can actually see where they stand. ' +
                       'Do not mention that you were stopped, and do not ask a question and show options in the same breath.',
+                    refused: true,
                   }
                 }
 
@@ -1296,7 +1336,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     return {
                       id: String(application.id),
                       product: application.product,
-                      displayName: journeyFor(application.product).displayName,
+                      displayName: applicationName(application, nameFor),
                       state: application.state,
                       stateLabel: stateLabel(application.state),
                       outstandingCount: match?.outstanding.length ?? 0,
@@ -1345,6 +1385,7 @@ async function handleTurn(request: Request): Promise<Response> {
                       'Not yet. Before this can be arranged, ask: ' +
                       arrangement.needs.map((need) => need.why).join(' ') +
                       ' One question, then show it next turn.',
+                    refused: true,
                   }
                 }
 
@@ -1355,6 +1396,7 @@ async function handleTurn(request: Request): Promise<Response> {
                       'they can put away each month are not held, or only one account fits. ' +
                       'Ask for the figures if they are missing; otherwise offer products one ' +
                       'at a time.',
+                    refused: true,
                   }
                 }
 
@@ -1400,7 +1442,7 @@ async function handleTurn(request: Request): Promise<Response> {
               case 'show_review': {
                 const { applicationId } = input as { applicationId: string }
                 const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.' }
+                if (!application) return { result: 'There is no such application.', refused: true }
 
                 const evaluation = evaluateFor(loaded, application)
                 if (!readyForReview(evaluation)) {
@@ -1411,23 +1453,39 @@ async function handleTurn(request: Request): Promise<Response> {
                     .map((item) => item.requirement.label)
                   return {
                     result: `Not ready to review. Still needed: ${remaining.join(', ')}.`,
+                    refused: true,
                   }
                 }
 
-                const journey = journeyFor(application.product)
+                /*
+                 * The row's own name. Three savings accounts reviewed one after another were
+                 * three cards all headed "Savings account", and the customer confirmed each
+                 * without being told which it was. A product name is kept as the catalogue
+                 * spells it on the button too: "Submit SuperSaver", not "Submit supersaver";
+                 * only the journey's generic name reads as a common noun.
+                 */
+                const name = applicationName(application, nameFor)
+                const generic = name === journeyFor(application.product).displayName
 
-                // Built from the case, not from the model's words (Invariant 2).
+                // Built from the case, not from the model's words (Invariant 2). Values are
+                // printed as the reuse card prints them, money as money and a PPS number
+                // masked, rather than "60000" and "true".
                 const card: Card = {
                   type: 'review',
                   applicationId,
-                  displayName: journey.displayName,
+                  displayName: name,
                   summary: evaluation.satisfied
-                    .filter((item) => item.fact !== null)
-                    .slice(0, 12)
-                    .map((item) => ({
-                      label: item.requirement.label,
-                      value: String(item.fact?.value ?? ''),
-                    })),
+                    .flatMap((item) =>
+                      item.fact === null
+                        ? []
+                        : [
+                            {
+                              label: item.requirement.label,
+                              value: formatFactValue(item.fact.key, item.fact.value),
+                            },
+                          ],
+                    )
+                    .slice(0, 12),
                   confirmations: confirmationsForReview(evaluation).map((item) => ({
                     requirementId: item.requirement.id,
                     label: item.requirement.label,
@@ -1437,9 +1495,12 @@ async function handleTurn(request: Request): Promise<Response> {
                         : item.requirement.kind === 'confirmation'
                           ? ('confirmation' as const)
                           : ('reuse' as const),
-                    knownValue: item.knownFact === null ? null : String(item.knownFact.value),
+                    knownValue:
+                      item.knownFact === null
+                        ? null
+                        : formatFactValue(item.knownFact.key, item.knownFact.value),
                   })),
-                  confirmLabel: `Submit ${journey.displayName.toLowerCase()}`,
+                  confirmLabel: `Submit ${generic ? name.toLowerCase() : name}`,
                 }
 
                 return {
@@ -1453,20 +1514,23 @@ async function handleTurn(request: Request): Promise<Response> {
               case 'show_pause_prompt': {
                 const { applicationId } = input as { applicationId: string }
                 const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.' }
+                if (!application) return { result: 'There is no such application.', refused: true }
 
                 // The advisory is deterministic; the model may only explain one that applies.
                 const advisory = evaluateAdvisories(loaded.applications).find(
                   (candidate) => String(candidate.appliesTo) === applicationId,
                 )
                 if (!advisory) {
-                  return { result: 'There is no advisory for that application, so do not offer to pause it.' }
+                  return {
+                    result: 'There is no advisory for that application, so do not offer to pause it.',
+                    refused: true,
+                  }
                 }
 
                 const card: Card = {
                   type: 'pause_prompt',
                   applicationId,
-                  displayName: journeyFor(application.product).displayName,
+                  displayName: applicationName(application, nameFor),
                   advisoryTitle: advisory.title,
                   advisoryExplanation: advisory.explanation,
                 }
@@ -1484,12 +1548,12 @@ async function handleTurn(request: Request): Promise<Response> {
               case 'show_form_declarations': {
                 const { applicationId } = input as { applicationId: string }
                 const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.' }
+                if (!application) return { result: 'There is no such application.', refused: true }
 
                 const mapping = formForProduct(application.product)
                 const snapshot = mapping ? formSnapshot(mapping.formId) : undefined
                 if (!snapshot) {
-                  return { result: 'That application has no bank form behind it.' }
+                  return { result: 'That application has no bank form behind it.', refused: true }
                 }
 
                 const stored = loaded.formApplications.find(
@@ -1502,7 +1566,10 @@ async function handleTurn(request: Request): Promise<Response> {
                   .map((field) => ({ fieldId: field.id, wording: field.label }))
 
                 if (declarations.length === 0) {
-                  return { result: 'There are no declarations left to make on that form.' }
+                  return {
+                    result: 'There are no declarations left to make on that form.',
+                    refused: true,
+                  }
                 }
 
                 const card: Card = {
@@ -1528,20 +1595,26 @@ async function handleTurn(request: Request): Promise<Response> {
               case 'show_form_upload': {
                 const { applicationId } = input as { applicationId: string }
                 const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.' }
+                if (!application) return { result: 'There is no such application.', refused: true }
 
                 const mapping = formForProduct(application.product)
                 const snapshot = mapping ? formSnapshot(mapping.formId) : undefined
-                if (!snapshot) return { result: 'That application has no bank form behind it.' }
+                if (!snapshot) {
+                  return { result: 'That application has no bank form behind it.', refused: true }
+                }
 
                 const stored = loaded.formApplications.find(
                   (row) => row.formId === snapshot.formId,
                 )
-                if (!stored) return { result: 'Nothing has been collected for that form yet.' }
+                if (!stored) {
+                  return { result: 'Nothing has been collected for that form yet.', refused: true }
+                }
 
                 const state = resolveFormState(snapshot.definition, stored.answers)
                 const wanted = state.outstanding.find((field) => field.type === 'fileupload')
-                if (!wanted) return { result: 'That form is not waiting for any documents.' }
+                if (!wanted) {
+                  return { result: 'That form is not waiting for any documents.', refused: true }
+                }
 
                 const maxMb = Number(wanted.platform?.['maxFileSize'] ?? 0)
                 const extensions = String(wanted.platform?.['allowedExtensions'] ?? '')
@@ -1566,7 +1639,7 @@ async function handleTurn(request: Request): Promise<Response> {
               case 'show_form': {
                 const { applicationId } = input as { applicationId: string }
                 const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.' }
+                if (!application) return { result: 'There is no such application.', refused: true }
 
                 const evaluation = evaluateFor(loaded, application)
                 const blocking = evaluation.outstanding.filter((item) => item.blocking)
@@ -1606,7 +1679,10 @@ async function handleTurn(request: Request): Promise<Response> {
                 )
 
                 if (sensitive.length === 0) {
-                  return { result: 'There is no form outstanding for that application.' }
+                  return {
+                    result: 'There is no form outstanding for that application.',
+                    refused: true,
+                  }
                 }
 
                 const card: Card = {
@@ -1638,17 +1714,41 @@ async function handleTurn(request: Request): Promise<Response> {
 
               case 'show_partner_invite': {
                 const { applicationIds } = input as { applicationIds: string[] }
-                const names = applicationIds
+                const applications = applicationIds
                   .map((id) => findApplication(loaded, id))
                   .filter((application) => application !== undefined)
-                  .map((application) => journeyFor(application.product).displayName)
 
-                if (names.length === 0) return { result: 'There is no such application.' }
+                if (applications.length === 0) {
+                  return { result: 'There is no such application.', refused: true }
+                }
 
                 const partner = loaded.participants.find((p) => p.role === 'partner')
                 if (partner) {
                   return {
                     result: `${partner.displayName ?? 'The second applicant'} has already joined. There is nothing left to invite.`,
+                    refused: true,
+                  }
+                }
+
+                /*
+                 * Somebody to invite, and something to invite them to. Three savings accounts
+                 * got an invite card because the model was asked for one, and the second
+                 * applicant joined to an empty task list: a savings journey asks a partner for
+                 * nothing. Whether any of these applications has a second applicant's share is
+                 * the requirement engine's to say, not the model's.
+                 */
+                const needsPartner = applications.some((application) =>
+                  evaluateFor(loaded, application).outstanding.some(
+                    (item) => item.requirement.subject === 'partner',
+                  ),
+                )
+                if (!needsPartner) {
+                  return {
+                    result:
+                      'None of these applications needs anything from a second applicant, so ' +
+                      'there is nobody to invite for them. Do not offer an invite; if the ' +
+                      'customer wants a joint product, that is a product choice.',
+                    refused: true,
                   }
                 }
 
@@ -1671,8 +1771,10 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 const card: Card = {
                   type: 'partner_invite',
-                  applicationIds,
-                  applicationNames: names,
+                  applicationIds: applications.map((application) => String(application.id)),
+                  applicationNames: applications.map((application) =>
+                    applicationName(application, nameFor),
+                  ),
                   // Always null by this point: a joined partner returned above, and a
                   // participant row does not exist before they join.
                   partnerName: null,
@@ -1721,6 +1823,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   return {
                     result:
                       'There is nothing measurable to plan towards yet. Find out what they are aiming for first.',
+                    refused: true,
                   }
                 }
 
@@ -1741,6 +1844,7 @@ async function handleTurn(request: Request): Promise<Response> {
                       'card would show it finished. Ask what they are actually aiming for before ' +
                       'planning towards a figure. A bigger deposit means less borrowing and a ' +
                       'better rate, so "more than the minimum" is a real answer worth pinning down.',
+                    refused: true,
                   }
                 }
 
@@ -1768,6 +1872,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   return {
                     result:
                       'They already have a plan for this goal. Talk about that one rather than starting another.',
+                    refused: true,
                   }
                 }
 
@@ -1783,6 +1888,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     result:
                       'That would have two plans counting on the same savings. Say so plainly, ' +
                       'and ask which one the money is for before proposing anything.',
+                    refused: true,
                   }
                 }
 
@@ -1796,10 +1902,14 @@ async function handleTurn(request: Request): Promise<Response> {
                   today: context.today,
                 })
 
-                if (draft === null) return { result: 'That is not a goal I can plan for.' }
+                if (draft === null) {
+                  return { result: 'That is not a goal I can plan for.', refused: true }
+                }
 
                 const planId = await proposePlan(admin, turn.caseId, draft)
-                if (planId === null) return { result: 'That plan could not be saved just now.' }
+                if (planId === null) {
+                  return { result: 'That plan could not be saved just now.', refused: true }
+                }
 
                 const months =
                   target !== null && context.monthlySaving !== null && context.monthlySaving > 0
@@ -1892,6 +2002,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     result:
                       `No rate can be quoted: ${selection.unavailable} Tell them that plainly, ` +
                       'and offer to carry on with everything else.',
+                    refused: true,
                   }
                 }
 
@@ -1900,6 +2011,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     result:
                       'No published rate matches those details. Check the buyer type and BER ' +
                       'against what they actually told you before asking them again.',
+                    refused: true,
                   }
                 }
 
@@ -1961,6 +2073,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     result:
                       `Not in the catalogue, or not for showing: ${missing.map((entry) => entry.option.id).join(', ')}. ` +
                       'Use ids exactly as they appear in the product list, and only ones listed there.',
+                    refused: true,
                   }
                 }
 
@@ -2057,6 +2170,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     result:
                       `No options to show: ${quote.problem} Say that plainly and ask for what ` +
                       'would let you work it out.',
+                    refused: true,
                   }
                 }
 
@@ -2104,7 +2218,9 @@ async function handleTurn(request: Request): Promise<Response> {
                   documentType?: string
                 }
                 const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.' }
+                if (!application) {
+                  return { result: 'There is no such application.', refused: true }
+                }
 
                 // The journey decides what can be asked for, not the model (Invariant 3). The
                 // named type narrows it; without one, the next outstanding document wins.
@@ -2112,16 +2228,22 @@ async function handleTurn(request: Request): Promise<Response> {
                 const documents = evaluation.outstanding.filter(
                   (item) => item.requirement.kind === 'document',
                 )
+                // What the bank asked for after submission comes first, whatever the model
+                // named: it is the only document an application in `info_required` is waiting
+                // on, and the row to upload against already exists (§41).
                 const outstanding =
+                  documents.find((item) => item.requestId !== undefined) ??
                   documents.find(
                     (item) =>
                       item.requirement.kind === 'document' &&
                       item.requirement.documentType === documentType,
-                  ) ?? documents[0]
+                  ) ??
+                  documents[0]
 
                 if (!outstanding || outstanding.requirement.kind !== 'document') {
                   return {
                     result: 'This application is not waiting on any documents.',
+                    refused: true,
                   }
                 }
 
@@ -2129,7 +2251,9 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 const journey = journeyFor(application.product)
 
-                // One open request per requirement, so asking twice does not pile up rows.
+                // One open request per requirement, so asking twice does not pile up rows. A
+                // bank request names its row outright; a journey document may have one from
+                // an earlier ask.
                 const existing = loaded.requests.find(
                   (request) =>
                     request.applicationId === application.id &&
@@ -2137,7 +2261,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     request.status === 'open',
                 )
 
-                let requestId = existing?.id ?? null
+                let requestId = outstanding.requestId ?? existing?.id ?? null
                 if (requestId === null) {
                   const created = await admin
                     .from('application_requests')
@@ -2187,6 +2311,11 @@ async function handleTurn(request: Request): Promise<Response> {
         for await (const event of events) {
           if (event.type === 'text_delta') spoken.push(event.text)
           if (event.type === 'card') shown.push(event.card)
+          // Withdrawn from the record as well as the screen: the saved reply is what the
+          // customer was left reading, not what was said and then taken back.
+          if (event.type === 'retract') {
+            spoken.splice(0, spoken.length, withdraw(spoken.join(''), event.length))
+          }
           send(event)
         }
 
@@ -2273,7 +2402,8 @@ async function handleTurn(request: Request): Promise<Response> {
          */
         const text = spoken.join('')
         const promisedACard =
-          /\btap (the|that) (card|option)|\bcard (below|above)\b/i.test(text) ||
+          // "above" refers to a card already on screen, which is not a promise of a new one.
+          /\btap (the|that) (card|option)|\bcard below\b/i.test(text) ||
           /\bhere (they|it|those) (are|is)\b|\bhere are (the|your|those|three|some|a few)\b/i.test(
             text,
           )
@@ -2312,6 +2442,24 @@ async function handleTurn(request: Request): Promise<Response> {
             type: 'question_with_card',
             actor: 'model',
             payload: { cards: waiting, said: text.slice(-200) },
+          })
+        }
+
+        /*
+         * The same thing one turn later: a card from an earlier reply still untapped, and this
+         * reply asks something new instead of pointing at it. The digest told the model the
+         * card was waiting, so a question here is the rule being broken with the facts in hand.
+         */
+        if (digest.awaiting !== undefined && waiting.length === 0 && asksSomething(text)) {
+          await writeEvent(admin, {
+            caseId: turn.caseId,
+            type: 'question_while_card_awaits',
+            actor: 'model',
+            payload: {
+              card: digest.awaiting.type,
+              turnsAgo: digest.awaiting.turnsAgo,
+              said: text.slice(-200),
+            },
           })
         }
 

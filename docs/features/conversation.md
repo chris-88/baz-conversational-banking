@@ -2,7 +2,7 @@
 title: Conversation
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - src/surfaces/BazScreen.tsx
   - src/baz/
@@ -27,6 +27,11 @@ Baz's first reply — one object moving, via the View Transitions API.
 From there it is a transcript of text and cards. Baz replies in streamed text; where an action is
 available, a card appears and the customer taps it.
 
+Now and then a sentence Baz has started disappears and is written again. That is the server
+refusing something the model was about to show, and taking back the words that introduced it
+rather than leaving a promise of a card that never came. The saved conversation keeps only what
+was left standing.
+
 ## What happens underneath
 
 A turn is handled end to end by `baz-turn`: gate, load the case, compute the stage, select the
@@ -45,6 +50,13 @@ validates and writes — the model never does.
 
 One card per turn, with one line of text before it and nothing after. A card that waits for a tap
 is the question of that turn.
+
+A card that waits for a tap is the only question on its turn, and it stays the question until it
+is tapped. When the customer answers it in words instead ("great", "yes"), the turn is told, from
+the transcript and the case rather than from the model, that the card is still waiting, and Baz
+says nothing has started and points at it. A reply that asks something new while a card waits
+leaves a `question_while_card_awaits` event; the same thing on the turn the card was shown is
+`question_with_card`.
 
 ## Continuity
 

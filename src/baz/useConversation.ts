@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { Card } from '@contracts/cards.ts'
+import { withdraw } from '@contracts/stream.ts'
 import { streamBazTurn } from '@/baz/bazTurnClient'
 import { settledState, type CaseState } from '@/baz/cardState'
 
@@ -125,6 +126,27 @@ export function useConversation(caseId: string | null) {
                   )
                 })
                 if (firstToken) release()
+                break
+              }
+
+              case 'retract': {
+                /*
+                 * Baz was introducing something the server then refused to show, so the words
+                 * come back off the screen before the rewrite arrives. If nothing is left the
+                 * bubble goes too: an empty one reads as a reply, and with no reply on screen
+                 * the surface shows Baz thinking again, which is the truth of it.
+                 */
+                reply = withdraw(reply, event.length)
+                const remaining = reply
+                setEntries((current) =>
+                  remaining.length === 0
+                    ? current.filter((entry) => entry.id !== replyId)
+                    : current.map((entry) =>
+                        entry.id === replyId && entry.kind === 'message'
+                          ? { ...entry, text: remaining }
+                          : entry,
+                      ),
+                )
                 break
               }
 

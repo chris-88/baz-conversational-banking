@@ -52,6 +52,14 @@ export function CaseInspector({
   } | null>(null)
 
   /*
+   * What the team is asking for, per application. The default is the wording the demo has
+   * always used; a presenter can make it anything the customer will recognise. §41
+   */
+  const [requestDetails, setRequestDetails] = useState<Record<string, string>>({})
+  const requestDetailFor = (applicationId: string): string =>
+    requestDetails[applicationId] ?? 'one more payslip'
+
+  /*
    * The default copy, editable rather than fixed.
    *
    * §35 keeps what the system sends by itself deliberately uninformative, because a
@@ -127,27 +135,51 @@ export function CaseInspector({
                   </div>
 
                   {application.canSimulate.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {application.canSimulate.map((event) => (
-                        <Button
-                          key={event}
-                          size="sm"
-                          variant="outline"
-                          className="text-xs"
-                          disabled={simulate.isPending}
-                          onClick={() =>
-                            simulate.mutate({
-                              applicationId: application.id,
-                              event: event as Parameters<typeof adminApi.simulate>[0]['event'],
-                              ...(event === 'information_requested'
-                                ? { detail: 'one more payslip' }
-                                : {}),
-                            })
-                          }
-                        >
-                          {EVENT_LABELS[event] ?? event}
-                        </Button>
-                      ))}
+                    <div className="space-y-2">
+                      {application.canSimulate.includes('information_requested') && (
+                        <div className="space-y-1">
+                          <Label htmlFor={`request-detail-${application.id}`} className="text-xs">
+                            What the team is asking for
+                          </Label>
+                          <Input
+                            id={`request-detail-${application.id}`}
+                            value={requestDetailFor(application.id)}
+                            maxLength={120}
+                            className="h-8 text-xs"
+                            onChange={(event) =>
+                              setRequestDetails((current) => ({
+                                ...current,
+                                [application.id]: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {application.canSimulate.map((event) => (
+                          <Button
+                            key={event}
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            disabled={simulate.isPending}
+                            onClick={() => {
+                              // The server supplies the default when the box is empty, so a
+                              // cleared field is the one-click button, not an error.
+                              const detail = requestDetailFor(application.id).trim()
+                              simulate.mutate({
+                                applicationId: application.id,
+                                event: event as Parameters<typeof adminApi.simulate>[0]['event'],
+                                ...(event === 'information_requested' && detail.length > 0
+                                  ? { detail }
+                                  : {}),
+                              })
+                            }}
+                          >
+                            {EVENT_LABELS[event] ?? event}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-2xs">

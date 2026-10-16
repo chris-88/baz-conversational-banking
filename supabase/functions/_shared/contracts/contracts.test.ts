@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CARD_TYPES, cardSchema } from './cards.ts'
 import { ERROR_CODES, fail, ok, statusFor } from './common.ts'
-import { parseStreamEvent, streamEventSchema, toSseFrame } from './stream.ts'
+import { parseStreamEvent, streamEventSchema, toSseFrame, withdraw } from './stream.ts'
 import { bazTurnRequestSchema } from './baz-turn.ts'
 
 describe('the result envelope', () => {
@@ -39,9 +39,25 @@ describe('stream events', () => {
     expect(parseStreamEvent('{}')).toBeNull()
   })
 
-  it('covers exactly the five event types CLAUDE.md names', () => {
+  it('covers exactly the event types every consumer switches on', () => {
     const types = streamEventSchema.options.map((option) => option.shape.type.value)
-    expect([...types].sort()).toEqual(['card', 'done', 'error', 'status', 'text_delta'])
+    expect([...types].sort()).toEqual(['card', 'done', 'error', 'retract', 'status', 'text_delta'])
+  })
+
+  it('carries a retract as a count of characters, never a zero', () => {
+    expect(parseStreamEvent('{"type":"retract","length":14}')).toEqual({ type: 'retract', length: 14 })
+    expect(parseStreamEvent('{"type":"retract","length":0}')).toBeNull()
+    expect(parseStreamEvent('{"type":"retract","length":1.5}')).toBeNull()
+  })
+
+  /**
+   * The function trims what it persists and the browser trims what it shows with this one
+   * function, so the record and the screen cannot disagree about where the withdrawal ended.
+   */
+  it('withdraws from the end, and never past the start', () => {
+    expect(withdraw('Right.\n\nI will put it up.', '\n\nI will put it up.'.length)).toBe('Right.')
+    expect(withdraw('Hello', 50)).toBe('')
+    expect(withdraw('Hello', 0)).toBe('Hello')
   })
 })
 

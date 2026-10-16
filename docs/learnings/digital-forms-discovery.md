@@ -2,9 +2,11 @@
 title: Digital forms discovery
 status: current
 scope: shared
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/functions/_shared/domain/forms/
+  - supabase/functions/_shared/db/form-digest.ts
+  - supabase/functions/_shared/db/record-form-answers.ts
   - docs/decisions.md
 ---
 
@@ -94,3 +96,24 @@ destination resolves against the live branch, and where several fields share a n
 ones win.
 
 Plus one rule with no exceptions: **never prefill a `hidden` field.**
+
+## 2026-10-16: the two halves of a feature have to share a key
+
+The form questions shipped on 2026-10-14 and recorded nothing until 2026-10-16. The digest listed
+each outstanding question by its label; the tool that records an answer required the
+definition's field id; the model, shown one and asked for the other, guessed. Across the whole
+project's history `form_answers` had zero rows, `record_form_answers` had been called on one turn,
+and that call was refused with "mobile: no such field on this form". In case aed80555 a customer
+answered five of the form's questions in conversation, 365 online, joint or sole, the current
+account, title and country of residence, and all five were lost while the conversation read as
+a success.
+
+The fix is small: the digest line carries the id in brackets, and the recorder also resolves a
+label when exactly one live question carries it. The lesson is about detection. Every unit test
+passed, because each half was correct on its own terms, and nothing tested the sentence the
+model reads against the key the server matches. The detector that would have caught it on the
+first day is a count of `form_answers` rows, which stayed at zero through two days of live
+conversations.
+
+> **When a feature exists to write something down, the first thing to check after shipping it
+> is whether anything was written.**

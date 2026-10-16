@@ -95,7 +95,12 @@ describe('the catalogue decides whose fact it is, not the model', () => {
     expect(inserted[0]?.participant_id).toBe('p-partner')
   })
 
-  it('refuses a partner fact before the partner exists', async () => {
+  it('refuses a partner fact before the partner exists, and says what to do instead', async () => {
+    /*
+     * "There is no partner on this case yet" was true and not enough. The model read it as a
+     * passing failure and sent the same write on the next five turns, refused every time,
+     * while the figure the customer gave was kept nowhere. The refusal has to close the loop.
+     */
     const { client } = stubClient()
     const outcome = await recordFacts(client, {
       caseId: 'c-1',
@@ -105,7 +110,42 @@ describe('the catalogue decides whose fact it is, not the model', () => {
     })
 
     expect(outcome.accepted).toEqual([])
-    expect(outcome.rejected[0]?.reason).toMatch(/no partner/i)
+    const reason = outcome.rejected[0]?.reason ?? ''
+    expect(reason).toMatch(/no partner on this case yet/i)
+    expect(reason).toContain('income.annualBasic is asked of them directly when they join')
+    expect(reason).toMatch(/do not try again/i)
+    expect(reason).toContain(
+      'Record what the customer said about it as income.partnerAnnualStated instead.',
+    )
+  })
+
+  it('offers the hearsay key for income only, because only income has one', async () => {
+    const { client } = stubClient()
+    const outcome = await recordFacts(client, {
+      caseId: 'c-1',
+      facts: [{ key: 'employment.status', subject: 'partner', value: 'employed_full_time' }],
+      participants: { primary: 'p-primary', partner: null },
+      source: 'customer_stated',
+    })
+
+    const reason = outcome.rejected[0]?.reason ?? ''
+    expect(reason).toContain('employment.status is asked of them directly when they join')
+    expect(reason).toMatch(/do not try again/i)
+    expect(reason).not.toContain('income.partnerAnnualStated')
+  })
+
+  it("keeps what the customer said about their partner's income before the partner exists", async () => {
+    const { client, inserted } = stubClient()
+    const outcome = await recordFacts(client, {
+      caseId: 'c-1',
+      facts: [{ key: 'income.partnerAnnualStated', value: 100_000 }],
+      participants: { primary: 'p-primary', partner: null },
+      source: 'customer_stated',
+    })
+
+    expect(outcome.accepted).toEqual(['income.partnerAnnualStated'])
+    expect(inserted[0]?.subject_kind).toBe('household')
+    expect(inserted[0]?.participant_id).toBeNull()
   })
 })
 

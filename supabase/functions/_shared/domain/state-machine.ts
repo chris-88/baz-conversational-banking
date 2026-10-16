@@ -36,6 +36,14 @@ export type Application = {
    * behind them.
    */
   readonly catalogueId?: string | null
+  /**
+   * What the customer saw it called when they started it, e.g. "SuperSaver".
+   *
+   * Written once at creation from the tenant's catalogue, so the name survives into a layer
+   * that cannot look the catalogue up (Invariant 11). Null for applications created before
+   * the column existed; they are called what the journey is called.
+   */
+  readonly displayName?: string | null
   readonly state: ApplicationState
   /** Where `resumed` returns to. Non-null only while `paused`. */
   readonly resumeTo: ApplicationState | null

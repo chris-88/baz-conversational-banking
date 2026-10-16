@@ -24,12 +24,14 @@ const SIGNALS = new Set([
   'goal_identified',
   'product_quoted',
   'card_promised_not_shown',
+  'question_while_card_awaits',
   'application_created',
   'application_submitted',
   'partner_joined',
   'partner_completed',
   'request_blocked',
   'tool_rejected',
+  'customer_repeated',
 ])
 
 const text = (payload: Record<string, unknown>, key: string): string | null => {
@@ -74,6 +76,10 @@ export function describeAdminEvent(
         return `Worked out a goal: ${text(payload, 'goal')?.replaceAll('_', ' ') ?? 'something they are after'}`
       case 'card_promised_not_shown':
         return 'Said there was a card, and there was not'
+      case 'question_while_card_awaits': {
+        const card = text(payload, 'card')?.replaceAll('_', ' ') ?? 'a'
+        return `Asked something new while the ${card} card was still waiting for a tap`
+      }
       /*
        * The two that explain a turn that came to nothing.
        *
@@ -93,6 +99,15 @@ export function describeAdminEvent(
         return `Baz reached for ${called.length > 0 ? called.join(', ') : 'nothing'}${
           refused > 0 ? ` (${String(refused)} refused)` : ''
         }`
+      }
+      /*
+       * The customer saying it again. Twice in one live case the same message came back within
+       * a minute of the first because the answer had not landed, and the transcript showed two
+       * ordinary turns. The turn itself is unchanged; this is the mark it leaves.
+       */
+      case 'customer_repeated': {
+        const said = text(payload, 'said')
+        return said === null ? 'Said the same thing again' : `Said it again, word for word: "${said}"`
       }
       case 'product_quoted':
         return `Showed figures for ${text(payload, 'product')?.replaceAll('_', ' ') ?? 'a product'}`

@@ -2,7 +2,7 @@
 title: Conversation runtime
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/functions/baz-turn/index.ts
   - supabase/functions/_shared/llm/prompt.ts
@@ -90,8 +90,25 @@ looks fine on screen and orchestrates nothing underneath.
 Server-sent events, as a Zod discriminated union:
 
 ```ts
-text_delta | card | status | done | error
+text_delta | retract | card | status | done | error
 ```
+
+Text streams live, round by round. The model usually speaks, calls a tool and speaks again about
+what came back, and when the server refuses the tool the first sentence has already reached the
+customer: "Payslip first, then. Send it in as a photo", and a paragraph later "there's no document
+I can ask you for". Four times in one live conversation. So a round that spoke and then had a call
+refused is withdrawn. A `retract` carries the number of characters that round put on screen,
+paragraph break included; the browser takes them back off the reply (and drops the bubble if
+nothing is left, so Baz is thinking again rather than silent), the function takes them out of the
+text it persists, and every refused tool result tells the model its words were withdrawn and to
+write again from the results. Both ends trim with the same `withdraw` function, so the record and
+the screen cannot disagree.
+
+A refusal is a tool that was asked to show or do something and did nothing the customer can see:
+a handler's "nothing to show" return marked `refused: true`, or a schema failure or a throw on any
+tool other than `record_facts` and `record_form_answers`, whose partial rejections leave the words
+beside them standing because those words are usually right. "Already on screen, point at it" is
+not a refusal either, for the same reason.
 
 The stream emits while it thinks, so a slow tool round never reads as a dead connection. The
 keepalive is comfortably inside the client's 45-second silence limit and small enough to survive

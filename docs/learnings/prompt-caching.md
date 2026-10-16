@@ -2,7 +2,7 @@
 title: Prompt caching
 status: current
 scope: shared
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - docs/04-cost-of-running-a-conversational-assistant.md
   - supabase/functions/_shared/llm/prompt.ts
@@ -69,3 +69,11 @@ It had been there since the gate was written, and it was assumed to work because
 It has been left uncached, because padding a prompt to reach a cache threshold would cost more
 than it saves. The comment beside it now records the measurement rather than the intention — which
 is the right outcome for any assumption that turns out to be false.
+
+## One prefix per stage (16 October)
+
+The stage decides which tools a turn is offered, and the tools sit ahead of the breakpoint, so
+each stage is its own cache entry. A real conversation that moved through planning, arranging
+and choosing wrote the prefix three times, €0.30 of €1.69. The lists stay stage-dependent,
+because withholding a tool is enforcement; the pre-warm step before a presentation now covers
+each stage. docs/04, Finding 9.

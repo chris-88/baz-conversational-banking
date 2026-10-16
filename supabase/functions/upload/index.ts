@@ -8,6 +8,10 @@ import {
 } from '../_shared/db/case-repository.ts'
 import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
 import { env } from '../_shared/env.ts'
+import { asApplicationId } from '../_shared/domain/facts.ts'
+import type { Product } from '../_shared/domain/journey.ts'
+import { journeyFor } from '../_shared/domain/journeys/index.ts'
+import { transition, type ApplicationState } from '../_shared/domain/state-machine.ts'
 
 /**
  * `upload` — the only way a document enters a case (§6 Stage 7, §10).
@@ -106,12 +110,21 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
   const requestRow = await admin
     .from('application_requests')
-    .select('id, status, requirement_id, application_id, applications!inner(case_id)')
+    .select(
+      'id, status, requirement_id, application_id, ' +
+        'applications!inner(id, case_id, product, state, resume_to)',
+    )
     .eq('id', requestId)
     .maybeSingle()
 
   const row = requestRow.data as
-    | { id: string; status: string; requirement_id: string; application_id: string; applications: { case_id: string } }
+    | {
+        id: string
+        status: string
+        requirement_id: string
+        application_id: string
+        applications: HeldApplication
+      }
     | null
 
   if (!row) return errorResponse('not_found', 'There is no such request.')
@@ -164,15 +177,103 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     'the request',
   )
 
+  const actor = attached.participants.role === 'partner' ? 'partner' : 'customer'
+
   await writeEvent(admin, {
     caseId,
     type: 'document_uploaded',
-    actor: attached.participants.role === 'partner' ? 'partner' : 'customer',
+    actor,
     payload: { requirementId: row.requirement_id, fileName: file.name },
+  })
+
+  await settleInformationRequest(admin, {
+    caseId,
+    application: row.applications,
+    actor,
+    requirementId: row.requirement_id,
+    fileName: file.name,
   })
 
   return json(ok({ fileName: file.name, requirementId: row.requirement_id }), 200)
 })
+
+/** The application a request belongs to, as far as the state machine needs it. */
+type HeldApplication = {
+  id: string
+  case_id: string
+  product: Product
+  state: ApplicationState
+  resume_to: ApplicationState | null
+}
+
+/**
+ * §41: the bank asked, the customer answered, the application moves on.
+ *
+ * An application in `info_required` is waiting on the bank's own request, not on anything in
+ * its journey, so the requirement engine's recompute cannot move it: the state machine refuses
+ * `requirements_changed` after submission. The upload that fulfils the last open request is the
+ * moment the information was supplied, and that is the transition taken here, through the
+ * machine and never by setting the state. Nothing happens while another request is still open,
+ * or in any other state: a document against a pre-submission journey requirement is the
+ * engine's business on the next recompute, as before.
+ */
+async function settleInformationRequest(
+  admin: ReturnType<typeof createClient<Database>>,
+  input: {
+    caseId: string
+    application: HeldApplication
+    actor: 'customer' | 'partner'
+    requirementId: string
+    fileName: string
+  },
+): Promise<void> {
+  const { application } = input
+  if (application.state !== 'info_required') return
+
+  const open = await admin
+    .from('application_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('application_id', application.id)
+    .eq('status', 'open')
+
+  // Thrown rather than skipped: skipping leaves the application waiting for a document that
+  // has just arrived, which is the defect this exists to end.
+  if (open.error) throw new Error(`Could not read the open requests: ${open.error.message}`)
+  if ((open.count ?? 0) > 0) return
+
+  const result = transition(
+    {
+      id: asApplicationId(application.id),
+      product: application.product,
+      state: application.state,
+      resumeTo: application.resume_to,
+    },
+    { type: 'information_supplied' },
+  )
+  if (!result.ok) throw new Error(result.error.message)
+
+  mustWrite(
+    await admin
+      .from('applications')
+      .update({ state: result.application.state, resume_to: result.application.resumeTo })
+      .eq('id', application.id),
+    'the application',
+  )
+
+  // The same event the console writes when it simulates the bank receiving a document, so the
+  // return summary and the console narrate it with the words they already have.
+  await writeEvent(admin, {
+    caseId: input.caseId,
+    type: 'document_received',
+    actor: input.actor,
+    applicationId: application.id,
+    payload: {
+      applicationName: journeyFor(application.product).displayName,
+      requirementId: input.requirementId,
+      fileName: input.fileName,
+    },
+  })
+}
 
 /**
  * A file attached to an upload control on the bank's own form.

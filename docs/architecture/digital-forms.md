@@ -2,10 +2,12 @@
 title: Digital forms
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/functions/_shared/domain/forms/
   - supabase/functions/_shared/tenants/boi/forms/
+  - supabase/functions/_shared/db/form-digest.ts
+  - supabase/functions/_shared/db/record-form-answers.ts
 ---
 
 # Digital forms
@@ -125,11 +127,39 @@ Answers that are not facts — a form-specific question, a declaration, a docume
 in `form_answers`, with the wording for consents recorded alongside.
 `form_applications.answers` is the merge, facts last.
 
+## What the model is told
+
+A section of the case digest, built by `_shared/db/form-digest.ts` on every turn: the form's
+name, how many answers are already filled in from facts, how many remain, and the first five
+outstanding questions. Each question is one line in a fixed shape the model copies from:
+
+```text
+- [id 1147] Do you use 365 online? One of: Yes, No.
+- [id 380] Title. One of: Mr, Mrs, Ms, Dr, Rev, Prof.
+- [id 478] Country of residence. One of: Ireland, Afghanistan, Aland Islands, ... or 211 others.
+```
+
+The id in brackets is the definition's own field id, which is the one key the digest and the
+recorder share. A choice list is cut at eight and says so, because the server accepts any value
+the form offers and not only the eight shown. The section ends by telling the model to record
+each answer with `record_form_answers` using the id in brackets, one answer per question.
+
 ## What the model may do
 
-`record_form_answers` writes an answer to one of the form's own questions. The server checks the
-field is live on the current branch, is a question, and that a choice value is one the form
-offers. It **refuses declarations and uploads outright**, whatever it is sent.
+`record_form_answers` (`_shared/db/record-form-answers.ts`) writes an answer to one of the
+form's own questions. It settles which field the answer is for before anything else, by id and
+then by label:
+
+- An id the definition has wins, including one copied with its brackets.
+- Otherwise the label is matched, trimmed and case-insensitive, among this form's live questions.
+  Exactly one match is accepted as that field. Several are refused as ambiguous with their ids
+  listed, because SuperSaver asks "Are you a US citizen?" once per applicant and a guess would
+  put an answer on the wrong person. None is refused with up to eight open questions and their
+  ids, so the next round can correct itself rather than guess again.
+
+The checks then run unchanged: the field is live on the current branch, is a question, and a
+choice value is one the form offers. It **refuses declarations and uploads outright**, whatever
+it is sent and however the field was named.
 
 `show_form_declarations` renders the form's declarations in its own published wording; the model
 supplies no text. `show_form_upload` asks for the next document the form wants, with the

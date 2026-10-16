@@ -145,7 +145,7 @@ export async function loadCase(
       .eq('case_id', caseId),
     client
       .from('applications')
-      .select('id, product, state, resume_to, catalogue_id')
+      .select('id, product, state, resume_to, catalogue_id, display_name')
       .eq('case_id', caseId),
     client.from('application_confirmations').select('application_id, requirement_id'),
     client.from('documents').select('application_id, requirement_id, verified').eq('case_id', caseId),
@@ -277,6 +277,7 @@ export async function loadCase(
       id: asApplicationId(row.id),
       product: row.product,
       catalogueId: row.catalogue_id ?? null,
+      displayName: row.display_name ?? null,
       state: row.state,
       resumeTo: row.resume_to,
     }))
@@ -511,7 +512,7 @@ export async function recordFacts(
     const participantId = household ? null : input.participants[role]
 
     if (!household && participantId === null) {
-      rejected.push({ key: fact.key, reason: `There is no ${role} on this case yet.` })
+      rejected.push({ key: fact.key, reason: missingParticipant(role, fact.key) })
       continue
     }
 
@@ -591,6 +592,24 @@ export async function recordFacts(
   }
 
   return { accepted, rejected }
+}
+
+/**
+ * Why a fact about somebody not on the case yet cannot be written, and what to do instead.
+ *
+ * "There is no partner on this case yet" was true and not enough. The model read it as a
+ * passing failure and sent the same write on the next five turns, refused every time, while
+ * the salary the customer had quoted for their partner was kept nowhere. A refusal the model
+ * acts on says three things: the fact is the partner's to give when they join, do not retry,
+ * and, for income, the key that holds what the customer said about it.
+ */
+function missingParticipant(role: 'primary' | 'partner', key: FactKey): string {
+  const refusal =
+    `There is no ${role} on this case yet; ${key} is asked of them directly when they join. ` +
+    'Do not try again.'
+  return role === 'partner' && key === 'income.annualBasic'
+    ? `${refusal} Record what the customer said about it as income.partnerAnnualStated instead.`
+    : refusal
 }
 
 export async function touchLastSeen(client: Db, caseId: string): Promise<void> {

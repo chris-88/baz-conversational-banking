@@ -12,6 +12,7 @@ import {
 import type { Application } from '../domain/state-machine.ts'
 import { slidersFor } from '../llm/persona.ts'
 import { buildCaseDigest, NARRATABLE_EVENTS } from './digest.ts'
+import { awaitingSection } from '../llm/conversation.ts'
 import type { LoadedCase } from './loaded-case.ts'
 
 const PRIMARY = asParticipantId('11111111-1111-4111-8111-111111111111')
@@ -375,5 +376,90 @@ describe('what the digest is given, it keeps', () => {
     expect(digest.plans).toHaveLength(1)
     expect(digest.checkin?.purpose).toBe('Review')
     expect(digest.revived).toHaveLength(1)
+  })
+})
+
+describe('what the bank asked for after submission (§41)', () => {
+  const held = application('savings', 'info_required')
+  const request = (
+    status: 'open' | 'fulfilled' | 'cancelled',
+    requirementId = 'bank:one-more-payslip',
+  ) => ({
+    id: '55555555-5555-4555-8555-555555555555',
+    applicationId: held.id,
+    requirementId,
+    status,
+    detail: 'one more payslip',
+  })
+  const bankLines = (lines: readonly string[] | undefined) =>
+    (lines ?? []).filter((line) => line.includes('request_upload'))
+
+  it('lists an open bank request as outstanding, with the instruction to offer the upload', () => {
+    const digest = buildCaseDigest(loaded({ applications: [held], requests: [request('open')] }))
+
+    const lines = bankLines(digest.applications[0]?.outstanding)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('One more payslip')
+    expect(lines[0]).toContain('do not guess')
+    expect(digest.applications[0]?.waitingOn).toBe('primary')
+  })
+
+  it('says nothing about it once fulfilled or cancelled', () => {
+    const digest = buildCaseDigest(
+      loaded({ applications: [held], requests: [request('fulfilled'), request('cancelled')] }),
+    )
+
+    expect(bankLines(digest.applications[0]?.outstanding)).toHaveLength(0)
+  })
+
+  it('leaves a request against one of the journey’s own requirements to the journey', () => {
+    const digest = buildCaseDigest(
+      loaded({ applications: [held], requests: [request('open', 'savings-declaration')] }),
+    )
+
+    expect(bankLines(digest.applications[0]?.outstanding)).toHaveLength(0)
+    expect(
+      digest.applications[0]?.outstanding.filter((line) => line.startsWith('Savings account declaration')),
+    ).toHaveLength(1)
+  })
+})
+
+/**
+ * A card shown on an earlier turn and not yet tapped is told to the turn from the case, so the
+ * model cannot take "Great" for the tap. The rules per card type live in `awaiting.test.ts`;
+ * this checks the digest carries it and the prompt says it.
+ */
+describe('a card still waiting for a tap', () => {
+  const message = (role: 'customer' | 'baz' | 'system', cards: readonly string[] = []) => ({
+    role,
+    content: '',
+    cards,
+    createdAt: '2026-10-16T10:00:00.000Z',
+  })
+
+  it('names the card and how far back it is', () => {
+    const digest = buildCaseDigest(
+      loaded({ messages: [message('customer'), message('baz', ['product_options'])] }),
+    )
+    expect(digest.awaiting).toEqual({ type: 'product_options', turnsAgo: 1 })
+  })
+
+  it('says nothing when the card was tapped, or when there is none', () => {
+    expect(buildCaseDigest(loaded()).awaiting).toBeUndefined()
+    const tapped = buildCaseDigest(
+      loaded({
+        applications: [application('joint_account', 'in_progress')],
+        messages: [message('baz', ['product_options']), message('system'), message('baz')],
+      }),
+    )
+    expect(tapped.awaiting).toBeUndefined()
+  })
+
+  it('renders as one short section the model can act on', () => {
+    const section = awaitingSection({ type: 'product_options', turnsAgo: 1 })
+    expect(section).toContain('## A card is waiting')
+    expect(section).toContain('product options card from your last reply')
+    expect(section).toContain('ask nothing new')
+    expect(awaitingSection({ type: 'review', turnsAgo: 3 })).toContain('review card from 3 replies ago')
   })
 })

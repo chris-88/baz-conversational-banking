@@ -2,7 +2,7 @@
 title: Customer context
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/functions/_shared/domain/facts.ts
   - supabase/functions/_shared/domain/requirements.ts
@@ -62,7 +62,10 @@ names a role; the role resolves to the participant it belongs to, and returns nu
 has no participant yet — which is how an application knows it is waiting on a partner who has not
 joined.
 
-Household information comes from the primary customer.
+Household information comes from the primary customer. What they say about their partner is
+household information too, and it is kept as hearsay: `income.partnerAnnualStated` holds the
+salary the customer quoted before the partner joined, is never reused and satisfies no journey.
+The partner's own `income.annualBasic` is what every journey needs, and they state it themselves.
 
 This was a real bug: facts recorded against the wrong person is a one-line mistake with a
 demo-breaking effect, and it is now explicitly tested.

@@ -1,8 +1,14 @@
 import type { Db } from './case-repository.ts'
 import { asApplicationId, type ApplicationId } from '../domain/facts.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
-import type { Journey, Product } from '../domain/journey.ts'
-import { evaluateJourney, type JourneyEvaluation, type RequirementContext } from '../domain/requirements.ts'
+import type { Product } from '../domain/journey.ts'
+import { withBankRequests } from '../domain/bank-requests.ts'
+import {
+  evaluateJourney,
+  type JourneyEvaluation,
+  type RequirementContext,
+  type SatisfiedItem,
+} from '../domain/requirements.ts'
 import { stateLabel, transition, type Application, type TransitionEvent } from '../domain/state-machine.ts'
 import type { ApplicationSummary } from '../contracts/case-action.ts'
 import { participantFor, type LoadedCase } from './loaded-case.ts'
@@ -36,22 +42,55 @@ export function evaluateFor(loaded: LoadedCase, application: Application): Journ
       .map((document) => ({ requirementId: document.requirementId, verified: document.verified })),
   }
 
-  return evaluateJourney(journeyFor(application.product), context)
+  const journey = journeyFor(application.product)
+
+  // What the bank asked for after submission is outstanding too. It is in no journey file, so
+  // without this the status card, the counts and `request_upload` all said nothing was left
+  // while the application sat in `info_required` (§41).
+  return withBankRequests(
+    journey,
+    evaluateJourney(journey, context),
+    loaded.requests.filter((request) => request.applicationId === application.id),
+  )
+}
+
+/**
+ * What the specific product is called, where the kind alone does not say.
+ *
+ * Without it a case holding SuperSaver, a notice account and MortgageSaver shows three rows
+ * all reading "Savings account" — the same confusion the catalogue id was added to end, one
+ * layer further down. Injected rather than looked up, because this file is tenant-free
+ * (Invariant 11).
+ */
+export type NameFor = (product: Product, catalogueId: string | null) => string
+
+/**
+ * What an application is called, wherever it is shown or recorded.
+ *
+ * The name on the row first: it is what the customer saw when they chose, and three savings
+ * accounts started with one tap each have their own. Three review cards all headed "Savings
+ * account" were confirmed by a customer who was never told which account each was, because
+ * every card and every event took the name from the journey, and nine savings products share
+ * one journey. A row from before the column existed has no name, so the catalogue is asked
+ * where a caller can reach it, and the journey's name is the last resort. Every card, summary
+ * and event goes through here, so one application is never called two things.
+ */
+export function applicationName(
+  application: Pick<Application, 'product' | 'catalogueId' | 'displayName'>,
+  nameFor?: NameFor,
+): string {
+  return (
+    application.displayName ??
+    nameFor?.(application.product, application.catalogueId ?? null) ??
+    journeyFor(application.product).displayName
+  )
 }
 
 export function summarise(
   application: Application,
-  journey: Journey,
   evaluation: JourneyEvaluation,
-  /**
-   * What the specific product is called, where the kind alone does not say.
-   *
-   * Without it a case holding SuperSaver, a notice account and MortgageSaver shows three rows
-   * all reading "Savings account" — the same confusion the catalogue id was added to end, one
-   * layer further down. Injected rather than looked up, because this file is tenant-free
-   * (Invariant 11).
-   */
-  nameFor?: (product: Product, catalogueId: string | null) => string,
+  /** See `applicationName`: for a row created before names were stored. */
+  nameFor?: NameFor,
 ): ApplicationSummary {
   const blocking = evaluation.outstanding.filter((item) => item.blocking)
   const satisfied = evaluation.satisfied.length
@@ -60,8 +99,7 @@ export function summarise(
   return {
     id: String(application.id),
     product: application.product,
-    displayName:
-      nameFor?.(application.product, application.catalogueId ?? null) ?? journey.displayName,
+    displayName: applicationName(application, nameFor),
     state: application.state,
     stateLabel: stateLabel(application.state),
     outstanding: blocking.filter((i) => i.waitingOn === 'primary').map((i) => i.requirement.label),
@@ -84,15 +122,14 @@ export async function recomputeApplications(
   loaded: LoadedCase,
   options: {
     readonly activeApplicationId?: ApplicationId | undefined
-    /** See `summarise`: what the specific catalogue product is called. */
-    readonly nameFor?: (product: Product, catalogueId: string | null) => string
+    /** See `applicationName`: for a row created before names were stored. */
+    readonly nameFor?: NameFor
   } = {},
 ): Promise<readonly ApplicationSummary[]> {
   const summaries: ApplicationSummary[] = []
 
   for (const application of loaded.applications) {
     const evaluation = evaluateFor(loaded, application)
-    const journey = journeyFor(application.product)
 
     // A submitted or paused application is not recomputed: the customer is no longer
     // assembling it, and the state machine refuses the event anyway.
@@ -122,15 +159,15 @@ export async function recomputeApplications(
         payload: {
           from: application.state,
           to: result.application.state,
-          applicationName: journey.displayName,
+          applicationName: applicationName(application, options.nameFor),
         },
       })
 
-      summaries.push(summarise(result.application, journey, evaluation, options.nameFor))
+      summaries.push(summarise(result.application, evaluation, options.nameFor))
       continue
     }
 
-    summaries.push(summarise(application, journey, evaluation, options.nameFor))
+    summaries.push(summarise(application, evaluation, options.nameFor))
   }
 
   return summaries
@@ -165,10 +202,12 @@ export async function createApplications(
    * What to call the application, given the catalogue product behind it.
    *
    * Injected rather than looked up here: this file is tenant-free, and the catalogue that knows
-   * "savings.supersaver" is called SuperSaver belongs to the tenant (Invariant 11). Omitted,
-   * every savings application is called "Savings account", which is where this started.
+   * "savings.supersaver" is called SuperSaver belongs to the tenant (Invariant 11). The name is
+   * written on the row, once, so everything that shows the application afterwards can read it
+   * without the catalogue. Omitted, every savings application is called "Savings account",
+   * which is where this started.
    */
-  nameFor?: (product: Product, catalogueId: string | null) => string,
+  nameFor?: NameFor,
 ): Promise<readonly ProductChoice[]> {
   const existing = new Set(loaded.applications.map(identify))
 
@@ -194,10 +233,14 @@ export async function createApplications(
         case_id: loaded.caseId,
         product: choice.product,
         catalogue_id: choice.catalogueId ?? null,
+        display_name: applicationName(
+          { product: choice.product, catalogueId: choice.catalogueId ?? null, displayName: null },
+          nameFor,
+        ),
         state: 'not_started',
       })),
     )
-    .select('id, product, catalogue_id')
+    .select('id, product, catalogue_id, display_name')
 
   if (inserted.error) throw new Error(inserted.error.message)
 
@@ -205,6 +248,7 @@ export async function createApplications(
     id: string
     product: Product
     catalogue_id: string | null
+    display_name: string | null
   }[]) {
     await writeEvent(client, {
       caseId: loaded.caseId,
@@ -213,8 +257,10 @@ export async function createApplications(
       applicationId: row.id,
       payload: {
         product: row.product,
-        applicationName:
-          nameFor?.(row.product, row.catalogue_id) ?? journeyFor(row.product).displayName,
+        applicationName: applicationName(
+          { product: row.product, catalogueId: row.catalogue_id, displayName: row.display_name },
+          nameFor,
+        ),
         ...(row.catalogue_id === null ? {} : { catalogueId: row.catalogue_id }),
       },
     })
@@ -250,6 +296,9 @@ export async function createApplications(
  * §53 — a requirement satisfied by a fact that was bank-held or captured for a different
  * application is a question the customer never had to answer. Recorded as it happens, so the
  * metric is derived from events rather than recomputed later.
+ *
+ * Returns what it recorded rather than how many, because the number to say to the customer is
+ * not the number of events: `countReusedFacts` in `domain/reuse.ts` says why.
  */
 export async function recordReuse(
   client: Db,
@@ -262,7 +311,7 @@ export async function recordReuse(
    * recorded when it started, and recording it again would count it twice (§53).
    */
   only?: ReadonlySet<string>,
-): Promise<number> {
+): Promise<readonly SatisfiedItem[]> {
   const reused = evaluation.satisfied.filter(
     (item) =>
       item.reused && (only === undefined || (item.fact !== null && only.has(item.fact.key))),
@@ -277,7 +326,7 @@ export async function recordReuse(
       payload: {
         requirementId: item.requirement.id,
         label: item.requirement.label,
-        applicationName: journeyFor(application.product).displayName,
+        applicationName: applicationName(application),
         /*
          * Which fact satisfied it and where that fact came from. Added so the reuse card can
          * be built from these rows alone: the value is read from the facts table at render
@@ -290,7 +339,7 @@ export async function recordReuse(
     })
   }
 
-  return reused.length
+  return reused
 }
 
 export function findApplication(

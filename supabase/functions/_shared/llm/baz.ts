@@ -18,6 +18,9 @@ import { TOOLS, validateToolCall, type ToolName } from './tools.ts'
 
 const MAX_TOOL_ROUNDS = 3
 
+/** Between what one round said and what the next says. Counted, so it can be taken back. */
+const PARAGRAPH_BREAK = '\n\n'
+
 /**
  * A backstop against runaway output (§47), not the enforcement — the gate is (Invariant 4).
  *
@@ -33,11 +36,55 @@ const MAX_TOOL_ROUNDS = 3
  */
 export const BAZ_MAX_TOKENS = 3_072
 
-/** Executes a validated tool call. Returns what the model is told, and any card to render. */
-export type ToolExecutor = (
-  name: ToolName,
-  input: unknown,
-) => Promise<{ readonly result: string; readonly card?: Card }>
+/** What a tool call came to: what the model is told, and any card to render. */
+export type ToolOutcome = {
+  readonly result: string
+  readonly card?: Card
+  /**
+   * The tool was asked to show or do something and did nothing the customer can see.
+   *
+   * Set by the handler, because only it knows. Not for "that is already on screen, point at
+   * it", where the words the model wrote beside the call are right; and not for a fact round
+   * that took some facts and not others, where they usually are. Set where they are not: the
+   * words introduced something that is not there, and the round is withdrawn.
+   */
+  readonly refused?: true
+}
+
+/** Executes a validated tool call. */
+export type ToolExecutor = (name: ToolName, input: unknown) => Promise<ToolOutcome>
+
+/**
+ * Appended to every refused result of a round whose words were withdrawn, so the model writes
+ * the reply again rather than the second half of one the customer can no longer see.
+ */
+export const WITHDRAWAL_NOTE =
+  'Nothing you wrote before this call reached the customer; it has been withdrawn. ' +
+  'Write your reply again from what the results say.'
+
+/**
+ * Whether a call that never ran leaves the words written beside it wrong.
+ *
+ * A call that fails validation or throws showed nothing, so for a show or propose tool it is
+ * withdrawn exactly as a refusal the handler chose would be: the sentence introducing it is
+ * about something that is not there. The two recording tools are the exception. The text
+ * written alongside a fact round is usually right whether or not every fact was taken, and
+ * saying it again would cost output for nothing, so a `record_facts` or `record_form_answers`
+ * failure of any kind keeps the round's words. The handlers hold the same line and never set
+ * `refused` on a partial rejection.
+ */
+function withdrawsOnFailure(name: string): boolean {
+  return name !== 'record_facts' && name !== 'record_form_answers'
+}
+
+/** One tool call, run or refused, before its result goes back to the model. */
+type SettledCall = {
+  readonly id: string
+  readonly content: string
+  readonly isError: boolean
+  /** Showed or did nothing the customer can see; see `ToolOutcome.refused`. */
+  readonly refused: boolean
+}
 
 export type BazTurnOptions = {
   /**
@@ -172,6 +219,9 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     let spokenThisRound = false
+    /** Characters put on screen by this round, paragraph break included, so a withdrawal is exact. */
+    let yieldedThisRound = 0
+    const spokenBefore: boolean = spoken
 
     const stream = options.provider.stream({
       model: options.model,
@@ -186,6 +236,7 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
     for await (const chunk of stream) {
       if (chunk.type === 'text_delta') {
         if (spokenThisRound) {
+          yieldedThisRound += chunk.text.length
           yield { type: 'text_delta', text: chunk.text }
           continue
         }
@@ -196,9 +247,13 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
         const opening = chunk.text.replace(/^\s+/, '')
         if (opening === '') continue
 
-        if (spoken) yield { type: 'text_delta', text: '\n\n' }
+        if (spoken) {
+          yieldedThisRound += PARAGRAPH_BREAK.length
+          yield { type: 'text_delta', text: PARAGRAPH_BREAK }
+        }
         spokenThisRound = true
         spoken = true
+        yieldedThisRound += opening.length
         yield { type: 'text_delta', text: opening }
       }
     }
@@ -246,7 +301,7 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
 
     messages.push({ role: 'assistant', content: message.content })
 
-    const results: Anthropic.ToolResultBlockParam[] = []
+    const settled: SettledCall[] = []
 
     for (const toolUse of toolUses) {
       options.onToolCalled?.(toolUse.name)
@@ -263,18 +318,23 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
          * failed closed without saying what failed.
          */
         options.onToolRejected?.({ name: toolUse.name, error: validation.error })
-        results.push({
-          type: 'tool_result',
-          tool_use_id: toolUse.id,
-          is_error: true,
+        settled.push({
+          id: toolUse.id,
           content: validation.error,
+          isError: true,
+          refused: withdrawsOnFailure(toolUse.name),
         })
         continue
       }
 
       try {
         const outcome = await options.executeTool(validation.name, validation.input)
-        results.push({ type: 'tool_result', tool_use_id: toolUse.id, content: outcome.result })
+        settled.push({
+          id: toolUse.id,
+          content: outcome.result,
+          isError: false,
+          refused: outcome.refused === true,
+        })
         if (outcome.card) cards.push(outcome.card)
       } catch (error) {
         // The third way a tool call can come to nothing, and the last one that was invisible.
@@ -282,16 +342,49 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
           name: toolUse.name,
           error: `threw: ${error instanceof Error ? error.message : String(error)}`,
         })
-        results.push({
-          type: 'tool_result',
-          tool_use_id: toolUse.id,
-          is_error: true,
+        settled.push({
+          id: toolUse.id,
           content: error instanceof Error ? error.message : 'That did not work.',
+          isError: true,
+          refused: withdrawsOnFailure(toolUse.name),
         })
       }
     }
 
-    messages.push({ role: 'user', content: results })
+    /*
+     * Words about something that is not there.
+     *
+     * The model speaks, calls a tool, and speaks again about what came back. When the tool
+     * refuses, the first sentence has already reached the customer and the reply contradicts
+     * itself: "Payslip first, then. Send it in as a photo", then "there's no document I can
+     * ask you for". Four times in one conversation. The text streams live because holding it
+     * back would kill streaming on the round that matters, so the fix is to take it back: the
+     * round's words come off the screen and out of the record, and every refused result says
+     * so, because a model that is not told writes the second half of a reply the customer can
+     * no longer see the first half of.
+     *
+     * Only a round that spoke. A round that only called the tool has nothing to take back.
+     */
+    const withdrawn = spokenThisRound && settled.some((call) => call.refused)
+
+    if (withdrawn) {
+      yield { type: 'retract', length: yieldedThisRound }
+      // The screen is back to what the earlier rounds said, so the next round opens from
+      // there: a paragraph break only if something still stands before it.
+      spoken = spokenBefore
+    }
+
+    messages.push({
+      role: 'user',
+      content: settled.map(
+        (call): Anthropic.ToolResultBlockParam => ({
+          type: 'tool_result',
+          tool_use_id: call.id,
+          content: withdrawn && call.refused ? `${call.content} ${WITHDRAWAL_NOTE}` : call.content,
+          ...(call.isError ? { is_error: true } : {}),
+        }),
+      ),
+    })
   }
 
   // The round limit was reached with tools still pending; show what was produced anyway.

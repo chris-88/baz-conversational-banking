@@ -311,6 +311,28 @@ export const factCatalogue = {
     extractable: true,
     label: 'Net monthly income',
   },
+  /**
+   * What the customer says their partner earns, before the partner is here to say it.
+   *
+   * "I earn 150k and she earns 100k" arrives in the first minute of a mortgage conversation,
+   * usually before anybody has been invited. There was no partner to write `income.annualBasic`
+   * against, so the write was refused, the model retried it on five successive turns, and the
+   * second salary was kept nowhere while Baz spoke of two good incomes.
+   *
+   * Household-level because it is the customer's account of their household, not a fact about
+   * a person who may not exist on the case yet. Hearsay: `never` reused, and no journey reads
+   * it, because the partner states their own income when they join and that is the figure an
+   * application needs. The label says whose word it rests on, so wherever it is shown, to the
+   * model or in the inspector, the caveat travels with the number.
+   */
+  'income.partnerAnnualStated': {
+    schema: positiveEuro,
+    subject: 'household',
+    reuse: 'never',
+    sensitivity: 'standard',
+    extractable: true,
+    label: "Partner's annual salary, as the customer described it",
+  },
 
   // ---- Expenditure (§9) ----
   'expenditure.monthlyRent': {

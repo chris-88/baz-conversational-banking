@@ -2,10 +2,12 @@
 title: Data model
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/migrations/20260930210000_init.sql
   - supabase/migrations/20261001140000_revoke_internal_tables.sql
+  - supabase/migrations/20261016171000_bank_request_documents.sql
+  - supabase/migrations/20261016170000_application_display_name.sql
   - supabase/functions/_shared/domain/facts.ts
 ---
 
@@ -39,8 +41,8 @@ tables; the `partner` function returns scoped DTOs.
 
 | Table | Holds |
 |---|---|
-| `applications` | One customer's progress through one journey |
-| `application_requests` | An open ask against an application — typically a document |
+| `applications` | One customer's progress through one journey. `catalogue_id` says which product of that kind; `display_name` is what the customer saw it called when they started it (`SuperSaver`, not `Savings account`), written once at creation and read back by every card, summary and event. Null means the journey's name, which every row created before the column is called |
+| `application_requests` | An open ask against an application: a journey document Baz has asked for, or something the bank asked for after submission (`requirement_id` prefixed `bank:`, see [document upload](../features/document-upload.md)) |
 | `application_confirmations` | The customer's explicit confirmation from the review card |
 | `documents` | Uploaded files, in Supabase Storage |
 | `product_interests` | `offered`, `accepted`, `declined`, `deferred`. Declined means do not raise again |
@@ -138,6 +140,11 @@ sensitivity, and whether the model may extract it:
 
 `subject` is what keeps people apart: the primary's income never satisfies the partner's income
 requirement. That has been a real bug, and it is explicitly tested.
+
+What the primary says about their partner is a different fact again. `income.partnerAnnualStated`
+is household-level hearsay: the salary the customer quoted for a partner who has not joined yet,
+`reuse: 'never'`, read by no journey. The partner's own `income.annualBasic` is what an
+application needs, and they state it themselves when they join.
 
 Facts are never updated in place. A correction writes a new fact and sets `supersededBy` on the
 old one, so the history of what someone said stays readable — which matters when the question is

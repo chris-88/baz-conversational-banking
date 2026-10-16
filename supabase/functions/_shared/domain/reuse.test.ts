@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { factCatalogue } from './facts.ts'
-import { describeReused, formatFactValue, type ReuseEvent } from './reuse.ts'
+import { asParticipantId, factCatalogue, type FactKey, type FactSubject } from './facts.ts'
+import { countReusedFacts, describeReused, formatFactValue, type ReuseEvent } from './reuse.ts'
 
 const fact = (key: string, value: unknown, source = 'bank_held') =>
   ({ key, value, source, supersededBy: null }) as never
@@ -78,5 +78,39 @@ describe('printing a value', () => {
   it('says yes and no rather than true and false', () => {
     expect(formatFactValue('housing.firstTimeBuyer', true)).toBe('Yes')
     expect(formatFactValue('lifeEvent.newChild', false)).toBe('No')
+  })
+})
+
+describe('counting what was carried over', () => {
+  const PRIMARY = asParticipantId('11111111-1111-4111-8111-111111111111')
+  const PARTNER = asParticipantId('22222222-2222-4222-8222-222222222222')
+
+  const carried = (key: FactKey, subject: FactSubject) => ({ reused: true, fact: { key, subject } })
+
+  /** Three savings accounts started together, each reusing the same name and address: two things, not six. */
+  it('counts a fact once however many applications it served', () => {
+    const perApplication = [
+      carried('identity.fullName', PRIMARY),
+      carried('identity.address', PRIMARY),
+    ]
+    expect(countReusedFacts([...perApplication, ...perApplication, ...perApplication])).toBe(2)
+  })
+
+  it('keeps the primary and the partner apart', () => {
+    expect(
+      countReusedFacts([
+        carried('income.annualBasic', PRIMARY),
+        carried('income.annualBasic', PARTNER),
+      ]),
+    ).toBe(2)
+  })
+
+  it('ignores what was asked for fresh, and what was never a fact', () => {
+    expect(
+      countReusedFacts([
+        { reused: false, fact: { key: 'income.annualBasic', subject: PRIMARY } },
+        { reused: false, fact: null },
+      ]),
+    ).toBe(0)
   })
 })

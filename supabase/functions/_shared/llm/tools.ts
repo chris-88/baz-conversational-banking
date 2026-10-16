@@ -37,8 +37,15 @@ export const recordFormAnswersInput = z.object({
   answers: z
     .array(
       z.object({
-        /** The definition's own field id, as given in the digest. */
-        fieldId: z.string().min(1).max(12),
+        /**
+         * The definition's own field id, in brackets on every line of the digest.
+         *
+         * Wide enough to hold a label as well, deliberately. A model that sends the question's
+         * wording instead of its id is resolved on the server where exactly one live question
+         * carries it, and otherwise refused with the ids that would have worked. A length
+         * error here would say none of that.
+         */
+        fieldId: z.string().min(1).max(200),
         value: z.union([z.string().max(200), z.number(), z.boolean()]),
       }),
     )
@@ -252,16 +259,19 @@ export const TOOLS: readonly ToolDefinition[] = [
     name: 'record_facts',
     description:
       'Record something the customer just told you, so it is never asked for again. Only for ' +
-      'what they actually said — never a guess, an inference, or anything about health.',
+      'what they actually said — never a guess, an inference, or anything about health. What ' +
+      'they say their partner earns is income.partnerAnnualStated until the partner has joined ' +
+      'and given their own figure.',
     schema: recordFactsInput,
   },
   {
     name: 'record_form_answers',
     description:
       "Record an answer to one of the bank form's own questions, listed under THE BANK FORM " +
-      'BEHIND THIS APPLICATION. Only what the customer actually said, and for a question with ' +
-      'a fixed set of answers, only one of those answers. Declarations and documents are not ' +
-      'recorded here: they need a tap or a file.',
+      'BEHIND THIS APPLICATION. The fieldId is the id in brackets on that list, copied ' +
+      'exactly. Only what the customer actually said, and for a question with a fixed set of ' +
+      'answers, only one of those answers. Declarations and documents are not recorded here: ' +
+      'they need a tap or a file.',
     schema: recordFormAnswersInput,
   },
   {

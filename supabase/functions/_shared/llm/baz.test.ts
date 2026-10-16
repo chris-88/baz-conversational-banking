@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { boiDomainConfig } from '../tenants/boi/domain-config.ts'
 import { knowledgeBaseSection } from '../tenants/boi/kb-prompt.ts'
-import { runBazTurn, type BazTurnOptions } from './baz.ts'
+import { withdraw, type StreamEvent } from '../contracts/stream.ts'
+import { runBazTurn, WITHDRAWAL_NOTE, type BazTurnOptions, type ToolOutcome } from './baz.ts'
 import { fixtureProvider, fixtureTurnSchema } from './fixture-provider.ts'
 import type { ModelProvider, ModelRequest } from './model.ts'
 import { slidersFor } from './persona.ts'
@@ -16,6 +17,8 @@ type Round = {
   readonly text: string
   readonly tool?: string
   readonly input?: unknown
+  /** Several calls in one round, where the test needs them. Takes precedence over `tool`. */
+  readonly tools?: readonly { readonly name: string; readonly input?: unknown }[]
   /** A round cut off by the output ceiling, which finishes neither its text nor its tool call. */
   readonly truncated?: boolean
 }
@@ -27,7 +30,9 @@ function providerReturning(rounds: readonly Round[]): ModelProvider {
         deltas: [round.text],
         // Tool input is validated before anything runs, so a card only appears when a round
         // supplies input the schema accepts.
-        toolUses: round.tool === undefined ? [] : [{ name: round.tool, input: round.input ?? {} }],
+        toolUses:
+          round.tools?.map((use) => ({ name: use.name, input: use.input ?? {} })) ??
+          (round.tool === undefined ? [] : [{ name: round.tool, input: round.input ?? {} }]),
         ...(round.truncated === true ? { stopReason: 'max_tokens' } : {}),
       })),
     }),
@@ -140,8 +145,13 @@ describe('prompt caching', () => {
 
 describe('runBazTurn', () => {
   it('breaks between what the model said before a tool ran and what it said after', async () => {
+    // Input the schema accepts: a call it refuses is withdrawn now, which is the other test.
     const text = await textOf([
-      { text: 'Let me pull those up.', tool: 'show_product_options' },
+      {
+        text: 'Let me pull those up.',
+        tool: 'show_product_options',
+        input: { products: [{ product: 'mortgage', reason: 'They said they are buying.' }] },
+      },
       { text: 'Mortgage first is usually the sensible order.' },
     ])
 
@@ -257,5 +267,228 @@ describe('running out of room', () => {
 
     expect(run.ceilings).toEqual([3_072])
     expect(run.said).toBe('Renting at €3,500 with two kids')
+  })
+})
+
+/**
+ * Words about something that is not there.
+ *
+ * The model speaks, calls a tool, and speaks again about what came back. When the server
+ * refuses the tool, the first sentence has already reached the customer and the reply
+ * contradicts itself: "Payslip first, then. Send it in as a photo" and, a paragraph later,
+ * "there's no document I can ask you for". Four times in one live conversation. So a round
+ * that spoke and then had a tool refused is withdrawn: a `retract` takes its words off the
+ * screen and out of the record, the refusal tells the model so, and the model writes again
+ * from the results.
+ */
+describe('a round whose tool was refused', () => {
+  /** The reply as both consumers build it: deltas appended, each retract applied as it arrives. */
+  const shownText = (events: readonly StreamEvent[]): string => {
+    let text = ''
+    for (const event of events) {
+      if (event.type === 'text_delta') text += event.text
+      if (event.type === 'retract') text = withdraw(text, event.length)
+    }
+    return text
+  }
+
+  const retractLengths = (events: readonly StreamEvent[]): number[] =>
+    events.flatMap((event) => (event.type === 'retract' ? [event.length] : []))
+
+  /**
+   * Every tool result the model was sent, in order. The loop passes one messages array by
+   * reference to every request, so the last request holds the whole conversation.
+   */
+  const resultsSent = (seen: readonly ModelRequest[]): string[] =>
+    (seen.at(-1)?.messages ?? []).flatMap((message) =>
+      typeof message.content === 'string'
+        ? []
+        : message.content.flatMap((block) =>
+            block.type === 'tool_result' && typeof block.content === 'string'
+              ? [block.content]
+              : [],
+          ),
+    )
+
+  /** Runs the turn with each tool call answered by the next scripted outcome, or thrown. */
+  const run = async (rounds: readonly Round[], outcomes: readonly (ToolOutcome | Error)[]) => {
+    const seen: ModelRequest[] = []
+    const base = options(rounds)
+    const events: StreamEvent[] = []
+    let call = 0
+
+    for await (const event of runBazTurn({
+      ...base,
+      provider: observing(base.provider, seen),
+      executeTool: () => {
+        const outcome = outcomes[call] ?? new Error('More tool calls than outcomes scripted.')
+        call += 1
+        return outcome instanceof Error ? Promise.reject(outcome) : Promise.resolve(outcome)
+      },
+    })) {
+      events.push(event)
+    }
+
+    return { events, text: shownText(events), results: resultsSent(seen) }
+  }
+
+  const option = { product: 'mortgage', reason: 'They said they are buying.' }
+
+  it('takes back exactly what the round said, and the model writes again from the result', async () => {
+    const said = 'Payslip first, then. Send it in as a photo.'
+    const turn = await run(
+      [
+        { text: said, tool: 'show_product_options', input: { products: [option] } },
+        { text: 'There is no document I can ask you for yet.' },
+      ],
+      [{ result: 'No open request to show.', refused: true }],
+    )
+
+    expect(turn.events.map((event) => event.type)).toEqual(['text_delta', 'retract', 'text_delta'])
+    expect(retractLengths(turn.events)).toEqual([said.length])
+    // The rewrite opens the message rather than continuing one that is no longer there.
+    expect(turn.text).toBe('There is no document I can ask you for yet.')
+    expect(turn.results).toEqual([`No open request to show. ${WITHDRAWAL_NOTE}`])
+  })
+
+  it('includes the paragraph break when something said earlier still stands', async () => {
+    const withdrawnWords = 'I will put the invitation up so she can do that.'
+    const turn = await run(
+      [
+        { text: 'Right.', tool: 'show_product_options', input: { products: [option] } },
+        { text: withdrawnWords, tool: 'show_product_options', input: { products: [option] } },
+        { text: 'Hannah has already joined, so there is nothing to send.' },
+      ],
+      [{ result: 'Options shown.' }, { result: 'Already joined.', refused: true }],
+    )
+
+    expect(retractLengths(turn.events)).toEqual(['\n\n'.length + withdrawnWords.length])
+    // Back to the first round's words, with a fresh break before the rewrite.
+    expect(turn.text).toBe('Right.\n\nHannah has already joined, so there is nothing to send.')
+    expect(turn.results).toEqual(['Options shown.', `Already joined. ${WITHDRAWAL_NOTE}`])
+  })
+
+  it('keeps its words when the tool did what was asked', async () => {
+    const turn = await run(
+      [
+        { text: 'Let me pull those up.', tool: 'show_product_options', input: { products: [option] } },
+        { text: 'Mortgage first is usually the sensible order.' },
+      ],
+      [{ result: 'Options shown.' }],
+    )
+
+    expect(retractLengths(turn.events)).toEqual([])
+    expect(turn.text).toBe('Let me pull those up.\n\nMortgage first is usually the sensible order.')
+    expect(turn.results).toEqual(['Options shown.'])
+  })
+
+  it('withdraws a round where one call was refused and another was not', async () => {
+    const turn = await run(
+      [
+        {
+          text: 'Here are the options, and the invitation for Hannah.',
+          tools: [
+            { name: 'show_product_options', input: { products: [option] } },
+            { name: 'show_product_options', input: { products: [option] } },
+          ],
+        },
+        { text: 'Here are the options. Hannah has already joined.' },
+      ],
+      [
+        { result: 'Options shown.', card: { type: 'status', applications: [] } as never },
+        { result: 'Hannah has already joined.', refused: true },
+      ],
+    )
+
+    expect(retractLengths(turn.events)).toHaveLength(1)
+    expect(turn.text).toBe('Here are the options. Hannah has already joined.')
+    // The card that was shown still arrives, and only the refused result carries the note.
+    expect(turn.events.filter((event) => event.type === 'card')).toHaveLength(1)
+    expect(turn.results).toEqual([
+      'Options shown.',
+      `Hannah has already joined. ${WITHDRAWAL_NOTE}`,
+    ])
+  })
+
+  it('withdraws a show call the schema refused, since nothing was shown', async () => {
+    const turn = await run(
+      [
+        { text: 'Here they are.', tool: 'show_product_options', input: { products: 'none' } },
+        { text: 'Tell me a little more first.' },
+      ],
+      [],
+    )
+
+    expect(retractLengths(turn.events)).toEqual(['Here they are.'.length])
+    expect(turn.text).toBe('Tell me a little more first.')
+    expect(turn.results).toHaveLength(1)
+    expect(turn.results[0]).toContain(WITHDRAWAL_NOTE)
+  })
+
+  it('treats a show tool that threw as one that refused', async () => {
+    const turn = await run(
+      [
+        { text: 'Here they are.', tool: 'show_product_options', input: { products: [option] } },
+        { text: 'I could not bring those up. Tell me a little more first.' },
+      ],
+      [new Error('products: unavailable')],
+    )
+
+    expect(retractLengths(turn.events)).toEqual(['Here they are.'.length])
+    expect(turn.text).toBe('I could not bring those up. Tell me a little more first.')
+    expect(turn.results).toEqual([`products: unavailable ${WITHDRAWAL_NOTE}`])
+  })
+
+  /**
+   * The text written alongside a fact round is usually right whether or not every fact was
+   * taken, and saying it again would cost output for nothing. So neither a partial rejection
+   * nor a schema failure on the recording tools takes anything back.
+   */
+  it('does not withdraw on a record_facts call that took some facts and not others', async () => {
+    const turn = await run(
+      [
+        {
+          text: 'Two kids and a mortgage, noted.',
+          tool: 'record_facts',
+          input: { facts: [{ key: 'income.annualBasic', value: 52_000 }] },
+        },
+        { text: 'What does Hannah earn?' },
+      ],
+      [{ result: 'Recorded 1 of 2. Rejected household.children: not a number.' }],
+    )
+
+    expect(retractLengths(turn.events)).toEqual([])
+    expect(turn.text).toBe('Two kids and a mortgage, noted.\n\nWhat does Hannah earn?')
+    expect(turn.results).toEqual(['Recorded 1 of 2. Rejected household.children: not a number.'])
+  })
+
+  it('keeps the words beside a record_facts call the schema refused', async () => {
+    const turn = await run(
+      [
+        { text: 'Two kids, noted.', tool: 'record_facts', input: { facts: 'not a list' } },
+        { text: 'What do you both earn?' },
+      ],
+      [],
+    )
+
+    expect(retractLengths(turn.events)).toEqual([])
+    expect(turn.text).toBe('Two kids, noted.\n\nWhat do you both earn?')
+    expect(turn.results).toHaveLength(1)
+    expect(turn.results[0]).not.toContain(WITHDRAWAL_NOTE)
+  })
+
+  it('has nothing to take back from a round that only called the tool', async () => {
+    const turn = await run(
+      [
+        { text: '', tool: 'show_product_options', input: { products: [option] } },
+        { text: 'Hannah has already joined.' },
+      ],
+      [{ result: 'Already joined.', refused: true }],
+    )
+
+    expect(retractLengths(turn.events)).toEqual([])
+    expect(turn.text).toBe('Hannah has already joined.')
+    // Nothing was withdrawn, so the model is not told that something was.
+    expect(turn.results).toEqual(['Already joined.'])
   })
 })

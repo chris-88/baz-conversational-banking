@@ -68,6 +68,11 @@ export type OutstandingItem = {
   readonly blocking: boolean
   /** The value being offered for confirmation, when `reason` is `needs_confirmation`. */
   readonly knownFact: Fact | null
+  /**
+   * The open `application_requests` row behind a document the bank asked for after submission
+   * (`bank-requests.ts`). Absent for everything the journey itself requires.
+   */
+  readonly requestId?: string
 }
 
 export type SatisfiedItem = {

@@ -18,7 +18,7 @@ import {
   type Insert,
   writeEvent,
 } from '../_shared/db/case-repository.ts'
-import { evaluateFor, recomputeApplications } from '../_shared/db/applications.ts'
+import { applicationName, evaluateFor, recomputeApplications } from '../_shared/db/applications.ts'
 import type { LoadedCase } from '../_shared/db/loaded-case.ts'
 import { env } from '../_shared/env.ts'
 
@@ -66,7 +66,9 @@ function buildTasks(loaded: LoadedCase, partnerId: string): readonly PartnerTask
   const byKey = new Map<string, PartnerTask>()
 
   for (const application of loaded.applications) {
-    const journey = journeyFor(application.product)
+    // The name the primary chose it by, so a task applies to "SuperSaver" and not to one of
+    // three things called "Savings account".
+    const name = applicationName(application)
     const evaluation = evaluateFor(loaded, application)
 
     const items = [
@@ -87,9 +89,9 @@ function buildTasks(loaded: LoadedCase, partnerId: string): readonly PartnerTask
       if (existing) {
         byKey.set(key, {
           ...existing,
-          appliesTo: existing.appliesTo.includes(journey.displayName)
+          appliesTo: existing.appliesTo.includes(name)
             ? existing.appliesTo
-            : [...existing.appliesTo, journey.displayName],
+            : [...existing.appliesTo, name],
           done: existing.done || entry.done,
         })
         continue
@@ -127,7 +129,7 @@ function buildTasks(loaded: LoadedCase, partnerId: string): readonly PartnerTask
         ...(enumValues.length > 0
           ? { options: enumValues.map((value) => ({ value, label: prettify(value) })) }
           : {}),
-        appliesTo: [journey.displayName],
+        appliesTo: [name],
         done: entry.done,
       })
     }
@@ -307,7 +309,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     applications: loaded.applications
       .filter((application) => journeyFor(application.product).supportsPartner)
       .map((application) => ({
-        displayName: journeyFor(application.product).displayName,
+        displayName: applicationName(application),
         stateLabel: stateLabel(application.state),
         waitingOnYou: evaluateFor(loaded as LoadedCase, application).waitingOn === 'partner',
       })),

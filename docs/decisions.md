@@ -1571,3 +1571,83 @@ inviting again voids every earlier invite for any browser that has not already j
 also how a customer revokes one; a browser that has joined keeps its link, because the link in
 the partner's messages is their only way back in. Handoff codes and notification links keep their short TTLs and single use; they are used by the
 person who just made them, in the next minute. Invariant 8 now says so.
+
+## 2026-10-16 — the digest line carries the field id, and the recorder also answers to a label (§8, §53)
+
+The bank form's questions were put to the model by label and recorded by id, so the model
+guessed and every guess was refused: `form_answers` had no rows in two days of live
+conversations, and case aed80555 lost five answers while reading as a success. The definition's
+own field id is the one key both sides share, so every digest line now carries it in brackets
+and the instruction says to copy it. The recorder matches by id first, then by label among the
+live questions, accepting exactly one match, refusing several as ambiguous with their ids
+(SuperSaver asks "Are you a US citizen?" once per applicant), and refusing none with the open
+questions and their ids so the next round can be right. Declarations and uploads are refused
+however the field is named. A cut choice list says how many more there are, because "one of the
+listed values" would otherwise refuse the customer's own country. The detector that would have
+caught this on the first day is a count of `form_answers` rows.
+
+## 2026-10-16 — an application is called what the customer chose, on its row (§6 Stage 6, §53)
+
+Three savings products started with one tap arrived as three applications all called "Savings
+account": the review cards, the status card, the partner invite and every event took the name
+from the journey, and nine savings products share one journey, so the customer confirmed three
+identical-looking review cards without being told which account each was. The name is now
+written on the row at creation from the tenant's catalogue and read back by every card, summary
+and event through one helper, `applicationName`; null means the journey's name, which is what
+every earlier row is called, with the catalogue asked where a caller has it in hand. The same
+case found the partner invite offered for applications that ask a partner for nothing, so
+`show_partner_invite` is refused unless one of them has an outstanding second-applicant
+requirement. The confirmation line after starting applications counts a carried-over fact once
+rather than once per application it went into, so it agrees with the reuse card beside it.
+
+## 2026-10-16 — a request for information is a row the customer can answer (§41)
+
+The console's "ask for more information" moved an application to `info_required` and wrote an
+event saying what the team wanted, and that was all it did: Baz told the customer the team had
+asked for one more payslip, offered the upload, and `request_upload` answered that nothing was
+outstanding, because the only documents it knew were the journey's and the savings journey has
+none. The simulation now opens an `application_requests` row (kind document, requested of the
+primary applicant, `requirement_id` `bank:<slug of the wording>` so it can never collide with a
+journey id), and `withBankRequests` turns every open one into an outstanding, blocking document
+in the application's evaluation, applied by `evaluateFor` and the digest alike, so the status
+card, the counts, the handoff note, the console and the model's briefing all see the same thing.
+`request_upload` serves that row first whatever document type the model names; the upload
+fulfils it and takes `info_required` to `under_review` through `information_supplied` when
+nothing else is open. The file is recorded as `bank_request`, which the `documents` check now
+allows, because what the bank asks for after submission is not a type any journey names.
+
+## 2026-10-16 — a card stays the question until it is tapped (§6, §27)
+
+"A card is the question" covered the turn a card is shown on. Nothing covered the next one: Baz
+put a joint current account on screen, the customer wrote "Great" instead of tapping it, and Baz
+took the word for the tap, asked the account's discovery questions and said it had everything it
+needed for an application that did not exist. The turn is now told, from the transcript and the
+case rather than from the model, that a card is still waiting (`awaitingCard`, settled per card
+type by what the case holds since the card went up), the rule says the words are not the tap,
+and a reply that asks something new while a card waits leaves a `question_while_card_awaits`
+event. "The card above" no longer counts as a promise of a card, since it names one on screen.
+
+## 2026-10-16 — words written before a refused tool are withdrawn (§27, §59)
+
+The model speaks, calls a tool, and speaks again about what came back; when the server refuses
+the tool the first sentence has already reached the customer and the reply contradicts itself,
+four times in one conversation. Holding the text until the round ends would kill streaming on
+the round that matters, so the words are taken back instead: a `retract` stream event carries
+the characters the round put on screen, the browser and the function trim with the same
+`withdraw`, and every refused result tells the model its words were withdrawn and to write
+again from the results. A refusal is a handler's `refused: true` or a schema failure or throw on
+anything but the two recording tools, whose partial rejections leave the words beside them
+standing because those words are usually right.
+
+## 2026-10-16 — what the customer says their partner earns is a fact about the household (§9, §33)
+
+"I earn 150k and she earns 100k", said before anybody had been invited. The partner's income is a
+person-level key, there was no partner to write it against, `record_facts` refused it, and the
+model sent the same write on the next five turns while the second salary was kept nowhere. So
+the figure has a key of its own: `income.partnerAnnualStated` is household-level, because it is
+the customer's account of their household rather than a fact about somebody who may not be on
+the case yet, and it is `reuse: 'never'` and read by no journey, because the partner states their
+own `income.annualBasic` when they join. The refusal now says that, says not to retry, and names
+the key. A message repeated word for word within ten minutes of the previous one also leaves a
+`customer_repeated` event: twice in the same case the customer did that because the answer had
+not landed, and the transcript showed two ordinary turns.

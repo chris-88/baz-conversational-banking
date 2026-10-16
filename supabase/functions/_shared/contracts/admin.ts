@@ -77,7 +77,12 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
       'assessment_declined',
       'completed',
     ]),
-    detail: z.string().max(120).optional(),
+    /**
+     * What the team is asking for, in the words the customer will read. Only
+     * `information_requested` uses it; the handler supplies "one more payslip" when it is left
+     * out, so the console's one-click button keeps working.
+     */
+    detail: z.string().trim().min(1).max(120).optional(),
   }),
 
   /**

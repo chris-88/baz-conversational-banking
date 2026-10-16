@@ -10,7 +10,8 @@ import type { Product } from '../domain/journey.ts'
 import type { ApplicationState } from '../domain/state-machine.ts'
 import type { DomainConfig } from '../tenants/boi/domain-config.ts'
 import { applySensitivity, composePersona, type PersonaSliders } from './persona.ts'
-import { stageSection } from './conversation.ts'
+import { awaitingSection, stageSection } from './conversation.ts'
+import type { AwaitingCard } from '../domain/conversation/awaiting.ts'
 import type { Stage } from '../domain/conversation/stages.ts'
 
 /**
@@ -282,7 +283,9 @@ export function factReference(): string {
     'partner is still the partner\'s: "my wife earns 100k" is subject: "partner", never the',
     'customer\'s own income. Recorded against the wrong person it silently replaces a correct',
     'answer, and the case then shows the customer earning what their partner earns. If you are',
-    'not certain whose it is, ask rather than guess.',
+    'not certain whose it is, ask rather than guess. Until the second applicant has joined,',
+    'what the customer says their partner earns goes under income.partnerAnnualStated: it is',
+    'their account of it, and the partner gives their own figure when they join.',
     '',
     ...lines,
     '',
@@ -511,6 +514,11 @@ export type CaseDigest = {
    */
   readonly arrangementNeeds?: readonly string[]
   /**
+   * A card shown on an earlier turn that the customer has not acted on, from the transcript
+   * and the case. When they answer it in words, the words are not the tap.
+   */
+  readonly awaiting?: AwaitingCard
+  /**
    * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
    * already reasoned about, what is primary, what is worth mentioning once, what is being held
    * and why, and anything two goals are both laying claim to.
@@ -624,6 +632,7 @@ function digestSection(digest: CaseDigest): string {
    * plan, or asked the customer which of those they wanted.
    */
   if (digest.stage !== undefined) lines.push(stageSection(digest.stage), '')
+  if (digest.awaiting !== undefined) lines.push(awaitingSection(digest.awaiting), '')
 
   lines.push('## What you already know')
   lines.push(

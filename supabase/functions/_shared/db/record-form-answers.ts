@@ -1,5 +1,6 @@
 import type { Db } from './case-repository.ts'
 import type { Json } from './database.types.ts'
+import type { FormField } from '../domain/forms/definition.ts'
 import { resolveFormState, isQuestion } from '../domain/forms/state.ts'
 import { formForProduct } from '../tenants/boi/forms/mapping.ts'
 import { formSnapshot } from '../tenants/boi/forms/snapshots.ts'
@@ -13,7 +14,15 @@ import { isProduct } from '../domain/journey.ts'
  * of it is written, because a form answer that the platform would reject, or that silently
  * lands on a field nobody asked about, is worse than no answer at all.
  *
- * Four refusals, in order of how badly they would end:
+ * Which field an answer is for is settled first, by id and then by label. The digest lists
+ * every question with its id in brackets and tells the model to copy it; for two days it
+ * listed labels alone, the model guessed ids, and every answer was refused with "no such
+ * field". The id is still the key. A label is accepted when exactly one live question carries
+ * it, because SuperSaver asks "Are you a US citizen?" once per applicant and a guess between
+ * the two would put an answer on the wrong person. A refusal names the ids that would have
+ * worked, so the next round can be right rather than another guess.
+ *
+ * Four refusals after that, in order of how badly they would end:
  *
  *   - a declaration or an upload, which need a tap and a file and can never come from chat
  *   - a field this customer's branch does not reach
@@ -23,6 +32,28 @@ import { isProduct } from '../domain/journey.ts'
  * Refusals come back to the model as reasons, the way fact refusals do, so a turn where
  * everything bounced is visible rather than looking like a turn where nothing was tried.
  */
+
+/** Enough for the model to find the one it meant; the digest itself shows five. */
+const MAX_CANDIDATES = 8
+
+/** Trimmed, case-folded, and without the full stop the digest adds to make a label a sentence. */
+function labelKey(label: string): string {
+  return label.trim().toLowerCase().replace(/\.$/, '')
+}
+
+/** "[id 380]" copied whole from the digest line is still the id. */
+function idKey(sent: string): string {
+  return sent
+    .trim()
+    .replace(/^\[?\s*id\s+/i, '')
+    .replace(/\]$/, '')
+    .trim()
+}
+
+const answerable = (field: FormField): boolean =>
+  field.type !== 'checkbox' && field.type !== 'fileupload'
+
+const named = (field: FormField): string => `${field.id}: ${field.label.trim()}`
 
 export type FormAnswerWrite = {
   readonly fieldId: string
@@ -101,6 +132,55 @@ export async function recordFormAnswers(
   const active = new Set(state.active.map((field) => field.id))
   const byId = new Map(snapshot.definition.fields.map((field) => [field.id, field]))
 
+  /*
+   * What a label can resolve to: the live questions, with declarations and documents left in
+   * so that naming one earns the refusal that explains it. Structure and derived fields are
+   * left out, because nobody answers an html block, and a heading sharing a question's wording
+   * would otherwise make the question ambiguous.
+   */
+  const liveQuestions = state.active.filter((field) => isQuestion(field))
+  const byLabel = new Map<string, FormField[]>()
+  for (const field of liveQuestions) {
+    const key = labelKey(field.label)
+    if (key === '') continue
+    byLabel.set(key, [...(byLabel.get(key) ?? []), field])
+  }
+
+  /*
+   * Where to point the model when nothing matched: the questions still open first, because
+   * those are the ones it was shown, then the rest of what is live, so a correction to a
+   * question already answered can still find its id.
+   */
+  const open = state.outstanding.filter(answerable)
+  const openIds = new Set(open.map((field) => field.id))
+  const candidates = [
+    ...open,
+    ...liveQuestions.filter((field) => answerable(field) && !openIds.has(field.id)),
+  ]
+    .slice(0, MAX_CANDIDATES)
+    .map(named)
+    .join(', ')
+
+  const resolve = (sent: string): { ok: true; field: FormField } | { ok: false; reason: string } => {
+    const byIdMatch = byId.get(idKey(sent))
+    if (byIdMatch) return { ok: true, field: byIdMatch }
+
+    const sharing = byLabel.get(labelKey(sent)) ?? []
+    const [only] = sharing
+    if (sharing.length === 1 && only) return { ok: true, field: only }
+    if (sharing.length > 1) {
+      return { ok: false, reason: `ambiguous; use one of: ${sharing.map(named).join(', ')}` }
+    }
+
+    return {
+      ok: false,
+      reason:
+        candidates === ''
+          ? 'no such field on this form'
+          : `no such field on this form; the questions still open are: ${candidates}`,
+    }
+  }
+
   const writes: {
     form_application_id: string
     field_id: string
@@ -110,12 +190,14 @@ export async function recordFormAnswers(
   }[] = []
 
   for (const answer of input.answers) {
-    const field = byId.get(answer.fieldId)
+    const resolved = resolve(answer.fieldId)
 
-    if (!field) {
-      rejected.push({ fieldId: answer.fieldId, reason: 'no such field on this form' })
+    if (!resolved.ok) {
+      rejected.push({ fieldId: answer.fieldId, reason: resolved.reason })
       continue
     }
+
+    const field = resolved.field
 
     /*
      * The two that can never come from a conversation.

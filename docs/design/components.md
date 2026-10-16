@@ -2,7 +2,7 @@
 title: Components
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - src/components/ui/
   - src/baz/cards/
@@ -54,7 +54,10 @@ Three things are true of every one of them:
 2. **A tap calls `case-action`**, never a tool. The card is the proposal; the action is the
    commitment.
 3. **It renders from data, not from model text.** A status card shows what the database says even
-   if the sentence above it is wrong.
+   if the sentence above it is wrong. That includes what an application is called: the review,
+   status, pause and partner-invite cards take the name stored on the application row, the one
+   the customer chose it by (`SuperSaver`), never the journey's generic name, so three savings
+   accounts started together are three cards a customer can tell apart.
 
 Card types are a discriminated union with an exhaustive `switch` and `assertNever`, so adding a
 card type fails to compile until the renderer handles it.

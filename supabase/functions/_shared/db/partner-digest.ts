@@ -3,7 +3,7 @@ import type { CaseDigest } from '../llm/prompt.ts'
 import { factCatalogue, isFactKey } from '../domain/facts.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
 import { stateLabel } from '../domain/state-machine.ts'
-import { evaluateFor } from './applications.ts'
+import { applicationName, evaluateFor } from './applications.ts'
 
 /**
  * What Baz is allowed to know while it is talking to the partner (§33, Invariant 7).
@@ -59,7 +59,7 @@ export function buildPartnerDigest(
 
       return {
         product: application.product,
-        displayName: journeyFor(application.product).displayName,
+        displayName: applicationName(application),
         state: application.state,
         stateLabel: stateLabel(application.state),
         // Only what is wanted from them. What the primary still owes is the primary's business.

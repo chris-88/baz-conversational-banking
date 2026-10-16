@@ -2,10 +2,12 @@
 title: Digital forms integration
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - supabase/functions/_shared/domain/forms/
   - supabase/functions/_shared/tenants/boi/forms/
+  - supabase/functions/_shared/db/form-digest.ts
+  - supabase/functions/_shared/db/record-form-answers.ts
   - src/admin/FormsScreen.tsx
 ---
 
@@ -31,7 +33,8 @@ form. From then on:
 
 1. The engine works out which of the form's questions actually apply to this customer.
 2. Anything Baz already knows as a **fact** prefills.
-3. The rest are asked in conversation, one at a time.
+3. The rest are asked in conversation, a couple at a time, and each answer is recorded against
+   the form's own field id.
 4. Declarations are shown in the form's own published wording and ticked on a card.
 5. Documents are requested with the form control's own size and type limits.
 6. A submission packet is built — and never sent.
@@ -45,6 +48,26 @@ The customer never sees a 499-field form. They have a conversation, and the form
 - Does not give a figure twice — the total is calculated from its parts, by the form's own
   formula.
 - Does not get an eligibility answer from a language model.
+
+## How the model is told the questions, and how answers are matched
+
+On every turn the case digest carries the first five questions the form still needs, one line
+each: `- [id 1147] Do you use 365 online? One of: Yes, No.` The id is the definition's own
+field id. Where a question offers more than eight values the line shows eight and says how many
+more there are, so the customer's own country is not refused for being off the list. The section
+ends by telling the model to record each answer with `record_form_answers`, using the id in
+brackets, one answer per question.
+
+The server settles which field an answer is for by id first, including an id copied with its
+brackets, and then by label among the form's live questions, trimmed and case-insensitive. One
+match is accepted. Several are refused as ambiguous with the ids listed. None is refused with up
+to eight open questions and their ids, so the model can correct itself on the next round. After
+that the usual checks run: live on this branch, a question rather than something calculated, a
+value the form offers. A declaration or an upload is refused whatever it is called.
+
+This is also the part of the feature that silently did nothing from 2026-10-14 to 2026-10-16,
+because the digest showed labels and the tool wanted ids. See
+[learnings/digital-forms-discovery](../learnings/digital-forms-discovery.md).
 
 ## What is faithful and what is not
 

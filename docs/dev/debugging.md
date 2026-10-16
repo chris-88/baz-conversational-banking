@@ -24,7 +24,7 @@ Thirty-nine writes had no error check, and one of them broke the declined-produc
 week with no symptom at all. Any write that matters goes through `mustWrite(result, what)`.
 
 **Anything worth explaining afterwards writes an event.** `tool_rejected`, `turn_tools`,
-`request_blocked`, `card_promised_not_shown` exist so that a failure leaves a record a person
+`request_blocked`, `card_promised_not_shown`, `question_while_card_awaits`, `customer_repeated` exist so that a failure leaves a record a person
 can read later, in the console, without a log aggregator.
 
 ## Where to look, in order

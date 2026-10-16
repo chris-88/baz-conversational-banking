@@ -29,12 +29,16 @@ import { knowledgeProduct } from '../_shared/tenants/boi/kb-prompt.ts'
 import { loadProductCatalogue } from '../_shared/db/catalogue.ts'
 import { env } from '../_shared/env.ts'
 import {
+  applicationName,
   createApplications,
   evaluateFor,
   findApplication,
   recomputeApplications,
   recordReuse,
+  type NameFor,
 } from '../_shared/db/applications.ts'
+import { countReusedFacts } from '../_shared/domain/reuse.ts'
+import type { SatisfiedItem } from '../_shared/domain/requirements.ts'
 
 /**
  * `case-action` — the customer's taps (Invariant 1, §27, §48).
@@ -107,40 +111,45 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
   // The catalogue names the applications (§51): the console's rows, or the published file.
   const kb = await loadProductCatalogue(admin)
 
+  /*
+   * The catalogue knows SuperSaver from the 365 31-Day Notice Account; the journey only knows
+   * they are both savings. Two applications called "Savings account" tell the customer nothing
+   * about which is which, so a new application is named from this once, on its row, and a row
+   * from before names were stored is named from it on the way out (`applicationName`).
+   */
+  const nameFor: NameFor = (product, catalogueId) =>
+    (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
+    journeyFor(product).displayName
+
   let summary = ''
   let inviteUrl: string | undefined
 
   switch (action.action) {
     case 'select_products': {
-      const created = await createApplications(
-        admin,
-        loaded,
-        action.products,
-        // The catalogue knows SuperSaver from the 365 31-Day Notice Account; the journey only
-        // knows they are both savings. Two applications called "Savings account" tell the
-        // customer nothing about which is which.
-        (product, catalogueId) =>
-          (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
-          journeyFor(product).displayName,
-      )
+      const created = await createApplications(admin, loaded, action.products, nameFor)
       loaded = (await loadCase(admin, caseId))!
 
-      // §53 — count what each new application never had to ask for.
+      // §53 — record what each new application never had to ask for.
       const startedNow = new Set(
         created.map((choice) => `${choice.product}:${choice.catalogueId ?? ''}`),
       )
-      let reused = 0
+      const carried: SatisfiedItem[] = []
       for (const application of loaded.applications) {
         if (!startedNow.has(`${application.product}:${application.catalogueId ?? ''}`)) continue
-        reused += await recordReuse(admin, loaded, application, evaluateFor(loaded, application))
+        carried.push(
+          ...(await recordReuse(admin, loaded, application, evaluateFor(loaded, application))),
+        )
       }
 
-      const names = created.map(
-        (choice) =>
-          (choice.catalogueId === undefined
-            ? undefined
-            : knowledgeProduct(choice.catalogueId, kb.products)?.name) ?? journeyFor(choice.product).displayName,
-      )
+      /*
+       * Said as the customer would count it. One event per requirement per application is
+       * the record (§53); one fact is one thing, however many applications it went into.
+       * Three savings accounts carrying the same name and address announced "6 things carried
+       * over" beside a reuse card that said two.
+       */
+      const reused = countReusedFacts(carried)
+
+      const names = created.map((choice) => nameFor(choice.product, choice.catalogueId ?? null))
       summary =
         created.length === 0
           ? 'Those were already started.'
@@ -280,10 +289,10 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         type: 'application_submitted',
         actor: 'customer',
         applicationId: action.applicationId,
-        payload: { applicationName: journeyFor(application.product).displayName },
+        payload: { applicationName: applicationName(application, nameFor) },
       })
 
-      summary = `${journeyFor(application.product).displayName} submitted.`
+      summary = `${applicationName(application, nameFor)} submitted.`
       break
     }
 
@@ -519,7 +528,8 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
       const base = (globalThis as any).Deno?.env?.get('APP_BASE_URL') ?? ''
       inviteUrl = `${base}/#/join/${token}`
-      summary = `${action.name} can join with that link.`
+      // Nothing is sent by anything here. The customer passes the link on, or does not.
+      summary = `Here is a link to pass to ${action.name}. Nothing is sent until you share it.`
       break
     }
 
@@ -716,21 +726,17 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         type: pausing ? 'application_paused' : 'application_resumed',
         actor: 'customer',
         applicationId: action.applicationId,
-        payload: { applicationName: journeyFor(application.product).displayName },
+        payload: { applicationName: applicationName(application, nameFor) },
       })
 
-      summary = `${journeyFor(application.product).displayName} ${pausing ? 'paused' : 'resumed'}.`
+      summary = `${applicationName(application, nameFor)} ${pausing ? 'paused' : 'resumed'}.`
       break
     }
   }
 
   // Recompute after every action: what is outstanding is derived, never remembered.
   loaded = (await loadCase(admin, caseId))!
-  const applications = await recomputeApplications(admin, loaded, {
-    nameFor: (product, catalogueId) =>
-      (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
-      journeyFor(product).displayName,
-  })
+  const applications = await recomputeApplications(admin, loaded, { nameFor })
 
   /*
    * And the digital form applications, so selecting a product puts its form in the console

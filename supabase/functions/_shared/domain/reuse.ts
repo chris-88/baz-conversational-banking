@@ -103,3 +103,27 @@ export function formatFactValue(key: FactKey, value: unknown): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   return String(value)
 }
+
+/**
+ * How many things the customer never had to type, said once.
+ *
+ * `recordReuse` writes one `context_reused` event per requirement per application, which is
+ * the right record (§53 counts questions avoided) and the wrong number to say out loud. Three
+ * savings accounts started together each carried the same name and address, so the
+ * confirmation line said "6 things carried over" while the reuse card beside it said two. One
+ * fact is one thing, however many applications it served. Counted by key and subject, so the
+ * primary's income and the partner's income are still two.
+ */
+export function countReusedFacts(
+  items: readonly {
+    readonly reused: boolean
+    readonly fact: Pick<Fact, 'key' | 'subject'> | null
+  }[],
+): number {
+  const seen = new Set<string>()
+  for (const item of items) {
+    if (!item.reused || item.fact === null) continue
+    seen.add(`${item.fact.key}:${String(item.fact.subject)}`)
+  }
+  return seen.size
+}

@@ -1,8 +1,10 @@
 import { factCatalogue, type Fact } from '../domain/facts.ts'
+import { awaitingCard } from '../domain/conversation/awaiting.ts'
 import { describeEvent } from '../domain/narration.ts'
 export { NARRATABLE_EVENTS } from '../domain/narration.ts'
 export type { NarratableEvent } from '../domain/narration.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
+import { withBankRequests } from '../domain/bank-requests.ts'
 import { evaluateJourney, type OutstandingItem, type RequirementContext } from '../domain/requirements.ts'
 import { evaluateAdvisories } from '../domain/advisories.ts'
 import { stateLabel } from '../domain/state-machine.ts'
@@ -14,6 +16,7 @@ import { deferred, evaluateNeeds, nextToClarify, readyToSurface } from '../domai
 import { buildPlan } from '../domain/needs/plan.ts'
 import type { DigestPlan } from '../llm/prompt.ts'
 import { participantFor, type LoadedCase } from './loaded-case.ts'
+import { applicationName } from './applications.ts'
 
 /**
  * Builds the case digest the model sees (§14, Invariant 2).
@@ -83,7 +86,13 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
     }
 
     const journey = journeyFor(application.product)
-    const evaluation = evaluateJourney(journey, context)
+    // With what the bank asked for after submission, so this and the status card agree about
+    // whether anything is left (Invariant 2, §41).
+    const evaluation = withBankRequests(
+      journey,
+      evaluateJourney(journey, context),
+      loaded.requests.filter((request) => request.applicationId === application.id),
+    )
 
     // Only blocking items: an optional extra is not something to chase anyone for. An
     // application can be waiting on the customer AND the partner at the same time, so the two
@@ -96,6 +105,15 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
      * values the customer has already given as though they were missing.
      */
     const describe = (item: OutstandingItem): string => {
+      // The bank's own ask, after submission. Said as an instruction because the model has
+      // nothing else to go on: the journey does not know this document, and what the
+      // assessors meant by it is not something to guess at.
+      if (item.requestId !== undefined) {
+        return (
+          `${item.requirement.label}: the bank has asked for this since the application went ` +
+          'in. Offer the upload with request_upload; do not guess what else they want.'
+        )
+      }
       switch (item.reason) {
         case 'needs_confirmation':
           return `${item.requirement.label} — already known, confirmed on the review card`
@@ -124,7 +142,8 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
     return {
       id: application.id,
       product: application.product,
-      displayName: journey.displayName,
+      // The row's own name: the model has to tell three savings accounts apart to pick one.
+      displayName: applicationName(application),
       state: application.state,
       stateLabel: stateLabel(application.state),
       outstanding: blocking.filter((item) => item.waitingOn === 'primary').map(describe),
@@ -175,6 +194,7 @@ export function buildCaseDigest(
   const needs = needContext === null ? [] : evaluateNeeds(needContext, loaded.needs)
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
+  const awaiting = awaitingCard(loaded)
   // What the bank's own form still wants, which is a different list from the journey's.
   const forms = formDigestSection(formDigests(loaded))
 
@@ -194,7 +214,7 @@ export function buildCaseDigest(
           const application = loaded.applications.find(
             (candidate) => candidate.id === fact.capturedFor,
           )
-          const where = application ? journeyFor(application.product).displayName : 'the case'
+          const where = application ? applicationName(application) : 'the case'
           return `Health information for ${where} — answered and recorded.`
         }),
     ),
@@ -251,6 +271,9 @@ export function buildCaseDigest(
     ...(options.arrangement === undefined ? {} : { arrangement: options.arrangement }),
     ...(options.arrangementNeeds === undefined ? {} : { arrangementNeeds: options.arrangementNeeds }),
     ...(options.stage === undefined ? {} : { stage: options.stage }),
+    // The card still waiting for a tap, read from the transcript and the case, never from the
+    // model (which is what took "Great" for the tap).
+    ...(awaiting === null ? {} : { awaiting }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     applications,

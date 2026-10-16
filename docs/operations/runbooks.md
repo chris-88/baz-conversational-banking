@@ -68,6 +68,17 @@ nothing. Haiku was measured and rejected for this reason — 1/6 on tool calls a
 Then update `docs/04-cost-of-running-a-conversational-assistant.md` **and its changelog** with
 measured figures.
 
+## Warm the cache before a presentation
+
+The cached prefix is shared across cases and lives an hour (docs/04, Finding 2), and there is
+one prefix per conversation stage because the stage decides the tool list (Finding 9). A cold
+prefix costs about €0.10 and a visible pause on the first round that meets it. Within the hour
+before the run, take one throwaway conversation through the stages on a test-tagged case:
+opening, a direction, a few facts, keep a plan, show the arrangement, choose, start an
+application. Every stage the presenter will reach is then a hit, for the presenter and for the
+audience's phones alike. Delete the case afterwards (`delete_case`, or let the probe script do
+it).
+
 ## Change anything that moves the cost of a turn
 
 Prompt size, cache breakpoints or lifetimes, model choice, tool rounds, reply length, a new tool.
