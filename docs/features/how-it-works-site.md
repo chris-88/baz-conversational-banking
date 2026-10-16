@@ -16,11 +16,12 @@ product, which is why it has its own address and reads as a case study rather th
 Each chapter pairs a claim with the evidence for it, and the evidence is real: published form
 definitions, measured token counts, commits counted out of git history.
 
-## Nine chapters
+## Ten chapters
 
 ```text
 opportunity    why the current interaction model wastes the bank's own context
 story          the §67 acceptance story, beat by beat, through the real cards
+capabilities   what is built, as tiles, six rendered cards and three running proofs
 experience     what the conversation actually does
 architecture   where the model sits and what it is not allowed to decide
 discovery      the bank's published form definitions, read as another renderer
@@ -30,7 +31,7 @@ economics      what a turn costs, measured
 future         what this could become
 ```
 
-Seven are in the top navigation. Lessons and the close are read on the way past.
+Eight are in the top navigation. Lessons and the close are read on the way past.
 
 ## The story: a show and tell for people who were not there
 
@@ -55,6 +56,30 @@ description of it.
 The heavy tenant data (the knowledge base and the rate table) stays out of the explainer's
 chunk: engine figures are pinned in `story.ts` and recomputed in the test rather than computed
 on the page.
+
+## What it can do: the inventory
+
+Three grids of tiles, by who meets the thing: in the conversation, around it, for the bank.
+Each tile is labelled POC or a production direction, and the two directions (Baz for the
+partner, a plan surface for the customer) say in their body that they are not built. Counts
+carry the date they were measured; the ones a test can recompute (cards, tools, rate rows,
+decision records, eval cases) are recomputed in `capabilities.test.ts`.
+
+Then six real cards in tabs, through `CardRenderer` with every control disabled: the rates,
+a comparison, a quote, the arrangement, a plan and a review. The comparison and the quote are
+built from the same catalogue helpers the server uses and pinned; the test recomputes them.
+The quote is labelled illustrative because `products.ts` says its variants are invented.
+
+Then three proofs that are the running code rather than copy about it:
+
+- **Persona** (§56): the presets, the six slider values, the prose the composer turns them
+  into and the tone bucket a refusal would use, all from `@llm/persona.ts`; a switch applies
+  `applySensitivity`. The §56 example sentences are shown as the spec's own and labelled.
+- **Guardrails** (§57): ten cases copied by id from `evals/guardrails/cases.jsonl`, with the
+  exact refusal from `@llm/refusals.ts` in a chosen tone bucket. No classifier is called; the
+  test checks each case is identical to the eval set.
+- **Stage gating**: `STAGES` and `CONVERSATION` rendered directly, so the tool list per stage
+  is the enforcement and not a description of it.
 
 Each chapter is deep-linkable — `/#/how-it-works/architecture` lands on it and scrolls once,
 without fighting later scrolling, so a single chapter can be sent on its own.
@@ -82,6 +107,9 @@ That third rule is the one worth copying into anything else written about this p
 | `pivots.ts` | The before-and-after comparisons |
 | `scenarios.ts` | Three worked customer situations: `home`, `cash`, `difficulty` |
 | `story.ts` | The §67 story: nineteen beats, their card payloads, and what the system did. Engine figures pinned, recomputed in `story.test.ts` |
+| `capabilities.ts` | The inventory tiles, grouped, with measured counts and their date |
+| `gallery.ts` | Six real card payloads for the gallery; comparison and quote pinned from the catalogue helpers |
+| `guardrails.ts` | Ten cases copied by id from the eval set, with the category each exercises |
 | `copy.ts` | Chapter identifiers, navigation labels, prose |
 
 `build-metrics.mjs` is run by hand, so the build figures are as fresh as the last run. The cost

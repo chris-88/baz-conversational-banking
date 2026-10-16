@@ -328,7 +328,7 @@ function statusRow(
  * recomputed in the test. Months remaining is the server's own arithmetic: what is left to
  * save, divided by what is saved each month, rounded up.
  */
-const PLAN_CARD: Card = {
+export const PLAN_CARD: Card = {
   type: 'plan_proposal',
   planId: IDS.plan,
   title: 'Buy our first home',
@@ -370,7 +370,7 @@ export const ARRANGEMENT_INPUT = {
   monthsToTarget: 8,
 } as const
 
-const ARRANGEMENT_CARD: Card = {
+export const ARRANGEMENT_CARD: Card = {
   type: 'arrangement',
   title: 'How your money would be arranged',
   allocations: [
@@ -556,7 +556,7 @@ export const RATES_INPUT = {
   termYears: 30,
 } as const
 
-const RATES_CARD: Card = {
+export const RATES_CARD: Card = {
   type: 'mortgage_rates',
   title: 'Your mortgage rate options',
   basis: { buyerType: 'first time buyer', ber: 'B', amountEur: 360_000, termYears: 30 },
@@ -609,7 +609,7 @@ const RATES_CARD: Card = {
   ],
 }
 
-const REVIEW_CARD: Card = {
+export const REVIEW_CARD: Card = {
   type: 'review',
   applicationId: IDS.creditCard,
   displayName: NAME.credit_card,

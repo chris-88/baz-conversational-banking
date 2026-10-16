@@ -8,6 +8,7 @@
 export const CHAPTERS = [
   'opportunity',
   'story',
+  'capabilities',
   'experience',
   'architecture',
   'discovery',
@@ -23,6 +24,7 @@ export type ChapterId = (typeof CHAPTERS)[number]
 export const NAV: readonly { readonly id: ChapterId; readonly label: string }[] = [
   { id: 'opportunity', label: 'The opportunity' },
   { id: 'story', label: 'The story' },
+  { id: 'capabilities', label: 'What it can do' },
   { id: 'experience', label: 'The experience' },
   { id: 'architecture', label: 'The architecture' },
   { id: 'discovery', label: 'The discovery' },
@@ -71,6 +73,15 @@ export const storyChapter = {
     'Aoife and Emma are the seed\u2019s synthetic customers. Three lines are quoted from a live case; the rest were written to the spec.',
   close:
     'Nineteen beats, no screenshots. Everything above renders from the same components the conversation uses, with every control disabled. The one thing a page cannot show is the wait between beats twelve and thirteen, which in the room is a presenter pressing a button and a phone lighting up on the desk.',
+} as const
+
+export const capabilitiesChapter = {
+  eyebrow: 'What it can do',
+  title: 'What is actually built',
+  body: [
+    'A prototype earns the right to be taken seriously by doing more than its demo. This is the inventory: what a customer can be shown and asked, what carries the case across a tab, a phone and a second applicant, and what the bank gets behind it.',
+    'Every tile is something that runs today, except the two that say otherwise. Six of the cards are rendered below exactly as the conversation renders them, and three of the mechanisms are on the page as running code rather than as sentences about code.',
+  ],
 } as const
 
 export const experience = {

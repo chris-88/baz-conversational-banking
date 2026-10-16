@@ -2,7 +2,7 @@
 title: Project status
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - docs/decisions.md
   - src/app/routes.ts
@@ -20,7 +20,7 @@ real bank.
 
 | Area | State |
 |---|---|
-| Conversation runtime | Gate → model with tools → SSE stream → persistence. 15 tools |
+| Conversation runtime | Gate → model with tools → SSE stream → persistence. 16 tools |
 | Guardrails | 8-category classifier plus deterministic pre-checks, in front of the model |
 | Persona | 6 sliders, presets, applied fresh every turn |
 | Applications | 12-state machine, concurrent applications, review and submit, advisories |
@@ -31,8 +31,8 @@ real bank.
 | Partner | Invite by a token that does not expire, scoped DTOs, own session per browser |
 | Notifications | Web Push, hand-written, confirmed delivering to a real phone |
 | Admin console | 8 sections: cases, case inspector, guardrails, persona, engine, analytics, forms, profile |
-| Explainer | `/how-it-works`, an interactive case study |
-| Tests | 779 Vitest tests in 61 files; Playwright route and render specs; guardrail evals |
+| Explainer | `/how-it-works`: the §67 story through the real cards, the inventory of what is built, and the engineering case study |
+| Tests | 940 Vitest tests in 75 files; Playwright route and render specs; guardrail evals |
 
 ## Deliberately not built
 

@@ -2,7 +2,7 @@
 title: Testing
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - vitest.config.ts
   - playwright.config.ts
@@ -31,7 +31,7 @@ and a Playwright spec that drives a whole conversation through it is the next th
 The discipline still holds for the live model: it is for checking what the model itself does,
 and nothing else.
 
-## Vitest — 788 tests in 62 files
+## Vitest — 940 tests in 75 files
 
 The layer that carries the weight. Everything deterministic is tested here, and domain logic is
 written test-first.

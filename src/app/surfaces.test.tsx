@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -128,5 +128,29 @@ describe('the explainer', () => {
       (button) => !button.disabled && button.closest('nav') === null,
     )
     expect(live.map((button) => button.textContent)).toEqual([])
+  })
+
+  it('shows what is built, with every unbuilt thing labelled a direction', async () => {
+    const { GROUPS, capabilities } = await import('@/content/how-it-works/capabilities')
+    await withStillPage('/how-it-works/capabilities')
+
+    for (const group of GROUPS) {
+      expect(screen.getByRole('heading', { name: group.title })).toBeInTheDocument()
+    }
+    for (const capability of capabilities) {
+      expect(screen.getByRole('heading', { name: capability.title })).toBeInTheDocument()
+    }
+    // Scoped to the chapter: the discovery chapter labels two channels the same way.
+    const chapter = document.getElementById('capabilities')
+    expect(chapter).not.toBeNull()
+    if (chapter === null) return
+    expect(within(chapter).getAllByText('Production direction').length).toBe(
+      capabilities.filter((capability) => capability.claim === 'production').length,
+    )
+
+    // The three proofs run the product's own code: the composer's words are on the page.
+    expect(screen.getByText(/## Style/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /which tools exist, stage by stage/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /guardrails: what gets through/i })).toBeInTheDocument()
   })
 })

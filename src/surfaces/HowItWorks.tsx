@@ -11,6 +11,7 @@ import { scrollToChapter, useActiveChapter } from './how-it-works/useActiveChapt
 import { Hero } from './how-it-works/Hero'
 import { Opportunity } from './how-it-works/Opportunity'
 import { Story } from './how-it-works/Story'
+import { Capabilities } from './how-it-works/Capabilities'
 import { Experience } from './how-it-works/Experience'
 import { Architecture } from './how-it-works/Architecture'
 import { Discovery } from './how-it-works/Discovery'
@@ -35,7 +36,8 @@ import { FullReplay } from './how-it-works/FullReplay'
  * The story chapter is the show and tell for anybody who was not in the room: the §67 acceptance
  * story, beat by beat, through the product's own cards. It comes second, after the claim and
  * before the engineering, because a reader who only gets that far should still have seen the
- * thing work.
+ * thing work. The capabilities chapter follows it with the inventory of what is built, for the
+ * reader deciding whether this is a product or a demo.
  *
  * The page sits on a tinted surface with the evidence on white cards above it. That is not
  * decoration: the first build of this had everything at one elevation, in one weight, at one
@@ -107,6 +109,7 @@ export function HowItWorks(): ReactNode {
           <main className="min-w-0 pb-16">
             <Opportunity />
             <Story />
+            <Capabilities />
             <Experience />
             <Architecture />
             <Discovery />
