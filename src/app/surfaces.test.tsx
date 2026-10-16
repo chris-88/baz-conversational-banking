@@ -73,3 +73,60 @@ describe('surfaces', () => {
     expect(screen.queryByText(/rebuild the sample customer/i)).not.toBeInTheDocument()
   })
 })
+
+/**
+ * The explainer, read with every animation off.
+ *
+ * Rendered under `prefers-reduced-motion: reduce`, which is the page's own first rule made into
+ * a test: everything on it has to be legible with nothing moving. jsdom has no `matchMedia`, no
+ * `IntersectionObserver` and no `scrollIntoView`, so the stubs here are what a browser with
+ * motion switched off would provide, and nothing the page needs beyond that.
+ */
+describe('the explainer', () => {
+  const withStillPage = async (path: string): Promise<void> => {
+    const { LazyMotion, domAnimation } = await import('motion/react')
+    const { HowItWorks } = await import('@/surfaces/HowItWorks')
+
+    window.matchMedia = (query: string): MediaQueryList =>
+      ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList
+    Element.prototype.scrollIntoView = () => undefined
+
+    renderSurface(
+      <LazyMotion features={domAnimation}>
+        <Routes>
+          <Route path="/how-it-works/:section?" element={<HowItWorks />} />
+        </Routes>
+      </LazyMotion>,
+      [path],
+    )
+  }
+
+  it('tells the §67 story, every beat on the page, with nothing startable', async () => {
+    const { story, STAGE_NAMES } = await import('@/content/how-it-works/story')
+    await withStillPage('/how-it-works/story')
+
+    for (const beat of story) {
+      expect(screen.getByRole('heading', { name: beat.title })).toBeInTheDocument()
+    }
+    for (const name of Object.values(STAGE_NAMES)) {
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0)
+    }
+
+    // The real cards, with every control disabled: the page shows the product and starts nothing.
+    const chapter = document.getElementById('story')
+    expect(chapter).not.toBeNull()
+    const live = Array.from(chapter?.querySelectorAll('button') ?? []).filter(
+      (button) => !button.disabled && button.closest('nav') === null,
+    )
+    expect(live.map((button) => button.textContent)).toEqual([])
+  })
+})

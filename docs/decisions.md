@@ -1531,6 +1531,19 @@ that the same address will be asked for. And asking for notifications in Safari 
 now shows the two taps that install the app, in place, rather than a sentence saying they are
 needed: the person has just said what they want, and the taps are the only thing in the way.
 
+## 2026-10-16 — the explainer tells the §67 story through the real cards (§6, §55, §67)
+
+The page was an engineering case study with the acceptance story nowhere on it. The story is
+now a chapter: a synthetic script written to §6 and §67 with the seed's names, rendered through
+`CardRenderer` with every control disabled, grouped under the thirteen stages. No film is
+embedded; the walkthrough is the show and tell. Every card payload is parsed against
+`cardSchema` in a test, and figures that come out of an engine (the arrangement, the rate
+selection, the plan draft, the advisory) are pinned as produced and recomputed from the same
+engine, rather than shipping the knowledge base and the rate table into the explainer's chunk.
+Three lines are quoted from the fixtures transcribed off a live case and the test checks them
+byte for byte. The story goes second, after the claim and before the engineering, because a
+reader who only gets that far should still have seen the thing work.
+
 ## 2026-10-16 — the customer's conversation is the one they are the customer of (Invariant 7)
 
 An invite link opened in the primary's own browser joins the case with the user that browser

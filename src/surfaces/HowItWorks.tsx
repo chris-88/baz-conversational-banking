@@ -10,6 +10,7 @@ import { ChapterBar, ChapterRail } from './how-it-works/ChapterNav'
 import { scrollToChapter, useActiveChapter } from './how-it-works/useActiveChapter'
 import { Hero } from './how-it-works/Hero'
 import { Opportunity } from './how-it-works/Opportunity'
+import { Story } from './how-it-works/Story'
 import { Experience } from './how-it-works/Experience'
 import { Architecture } from './how-it-works/Architecture'
 import { Discovery } from './how-it-works/Discovery'
@@ -30,6 +31,11 @@ import { FullReplay } from './how-it-works/FullReplay'
  * carries where it came from, because the draft this replaces had three of four headline figures
  * wrong. And anything the prototype does not actually do is labelled as a direction rather than
  * described in the present tense.
+ *
+ * The story chapter is the show and tell for anybody who was not in the room: the §67 acceptance
+ * story, beat by beat, through the product's own cards. It comes second, after the claim and
+ * before the engineering, because a reader who only gets that far should still have seen the
+ * thing work.
  *
  * The page sits on a tinted surface with the evidence on white cards above it. That is not
  * decoration: the first build of this had everything at one elevation, in one weight, at one
@@ -100,6 +106,7 @@ export function HowItWorks(): ReactNode {
 
           <main className="min-w-0 pb-16">
             <Opportunity />
+            <Story />
             <Experience />
             <Architecture />
             <Discovery />

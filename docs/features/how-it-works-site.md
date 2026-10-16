@@ -2,7 +2,7 @@
 title: How it works (the explainer)
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - src/surfaces/HowItWorks.tsx
   - src/content/how-it-works/
@@ -16,20 +16,45 @@ product, which is why it has its own address and reads as a case study rather th
 Each chapter pairs a claim with the evidence for it, and the evidence is real: published form
 definitions, measured token counts, commits counted out of git history.
 
-## Eight chapters
+## Nine chapters
 
 ```text
 opportunity    why the current interaction model wastes the bank's own context
+story          the §67 acceptance story, beat by beat, through the real cards
 experience     what the conversation actually does
 architecture   where the model sits and what it is not allowed to decide
-discovery      the needs and goals engines
+discovery      the bank's published form definitions, read as another renderer
 build          how it was built, and how fast
 lessons        what went wrong
 economics      what a turn costs, measured
 future         what this could become
 ```
 
-Six are in the top navigation. Lessons and the close are read on the way past.
+Seven are in the top navigation. Lessons and the close are read on the way past.
+
+## The story: a show and tell for people who were not there
+
+The §67 acceptance story is the only test that matters, and until 2026-10-16 the page never
+told it. The story chapter does, as nineteen beats grouped under the thirteen §6 stages, each
+one a phone-width transcript beside a strip of what the system did.
+
+The transcript is built from the product's own pieces: `ChatBubble`, `MessageText` and
+`CardRenderer`, with no actions and every control disabled, so what is on the page is what is
+on a phone and nothing can be started from it. Where the story has moved on, a card is shown
+settled with the wording the product uses the moment a tap lands. The partner's task list, the
+console and the lock screen are drawn as rows, and each says where the real screen is.
+
+The words are synthetic and labelled. Three lines are quoted byte for byte from the fixture
+scripts transcribed off a live case. The shape is not synthetic: `story.test.ts` parses every
+card against `cardSchema`, recomputes the arrangement, the rate selection and the plan draft
+from the engines that produced them, reads the advisory from `evaluateAdvisories`, and checks
+the §6 stages run in order with none missing. The tools shown on each beat are read from
+`CONVERSATION`, the object a live turn is handed, so the list is the enforcement and not a
+description of it.
+
+The heavy tenant data (the knowledge base and the rate table) stays out of the explainer's
+chunk: engine figures are pinned in `story.ts` and recomputed in the test rather than computed
+on the page.
 
 Each chapter is deep-linkable — `/#/how-it-works/architecture` lands on it and scrolls once,
 without fighting later scrolling, so a single chapter can be sent on its own.
@@ -56,6 +81,7 @@ That third rule is the one worth copying into anything else written about this p
 | `architecture.ts` | The component and boundary diagram's content |
 | `pivots.ts` | The before-and-after comparisons |
 | `scenarios.ts` | Three worked customer situations: `home`, `cash`, `difficulty` |
+| `story.ts` | The §67 story: nineteen beats, their card payloads, and what the system did. Engine figures pinned, recomputed in `story.test.ts` |
 | `copy.ts` | Chapter identifiers, navigation labels, prose |
 
 `build-metrics.mjs` is run by hand, so the build figures are as fresh as the last run. The cost
@@ -70,6 +96,10 @@ It was first a row of pills across the top, which had two problems and the secon
 one: tapping a pill scrolled the heading underneath the sticky bar that had just been tapped, and
 the chapter tracker kept reassigning the active chapter while the smooth scroll was still
 running. `useActiveChapter.ts` carries the fix — a jump suppresses tracking until it settles.
+
+The section the reading line is inside wins outright. Measured by heading distance alone, the
+story chapter, which is tall, lost to the short one after it as soon as its own heading had
+scrolled away, and the rail said "The experience" through most of the story.
 
 ## Motion
 

@@ -45,7 +45,12 @@ export function useActiveChapter(ids: readonly ChapterId[]): {
         // Only sections that have reached the line and not yet left it entirely.
         if (bottom < line) continue
 
-        const distance = Math.abs(top - line)
+        /*
+         * The section the line is inside wins outright. Measured by heading distance alone, a
+         * tall chapter lost to the short one after it as soon as its own heading had scrolled
+         * far enough away, so the rail said "The experience" through most of the story.
+         */
+        const distance = top <= line ? 0 : top - line
         if (distance < best) {
           best = distance
           nearest = id

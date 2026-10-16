@@ -7,6 +7,7 @@
 
 export const CHAPTERS = [
   'opportunity',
+  'story',
   'experience',
   'architecture',
   'discovery',
@@ -18,9 +19,10 @@ export const CHAPTERS = [
 
 export type ChapterId = (typeof CHAPTERS)[number]
 
-/** The six in the top nav. Lessons and the close are read on the way past. */
+/** The ones in the nav. Lessons and the close are read on the way past. */
 export const NAV: readonly { readonly id: ChapterId; readonly label: string }[] = [
   { id: 'opportunity', label: 'The opportunity' },
+  { id: 'story', label: 'The story' },
   { id: 'experience', label: 'The experience' },
   { id: 'architecture', label: 'The architecture' },
   { id: 'discovery', label: 'The discovery' },
@@ -56,6 +58,19 @@ export const opportunity = {
       body: 'The case survives the session, the channel, the second applicant and the month in between.',
     },
   ],
+} as const
+
+export const storyChapter = {
+  eyebrow: 'The story',
+  title: 'One customer, thirteen stages, the whole case',
+  body: [
+    'The acceptance test for this prototype is a story rather than a feature list. A customer comes for a mortgage. Baz works out the life event behind it. The products are chosen, the facts are collected once and used everywhere, the case moves from a browser tab to a phone, a spouse joins from her own phone, a loan is deliberately held, the customer leaves, the bank moves, a notification arrives, and Baz knows exactly what changed.',
+    'This is that story, told through the cards the product renders. The customer and her words are synthetic and say so. The cards are the real components, the states are the real states, and every figure on them is what the engine produced.',
+  ],
+  caption:
+    'Aoife and Emma are the seed\u2019s synthetic customers. Three lines are quoted from a live case; the rest were written to the spec.',
+  close:
+    'Nineteen beats, no screenshots. Everything above renders from the same components the conversation uses, with every control disabled. The one thing a page cannot show is the wait between beats twelve and thirteen, which in the room is a presenter pressing a button and a phone lighting up on the desk.',
 } as const
 
 export const experience = {
