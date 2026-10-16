@@ -184,12 +184,13 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
      * Voided, or expired where a token carries an expiry, and unknown all read the same from
      * outside. The partner invite carries none and is not used up by being opened: the same
      * link works that evening, next week, and from the second phone, each opening attaching
-     * one more browser to the same partner participant. It stops working when the customer
-     * invites again, which voids it (`case-action`).
+     * one more browser to the same partner participant. Inviting again voids it
+     * (`case-action`), but only for a browser that never joined: the link in the partner's
+     * messages is their only way back in, and a customer correcting a spelling must not lock
+     * out somebody who has already done half the work.
      */
     const token = found.data as any
-    const expired = token?.expires_at !== null && new Date(token?.expires_at) < new Date()
-    if (!token || token.consumed_at || expired) {
+    if (!token) {
       return errorResponse('not_found', 'That invitation is no longer valid. Ask for a new one.')
     }
 
@@ -199,6 +200,11 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       .eq('participant_id', token.participant_id)
       .eq('auth_user_id', authUserId)
       .maybeSingle()
+
+    const expired = token.expires_at !== null && new Date(token.expires_at) < new Date()
+    if (known.data === null && (token.consumed_at || expired)) {
+      return errorResponse('not_found', 'That invitation is no longer valid. Ask for a new one.')
+    }
 
     if (known.data === null) {
       mustWrite(

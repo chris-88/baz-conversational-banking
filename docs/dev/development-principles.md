@@ -37,7 +37,8 @@ flow instead.
    primary's conversation or facts.
 8. **Nothing sensitive in URLs.** Links carry opaque tokens: 128-bit random, stored hashed.
    Handoff codes and notification links are single-use with a short TTL, consumed on
-   redemption. The partner invite neither expires nor is used up; inviting again voids it.
+   redemption. The partner invite neither expires nor is used up; inviting again voids it for
+   anyone who has not already joined.
 9. **Everything significant writes an event.** With an actor. Metrics are derived from events.
 10. **Synthetic data only.** No real credentials, no real bank auth, no real customer data.
 11. **Baz is portable.** `src/baz/**` and `_shared/domain/**` never import a tenant or a shell.

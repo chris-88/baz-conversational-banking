@@ -53,7 +53,8 @@ Never the primary's conversation or facts.
 **Token leakage through URLs.** Every access-granting link carries a 128-bit random token, stored
 only as a SHA-256 hash. Handoff codes and notification links have a short TTL and are consumed on
 redemption. The partner invite has neither: a leaked invite grants the partner's scoped view of a
-synthetic case for as long as it is the latest one, and inviting again voids it. Expired, voided
+synthetic case until the customer invites again, which voids it for any browser that has not
+already joined. Expired, voided
 and unknown return the same message, so a caller learns nothing about which part was wrong.
 
 **Prompt injection and scope escape.** Deterministic pre-checks then a classifier, in front of

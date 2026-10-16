@@ -88,8 +88,9 @@ wrong.
 The partner invite is the exception. It neither expires nor is used up: the second applicant
 opens it when they get to it, and from whichever phone they have, and each opening attaches that
 browser's anonymous user to the same partner participant. What keeps it honest is that only the
-latest one works: inviting again voids every earlier link for the case, which is also how the
-customer revokes one.
+latest one works for anyone new: inviting again voids every earlier link for any browser that
+has not already joined, which is also how the customer revokes one. A browser that has joined
+keeps its link, because the link in the partner's messages is their only way back in.
 
 Nothing sensitive is ever in a URL.
 

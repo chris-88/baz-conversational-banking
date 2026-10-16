@@ -1567,6 +1567,7 @@ opening the installed app. So `tokens.expires_at` is nullable and null means nev
 invite is issued with none, and redeeming it does not consume it: each opening attaches that
 browser's anonymous user to the same partner participant, and `partner_joined` is written once
 per browser rather than once per tap. What keeps it honest is that only the latest link works:
-inviting again voids every earlier invite for the case, which is also how a customer revokes one.
-Handoff codes and notification links keep their short TTLs and single use; they are used by the
+inviting again voids every earlier invite for any browser that has not already joined, which is
+also how a customer revokes one; a browser that has joined keeps its link, because the link in
+the partner's messages is their only way back in. Handoff codes and notification links keep their short TTLs and single use; they are used by the
 person who just made them, in the next minute. Invariant 8 now says so.
