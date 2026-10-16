@@ -157,14 +157,25 @@ describe('when the bonus is not actually available', () => {
    * Unknown is not the same as no, and it is not the same as yes either.
    *
    * The bonus turns on a Bank of Ireland mortgage being drawn down. Arranging €200 a month
-   * around a condition nobody has confirmed would be the engine assuming the answer to the
-   * question that decides it.
+   * around a condition nobody has confirmed would be the engine assuming the answer. The
+   * question is cheap and the answer moves €2,000, so the arrangement says it needs it rather
+   * than quietly going ahead without: on a live case it went ahead with a note on the card,
+   * nobody asked, and the customer raised the bonus themselves two turns later.
    */
-  it('skips it when nobody has said where the mortgage is going', () => {
+  it('says it needs to know where the mortgage is going before it is shown', () => {
     const result = arrange({ ...dublin, mortgageWithThisBank: null }, CATALOGUE)
 
     expect(found('savings.mortgagesaver', result)).toBeUndefined()
+    expect(result?.needs.map((need) => need.key)).toEqual(['mortgage.withThisBank'])
     expect(result?.notes.some((note) => /mortgage/i.test(note))).toBe(true)
+  })
+
+  it('needs nothing once the question is answered either way', () => {
+    expect(arrange(dublin, CATALOGUE)?.needs).toEqual([])
+    expect(arrange({ ...dublin, mortgageWithThisBank: false }, CATALOGUE)?.needs).toEqual([])
+    expect(
+      arrange({ ...dublin, firstTimeBuyer: false, mortgageWithThisBank: null }, CATALOGUE)?.needs,
+    ).toEqual([])
   })
 
   it('skips it for somebody who is not a first-time buyer', () => {

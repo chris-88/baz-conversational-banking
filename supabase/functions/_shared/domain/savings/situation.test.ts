@@ -73,6 +73,7 @@ describe('months until the target', () => {
 
 describe('saying the arrangement', () => {
   const arrangement: Arrangement = {
+    needs: [],
     allocations: [
       {
         productId: 'savings.advantage_fixed',

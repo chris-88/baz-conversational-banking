@@ -102,7 +102,25 @@ export type Allocation = {
   readonly watch: readonly string[]
 }
 
+/** A fact that would change the arrangement if it were known, and why it is worth asking. */
+export type ArrangementNeed = {
+  readonly key: 'mortgage.withThisBank'
+  readonly why: string
+}
+
 export type Arrangement = {
+  /**
+   * Questions worth asking before this is shown.
+   *
+   * An arrangement built around an unanswered question is an arrangement that will be wrong
+   * one way or the other: leave the bonus out and a first-time buyer who does intend to
+   * borrow here is shown a split that leaves €2,000 on the table; put it in and somebody
+   * borrowing elsewhere is signed up for an account that pays 2% on the strength of a bonus
+   * they will never see. The question costs one sentence. On a live case the engine left a
+   * note on the card instead, nobody asked, and the customer raised the bonus themselves two
+   * turns later, which is the exact thing this engine exists to prevent.
+   */
+  readonly needs: readonly ArrangementNeed[]
   readonly allocations: readonly Allocation[]
   /** Interest across the arrangement over twelve months, at the rates as published. */
   readonly firstYearInterest: number
@@ -122,12 +140,13 @@ export function arrange(
 ): Arrangement | null {
   const allocations: Allocation[] = []
   const notes: string[] = []
+  const needs: ArrangementNeed[] = []
 
   let lumpLeft = Math.max(0, situation.lumpSum ?? 0)
   let monthlyLeft = Math.max(0, situation.monthly ?? 0)
 
   // ---- The bonus first, because it is worth more than any rate on this page -------------
-  const bonusOption = bestBonus(situation, catalogue, monthlyLeft, notes)
+  const bonusOption = bestBonus(situation, catalogue, monthlyLeft, notes, needs)
 
   if (bonusOption !== null && bonusOption.bonus !== undefined) {
     const take = bonusOption.bonus.minMonthly
@@ -206,6 +225,7 @@ export function arrange(
   if (allocations.length < MINIMUM_ALLOCATIONS) return null
 
   return {
+    needs,
     allocations: ordered(allocations),
     firstYearInterest: firstYearInterest(allocations),
     bonus: bonusFrom(bonusOption),
@@ -226,6 +246,7 @@ function bestBonus(
   catalogue: readonly SavingsOption[],
   monthly: number,
   notes: string[],
+  needs: ArrangementNeed[],
 ): SavingsOption | null {
   const candidates = catalogue.filter((option) => option.bonus !== undefined)
   if (candidates.length === 0) return null
@@ -244,6 +265,13 @@ function bestBonus(
       (option) => option.bonus?.requiresMortgageHere === true && situation.firstTimeBuyer,
     )
     if (asked && situation.mortgageWithThisBank === null) {
+      needs.push({
+        key: 'mortgage.withThisBank',
+        why:
+          'Whether they intend to take the mortgage here. A first-time-buyer bonus worth ' +
+          '\u20ac2,000 depends on it, and it decides whether \u20ac200 a month goes into the account ' +
+          'that carries it.',
+      })
       notes.push(
         'There is a first-time-buyer bonus worth having, but it depends on the mortgage being ' +
           'drawn down here. Nobody has said yet, so nothing has been arranged around it.',

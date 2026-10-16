@@ -86,7 +86,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
     purpose: 'They asked for a plan, so now find out about their life, not their mortgage file.',
     todo: [
       'Go wide before you go deep. Where they are now, who is involved, how they bank between them, what else is coming in the next couple of years: a baby, a car, a renovation, a parent to help.',
-      'Ask about preferences as well as figures. Would they want the mortgage here, do they want to bank together, is anyone else putting money in.',
+      'Ask about preferences as well as figures. Whether they would want the mortgage here (record it as `mortgage.withThisBank`; for a first-time buyer it decides a €2,000 bonus), whether they want to bank together, whether anyone else is putting money in.',
       'Figures where a plan genuinely needs them: what is saved, what they can add, roughly what they earn. Enough to make the plan real, not enough to underwrite it.',
       'Two things at a time, in one natural sentence, and say what you have taken something as when it was rough.',
       'Stop when you could write the plan. Anything else the products need can be asked when they are being applied for.',

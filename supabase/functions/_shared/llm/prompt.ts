@@ -506,6 +506,11 @@ export type CaseDigest = {
    */
   readonly arrangement?: readonly string[]
   /**
+   * What the savings engine needs to know before it will arrange anything. One question, which
+   * decides the shape; ask it before offering any account.
+   */
+  readonly arrangementNeeds?: readonly string[]
+  /**
    * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
    * already reasoned about, what is primary, what is worth mentioning once, what is being held
    * and why, and anything two goals are both laying claim to.
@@ -776,6 +781,17 @@ function digestSection(digest: CaseDigest): string {
         '',
       )
     }
+  }
+
+  const arrangementNeeds = digest.arrangementNeeds ?? []
+  if (arrangementNeeds.length > 0) {
+    lines.push(
+      '## One question before their money can be arranged',
+      'The savings engine can split their lump sum and monthly saving across accounts, but not',
+      'until this is known. Ask it, plainly, before offering any account, and record the answer:',
+      ...arrangementNeeds.map((line) => `- ${line}`),
+      '',
+    )
   }
 
   const arrangement = digest.arrangement ?? []

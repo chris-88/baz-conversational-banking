@@ -773,7 +773,8 @@ async function handleTurn(request: Request): Promise<Response> {
       goals.candidates.find((candidate) => candidate.tier === 'primary')?.missing.length ?? 99,
     approach,
     planAccepted: keptPlans.length > 0,
-    arrangement: arrangement !== null,
+    // Not until it has nothing left to ask. An arrangement with an open question is not shown.
+    arrangement: arrangement !== null && arrangement.needs.length === 0,
     arrangementShown,
     applications: loaded.applications.length,
   })
@@ -785,7 +786,12 @@ async function handleTurn(request: Request): Promise<Response> {
     ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
     ...(suitability.length === 0 ? {} : { suitability }),
     ...(prospect.length === 0 ? {} : { prospect: [...prospect] }),
-    ...(arrangement === null ? {} : { arrangement: describeArrangement(arrangement) }),
+    ...(arrangement === null || arrangement.needs.length > 0
+      ? {}
+      : { arrangement: describeArrangement(arrangement) }),
+    ...(arrangement === null || arrangement.needs.length === 0
+      ? {}
+      : { arrangementNeeds: arrangement.needs.map((need) => need.why) }),
     ...(revived.length === 0 ? {} : { revived }),
     ...(dueNow === null
       ? {}
@@ -1299,6 +1305,31 @@ async function handleTurn(request: Request): Promise<Response> {
                * share one `savings` journey and one tap has to start the right ones.
                */
               case 'show_arrangement': {
+                /*
+                 * From the case as it is now, not as it was when the turn began.
+                 *
+                 * The arrangement is worked out once at the start of the turn, and a fact the
+                 * model records in the same turn is not in it. On a live case the customer
+                 * said the mortgage was coming here, the model recorded it and called this in
+                 * the same breath, Baz described a three-account split, and the card showed
+                 * two. `record_facts` reloads for the same reason.
+                 */
+                const current = await loadCase(admin, turn.caseId)
+                const reader = current === null ? null : caseFactReader(current)
+                const arrangement =
+                  reader === null
+                    ? null
+                    : arrange(situationFrom(reader, new Date().toISOString().slice(0, 10)), boiSavingsOptions)
+
+                if (arrangement !== null && arrangement.needs.length > 0) {
+                  return {
+                    result:
+                      'Not yet. Before this can be arranged, ask: ' +
+                      arrangement.needs.map((need) => need.why).join(' ') +
+                      ' One question, then show it next turn.',
+                  }
+                }
+
                 if (arrangement === null) {
                   return {
                     result:
