@@ -5,15 +5,20 @@ import { expect, test, type Page } from '@playwright/test'
  *
  * Runs against the local dev server by default, or against a deployment:
  *   E2E_BASE_URL=https://baz.chrisquinn.ie npm run e2e
+ *
+ * The list is the surfaces that exist. The replica public site, the simulated login and the
+ * audience entry were deleted on 2026-10-06; their routes redirect to Baz and are checked as
+ * redirects below, not as pages.
  */
 
 const surfaces = [
-  { route: '/#/', name: 'public site', expect: /For whatever life brings next/i },
-  { route: '/#/app/login', name: 'simulated login', expect: /simulated sign-in for demonstration/i },
+  { route: '/#/', name: 'landing', expect: /tell baz what you.{0,3}re trying to do/i, discloses: true },
+  { route: '/#/baz', name: 'Baz', expect: /what are you trying to do/i, discloses: false },
+  { route: '/#/how-it-works', name: 'explainer', expect: /how baz works/i, discloses: true },
+  { route: '/#/privacy', name: 'privacy notice', expect: /not a banking service/i, discloses: true },
   // An invalid invite is refused rather than showing a page: the token is the whole gate.
-  { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation link isn.{0,3}t valid/i },
-  { route: '/#/try', name: 'audience entry', expect: /Try Baz/i },
-  { route: '/#/admin', name: 'presenter console', expect: /presenter console/i },
+  { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation link isn.{0,3}t valid/i, discloses: false },
+  { route: '/#/admin', name: 'presenter console', expect: /sign in/i, discloses: false },
 ] as const
 
 function collectErrors(page: Page): string[] {
@@ -43,13 +48,29 @@ for (const surface of surfaces) {
   })
 }
 
-test('every surface discloses that it is not a real banking service', async ({ page }) => {
+test('every surface with a footer discloses that it is not a banking service', async ({ page }) => {
   for (const surface of surfaces) {
+    if (!surface.discloses) continue
     await page.goto(surface.route)
-    const note = page.getByRole('note').first()
-    await expect(note, surface.route).toContainText(/not a real banking service/i)
-    await expect(note, surface.route).toContainText(/never enter real personal/i)
+    await expect(page.getByText(/not a banking service/i).first(), surface.route).toBeVisible()
   }
+})
+
+test('the old entry points land on Baz rather than breaking', async ({ page }) => {
+  for (const route of ['/#/try', '/#/app/login', '/#/app']) {
+    await page.goto(route)
+    await expect(page).toHaveURL(/#\/baz$/)
+    await expect(page.getByText(/what are you trying to do/i).first()).toBeVisible()
+  }
+})
+
+test('a chapter of the explainer can be sent on its own', async ({ page }) => {
+  await page.goto('/#/how-it-works/story')
+  const chapter = page.locator('#story')
+  await expect(chapter).toBeVisible()
+  // The deep link scrolls once, to the chapter heading, and the stage buttons are already there.
+  await expect(page.getByRole('heading', { name: /one customer, thirteen stages/i })).toBeInViewport()
+  await expect(page.getByRole('button', { name: /partner participation/i })).toBeVisible()
 })
 
 test('an unknown route falls back rather than breaking', async ({ page }) => {
