@@ -295,8 +295,15 @@ async function handleTurn(request: Request): Promise<Response> {
     .eq('auth_user_id', caller.data.user.id)
     .limit(50)
 
+  /*
+   * The primary, and only the primary. A partner has a participant on this case too, with the
+   * same kind of mapping, and matching on the case id alone let a partner's auth user through
+   * here. Their surface is `/join` and the `partner` function; they never drive this
+   * conversation (Invariant 7). Found when the partner link was opened on the primary's own
+   * phone, which gave one anonymous user both roles.
+   */
   const session = (sessionLookup.data ?? []).find(
-    (row: any) => row.participants?.case_id === turn.caseId,
+    (row: any) => row.participants?.case_id === turn.caseId && row.participants?.role === 'primary',
   )
   if (!session) return errorResponse('forbidden', 'This is not your case.')
 

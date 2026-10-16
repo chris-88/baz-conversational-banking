@@ -1530,3 +1530,14 @@ app's first open leads with the sign-in form and says why; the install card says
 that the same address will be asked for. And asking for notifications in Safari on an iPhone
 now shows the two taps that install the app, in place, rather than a sentence saying they are
 needed: the person has just said what they want, and the taps are the only thing in the way.
+
+## 2026-10-16 — the customer's conversation is the one they are the customer of (Invariant 7)
+
+An invite link opened in the primary's own browser joins the case with the user that browser
+already has, so one anonymous user held two mappings: its own case as primary, and aed80555 as
+partner. The partner mapping was the newer one, and `session` chose "the conversation this
+browser was last in" by recency alone, so the customer's chat landed on a case where this user
+is the partner. RLS refused the history, the screen went blank, and `baz-turn`, which matched
+on the case id alone, let the partner's user through to the turn. Every place the customer chat
+resolves "mine" now requires the primary role: session start, the switcher, the claim, and the
+turn's own check. The partner's surface is `/join` and the `partner` function, and nothing else.

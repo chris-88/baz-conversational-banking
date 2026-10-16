@@ -97,10 +97,19 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
   async function currentMapping(): Promise<
     { participantId: string; caseId: string; role: string } | null
   > {
+    /*
+     * Primary mappings only. The same anonymous user can also be a partner on another case,
+     * because an invite link opened in the same browser joins with the user that browser has.
+     * That mapping is the newer one, so ordering by recency alone landed the customer's chat on
+     * a case where this user is the partner: the history was refused by RLS, the screen went
+     * blank, and the next turn failed. A partner's conversation is not a conversation this
+     * browser was in; it is one it was invited to, on a different surface (Invariant 7).
+     */
     const existing = await admin
       .from('participant_sessions')
       .select('participant_id, last_used_at, participants!inner(id, case_id, role)')
       .eq('auth_user_id', authUserId)
+      .eq('participants.role', 'primary')
       .order('last_used_at', { ascending: false })
       .limit(1)
 
@@ -307,8 +316,10 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
     const mine = await admin
       .from('participant_sessions')
-      .select('participants!inner(case_id)')
+      .select('participants!inner(case_id, role)')
       .eq('auth_user_id', authUserId)
+      // A case this user is the partner on is not one of theirs to switch into.
+      .eq('participants.role', 'primary')
 
     const myCaseIds = new Set(
       ((mine.data ?? []) as any[]).map((row) => row.participants.case_id as string),
@@ -423,6 +434,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       .from('participant_sessions')
       .select('participant_id, last_used_at, participants!inner(id, case_id, role)')
       .eq('auth_user_id', prior)
+      .eq('participants.role', 'primary')
       .order('last_used_at', { ascending: false })
       .limit(1)
 
@@ -440,6 +452,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       .from('participant_sessions')
       .select('participant_id, last_used_at, participants!inner(id, case_id, role)')
       .eq('auth_user_id', authUserId)
+      .eq('participants.role', 'primary')
       .order('last_used_at', { ascending: false })
 
     const mine = ((own.data ?? []) as any[]).find(
@@ -522,7 +535,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       .eq('auth_user_id', authUserId)
 
     const existingHere = ((already.data ?? []) as any[]).find(
-      (row) => row.participants.case_id === target,
+      (row) => row.participants.case_id === target && row.participants.role === 'primary',
     )
 
     if (!existingHere && !presenter) return errorResponse('forbidden', 'Not your conversation.')
