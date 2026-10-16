@@ -24,7 +24,7 @@ import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { arrange } from '../_shared/domain/savings/arrange.ts'
 import { describeReused, type ReuseEvent } from '../_shared/domain/reuse.ts'
 import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
-import { boiSavingsOptions } from '../_shared/tenants/boi/savings-options.ts'
+import { savingsOptionsFrom } from '../_shared/tenants/boi/savings-options.ts'
 import { caseFactReader } from '../_shared/db/fact-reader.ts'
 import { asksSomething } from '../_shared/domain/conversation/turn-shape.ts'
 import { outOfAllowance, runGate } from '../_shared/llm/gate.ts'
@@ -48,11 +48,12 @@ import type { ToolName } from '../_shared/llm/tools.ts'
 import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { boiProducts, productInfo } from '../_shared/tenants/boi/products.ts'
 import {
-  SURFACEABLE_PRODUCTS,
+  surfaceableProducts,
   knowledgeBaseSection,
   knowledgeProduct,
 } from '../_shared/tenants/boi/kb-prompt.ts'
 import { rateOf } from '../_shared/tenants/boi/rates.ts'
+import { loadMortgageRates, loadProductCatalogue } from '../_shared/db/catalogue.ts'
 import { mortgageRatesSection, selectRates } from '../_shared/tenants/boi/mortgage-rates-select.ts'
 import type {
   BerAnswer,
@@ -307,8 +308,18 @@ async function handleTurn(request: Request): Promise<Response> {
   )
   if (!session) return errorResponse('forbidden', 'This is not your case.')
 
-  const loaded = await loadCase(admin, turn.caseId)
+  /*
+   * The catalogue and the rate table Baz speaks from this turn (§51): the rows a presenter has
+   * loaded and edited in the console, or the published files until there are any. Read with
+   * the case, because every turn that gets past the gate needs both.
+   */
+  const [loaded, kb, rateTable] = await Promise.all([
+    loadCase(admin, turn.caseId),
+    loadProductCatalogue(admin),
+    loadMortgageRates(admin),
+  ])
   if (!loaded) return errorResponse('not_found', 'That case does not exist.')
+  const savingsOptions = savingsOptionsFrom(kb.products)
 
   const tone = toneBucket(loaded.persona)
 
@@ -771,7 +782,7 @@ async function handleTurn(request: Request): Promise<Response> {
   const arrangement =
     factReader === null
       ? null
-      : arrange(situationFrom(factReader, new Date().toISOString().slice(0, 10)), boiSavingsOptions)
+      : arrange(situationFrom(factReader, new Date().toISOString().slice(0, 10)), savingsOptions)
   const arrangementShown = loaded.messages.some((message) => message.cards.includes('arrangement'))
 
   const stage = stageFor({
@@ -964,8 +975,8 @@ async function handleTurn(request: Request): Promise<Response> {
           onUsage: recordModel,
           prompt: {
             domainConfig: boiDomainConfig,
-            productCatalogue: knowledgeBaseSection(),
-            rateGuidance: mortgageRatesSection(),
+            productCatalogue: knowledgeBaseSection(kb.products),
+            rateGuidance: mortgageRatesSection(rateTable),
             sliders: loaded.persona,
             digest,
             sensitive: gate.suppressHumour,
@@ -1069,7 +1080,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   if (reloaded) {
                     const summaries = await recomputeApplications(admin, reloaded, {
     nameFor: (product, catalogueId) =>
-      (catalogueId === null ? undefined : knowledgeProduct(catalogueId)?.name) ??
+      (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
       journeyFor(product).displayName,
   })
                     const ready = summaries.filter((a) => a.state === 'ready')
@@ -1202,7 +1213,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     const catalogue =
                       option.catalogueId === undefined
                         ? undefined
-                        : knowledgeProduct(option.catalogueId)
+                        : knowledgeProduct(option.catalogueId, kb.products)
 
                     return {
                       product: option.product,
@@ -1326,7 +1337,7 @@ async function handleTurn(request: Request): Promise<Response> {
                 const arrangement =
                   reader === null
                     ? null
-                    : arrange(situationFrom(reader, new Date().toISOString().slice(0, 10)), boiSavingsOptions)
+                    : arrange(situationFrom(reader, new Date().toISOString().slice(0, 10)), savingsOptions)
 
                 if (arrangement !== null && arrangement.needs.length > 0) {
                   return {
@@ -1869,7 +1880,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   ber: ask.ber,
                   ...(ask.amountEur === undefined ? {} : { amountEur: ask.amountEur }),
                   ...(ask.termYears === undefined ? {} : { termYears: ask.termYears }),
-                })
+                }, rateTable)
 
                 /*
                  * Refusing to price something is an answer, not a failure. A0 is the live case:
@@ -1941,7 +1952,7 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 const found = ask.options.map((option) => ({
                   option,
-                  product: SURFACEABLE_PRODUCTS.find((candidate) => candidate.id === option.id),
+                  product: surfaceableProducts(kb.products).find((candidate) => candidate.id === option.id),
                 }))
 
                 const missing = found.filter((entry) => entry.product === undefined)

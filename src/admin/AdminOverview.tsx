@@ -8,6 +8,7 @@ import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { adminApi } from '@/admin/adminClient'
 import { CasesWorkspace } from '@/admin/CasesWorkspace'
 import { EngineScreen } from '@/admin/EngineScreen'
+import { ProductsScreen } from '@/admin/ProductsScreen'
 import { AnalyticsScreen } from '@/admin/AnalyticsScreen'
 import { PeriodSelect } from '@/admin/parts'
 import { ProfileScreen } from '@/admin/ProfileScreen'
@@ -29,6 +30,7 @@ type Section =
   | 'guardrails'
   | 'persona'
   | 'engine'
+  | 'catalogue'
   | 'analytics'
   | 'forms'
   | 'profile'
@@ -38,12 +40,13 @@ type OverviewSection = Extract<Section, 'cases' | 'case' | 'guardrails' | 'perso
 
 export function AdminOverview({ section }: { readonly section?: Section }): ReactNode {
   /*
-   * Two screens read none of the overview.
+   * These screens read none of the overview.
    *
    * Both fetch exactly what they need — the catalogue overlay, or the analytics window — so
    * neither should sit behind a spinner waiting for a case list it will never read.
    */
   if (section === 'engine') return <EngineScreen />
+  if (section === 'catalogue') return <ProductsScreen />
   if (section === 'forms') return <FormsScreen />
   if (section === 'analytics') return <Analytics />
   if (section === 'profile') return <Profile />

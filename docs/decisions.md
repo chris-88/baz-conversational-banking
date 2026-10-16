@@ -1541,3 +1541,19 @@ is the partner. RLS refused the history, the screen went blank, and `baz-turn`, 
 on the case id alone, let the partner's user through to the turn. Every place the customer chat
 resolves "mine" now requires the primary role: session start, the switcher, the claim, and the
 turn's own check. The partner's surface is `/join` and the `partner` function, and nothing else.
+
+## 2026-10-16 — the catalogue and the rate table are rows; the files are the published set (§51)
+
+The presenter needs to change a rate, reword a product or add one without a deploy, and Baz
+has to pick it up on the next turn. So `product_catalogue` and `mortgage_rates` hold one jsonb
+payload per row, validated on the way in against a Zod schema that is the compiled file's own
+shape and proven against every published row, and re-validated on the way out, so Baz can be
+handed a different catalogue but never a malformed one. The readers (`knowledgeBaseSection`,
+`savingsOptionsFrom`, `selectRates`, `mortgageRatesSection`) take the data as an argument with
+the compiled set as the default, and every turn loads both tables alongside the case. An empty
+table means the file: the table is for editing what is published, not a second copy of it, and
+any write to an empty table copies the file in first, because one row would otherwise be the
+whole catalogue the next turn reads. "Edited" is decided by comparing canonical JSON, because
+jsonb returns keys in its own order and the file's order is not an edit. Restoring something the
+file never had removes it. The rate table's date moves to the latest edit, so a figure is never
+cited "as at" a day before it was changed.

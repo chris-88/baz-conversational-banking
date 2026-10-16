@@ -32,6 +32,7 @@ export const routes = {
     guardrails: '/admin/guardrails',
     persona: '/admin/persona',
     engine: '/admin/engine',
+    catalogue: '/admin/catalogue',
     analytics: '/admin/analytics',
     forms: '/admin/forms',
     formApplication: (id: string) => `/admin/forms/${id}`,

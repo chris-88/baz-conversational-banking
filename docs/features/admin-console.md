@@ -2,7 +2,7 @@
 title: Admin console
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 sources:
   - src/admin/
   - supabase/functions/admin/index.ts
@@ -14,7 +14,7 @@ sources:
 `/#/admin`, reachable only by typing the address. Real Supabase email auth plus a row in
 `admin_users`, checked client-side for routing and **server-side on every call**.
 
-Eight sections.
+Nine sections.
 
 ## Cases
 
@@ -71,6 +71,19 @@ Six sliders, presets, and a preview that does not spend a conversation turn. See
 What the needs and goals engines currently read from a case: which needs are established and on
 what evidence, which goals are in play, which are held for later, where two lay claim to the same
 money.
+
+## Products and rates
+
+`/#/admin/catalogue`. The product knowledge base and the mortgage rate table, as rows, each
+edited as the JSON it is and validated on every keystroke against the same schema the function
+applies (`contracts/catalogue.ts`). Until something is loaded the rows shown are the published
+files, marked as such, so the screen always shows what Baz is reading; "Load published" copies
+a file into its table, and so does the first save, so one edited product can never become the
+whole catalogue. From then on every turn reads the rows. A row that differs from the file is
+marked `edited`, one the file never had is marked `added`, and a switched-off row stays in the
+list so it can be switched back on. "Restore published" puts a row back to the file's wording;
+"Remove" is for an added one. Edits reach Baz on the next turn: the prompt prefix is rebuilt
+from the rows, so the cache rewrites once per edit and is otherwise untouched.
 
 ## Analytics
 

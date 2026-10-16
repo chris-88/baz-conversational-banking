@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { selectRates } from './mortgage-rates-select.ts'
+import { PUBLISHED_RATES, mortgageRatesSection, selectRates } from './mortgage-rates-select.ts'
 
 const ftb = { customerType: 'first_time_buyer' as const, ber: 'A' as const }
 
@@ -68,5 +68,32 @@ describe('selectRates', () => {
 
   it('carries the date the rate table claims, not today', () => {
     expect(selectRates({ ...ftb, amountEur: 400_000 }).asOf).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
+
+/**
+ * The table is handed in, not imported (§51).
+ *
+ * A presenter can edit a rate in the console, and the turn then reads rows rather than the
+ * published file. What `selectRates` returns, and the date the prompt says the figures carry,
+ * both have to follow the table it was given.
+ */
+describe('an edited rate table', () => {
+  it('quotes the table it is handed, with its own date', () => {
+    const edited = {
+      asOf: '2026-10-16',
+      rates: PUBLISHED_RATES.rates.map((rate) =>
+        rate.id === 'new.standard.2y.a' ? { ...rate, interest_rate_pct: 1.11 } : rate,
+      ),
+    }
+
+    const published = selectRates({ ...ftb, amountEur: 240_000, termYears: 25 })
+    const changed = selectRates({ ...ftb, amountEur: 240_000, termYears: 25 }, edited)
+
+    expect(published.options.some((o) => o.ratePct === 1.11)).toBe(false)
+    expect(changed.options.some((o) => o.ratePct === 1.11)).toBe(true)
+    expect(changed.asOf).toBe('2026-10-16')
+    expect(mortgageRatesSection(edited)).toContain('as at 2026-10-16')
+    expect(mortgageRatesSection()).toContain(`as at ${PUBLISHED_RATES.asOf}`)
   })
 })

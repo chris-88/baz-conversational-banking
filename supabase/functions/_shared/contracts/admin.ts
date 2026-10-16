@@ -1,3 +1,4 @@
+import { knowledgeProductSchema, mortgageRateSchema } from './catalogue.ts'
 import { z } from 'zod'
 import { CASE_KINDS, CASE_OUTCOMES, CASE_STATUSES } from '../domain/case.ts'
 
@@ -198,6 +199,36 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
 
   /** Plan §3.2 — what is currently overridden. */
   z.object({ action: z.literal('catalogue_overrides') }),
+
+  /**
+   * §51 — the product catalogue and the mortgage rate table, as rows.
+   *
+   * Each payload is validated against the compiled file's own shape before it is written, so
+   * what Baz speaks from cannot be malformed, only different. An id that is not in the
+   * published set is a product or rate the presenter added; "restore" on one of those deletes
+   * it, because there is nothing to restore it to.
+   */
+  z.object({ action: z.literal('list_products') }),
+  z.object({
+    action: z.literal('set_product'),
+    id: z.string().trim().min(3).max(80),
+    product: knowledgeProductSchema,
+    enabled: z.boolean(),
+  }),
+  z.object({ action: z.literal('delete_product'), id: z.string().trim().min(1).max(80) }),
+  z.object({ action: z.literal('load_published_products') }),
+  z.object({ action: z.literal('restore_published_product'), id: z.string().trim().min(1).max(80) }),
+
+  z.object({ action: z.literal('list_rates') }),
+  z.object({
+    action: z.literal('set_rate'),
+    id: z.string().trim().min(1).max(80),
+    rate: mortgageRateSchema,
+    enabled: z.boolean(),
+  }),
+  z.object({ action: z.literal('delete_rate'), id: z.string().trim().min(1).max(80) }),
+  z.object({ action: z.literal('load_published_rates') }),
+  z.object({ action: z.literal('restore_published_rate'), id: z.string().trim().min(1).max(80) }),
 
   /** Plan §3.2 — drop the row and go back to what is compiled in. */
   z.object({
@@ -705,3 +736,9 @@ export type PurgeResult = z.infer<typeof purgeResultSchema>
 export type AdminRequest = z.infer<typeof adminRequestSchema>
 export type AdminOverview = z.infer<typeof adminOverviewSchema>
 export type AdminCase = z.infer<typeof adminCaseSchema>
+
+/** What a catalogue write comes back with: the row's new version, or how many rows were loaded. */
+export const catalogueWriteSchema = z.object({ version: z.number().int().nonnegative() })
+export const catalogueLoadSchema = z.object({ inserted: z.number().int().nonnegative() })
+export type CatalogueWrite = z.infer<typeof catalogueWriteSchema>
+export type CatalogueLoad = z.infer<typeof catalogueLoadSchema>

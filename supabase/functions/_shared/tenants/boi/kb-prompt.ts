@@ -26,9 +26,18 @@ export function surfaceable(product: KnowledgeProduct): boolean {
 export const SURFACEABLE_PRODUCTS: readonly KnowledgeProduct[] =
   boiKnowledgeBase.products.filter(surfaceable)
 
-const BY_ID: ReadonlyMap<string, KnowledgeProduct> = new Map(
-  boiKnowledgeBase.products.map((product) => [product.id, product]),
-)
+/**
+ * The products a turn may put in front of a customer, from whichever catalogue the turn holds.
+ *
+ * The compiled set is the default so nothing that calls without one changes; a turn passes the
+ * rows `loadProductCatalogue` read, which are the compiled set until a presenter loads and
+ * edits them in the console (§51).
+ */
+export function surfaceableProducts(
+  products: readonly KnowledgeProduct[] = boiKnowledgeBase.products,
+): readonly KnowledgeProduct[] {
+  return products.filter(surfaceable)
+}
 
 /**
  * One catalogue product by its id, e.g. `savings.supersaver`.
@@ -37,8 +46,11 @@ const BY_ID: ReadonlyMap<string, KnowledgeProduct> = new Map(
  * products the customer actually chose. Undefined for an id that is not in the pack, which is
  * the model offering something that does not exist and must not become a name on a card.
  */
-export function knowledgeProduct(id: string): KnowledgeProduct | undefined {
-  return BY_ID.get(id)
+export function knowledgeProduct(
+  id: string,
+  products: readonly KnowledgeProduct[] = boiKnowledgeBase.products,
+): KnowledgeProduct | undefined {
+  return products.find((product) => product.id === id)
 }
 
 /**
@@ -135,7 +147,15 @@ function illustrativeRates(): string {
   ].join('\n')
 }
 
-export function knowledgeBaseSection(): string {
+/**
+ * The catalogue as the prompt says it, from the products the turn holds.
+ *
+ * This is in the cached prefix. It stays byte-identical turn to turn as long as the rows do,
+ * so an edited catalogue costs one rewrite of the prefix and nothing after.
+ */
+export function knowledgeBaseSection(
+  products: readonly KnowledgeProduct[] = boiKnowledgeBase.products,
+): string {
   return [
     '# Products',
     '',
@@ -143,7 +163,7 @@ export function knowledgeBaseSection(): string {
     '',
     ...boiKnowledgeBase.knowledge_policy.baz_rules.map((rule) => `- ${rule}`),
     '',
-    ...SURFACEABLE_PRODUCTS.map(describe),
+    ...surfaceableProducts(products).map(describe),
     '',
     combinationsSection(),
     '',

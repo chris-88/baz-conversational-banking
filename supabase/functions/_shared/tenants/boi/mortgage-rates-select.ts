@@ -116,8 +116,19 @@ function toOption(rate: MortgageRate, criteria: RateCriteria): RateOption {
  * nothing. These are the four decisions actually in front of them: the lowest rate on offer,
  * the best rate that still pays cashback, the longest certainty available, and the variable.
  */
-export function selectRates(criteria: RateCriteria): RateSelection {
-  const asOf = boiMortgageRates.metadata.public_rates_table_last_update.slice(0, 10)
+/** The rows and the date they carry. The published table, unless a turn has loaded edited rows. */
+export type RateTable = {
+  readonly rates: readonly MortgageRate[]
+  readonly asOf: string
+}
+
+export const PUBLISHED_RATES: RateTable = {
+  rates: boiMortgageRates.rates,
+  asOf: boiMortgageRates.metadata.public_rates_table_last_update.slice(0, 10),
+}
+
+export function selectRates(criteria: RateCriteria, table: RateTable = PUBLISHED_RATES): RateSelection {
+  const asOf = table.asOf
 
   /*
    * §4 of the pack's own answering rules. BOI added A0 to the BER scale in May 2026 and the
@@ -133,7 +144,7 @@ export function selectRates(criteria: RateCriteria): RateSelection {
     }
   }
 
-  const eligible = boiMortgageRates.rates.filter((rate) => applies(rate, criteria))
+  const eligible = table.rates.filter((rate) => applies(rate, criteria))
   if (eligible.length === 0) {
     return { options: [], asOf, unavailable: null }
   }
@@ -165,9 +176,7 @@ export const mortgageAnsweringRules: readonly string[] = boiMortgageRates.baz_an
  * Composed from the supplied answering rules so the two cannot drift: if the pack's guidance
  * changes, this changes with it and nobody has to remember to update a paragraph.
  */
-export function mortgageRatesSection(): string {
-  const { metadata } = boiMortgageRates
-
+export function mortgageRatesSection(table: RateTable = PUBLISHED_RATES): string {
   return [
     '# Mortgage rates',
     '',
@@ -192,7 +201,7 @@ export function mortgageRatesSection(): string {
     '',
     ...mortgageAnsweringRules.map((rule) => `- ${rule}`),
     '',
-    `These are published rates as at ${metadata.public_rates_table_last_update.slice(0, 10)}, and`,
+    `These are published rates as at ${table.asOf}, and`,
     'that date goes with any figure you state. A published rate is not an offer and never means',
     'approval: what somebody can actually borrow goes through a full assessment, and saying so',
     'once is honest rather than discouraging.',

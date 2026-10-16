@@ -245,6 +245,60 @@ export type Database = {
           },
         ]
       }
+      mortgage_rates: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          rate: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id: string
+          rate: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          rate?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      product_catalogue: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          product: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id: string
+          product: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          product?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       catalogue_overrides: {
         Row: {
           checkin_agendas: Json

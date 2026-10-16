@@ -69,6 +69,8 @@ tables; the `partner` function returns scoped DTOs.
 | `persona_config` | The slider values, read fresh every turn |
 | `domain_config` | The permitted conversational domain |
 | `catalogue_overrides` | Admin overrides on catalogue entries |
+| `product_catalogue` | The product knowledge base as rows, one jsonb payload per product, once the console has loaded it. Empty means the functions read the compiled file |
+| `mortgage_rates` | The mortgage rate table the same way. `updated_at` on an edited row moves the date every quote carries |
 | `admin_users` | The admin roster |
 | `push_subscriptions` | Web Push endpoints and keys |
 
@@ -87,7 +89,8 @@ can_read_case(target_case_id) -- is_admin(), OR the caller's participant on that
 Every case table has exactly one policy, `<table>_read`, `for select using
 (can_read_case(case_id))`. `persona_config`, `domain_config` and `catalogue_overrides` are
 readable by everyone, because they are configuration the client needs to render correctly and
-contain nothing private.
+contain nothing private. `product_catalogue` and `mortgage_rates` are readable by admins only:
+the functions read them on the service role, and the customer never needs the raw rows.
 
 ### Four tables with no read policy at all
 

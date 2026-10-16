@@ -7,6 +7,7 @@ import {
   ShieldAlertIcon,
   SlidersHorizontalIcon,
   FileJsonIcon,
+  PackageIcon,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -60,6 +61,13 @@ const SECTIONS = [
     label: 'Goals & needs',
     hint: 'What Baz can recognise',
     icon: CompassIcon,
+    end: false,
+  },
+  {
+    to: routes.admin.catalogue,
+    label: 'Products & rates',
+    hint: 'What Baz can offer and quote',
+    icon: PackageIcon,
     end: false,
   },
   {

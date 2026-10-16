@@ -87,6 +87,7 @@ Postgres
   need_decisions.
   Forms: form_applications, form_answers.
   Config and ops: persona_config, domain_config, catalogue_overrides,
+  product_catalogue, mortgage_rates,
   admin_users, push_subscriptions.
 ```
 
@@ -187,6 +188,8 @@ A requirement satisfied by a fact that was bank-held or captured for a different
 ### Product catalogue
 
 `_shared/tenants/boi/products.ts`: names, plain-language descriptions, eligibility notes, illustrative terms clearly marked synthetic. Baz states product details only from this catalogue (§51).
+
+The knowledge base the prompt is built from (`kb-prompt.ts`) and the mortgage rate table (`mortgage-rates-select.ts`) take their data as an argument. Every turn reads `product_catalogue` and `mortgage_rates` at the start (`_shared/db/catalogue.ts`) and passes the rows in when there are any, the compiled files when there are none. The console's Products & rates screen loads the files into rows, then edits, adds, switches off and restores them; each payload is validated against the file's own shape (`contracts/catalogue.ts`) on the way in, and a row is re-validated on the way out, so Baz can be handed a different catalogue but never a malformed one. A write to an empty table copies the file in first, so one edited product never becomes the whole catalogue.
 
 ### Product interests
 

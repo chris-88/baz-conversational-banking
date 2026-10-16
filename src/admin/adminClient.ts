@@ -1,3 +1,17 @@
+import {
+  mortgageRatesListSchema,
+  productCatalogueListSchema,
+  type KnowledgeProductInput,
+  type MortgageRateInput,
+  type MortgageRatesList,
+  type ProductCatalogueList,
+} from '@contracts/catalogue.ts'
+import {
+  catalogueLoadSchema,
+  catalogueWriteSchema,
+  type CatalogueLoad,
+  type CatalogueWrite,
+} from '@contracts/admin.ts'
 import { callFunction } from '@/lib/callFunction'
 import {
   analyticsSchema,
@@ -44,6 +58,25 @@ export const adminApi = {
     analyticsSchema.parse(await call({ action: 'analytics', period })),
   catalogueOverrides: async (): Promise<CatalogueOverrides> =>
     catalogueOverridesSchema.parse(await call({ action: 'catalogue_overrides' })),
+
+  // §51 — the product catalogue and the mortgage rate table, editable.
+  listProducts: async (): Promise<ProductCatalogueList> =>
+    productCatalogueListSchema.parse(await call({ action: 'list_products' })),
+  setProduct: async (id: string, product: KnowledgeProductInput, enabled: boolean): Promise<CatalogueWrite> =>
+    catalogueWriteSchema.parse(await call({ action: 'set_product', id, product, enabled })),
+  deleteProduct: (id: string) => call({ action: 'delete_product', id }),
+  loadPublishedProducts: async (): Promise<CatalogueLoad> =>
+    catalogueLoadSchema.parse(await call({ action: 'load_published_products' })),
+  restorePublishedProduct: (id: string) => call({ action: 'restore_published_product', id }),
+
+  listRates: async (): Promise<MortgageRatesList> =>
+    mortgageRatesListSchema.parse(await call({ action: 'list_rates' })),
+  setRate: async (id: string, rate: MortgageRateInput, enabled: boolean): Promise<CatalogueWrite> =>
+    catalogueWriteSchema.parse(await call({ action: 'set_rate', id, rate, enabled })),
+  deleteRate: (id: string) => call({ action: 'delete_rate', id }),
+  loadPublishedRates: async (): Promise<CatalogueLoad> =>
+    catalogueLoadSchema.parse(await call({ action: 'load_published_rates' })),
+  restorePublishedRate: (id: string) => call({ action: 'restore_published_rate', id }),
   setCatalogueOverride: (
     edit: Omit<Extract<AdminRequest, { action: 'set_catalogue_override' }>, 'action'>,
   ) => call({ action: 'set_catalogue_override', ...edit }),

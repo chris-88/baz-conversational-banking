@@ -26,6 +26,7 @@ import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
 import { resolveFormState } from '../_shared/domain/forms/state.ts'
 import type { PlanStatus } from '../_shared/domain/plans/types.ts'
 import { knowledgeProduct } from '../_shared/tenants/boi/kb-prompt.ts'
+import { loadProductCatalogue } from '../_shared/db/catalogue.ts'
 import { env } from '../_shared/env.ts'
 import {
   createApplications,
@@ -103,6 +104,9 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
   let loaded = await loadCase(admin, caseId)
   if (!loaded) return errorResponse('not_found', 'That case does not exist.')
 
+  // The catalogue names the applications (§51): the console's rows, or the published file.
+  const kb = await loadProductCatalogue(admin)
+
   let summary = ''
   let inviteUrl: string | undefined
 
@@ -116,7 +120,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         // knows they are both savings. Two applications called "Savings account" tell the
         // customer nothing about which is which.
         (product, catalogueId) =>
-          (catalogueId === null ? undefined : knowledgeProduct(catalogueId)?.name) ??
+          (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
           journeyFor(product).displayName,
       )
       loaded = (await loadCase(admin, caseId))!
@@ -135,7 +139,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         (choice) =>
           (choice.catalogueId === undefined
             ? undefined
-            : knowledgeProduct(choice.catalogueId)?.name) ?? journeyFor(choice.product).displayName,
+            : knowledgeProduct(choice.catalogueId, kb.products)?.name) ?? journeyFor(choice.product).displayName,
       )
       summary =
         created.length === 0
@@ -708,7 +712,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
   loaded = (await loadCase(admin, caseId))!
   const applications = await recomputeApplications(admin, loaded, {
     nameFor: (product, catalogueId) =>
-      (catalogueId === null ? undefined : knowledgeProduct(catalogueId)?.name) ??
+      (catalogueId === null ? undefined : knowledgeProduct(catalogueId, kb.products)?.name) ??
       journeyFor(product).displayName,
   })
 

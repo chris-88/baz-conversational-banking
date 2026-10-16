@@ -72,7 +72,7 @@ Plans and discovery: `plans`, `plan_milestones`, `plan_checkins`, `plan_watches`
 Digital forms: `form_applications`, `form_answers`.
 
 Configuration and operations: `persona_config`, `domain_config`, `catalogue_overrides`,
-`admin_users`, `push_subscriptions`.
+`product_catalogue`, `mortgage_rates`, `admin_users`, `push_subscriptions`.
 
 ## Scripts
 

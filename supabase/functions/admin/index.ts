@@ -27,6 +27,16 @@ import { boiDomainConfig } from '../_shared/tenants/boi/domain-config.ts'
 import { composeSystemPrompt } from '../_shared/llm/prompt.ts'
 import { boiProducts } from '../_shared/tenants/boi/products.ts'
 import { knowledgeBaseSection } from '../_shared/tenants/boi/kb-prompt.ts'
+import { boiKnowledgeBase } from '../_shared/tenants/boi/knowledge-base.ts'
+import { boiMortgageRates } from '../_shared/tenants/boi/mortgage-rates.ts'
+import { knowledgeProductSchema, mortgageRateSchema } from '../_shared/contracts/catalogue.ts'
+import {
+  asOfFrom,
+  differsFromPublished,
+  loadProductCatalogue,
+  publishedProducts,
+  publishedRates,
+} from '../_shared/db/catalogue.ts'
 import { caseStatus, type CaseKind } from '../_shared/domain/case.ts'
 import { factCatalogue, isFactKey } from '../_shared/domain/facts.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
@@ -39,6 +49,7 @@ import {
   loadCase,
   mustWrite,
   recordFacts,
+  type Db,
   type Insert,
   writeEvent,
 } from '../_shared/db/case-repository.ts'
@@ -73,6 +84,66 @@ import { goalContextFor } from '../_shared/db/goals.ts'
 import { buildHandoffNote, handoffAsText } from '../_shared/db/handoff.ts'
 import { buildPlan } from '../_shared/domain/needs/plan.ts'
 import { env } from '../_shared/env.ts'
+
+/**
+ * Copy the published file into its table, leaving any row already there alone (§51).
+ *
+ * `ignoreDuplicates` makes it a no-op on ids that exist, so loading twice changes nothing and
+ * loading after an edit keeps the edit. What comes back is what was actually added, which is
+ * the number the console reports. Every write goes through here first: a table with one row
+ * in it is the whole catalogue the next turn reads, and thirty products must not vanish from
+ * Baz because somebody corrected a sentence in one.
+ */
+async function seedProducts(admin: Db): Promise<number> {
+  const result = await admin
+    .from('product_catalogue')
+    .upsert(
+      boiKnowledgeBase.products.map((product) => ({
+        id: product.id,
+        product: knowledgeProductSchema.parse(product) as unknown as Json,
+        enabled: true,
+        version: 1,
+      })) as Insert<'product_catalogue'>[],
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+    .select('id')
+  mustWrite(result, 'the published product catalogue')
+  return (result.data ?? []).length
+}
+
+async function seedRates(admin: Db): Promise<number> {
+  const result = await admin
+    .from('mortgage_rates')
+    .upsert(
+      boiMortgageRates.rates.map((rate) => ({
+        id: rate.id,
+        rate: mortgageRateSchema.parse(rate) as unknown as Json,
+        enabled: true,
+        version: 1,
+      })) as Insert<'mortgage_rates'>[],
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+    .select('id')
+  mustWrite(result, 'the published mortgage rate table')
+  return (result.data ?? []).length
+}
+
+/** The next version of a row, counting saves from the console and nothing else. */
+async function nextVersion(
+  admin: Db,
+  table: 'product_catalogue' | 'mortgage_rates',
+  id: string,
+): Promise<number> {
+  const existing = await admin.from(table).select('version').eq('id', id).maybeSingle()
+  return ((existing.data?.version as number | undefined) ?? 0) + 1
+}
+
+type CatalogueRow = {
+  id: string
+  enabled: boolean
+  version: number
+  updated_at: string
+}
 
 /**
  * The presenter console (§37 to §44).
@@ -377,7 +448,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         max_tokens: 400,
         system: composeSystemPrompt({
           domainConfig: boiDomainConfig,
-          productCatalogue: knowledgeBaseSection(),
+          productCatalogue: knowledgeBaseSection((await loadProductCatalogue(admin)).products),
           sliders: action.sliders,
           digest: {
             customerName: null,
@@ -797,6 +868,220 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       const overrides = catalogueOverrideRow.array().parse(result.data).map(toOverride)
 
       return json(ok({ overrides }), 200)
+    }
+
+    /**
+     * §51 — the product catalogue as rows the console can edit.
+     *
+     * Until something is loaded, the rows shown are the published file itself, marked as such,
+     * so the screen always shows what Baz is reading. Once rows exist every turn reads them
+     * instead. A row that still says what the file says is not an edit, whatever order jsonb
+     * hands its keys back in; an id the file does not have is something a presenter added.
+     */
+    case 'list_products': {
+      const result = await admin
+        .from('product_catalogue')
+        .select('id, product, enabled, version, updated_at')
+        .order('id')
+      if (result.error !== null) return errorResponse('bad_request', result.error.message)
+
+      const stored = result.data as (CatalogueRow & { product: unknown })[]
+      if (stored.length === 0) {
+        const asOf = boiKnowledgeBase.metadata['as_of']
+        return json(
+          ok({
+            loaded: false,
+            rows: boiKnowledgeBase.products.map((product) => ({
+              id: product.id,
+              product: knowledgeProductSchema.parse(product),
+              enabled: true,
+              edited: false,
+              published: true,
+              version: 0,
+              updatedAt: typeof asOf === 'string' ? asOf : '',
+            })),
+          }),
+          200,
+        )
+      }
+
+      const published = publishedProducts()
+      return json(
+        ok({
+          loaded: true,
+          rows: stored.map((row) => ({
+            id: row.id,
+            product: row.product,
+            enabled: row.enabled,
+            edited: differsFromPublished(published, row.id, row.product),
+            published: published.has(row.id),
+            version: row.version,
+            updatedAt: row.updated_at,
+          })),
+        }),
+        200,
+      )
+    }
+
+    case 'set_product': {
+      if (action.product.id !== action.id) {
+        return errorResponse('bad_request', 'The row id and the product id must match.')
+      }
+
+      await seedProducts(admin)
+      const version = await nextVersion(admin, 'product_catalogue', action.id)
+      const upsert = await admin.from('product_catalogue').upsert(
+        {
+          id: action.id,
+          product: action.product as unknown as Json,
+          enabled: action.enabled,
+          version,
+        } as Insert<'product_catalogue'>,
+        { onConflict: 'id' },
+      )
+      if (upsert.error !== null) return errorResponse('bad_request', upsert.error.message)
+
+      // No event row, for the reason `set_catalogue_override` gives: the edit is global.
+      return json(ok({ version }), 200)
+    }
+
+    case 'delete_product': {
+      await seedProducts(admin)
+      mustWrite(
+        await admin.from('product_catalogue').delete().eq('id', action.id),
+        'the product row',
+      )
+      return json(ok({ deleted: true }), 200)
+    }
+
+    case 'load_published_products': {
+      return json(ok({ inserted: await seedProducts(admin) }), 200)
+    }
+
+    /** Back to the file's wording. A product the file does not have is removed, which is the same thing. */
+    case 'restore_published_product': {
+      const compiled = boiKnowledgeBase.products.find((product) => product.id === action.id)
+      if (compiled === undefined) {
+        mustWrite(
+          await admin.from('product_catalogue').delete().eq('id', action.id),
+          'the product row',
+        )
+        return json(ok({ version: 0 }), 200)
+      }
+
+      await seedProducts(admin)
+      const version = await nextVersion(admin, 'product_catalogue', action.id)
+      const upsert = await admin.from('product_catalogue').upsert(
+        {
+          id: action.id,
+          product: knowledgeProductSchema.parse(compiled) as unknown as Json,
+          enabled: true,
+          version,
+        } as Insert<'product_catalogue'>,
+        { onConflict: 'id' },
+      )
+      if (upsert.error !== null) return errorResponse('bad_request', upsert.error.message)
+      return json(ok({ version }), 200)
+    }
+
+    /** §51 — the mortgage rate table, the same way. The date every quote carries comes with it. */
+    case 'list_rates': {
+      const result = await admin
+        .from('mortgage_rates')
+        .select('id, rate, enabled, version, updated_at')
+        .order('id')
+      if (result.error !== null) return errorResponse('bad_request', result.error.message)
+
+      const publishedOn = boiMortgageRates.metadata.public_rates_table_last_update.slice(0, 10)
+      const stored = result.data as (CatalogueRow & { rate: unknown })[]
+      if (stored.length === 0) {
+        return json(
+          ok({
+            loaded: false,
+            asOf: publishedOn,
+            rows: boiMortgageRates.rates.map((rate) => ({
+              id: rate.id,
+              rate: mortgageRateSchema.parse(rate),
+              enabled: true,
+              edited: false,
+              published: true,
+              version: 0,
+              updatedAt: publishedOn,
+            })),
+          }),
+          200,
+        )
+      }
+
+      const published = publishedRates()
+      return json(
+        ok({
+          loaded: true,
+          asOf: asOfFrom(publishedOn, stored),
+          rows: stored.map((row) => ({
+            id: row.id,
+            rate: row.rate,
+            enabled: row.enabled,
+            edited: differsFromPublished(published, row.id, row.rate),
+            published: published.has(row.id),
+            version: row.version,
+            updatedAt: row.updated_at,
+          })),
+        }),
+        200,
+      )
+    }
+
+    case 'set_rate': {
+      if (action.rate.id !== action.id) {
+        return errorResponse('bad_request', 'The row id and the rate id must match.')
+      }
+
+      await seedRates(admin)
+      const version = await nextVersion(admin, 'mortgage_rates', action.id)
+      const upsert = await admin.from('mortgage_rates').upsert(
+        {
+          id: action.id,
+          rate: action.rate as unknown as Json,
+          enabled: action.enabled,
+          version,
+        } as Insert<'mortgage_rates'>,
+        { onConflict: 'id' },
+      )
+      if (upsert.error !== null) return errorResponse('bad_request', upsert.error.message)
+      return json(ok({ version }), 200)
+    }
+
+    case 'delete_rate': {
+      await seedRates(admin)
+      mustWrite(await admin.from('mortgage_rates').delete().eq('id', action.id), 'the rate row')
+      return json(ok({ deleted: true }), 200)
+    }
+
+    case 'load_published_rates': {
+      return json(ok({ inserted: await seedRates(admin) }), 200)
+    }
+
+    case 'restore_published_rate': {
+      const compiled = boiMortgageRates.rates.find((rate) => rate.id === action.id)
+      if (compiled === undefined) {
+        mustWrite(await admin.from('mortgage_rates').delete().eq('id', action.id), 'the rate row')
+        return json(ok({ version: 0 }), 200)
+      }
+
+      await seedRates(admin)
+      const version = await nextVersion(admin, 'mortgage_rates', action.id)
+      const upsert = await admin.from('mortgage_rates').upsert(
+        {
+          id: action.id,
+          rate: mortgageRateSchema.parse(compiled) as unknown as Json,
+          enabled: true,
+          version,
+        } as Insert<'mortgage_rates'>,
+        { onConflict: 'id' },
+      )
+      if (upsert.error !== null) return errorResponse('bad_request', upsert.error.message)
+      return json(ok({ version }), 200)
     }
 
     case 'reset_case': {

@@ -142,10 +142,18 @@ function optionFor(product: KnowledgeProduct): SavingsOption | null {
   }
 }
 
-export const boiSavingsOptions: readonly SavingsOption[] = boiKnowledgeBase.products
-  .filter((product) => product.id.startsWith('savings.'))
-  .filter((product) => !NOT_FOR_A_GOAL.includes(product.id))
-  .flatMap((product) => {
-    const option = optionFor(product)
-    return option === null ? [] : [option]
-  })
+/** The savings accounts the engine may arrange across, from whichever catalogue a turn holds. */
+export function savingsOptionsFrom(products: readonly KnowledgeProduct[]): readonly SavingsOption[] {
+  return products
+    .filter((product) => product.id.startsWith('savings.'))
+    .filter((product) => !NOT_FOR_A_GOAL.includes(product.id))
+    .flatMap((product) => {
+      const option = optionFor(product)
+      return option === null ? [] : [option]
+    })
+}
+
+/** The published set, for tests and for anything that has not loaded a catalogue. */
+export const boiSavingsOptions: readonly SavingsOption[] = savingsOptionsFrom(
+  boiKnowledgeBase.products,
+)
