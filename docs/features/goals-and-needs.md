@@ -2,10 +2,12 @@
 title: Goals and needs
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-18
 sources:
   - supabase/functions/_shared/domain/needs/engine.ts
+  - supabase/functions/_shared/domain/needs/catalogue.ts
   - supabase/functions/_shared/domain/goals/engine.ts
+  - supabase/functions/_shared/tenants/boi/current-accounts.ts
   - docs/needs-engine/baz-needs-catalogue.json
   - docs/goal-catalogue/baz-goal-catalogue.json
 ---
@@ -14,8 +16,8 @@ sources:
 
 How Baz works out what somebody probably needs, without guessing.
 
-Two engines, sharing one confidence calculation. 49 needs in the catalogue, plus a goal catalogue
-with clusters.
+Two engines, sharing one confidence calculation. 49 needs in the catalogue, ten of them in code,
+plus a goal catalogue with clusters.
 
 ## Evidence to confidence: noisy-or
 
@@ -70,6 +72,32 @@ What the customer decided about a need that was raised goes in `need_decisions`.
 declined goes in `product_interests` as `declined`, and declined products are listed in the case
 digest as **do not raise again** — which is the only reliable way to stop a model offering a
 credit card to somebody who just refused one.
+
+## The ten needs in code
+
+`domain/needs/catalogue.ts` holds the needs the demonstration exercises: a first home mortgage,
+shared household finances, family protection, mortgage protection, home improvement borrowing,
+building the deposit, home insurance, saving for a child, everyday banking and a card for
+flexibility. The other 39 are data in the JSON until somebody writes their conditions.
+
+`everyday_banking` is the onboarding need: somebody the bank has never met, opening a first
+account. It is explicit when the objective asks for one in so many words (current account, bank
+account, open an account, switching bank) and does not say joint, savings or deposit, which are
+needs of their own. Starting work (`lifeEvent.startingWork`, or an `employment.startDate`) and
+moving to Ireland are strong signals; a salary paid to another bank is a soft one, enough to ask
+and never enough to offer. Its one clarifying question, "Is this your first account in Ireland,
+or are you moving from another bank?", is answered by `banking.holdsIrishPaymentAccount`. It is
+suppressed when the salary is already paid here and when a current account is already being
+opened or has been.
+
+Which current account is a tenant decision, not a domain one. `tenants/boi/current-accounts.ts`
+picks from the five an adult can open in their own name, first match wins, from facts: 66 or over
+is the Golden Years account, a student the Third Level account, graduated in the last three years
+the Graduate account, no payment account in Ireland and not in work the Basic Bank Account,
+otherwise the Personal account. The reason it gives is the pack's own eligibility and fee lines,
+never a figure of its own, and it names what would change the pick where a deciding fact is not
+held. The pick goes into the case digest, and `show_product_options` swaps whichever current
+account the model names for it, so the card shows the right account whatever was asked for.
 
 ## In the console
 

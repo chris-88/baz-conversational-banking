@@ -117,6 +117,12 @@ const employmentStatus = z.enum([
   'contract',
   'retired',
   'not_working',
+  /*
+   * A student is not "not working". The goal clusters already read `student` from this key
+   * without the schema admitting it, so the answer could be asked for and never recorded; the
+   * current account rules now turn on it too (2026-10-18).
+   */
+  'student',
 ])
 
 const maritalStatus = z.enum(['single', 'married', 'civil_partnership', 'separated', 'divorced', 'widowed'])
@@ -268,6 +274,23 @@ export const factCatalogue = {
     sensitivity: 'standard',
     extractable: true,
     label: 'Employment start date',
+  },
+
+  // ---- Education ----
+  /**
+   * When they finished studying, which decides whether the graduate account applies.
+   *
+   * A year rather than a date, because that is how people say it ("I graduated in 2024") and
+   * the eligibility it feeds is counted in years. The bounds catch a typed month or a two-digit
+   * year; they say nothing about the person.
+   */
+  'education.graduatedYear': {
+    schema: z.number().int().min(1950).max(2100),
+    subject: 'person',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Year they graduated',
   },
 
   // ---- Income (§9) ----
@@ -422,6 +445,22 @@ export const factCatalogue = {
     sensitivity: 'standard',
     extractable: true,
     label: 'Where their salary is paid',
+  },
+  /**
+   * Whether they already have a payment account in Ireland, anywhere.
+   *
+   * The first thing to know about somebody the bank has never met: "my first account in
+   * Ireland" and "moving from another bank" are different conversations, and the basic bank
+   * account's eligibility turns on exactly this. Person-level because two applicants can have
+   * arrived from different places.
+   */
+  'banking.holdsIrishPaymentAccount': {
+    schema: z.boolean(),
+    subject: 'person',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Already holds a payment account in Ireland',
   },
   'housing.currentTenure': {
     schema: tenure,

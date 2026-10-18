@@ -111,6 +111,41 @@ export function summarise(
   }
 }
 
+/** One line of the status card: a requirement, and whether it is met. */
+export type StatusStep = {
+  readonly label: string
+  readonly done: boolean
+  readonly waitingOnPartner: boolean
+}
+
+/**
+ * What the status card lists for an application: what is met, then what is still blocking.
+ *
+ * A document the bank has checked says so after its label. "Photo ID" ticked means only that
+ * something arrived, and the customer who sent it in is waiting to hear whether it was
+ * accepted; the check is the console's `documents_verified` move, read back here from the
+ * document's own flag rather than from any event (§41).
+ */
+export function statusSteps(evaluation: JourneyEvaluation): readonly StatusStep[] {
+  return [
+    ...evaluation.satisfied.map((item) => ({
+      label:
+        item.requirement.kind === 'document' && item.document?.verified === true
+          ? `${item.requirement.label} (checked)`
+          : item.requirement.label,
+      done: true,
+      waitingOnPartner: false,
+    })),
+    ...evaluation.outstanding
+      .filter((item) => item.blocking)
+      .map((item) => ({
+        label: item.requirement.label,
+        done: false,
+        waitingOnPartner: item.waitingOn === 'partner',
+      })),
+  ]
+}
+
 /**
  * Recomputes every application on the case and records any state change.
  *

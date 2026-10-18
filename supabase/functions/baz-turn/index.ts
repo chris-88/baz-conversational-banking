@@ -31,7 +31,14 @@ import { arrange } from '../_shared/domain/savings/arrange.ts'
 import { describeReused, formatFactValue, type ReuseEvent } from '../_shared/domain/reuse.ts'
 import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
 import { savingsOptionsFrom } from '../_shared/tenants/boi/savings-options.ts'
+import { suitableCurrentAccount } from '../_shared/tenants/boi/current-accounts.ts'
 import { caseFactReader } from '../_shared/db/fact-reader.ts'
+import {
+  ACCOUNT_OPENED_CARD,
+  openedAccounts,
+  welcomeCardFor,
+  welcomedAccounts,
+} from '../_shared/db/welcome.ts'
 import { asksSomething } from '../_shared/domain/conversation/turn-shape.ts'
 import { isRepeatedMessage } from '../_shared/domain/conversation/repeat.ts'
 import { outOfAllowance, runGate } from '../_shared/llm/gate.ts'
@@ -39,6 +46,7 @@ import { refusalFor } from '../_shared/llm/refusals.ts'
 import { stageFor, type Stage } from '../_shared/domain/conversation/stages.ts'
 import { CONVERSATION } from '../_shared/llm/conversation.ts'
 import { syncFormApplications } from '../_shared/db/form-applications.ts'
+import { statusSteps } from '../_shared/db/applications.ts'
 import { recordFormAnswers } from '../_shared/db/record-form-answers.ts'
 import { formForProduct } from '../_shared/tenants/boi/forms/mapping.ts'
 import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
@@ -511,6 +519,26 @@ async function handleTurn(request: Request): Promise<Response> {
   }
 
   /**
+   * The account is open: the news before anything else (§6 Stage 13, §41).
+   *
+   * Owed to every opened account that has not been welcomed, on whatever turn comes next. Which
+   * ones have been is read from the transcript by application id rather than counted in the
+   * loaded messages: those are the last two dozen, sized for the model, and a welcome counted
+   * only there would come back each time it scrolled out of them. Asked for only when there is
+   * an opened account, so every other case pays nothing for the read. Built from the case, not
+   * by the model (Invariant 2).
+   */
+  let pendingWelcome: Card | undefined
+  if (openedAccounts(loaded).length > 0) {
+    const welcomed = await admin
+      .from('messages')
+      .select('cards')
+      .eq('case_id', turn.caseId)
+      .contains('cards', [{ type: ACCOUNT_OPENED_CARD }])
+    pendingWelcome = welcomeCardFor(loaded, welcomedAccounts(welcomed.data ?? []))
+  }
+
+  /**
    * A tap is recorded as what it was.
    *
    * It used to be saved as a customer message, so "Started Savings account, Joint current
@@ -735,8 +763,39 @@ async function handleTurn(request: Request): Promise<Response> {
       ? 'personal_loan'
       : null)
 
-  const suitability =
-    considering === null || goalContext === null
+  /**
+   * Which current account, decided from facts rather than by the model (§51, Invariant 3).
+   *
+   * Five accounts in the pack, one with a fee, and the model offered that one to everybody.
+   * Worked out once a turn from the facts held and the catalogue the turn holds, and put in the
+   * digest only while the everyday banking need is live or an account is already being opened:
+   * a line about current accounts in a mortgage conversation is noise charged every round. The
+   * `show_product_options` handler holds the card to the same pick.
+   */
+  const currentAccountPick =
+    goalContext === null
+      ? null
+      : suitableCurrentAccount(goalContext.facts, new Date(), kb.products)
+  const everydayBankingLive =
+    loaded.applications.some((application) => application.product === 'current_account') ||
+    needsFor(loaded, { sensitiveDisclosure: gate.suppressHumour }).some(
+      (candidate) =>
+        candidate.need.id === 'everyday_banking' &&
+        (candidate.state === 'ready_to_surface' || candidate.state === 'clarify'),
+    )
+  const currentAccountLines =
+    currentAccountPick === null || !everydayBankingLive
+      ? []
+      : [
+          `Current account: offer the ${currentAccountPick.name} (${currentAccountPick.catalogueId}) ` +
+            `and no other current account. ${currentAccountPick.because}` +
+            (currentAccountPick.insteadOf.length === 0
+              ? ''
+              : ` Do not offer ${currentAccountPick.insteadOf.join(', ')}.`),
+        ]
+
+  const suitability = [
+    ...(considering === null || goalContext === null
       ? []
       : suggestionsFor(considering, {
           facts: goalContext.facts,
@@ -745,7 +804,9 @@ async function handleTurn(request: Request): Promise<Response> {
             credit_card: boiProducts.credit_card.variants,
             savings: boiProducts.savings.variants,
           },
-        }).map((suggestion) => `${productInfo(suggestion.to).name}: ${suggestion.because}`)
+        }).map((suggestion) => `${productInfo(suggestion.to).name}: ${suggestion.because}`)),
+    ...currentAccountLines,
+  ]
 
   /*
    * What applying for the quoted product would involve.
@@ -1242,6 +1303,54 @@ async function handleTurn(request: Request): Promise<Response> {
                 )
 
                 /*
+                 * The current account is decided from facts, not by the model (§51, Invariant 3).
+                 *
+                 * Whatever account the model named, the card shows the one the rules pick, and
+                 * the model is told so it says the right name. From the case as it is now, like
+                 * `show_arrangement`: a graduation year recorded earlier in this same turn is not
+                 * in the pick the turn began with, and swapping on a stale pick would put the
+                 * account with the fee on the card in the one turn that matters.
+                 */
+                const offersCurrentAccount = products.some(
+                  (option) => option.product === 'current_account',
+                )
+                const fresh = offersCurrentAccount ? await loadCase(admin, turn.caseId) : null
+                const freshReader = fresh === null ? null : caseFactReader(fresh)
+                const pick =
+                  freshReader === null
+                    ? currentAccountPick
+                    : suitableCurrentAccount(freshReader, new Date(), kb.products)
+
+                const swaps: { readonly from: string | null; readonly note: string }[] = []
+                const offered = products.map((option) => {
+                  if (option.product !== 'current_account' || pick === null) return option
+                  if (option.catalogueId === pick.catalogueId) return option
+
+                  swaps.push({
+                    from: option.catalogueId ?? null,
+                    note:
+                      `Swapped ${option.catalogueId ?? 'an unnamed current account'} for ` +
+                      `${pick.catalogueId}: ${pick.because} The card shows the ${pick.name}; ` +
+                      'name that account, not the one you asked for.',
+                  })
+                  return { ...option, catalogueId: pick.catalogueId }
+                })
+
+                for (const swap of swaps) {
+                  await writeEvent(admin, {
+                    caseId: turn.caseId,
+                    type: 'product_swapped',
+                    actor: 'system',
+                    payload: {
+                      product: 'current_account',
+                      from: swap.from,
+                      to: pick?.catalogueId ?? null,
+                      because: pick?.because ?? null,
+                    },
+                  })
+                }
+
+                /*
                  * The specific product's own name, where the model named one.
                  *
                  * Two savings accounts both labelled "Savings account" are two rows a customer
@@ -1249,7 +1358,7 @@ async function handleTurn(request: Request): Promise<Response> {
                  */
                 const card: Card = {
                   type: 'product_options',
-                  options: products.map((option) => {
+                  options: offered.map((option) => {
                     const catalogue =
                       option.catalogueId === undefined
                         ? undefined
@@ -1266,7 +1375,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   }),
                 }
 
-                for (const option of products) {
+                for (const option of offered) {
                   await writeEvent(admin, {
                     caseId: turn.caseId,
                     type: 'product_offered',
@@ -1292,7 +1401,8 @@ async function handleTurn(request: Request): Promise<Response> {
                   result:
                     'Options shown. The customer chooses in the card, so stop there — say in a ' +
                     'sentence why these and leave them to it. Do not ask another question in the ' +
-                    'same turn; whatever it is will keep until they have decided.',
+                    'same turn; whatever it is will keep until they have decided.' +
+                    (swaps.length === 0 ? '' : ` ${swaps.map((swap) => swap.note).join(' ')}`),
                   card,
                 }
               }
@@ -1317,21 +1427,9 @@ async function handleTurn(request: Request): Promise<Response> {
 
                     // Journey order, not satisfied-then-outstanding: the customer reads this as
                     // a path through the application, and reordering it as things complete
-                    // would make the same card look different for no reason.
-                    const steps = [
-                      ...evaluation.satisfied.map((item) => ({
-                        label: item.requirement.label,
-                        done: true,
-                        waitingOnPartner: false,
-                      })),
-                      ...evaluation.outstanding
-                        .filter((item) => item.blocking)
-                        .map((item) => ({
-                          label: item.requirement.label,
-                          done: false,
-                          waitingOnPartner: item.waitingOn === 'partner',
-                        })),
-                    ]
+                    // would make the same card look different for no reason. A checked
+                    // document says so on its step.
+                    const steps = [...statusSteps(evaluation)]
 
                     return {
                       id: String(application.id),
@@ -2301,6 +2399,13 @@ async function handleTurn(request: Request): Promise<Response> {
             }
           },
         })
+
+        // Before everything, the reuse card included: the account being open is the news, and
+        // the model's sentence follows what the customer can already see.
+        if (pendingWelcome !== undefined) {
+          shown.push(pendingWelcome)
+          send({ type: 'card', card: pendingWelcome })
+        }
 
         // First, so it is what the customer sees happen; the model's sentence follows it.
         if (pendingReuse !== undefined) {

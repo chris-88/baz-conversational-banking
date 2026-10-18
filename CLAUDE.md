@@ -171,6 +171,13 @@ export const creditCard = defineJourney({
 Products: `mortgage`, `joint_account`, `credit_card`, `personal_loan`, `protection`,
 `current_account`, `savings` (§7). Seven journeys, all `status: 'draft'`.
 
+Which current account is decided from facts, not by the model: `tenants/boi/current-accounts.ts`
+picks golden years, third level, graduate, basic or personal in that order from date of birth,
+employment status, `education.graduatedYear` and `banking.holdsIrishPaymentAccount`, citing the
+pack's own eligibility and fee lines. The pick goes into the digest while the `everyday_banking`
+need is live, and `show_product_options` swaps whatever current account the model named for it
+(`product_swapped` event). The onboarding use case this serves is `docs/journeys/onboarding.md`.
+
 ### Application state machine
 
 `state-machine.ts` holds the transition table. The only path to a state change is `transition(app, event)`, called from Edge Functions. Clients cannot update `applications`.
@@ -328,7 +335,7 @@ Gate output:
 ## Admin console (§37 to §44)
 
 - Case inspector: context with provenance, partner, applications, outstanding requirements, conversation, events.
-- Event simulator: buttons for §41 events, each a state-machine transition. "Information requested" also opens an `application_requests` row with the wording, so the customer has something to upload to.
+- Event simulator: buttons for §41 events, each a state-machine transition. "Information requested" also opens an `application_requests` row with the wording, so the customer has something to upload to. "Documents checked" is the one move that is not a transition: it flips `documents.verified` and is narrated on return; a completed current or joint account is narrated as "open" and welcomed with a server-built `account_opened` card (illustrative IBAN under the bank code `BAZZ`, which no institution holds).
 - Notify, persona sliders and presets, domain category view, audience metrics.
 - Reset restores the canonical presenter case from `_shared/domain/seed/canonical.ts`. Build a minimal reset in M1; you will need it constantly.
 - Purge audience cases. Global kill switch that makes the gate return a "demo paused" response.

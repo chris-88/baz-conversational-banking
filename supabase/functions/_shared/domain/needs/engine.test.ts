@@ -205,6 +205,79 @@ describe('what to ask next', () => {
   })
 })
 
+describe('somebody who needs an everyday account', () => {
+  const question = /first account in Ireland/i
+
+  it('surfaces the moment they ask for one while starting work', () => {
+    const candidates = evaluateNeeds(
+      contextOf({
+        'goals.primaryObjective': "I'm starting a new job and need a bank account",
+        'lifeEvent.startingWork': true,
+      }),
+    )
+    const everyday = find(candidates, 'everyday_banking')
+
+    expect(everyday?.state).toBe('ready_to_surface')
+    expect(everyday?.confidence).toBe(1)
+    expect(everyday?.evidence.map((item) => item.signal)).toEqual(
+      expect.arrayContaining(['asked-for-account', 'starting-work']),
+    )
+  })
+
+  it('asks before it offers when all it has is a salary paid somewhere else', () => {
+    // Most people bank elsewhere. On its own that is a reason to ask, never a reason to offer.
+    const candidates = evaluateNeeds(contextOf({ 'banking.salaryPaidTo': 'another_bank' }))
+    const everyday = find(candidates, 'everyday_banking')
+
+    expect(everyday?.state).not.toBe('ready_to_surface')
+    expect(everyday?.confidence).toBeLessThan(NEED_THRESHOLDS.surface)
+    expect(everyday?.nextQuestion).toMatch(question)
+  })
+
+  it('clarifies, rather than offers, for somebody starting work who has not asked', () => {
+    const candidates = evaluateNeeds(contextOf({ 'lifeEvent.startingWork': true }))
+    const everyday = find(candidates, 'everyday_banking')
+
+    expect(everyday?.state).toBe('clarify')
+    expect(everyday?.nextQuestion).toMatch(question)
+  })
+
+  it('has nothing left to ask once they have said whether they bank in Ireland already', () => {
+    const candidates = evaluateNeeds(
+      contextOf({ 'lifeEvent.startingWork': true, 'banking.holdsIrishPaymentAccount': false }),
+    )
+
+    expect(find(candidates, 'everyday_banking')?.nextQuestion).toBeNull()
+  })
+
+  it('is not raised by somebody asking for a savings or a joint account', () => {
+    // Both would match "account" on their own; the words that belong to other needs rule it out.
+    for (const objective of [
+      'open a new account for our savings',
+      'need an account we can both use, a joint account',
+      'a deposit account for the house money',
+    ]) {
+      const everyday = find(evaluateNeeds(contextOf({ 'goals.primaryObjective': objective })), 'everyday_banking')
+
+      expect(everyday?.state, objective).toBe('latent')
+      expect(everyday?.evidence, objective).toEqual([])
+    }
+  })
+
+  it('is suppressed once a current account is already being opened', () => {
+    const candidates = evaluateNeeds(
+      contextOf(
+        { 'goals.primaryObjective': 'I need a bank account', 'lifeEvent.startingWork': true },
+        { applications: [{ product: 'current_account', state: 'in_progress' }] },
+      ),
+    )
+    const everyday = find(candidates, 'everyday_banking')
+
+    expect(everyday?.state).toBe('suppressed')
+    expect(everyday?.reason).toMatch(/already/i)
+  })
+})
+
 describe('the catalogue itself', () => {
   it('gives every need approved wording to work from', () => {
     for (const need of needCatalogue) {

@@ -63,3 +63,60 @@ describe("what the customer says about their partner's income", () => {
     expect(hearsay).toEqual([])
   })
 })
+
+describe('the year they graduated', () => {
+  it('belongs to the person, because two applicants can have finished years apart', () => {
+    expect(factCatalogue['education.graduatedYear'].subject).toBe('person')
+  })
+
+  it('is ordinary information, taken in conversation and reused without being re-asked', () => {
+    expect(factCatalogue['education.graduatedYear'].extractable).toBe(true)
+    expect(factCatalogue['education.graduatedYear'].sensitivity).toBe('standard')
+    expect(factCatalogue['education.graduatedYear'].reuse).toBe('auto')
+  })
+
+  it('takes a plausible whole year and nothing else', () => {
+    const { schema } = factCatalogue['education.graduatedYear']
+    for (const year of [1950, 2024, 2100]) {
+      expect(schema.safeParse(year).success, String(year)).toBe(true)
+    }
+    for (const value of [1949, 2101, 2024.5, '2024']) {
+      expect(schema.safeParse(value).success, String(value)).toBe(false)
+    }
+  })
+
+  it('is labelled in plain words', () => {
+    expect(factCatalogue['education.graduatedYear'].label).toBe('Year they graduated')
+  })
+})
+
+describe('whether they already hold a payment account in Ireland', () => {
+  it('belongs to the person, because two applicants can have arrived from different places', () => {
+    expect(factCatalogue['banking.holdsIrishPaymentAccount'].subject).toBe('person')
+  })
+
+  it('is a yes or a no', () => {
+    const { schema } = factCatalogue['banking.holdsIrishPaymentAccount']
+    expect(schema.safeParse(true).success).toBe(true)
+    expect(schema.safeParse(false).success).toBe(true)
+    expect(schema.safeParse('no').success).toBe(false)
+  })
+
+  it('is taken in conversation and reused silently', () => {
+    expect(factCatalogue['banking.holdsIrishPaymentAccount'].extractable).toBe(true)
+    expect(factCatalogue['banking.holdsIrishPaymentAccount'].sensitivity).toBe('standard')
+    expect(factCatalogue['banking.holdsIrishPaymentAccount'].reuse).toBe('auto')
+  })
+
+  it('says on its face what it is about', () => {
+    expect(factCatalogue['banking.holdsIrishPaymentAccount'].label).toBe(
+      'Already holds a payment account in Ireland',
+    )
+  })
+})
+
+describe('employment status', () => {
+  it('admits a student, which the goal clusters and the current account rules both read', () => {
+    expect(factCatalogue['employment.status'].schema.safeParse('student').success).toBe(true)
+  })
+})

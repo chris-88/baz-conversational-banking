@@ -16,6 +16,8 @@ const BETWEEN = 400
  */
 export const GHOST_PROMPTS: readonly string[] = [
   'We’re hoping to buy a place next year…',
+  // Somebody the bank has never met, which is the conversation it most wants to have.
+  'I’m starting a new job and need a bank account…',
   'We’ve just had a baby…',
   'I’m moving in with my partner…',
   'I want to get on top of my money…',

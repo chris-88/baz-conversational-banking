@@ -2,7 +2,7 @@
 title: Conversation
 status: current
 scope: poc
-last_verified: 2026-10-16
+last_verified: 2026-10-18
 sources:
   - src/surfaces/BazScreen.tsx
   - src/baz/
@@ -45,7 +45,7 @@ tool does not exist.
 
 ## Cards
 
-18 of them. A card is a proposal; the tap is the commitment. Tapping calls `case-action`, which
+19 of them. A card is a proposal; the tap is the commitment. Tapping calls `case-action`, which
 validates and writes — the model never does.
 
 One card per turn, with one line of text before it and nothing after. A card that waits for a tap
@@ -65,6 +65,12 @@ leaves a `question_while_card_awaits` event; the same thing on the turn the card
   arrive without being re-asked.
 - Come back after the bank has moved something: the turn runs with a `return` trigger and Baz
   says what changed, with the status card rendering from the database beside it.
+- Come back after the bank has opened the account (the console simulates `completed`): the turn
+  opens with the welcome card before Baz has said a word. The account's name, an illustrative
+  IBAN with real check digits under a bank code no bank holds, where the debit card is going,
+  and what to do next. The server builds it from the case and sends it first on whatever turn
+  comes next, once per opened account; the model has no tool that shows it and writes none of
+  it. It is something to read, so it is not the question of its turn.
 
 ## The menu
 

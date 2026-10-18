@@ -1664,3 +1664,57 @@ own `income.annualBasic` when they join. The refusal now says that, says not to 
 the key. A message repeated word for word within ten minutes of the previous one also leaves a
 `customer_repeated` event: twice in the same case the customer did that because the answer had
 not landed, and the transcript showed two ordinary turns.
+
+## 2026-10-18 — which current account is decided from facts, not by the model (§51, Invariant 3)
+
+The pack holds five current accounts an adult can open in their own name and one of them has a
+fee; the model offered that one to everybody, because it is the account the public site leads
+with, so a graduate starting a first job was shown €6 a month when the account built for them
+costs nothing. `tenants/boi/current-accounts.ts` now picks, first match wins, from facts: 66 or
+over, a student, graduated within three years, no payment account in Ireland and not in work,
+otherwise the Personal account, and its reason is the pack's own eligibility and fee lines plus
+what would change the pick where a deciding fact is not held. The pick goes into the digest
+while the `everyday_banking` need is live, and `show_product_options` swaps whichever current
+account the model named for it, re-reading the case first so a graduation year recorded in the
+same turn counts, and leaves a `product_swapped` event. The need itself was reworked for
+onboarding: `high` rather than `low`, raised by asking for an account, starting work or moving
+to Ireland, clarified by "first account in Ireland, or moving from another bank?"
+(`banking.holdsIrishPaymentAccount`), and suppressed once a current account is being opened.
+Two facts were added for it, `education.graduatedYear` and `banking.holdsIrishPaymentAccount`,
+and `student` joined the employment statuses, which the goal clusters had been reading without
+the schema admitting it.
+
+## 2026-10-18 — checking documents is a console move that moves nothing (§41)
+
+The bank's moves on a submitted application were receive, ask, approve, decline and complete,
+so a customer who had uploaded photo ID and proof of address never heard whether they were
+accepted. `documents_verified` is a `simulate_event` move that is not a transition: it flips
+`verified` on every document of the application and leaves the state alone, is offered only
+while the application is still being assessed and something is unchecked, and is refused when
+nothing has been sent in. Every simulated event now carries `product` beside the application's
+name, so the narration can say a current or joint account "is open" where a loan "is complete".
+The requirement engine carries which document satisfied a requirement, and the status card's
+steps say "(checked)" on a checked document, because a tick says only that something arrived.
+
+## 2026-10-18 — the open account is welcomed by the server, once, by id (§6, §41)
+
+The closing moment of a first account is a card the model never writes: when the console marks
+a current or joint account `completed`, the customer's next turn opens with the account's name,
+an IBAN, where the debit card is going and what to do next, built from the case and sent before
+the model's first word. The IBAN is synthetic by construction rather than by disclaimer: the
+real shape and real ISO 7064 check digits, under the bank code `BAZZ` and BIC `BAZZIE2D`, which
+no institution holds, so an invented account number can never coincide with anybody's
+(Invariant 10). Which accounts have been welcomed is read back from the persisted card payloads
+by application id with one containment query, run only when the case holds an opened account,
+because the loaded messages are a window sized for the model and a count taken there came back
+each time it scrolled out. The card is something to read and is not in `AWAITING_CARDS`.
+
+## 2026-10-18 — onboarding is a use case, written before it is filmed (§6, §67)
+
+The CEO of retail named acquisition and onboarding as the bank's priority, so the use case is
+written beat by beat in `docs/journeys/onboarding.md` before anything is filmed: a graduate the
+bank has never met, from a typed opener to an open account, on two devices, with the right
+account chosen by rule, identity given once, documents from the phone, the bank's moves
+narrated on return, and a welcome card that ends with the next two things to do. What is real
+and what is simulated is a table in the same document, so nobody in the room is told that a
+console button is a KYC provider.

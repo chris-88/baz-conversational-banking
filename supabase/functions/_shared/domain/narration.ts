@@ -11,6 +11,7 @@ export const NARRATABLE_EVENTS = [
   'application_received',
   'information_requested',
   'document_received',
+  'documents_verified',
   'application_approved',
   'application_declined',
   'application_completed',
@@ -55,7 +56,12 @@ export function describeEvent(event: {
     case 'application_declined':
       return `${name} was not approved.`
     case 'application_completed':
-      return `${name} is complete.`
+      // An account opens; a loan, a card or a policy completes. The product on the event tells
+      // them apart, and an event written before it was carried keeps the wording it always had.
+      return event.payload['product'] === 'current_account' ||
+        event.payload['product'] === 'joint_account'
+        ? `${name} is open.`
+        : `${name} is complete.`
     case 'plan_milestone_reached':
       return typeof event.payload['label'] === 'string'
         ? `You reached a step on your plan: ${event.payload['label']}.`
@@ -74,6 +80,11 @@ export function describeEvent(event: {
         : 'Your partner completed their part.'
     case 'document_received':
       return `${name}: a document was received.`
+    case 'documents_verified':
+      // The case-wide check names no application, so it is not prefixed with "An application".
+      return typeof event.payload['applicationName'] === 'string'
+        ? `${name}: your documents were checked and accepted.`
+        : 'Your documents were checked and accepted.'
     default:
       return null
   }

@@ -64,7 +64,10 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
 
   /**
    * §41 — the downstream events the bank would raise. Each one is a state-machine transition,
-   * never a random timer, so an illegal move is refused rather than faked.
+   * never a random timer, so an illegal move is refused rather than faked. The one exception is
+   * `documents_verified`: the bank checks what was sent in and the application stays where it
+   * is, so it is legal whenever the application is with the bank rather than when the machine
+   * says so.
    */
   z.object({
     action: z.literal('simulate_event'),
@@ -73,6 +76,7 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
       'received_by_bank',
       'information_requested',
       'information_supplied',
+      'documents_verified',
       'assessment_approved',
       'assessment_declined',
       'completed',
@@ -568,7 +572,10 @@ export const adminCaseSchema = z.object({
       state: z.string(),
       stateLabel: z.string(),
       outstanding: z.array(z.string()),
-      /** Which §41 events the state machine will currently accept. */
+      /**
+       * Which §41 moves the console may offer now: the events the state machine will accept,
+       * plus the document check while something sent in is still unchecked.
+       */
       canSimulate: z.array(z.string()),
     }),
   ),

@@ -2,7 +2,7 @@
 title: Journeys
 status: current
 scope: poc
-last_verified: 2026-10-15
+last_verified: 2026-10-18
 sources:
   - supabase/functions/_shared/domain/journeys/
   - supabase/functions/_shared/tenants/boi/forms/mapping.ts
@@ -24,6 +24,12 @@ A journey is one product's requirements, as a data structure. One file per produ
 | `credit_card` | Credit card | 11 | No | — |
 | `current_account` | Current account | 10 | No | — |
 | `savings` | Savings account | 8 | No | [1833](supersaver-1833.md) |
+
+## The use case that runs through them
+
+[Onboarding a new customer](onboarding.md): somebody the bank has never met opens a current
+account and a savings account in one conversation, with the right current account chosen by
+rule, documents uploaded from the phone, and the bank's moves narrated on return.
 
 ## All seven are `status: 'draft'`
 

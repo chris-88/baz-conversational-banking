@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CARD_TYPES, cardSchema } from './cards.ts'
+import { awaitsCustomer, CARD_TYPES, cardSchema } from './cards.ts'
 import { ERROR_CODES, fail, ok, statusFor } from './common.ts'
 import { parseStreamEvent, streamEventSchema, toSseFrame, withdraw } from './stream.ts'
 import { bazTurnRequestSchema } from './baz-turn.ts'
@@ -103,6 +103,37 @@ describe('cards', () => {
       ],
     })
     expect(parsed.success).toBe(false)
+  })
+
+  it('carries the opened account as something to read, never something to tap', () => {
+    const parsed = cardSchema.safeParse({
+      type: 'account_opened',
+      applicationId: '3f8b0c7e-0000-4000-8000-000000000001',
+      displayName: 'Current account',
+      iban: 'IE29 BAZZ 0000 0000 0000 01',
+      bic: 'BAZZIE2D',
+      cardTo: '14 Example Road, Dublin 8',
+      next: [
+        'Give your employer this IBAN for your salary',
+        'Your debit card is on its way, and 365 online and the app are ready',
+      ],
+    })
+    expect(parsed.success).toBe(true)
+    expect(awaitsCustomer('account_opened')).toBe(false)
+  })
+
+  it('refuses an opened account with nothing to do next, or with too much', () => {
+    const welcome = {
+      type: 'account_opened',
+      applicationId: '3f8b0c7e-0000-4000-8000-000000000001',
+      displayName: 'Current account',
+      iban: 'IE29 BAZZ 0000 0000 0000 01',
+      bic: 'BAZZIE2D',
+      cardTo: null,
+    }
+    expect(cardSchema.safeParse({ ...welcome, next: [] }).success).toBe(false)
+    expect(cardSchema.safeParse({ ...welcome, next: ['a', 'b', 'c', 'd', 'e'] }).success).toBe(false)
+    expect(cardSchema.safeParse({ ...welcome, next: ['a'] }).success).toBe(true)
   })
 })
 

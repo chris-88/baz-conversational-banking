@@ -20,6 +20,7 @@ const EVENT_LABELS: Record<string, string> = {
   received_by_bank: 'Received by the bank',
   information_requested: 'Ask for more information',
   information_supplied: 'Information supplied',
+  documents_verified: 'Documents checked',
   assessment_approved: 'Approve',
   assessment_declined: 'Decline',
   completed: 'Complete',
@@ -28,8 +29,9 @@ const EVENT_LABELS: Record<string, string> = {
 /**
  * §40, §41, §42 — the case behind the conversation, and the controls that move it.
  *
- * Every button here is a state-machine transition. The server only offers the ones the machine
- * will actually accept, so nobody can reach an impossible state live.
+ * Every button here is a state-machine transition, bar the document check, which marks what was
+ * sent in and moves nothing. The server only offers the ones the machine will actually accept,
+ * so nobody can reach an impossible state live.
  *
  * Split in two because a page that opens with everything on it is a page nobody reads. What a
  * person handling the call needs — applications, the plan, the notification — is always on

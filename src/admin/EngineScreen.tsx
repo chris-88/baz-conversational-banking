@@ -25,7 +25,7 @@ import type { CatalogueOverrideDto } from '@contracts/admin.ts'
  * What Baz knows how to recognise, and what it does about it (§6).
  *
  * The catalogue is the answer to the question this prototype always gets asked — whether the
- * model is deciding any of this. Twenty-six goals, nine needs and ten life events, each with the
+ * model is deciding any of this. Twenty-six goals, ten needs and ten life events, each with the
  * conditions that raise it, the information it needs before it can be acted on, and the rules
  * that hold it back. None of it is prompt text.
  */

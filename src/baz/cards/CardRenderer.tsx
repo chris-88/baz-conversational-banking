@@ -11,6 +11,7 @@ import { MortgageRatesCard } from '@/baz/cards/MortgageRatesCard'
 import { ComparisonCard } from '@/baz/cards/ComparisonCard'
 import { ArrangementCard } from '@/baz/cards/ArrangementCard'
 import { ReuseCard } from '@/baz/cards/ReuseCard'
+import { AccountOpenedCard } from '@/baz/cards/AccountOpenedCard'
 import { StatusCard } from '@/baz/cards/StatusCard'
 import { ReviewCard } from '@/baz/cards/ReviewCard'
 import { PausePromptCard } from '@/baz/cards/PausePromptCard'
@@ -187,6 +188,9 @@ function LiveCard({
 
     case 'reuse':
       return <ReuseCard card={card} />
+
+    case 'account_opened':
+      return <AccountOpenedCard card={card} />
 
     case 'status':
       return (

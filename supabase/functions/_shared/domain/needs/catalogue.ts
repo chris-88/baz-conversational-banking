@@ -18,6 +18,18 @@ const objective = (context: NeedContext): string => {
   return typeof value === 'string' ? value.toLowerCase() : ''
 }
 
+/**
+ * Whether what they came for is an everyday account.
+ *
+ * "Open an account" on its own would claim the joint account and every savings account too,
+ * and those are needs with entries of their own, so the words that belong to them rule this
+ * one out rather than leaving the engine to untangle three explicit signals at once.
+ */
+const asksForAccount = (said: string): boolean =>
+  /current account|bank account|open an account|need an account|new account|switch(ing)? (my )?bank|mov(e|ing) (my )?bank/i.test(
+    said,
+  ) && !/joint|saving|deposit/i.test(said)
+
 /** A product the customer is actually pursuing, as opposed to one merely mentioned. */
 const pursuing = (context: NeedContext, product: string): boolean =>
   context.applications.some(
@@ -430,50 +442,83 @@ export const needCatalogue: readonly NeedDefinition[] = [
     deferrals: [],
   },
 
+  /**
+   * Somebody the bank has never met, opening their first account.
+   *
+   * This began as a low-priority need that fired only when somebody was saving monthly from
+   * an account elsewhere: a current account as the thing that makes a standing order possible.
+   * Onboarding is the bank's stated priority, and a first account is the whole reason some
+   * people come, so it is now raised in its own right: when they ask for one, when they are
+   * starting work or arriving in the country, and only clarified when all that is known is a
+   * salary paid somewhere else. Which current account is a tenant decision, made from facts
+   * (`tenants/boi/current-accounts.ts`), not something the model picks.
+   */
   {
     id: 'everyday_banking',
     name: 'Somewhere for the salary to land',
-    family: 'current_accounts',
+    family: 'banking',
     sensitive: false,
-    priority: 'low',
+    priority: 'high',
     signals: [
       {
-        id: 'asked-for-it',
+        id: 'asked-for-account',
         strength: 'explicit',
-        describe: 'they asked about a current account or about switching',
-        when: (context) => /current account|switch(ing)? (my )?(bank|account)/i.test(objective(context)),
+        describe: 'they asked for an everyday account, or to move their banking here',
+        when: (context) => asksForAccount(objective(context)),
+      },
+      {
+        id: 'starting-work',
+        strength: 'strong_inferred',
+        describe: 'they are starting work',
+        when: (context) =>
+          context.facts.boolean('lifeEvent.startingWork', 'household') === true ||
+          context.facts.has('employment.startDate', 'primary'),
+      },
+      {
+        id: 'moving-to-ireland',
+        strength: 'strong_inferred',
+        describe: 'they are moving to Ireland',
+        when: (context) => context.facts.boolean('lifeEvent.movingToIreland', 'household') === true,
       },
       {
         /*
          * Not "they bank elsewhere", which is true of most people and is nobody's business.
-         * This fires when they have told us about money they mean to move every month AND the
-         * account it would move from is somewhere else — the one case where an account here
-         * does something for them that nothing else can.
+         * Soft on its own: a salary paid somewhere else is a reason to ask, never a reason to
+         * offer.
          */
-        id: 'saving-from-another-bank',
+        id: 'salary-elsewhere',
         strength: 'soft_inferred',
-        describe: 'they are saving monthly from an account held somewhere else',
-        when: (context) =>
-          context.facts.get('banking.salaryPaidTo', 'primary') === 'another_bank' &&
-          context.facts.has('goals.monthlySaving', 'household'),
+        describe: 'their salary is paid to an account held somewhere else',
+        when: (context) => context.facts.get('banking.salaryPaidTo', 'primary') === 'another_bank',
       },
     ],
     clarifying: [
       {
-        question: 'Where does your salary get paid at the moment?',
-        answeredWhen: (context) => context.facts.has('banking.salaryPaidTo', 'primary'),
+        question: 'Is this your first account in Ireland, or are you moving from another bank?',
+        answeredWhen: (context) =>
+          context.facts.has('banking.holdsIrishPaymentAccount', 'primary'),
       },
     ],
     products: ['current_account'],
     framing:
-      'A current account here is what makes a standing order possible on payday, and lets income ' +
-      'and outgoings be read from records rather than asked for. It is never a condition of ' +
-      'anything else.',
+      'An everyday account is where the salary lands and the bills go out, with the card and ' +
+      'the app ready before the first payday, and it opens here, from the conversation. It is ' +
+      'never a condition of anything else.',
     suppressions: [
       {
         id: 'already_banks_here',
         describe: 'their salary is already paid to us, so they have the account this would be',
         when: (context) => context.facts.get('banking.salaryPaidTo', 'primary') === 'this_bank',
+      },
+      {
+        id: 'current_account_in_hand',
+        describe: 'a current account is already being opened here, or already has been',
+        when: (context) =>
+          pursuing(context, 'current_account') ||
+          context.applications.some(
+            (application) =>
+              application.product === 'current_account' && application.state === 'completed',
+          ),
       },
     ],
     deferrals: [],

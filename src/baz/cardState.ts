@@ -254,6 +254,7 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
      * commit something should fail here and be thought about, not silently stay tappable
      * forever.
      */
+    case 'account_opened':
     case 'comparison':
     case 'reuse':
     case 'consent':

@@ -2,10 +2,11 @@
 title: Document upload
 status: current
 scope: poc
-last_verified: 2026-10-16
+last_verified: 2026-10-18
 sources:
   - supabase/functions/upload/index.ts
   - supabase/functions/_shared/domain/bank-requests.ts
+  - supabase/functions/_shared/db/applications.ts
   - supabase/functions/admin/index.ts
   - src/baz/cards/UploadRequestCard.tsx
   - src/baz/cards/FormUploadCard.tsx
@@ -89,6 +90,21 @@ three places for that reason.
 
 ## In the console
 
-Documents appear in the case inspector with their provenance, and `verify_documents` is a
-presenter action — a simulated verification step through the state machine, not a real check of
-anything.
+Documents appear in the case inspector with their provenance. Verification is a console move,
+not a check of anything: **Documents checked** on an application (`simulate_event` with
+`documents_verified`) flips `verified` on every `documents` row of that application and changes
+no state, so it goes nowhere near the state machine. It is refused unless the application is with
+the bank, and offered only while something on it is still unchecked. The move writes a
+`documents_verified` event with the application's name, its product and the number of documents,
+which Baz narrates on return ("Current account: your documents were checked and accepted.") and
+the customer's screen shows in the pill. The status card's steps come from `statusSteps` in
+`_shared/db/applications.ts`, which suffixes a checked document's label with "(checked)", so
+"Photo ID" and "Photo ID (checked)" are different lines.
+
+The older case-wide **The bank checks the documents** button (`verify_documents`) marks every
+unchecked document on the case at once and writes one `documents_verified` event with no
+application on it, which narrates as "Your documents were checked and accepted."
+
+A journey requirement with `requiresVerification: true` (the mortgage payslip) stays outstanding
+as `awaiting_verification` until its document is checked. The rest are satisfied by the upload
+alone, and the check only changes what the step says.

@@ -441,6 +441,34 @@ export const dataNoticeCardSchema = z.object({
   noticeHref: z.string(),
 })
 
+/**
+ * The account is open (§6 Stage 13, §41).
+ *
+ * The closing moment of a first account. The console marks the application complete, and the
+ * customer's next turn, usually the one a push notification brings them back for, opens with
+ * this before the model has said a word: the account's name, its number, where the debit card
+ * is going and what to do next. Built by the server from the case; the model has no tool that
+ * shows it and writes none of it, because an account number the model wrote would be one it
+ * made up (Invariant 2).
+ *
+ * The number is synthetic and the card says so: a real IBAN shape, check digits that validate,
+ * and a bank code no bank holds, so it can never be somebody's account (Invariant 10).
+ *
+ * Something to read, not something to decide: not in `AWAITING_CARDS`.
+ */
+export const accountOpenedCardSchema = z.object({
+  type: z.literal('account_opened'),
+  applicationId,
+  displayName: z.string(),
+  /** Spaced in fours for reading. Synthetic: see `domain/iban.ts`. */
+  iban: z.string(),
+  bic: z.string(),
+  /** Where the debit card is addressed: the address on file, or null when none is held. */
+  cardTo: z.string().nullable(),
+  /** What to do with the account now, from the case: short enough to act on, never empty. */
+  next: z.array(z.string()).min(1).max(4),
+})
+
 export const cardSchema = z.discriminatedUnion('type', [
   quoteCardSchema,
   planProposalCardSchema,
@@ -460,6 +488,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   mortgageRatesCardSchema,
   dataNoticeCardSchema,
   signInCardSchema,
+  accountOpenedCardSchema,
 ])
 
 export type Card = z.infer<typeof cardSchema>
@@ -484,6 +513,7 @@ export const CARD_TYPES = [
   'mortgage_rates',
   'data_notice',
   'sign_in',
+  'account_opened',
 ] as const satisfies readonly CardType[]
 
 /**

@@ -13,6 +13,7 @@ import {
   createApplications,
   recomputeApplications,
   recordReuse,
+  statusSteps,
 } from './applications.ts'
 
 /**
@@ -269,6 +270,83 @@ describe('recording what was reused', () => {
         key: requirement.fact,
         source: 'bank_held',
       }),
+    ])
+  })
+})
+
+/**
+ * The status card's steps.
+ *
+ * A document that has arrived and a document the bank has checked are different things to the
+ * customer waiting on the second, and the label is the only place the card can say which.
+ */
+describe('what the status card lists', () => {
+  const journey = journeyFor('current_account')
+  const requirement = (id: string) => {
+    const found = journey.requirements.find((candidate) => candidate.id === id)
+    if (found === undefined) throw new Error(`the current account journey has no ${id}`)
+    return found
+  }
+
+  it('says a document was checked, and only once it has been', () => {
+    const steps = statusSteps({
+      satisfied: [
+        { requirement: requirement('photo-id'), fact: null, reused: false, document: { verified: true } },
+        { requirement: requirement('address-proof'), fact: null, reused: false, document: { verified: false } },
+      ],
+      outstanding: [],
+      complete: true,
+      waitingOn: null,
+      activeBranches: [],
+    })
+
+    expect(steps).toEqual([
+      { label: 'Photo ID (checked)', done: true, waitingOnPartner: false },
+      { label: 'Proof of address', done: true, waitingOnPartner: false },
+    ])
+  })
+
+  it('lists what is still blocking after what is met, and who it waits on', () => {
+    const partnerId = journeyFor('joint_account').requirements.find(
+      (candidate) => candidate.id === 'partner-doc-id',
+    )
+    if (partnerId === undefined) throw new Error("the joint account asks for the partner's ID")
+
+    const steps = statusSteps({
+      satisfied: [{ requirement: requirement('terms'), fact: null, reused: false }],
+      outstanding: [
+        {
+          requirement: requirement('photo-id'),
+          reason: 'awaiting_document',
+          waitingOn: 'primary',
+          blocking: true,
+          knownFact: null,
+        },
+        {
+          requirement: partnerId,
+          reason: 'awaiting_partner',
+          waitingOn: 'partner',
+          blocking: true,
+          knownFact: null,
+        },
+        // Optional, so it never holds the application back and is not a step.
+        {
+          requirement: requirement('email'),
+          reason: 'missing',
+          waitingOn: 'primary',
+          blocking: false,
+          knownFact: null,
+        },
+      ],
+      complete: false,
+      waitingOn: 'primary',
+      activeBranches: [],
+    })
+
+    expect(steps).toEqual([
+      { label: 'Current account terms and conditions', done: true, waitingOnPartner: false },
+      { label: 'Photo ID', done: false, waitingOnPartner: false },
+      { label: "Your partner's photo ID", done: false, waitingOnPartner: true },
     ])
   })
 })

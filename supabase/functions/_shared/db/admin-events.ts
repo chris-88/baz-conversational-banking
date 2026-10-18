@@ -123,6 +123,8 @@ export function describeAdminEvent(
         return 'An application was approved'
       case 'product_offered':
         return `Offered ${text(payload, 'product') ?? 'a product'}`
+      case 'product_swapped':
+        return `Swapped ${text(payload, 'from') ?? 'the account offered'} for ${text(payload, 'to') ?? 'the one that suits'}`
       case 'partner_invited':
         return 'Second applicant invited'
       case 'partner_joined':
@@ -132,7 +134,7 @@ export function describeAdminEvent(
       case 'document_uploaded':
         return `Document sent in: ${text(payload, 'fileName') ?? 'a file'}`
       case 'documents_verified':
-        return 'The bank checked the documents'
+        return 'Documents checked and accepted'
       case 'notification_sent':
         return 'Notification sent'
       case 'customer_authenticated':

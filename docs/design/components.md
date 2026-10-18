@@ -2,7 +2,7 @@
 title: Components
 status: current
 scope: poc
-last_verified: 2026-10-16
+last_verified: 2026-10-18
 sources:
   - src/components/ui/
   - src/baz/cards/
@@ -11,7 +11,7 @@ sources:
 
 # Components
 
-130 React components. 41 of them are shadcn-generated and are not hand-maintained.
+131 React components. 41 of them are shadcn-generated and are not hand-maintained.
 
 ## shadcn/ui is mandatory
 
@@ -29,7 +29,7 @@ hand-rolling one later.
 
 ## Conversation cards
 
-`src/baz/cards/` — 21 cards, plus `CardRenderer.tsx` which maps a card type to its component
+`src/baz/cards/` — 22 cards, plus `CardRenderer.tsx` which maps a card type to its component
 and `Settling.tsx`, which cross-fades any of them into `SettledCard` once its decision is made.
 
 ```text
@@ -38,13 +38,15 @@ ReviewCard           ConfirmationCard    StatusCard        PausePromptCard
 PartnerInviteCard    PlanProposalCard    ConsentCard       HealthFormCard
 UploadRequestCard    FormUploadCard      FormDeclarationsCard
 SignInCard           DataNoticeCard      ArrangementCard   ReuseCard
-SettledCard
+AccountOpenedCard    SettledCard
 ```
 
-`ArrangementCard` and `ReuseCard` are the two the engine writes every word of: the first is
-how the customer's money should be split across accounts, the second is what they were never
-asked because the bank already knew. `SettledCard` is what every card becomes once its
-decision is made, on the spot and on reload alike.
+`ArrangementCard`, `ReuseCard` and `AccountOpenedCard` are the three the engine writes every
+word of: the first is how the customer's money should be split across accounts, the second is
+what they were never asked because the bank already knew, the third is the account being open,
+with an illustrative IBAN whose check digits validate under a bank code no bank holds, so it
+can never be somebody's account. `SettledCard` is what every card becomes once its decision is
+made, on the spot and on reload alike.
 
 Three things are true of every one of them:
 

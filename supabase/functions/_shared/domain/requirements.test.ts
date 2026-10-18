@@ -340,6 +340,29 @@ describe('declarations, confirmations and documents', () => {
       outstanding(journey, context({ documents: [{ requirementId: 'payslip', verified: true }] })),
     ).toEqual([])
   })
+
+  /** So a card can say the document was checked rather than only received. */
+  it('a satisfied document carries whether it has been checked', () => {
+    const journey = journeyWith({
+      kind: 'document',
+      id: 'photo-id',
+      subject: 'primary',
+      label: 'Photo ID',
+      documentType: 'photo_id',
+    })
+
+    const received = evaluateJourney(
+      journey,
+      context({ documents: [{ requirementId: 'photo-id', verified: false }] }),
+    )
+    expect(received.satisfied[0]?.document).toEqual({ verified: false })
+
+    const checked = evaluateJourney(
+      journey,
+      context({ documents: [{ requirementId: 'photo-id', verified: true }] }),
+    )
+    expect(checked.satisfied[0]?.document).toEqual({ verified: true })
+  })
 })
 
 describe('branches', () => {

@@ -145,6 +145,11 @@ type CatalogueRow = {
   updated_at: string
 }
 
+/** With the bank and not yet decided: the only time anyone there is checking documents. */
+function underAssessment(state: ApplicationState): boolean {
+  return state === 'submitted' || state === 'under_review' || state === 'info_required'
+}
+
 /**
  * The presenter console (§37 to §44).
  *
@@ -1482,6 +1487,63 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       const row = found.data as any
       if (!row) return errorResponse('not_found', 'No such application.')
 
+      const names: Record<typeof action.event, string> = {
+        received_by_bank: 'application_received',
+        information_requested: 'information_requested',
+        information_supplied: 'document_received',
+        documents_verified: 'documents_verified',
+        assessment_approved: 'application_approved',
+        assessment_declined: 'application_declined',
+        completed: 'application_completed',
+      }
+
+      /*
+       * §41: the bank checks what was sent in. Not a move between states, so it branches
+       * before the machine, which has no event for it: the application stays where it is and
+       * the documents are marked. Legal while the application is with the bank, which is when
+       * anyone there would be looking at them.
+       */
+      if (action.event === 'documents_verified') {
+        // While somebody there is still looking at it: a decided application is not re-checked.
+        if (!underAssessment(row.state)) {
+          return errorResponse('bad_request', 'Documents can be checked once the application is with the bank.')
+        }
+
+        const checked = mustWrite(
+          await admin
+            .from('documents')
+            .update({ verified: true })
+            .eq('application_id', action.applicationId)
+            .select('id'),
+          'the documents',
+        )
+        const count = ((checked.data ?? []) as { id: string }[]).length
+
+        // Nothing to check is not a check. The event is narrated to the customer as their
+        // documents being accepted, and nothing was sent in.
+        if (count === 0) {
+          return errorResponse('bad_request', 'Nothing has been sent in for this application yet.')
+        }
+
+        await writeEvent(admin, {
+          caseId: row.case_id,
+          type: 'documents_verified',
+          actor: 'admin',
+          applicationId: action.applicationId,
+          payload: {
+            applicationName: applicationName({
+              product: row.product,
+              catalogueId: row.catalogue_id,
+              displayName: row.display_name,
+            }),
+            product: row.product,
+            documents: count,
+          },
+        })
+
+        return json(ok({ state: row.state }), 200)
+      }
+
       // §41 — the state machine decides, so an illegal move is refused rather than faked.
       const result = transition(
         { id: row.id, product: row.product, state: row.state, resumeTo: row.resume_to },
@@ -1497,15 +1559,6 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
           .eq('id', action.applicationId),
         'the application',
       )
-
-      const names: Record<typeof action.event, string> = {
-        received_by_bank: 'application_received',
-        information_requested: 'information_requested',
-        information_supplied: 'document_received',
-        assessment_approved: 'application_approved',
-        assessment_declined: 'application_declined',
-        completed: 'application_completed',
-      }
 
       // The ask is a row the customer can answer, not only a line in an event (§41). The
       // default wording is supplied here rather than by the schema, so no other event carries
@@ -1536,6 +1589,8 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
             catalogueId: row.catalogue_id,
             displayName: row.display_name,
           }),
+          // And what kind of thing it is, so the narration can tell an account from a loan.
+          product: row.product,
           ...(detail === undefined ? {} : { detail }),
           ...(requestId === null ? {} : { requestId }),
         },
@@ -1946,6 +2001,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
               catalogueId: row.catalogue_id,
               displayName: row.display_name,
             }),
+            product: row.product,
             ...(step === 'information_requested' ? { detail: 'one more payslip' } : {}),
             ...(requestId === null ? {} : { requestId }),
           },
@@ -2605,17 +2661,31 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
           outstanding: evaluateFor(loaded, application)
             .outstanding.filter((item) => item.blocking)
             .map((item) => item.requirement.label),
-          // Only offer the presenter moves the machine will actually accept.
-          canSimulate: (
-            [
-              'received_by_bank',
-              'information_requested',
-              'information_supplied',
-              'assessment_approved',
-              'assessment_declined',
-              'completed',
-            ] as const
-          ).filter((event) => transition(application, { type: event } as TransitionEvent).ok),
+          // Only offer the presenter moves the machine will actually accept. The document check
+          // is the one move the machine does not own: it is offered while the application is
+          // with the bank and something sent in is still unchecked, and not again after that.
+          canSimulate: ((): string[] => {
+            const documents = loaded.documents.filter(
+              (document) => document.applicationId === application.id,
+            )
+            return (
+              [
+                'received_by_bank',
+                'information_requested',
+                'information_supplied',
+                'documents_verified',
+                'assessment_approved',
+                'assessment_declined',
+                'completed',
+              ] as const
+            ).filter((event) =>
+              event === 'documents_verified'
+                ? underAssessment(application.state) &&
+                  documents.length > 0 &&
+                  documents.some((document) => !document.verified)
+                : transition(application, { type: event } as TransitionEvent).ok,
+            )
+          })(),
         })),
         events: (
           (events.data ?? []) as {

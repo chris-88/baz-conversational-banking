@@ -72,6 +72,7 @@ New to the repository, in this order:
 | | |
 |---|---|
 | [Journeys](journeys/README.md) | The seven products. **All seven are `draft`** |
+| [Onboarding a new customer](journeys/onboarding.md) | The acquisition use case, beat by beat |
 | [SuperSaver, form 1833](journeys/supersaver-1833.md) | 499 fields, 540 rules, no calculations |
 | [Personal loan, form 1940](journeys/personal-loan-1940.md) | 418 fields, and it decides things |
 | [Fixtures](journeys/fixtures/README.md) | Where the captured data lives |

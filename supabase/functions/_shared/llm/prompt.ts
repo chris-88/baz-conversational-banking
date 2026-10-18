@@ -689,10 +689,11 @@ function digestSection(digest: CaseDigest): string {
   if (suitability.length > 0) {
     lines.push(
       '## Something else may suit them better',
-      'They asked about one product; these are worked out from what they have actually told you',
-      'about the amount and how soon they mean to repay it. Raise it once, plainly, with the',
-      'figure. Do not argue for it, both may be reasonable and the choice is theirs. Never',
-      'recalculate any of these:',
+      'These are worked out from what they have actually told you: for borrowing, the amount',
+      'and how soon they mean to repay it; for a current account, who they are and what the',
+      'bank publishes about each one. Raise it once, plainly, with the figure. Do not argue',
+      'for it, both may be reasonable and the choice is theirs, except that a current account',
+      'line names the one account to offer. Never recalculate any of these:',
       ...suitability.map((line) => `- ${line}`),
       '',
     )

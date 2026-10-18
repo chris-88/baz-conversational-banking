@@ -2,7 +2,7 @@
 title: Admin console
 status: current
 scope: poc
-last_verified: 2026-10-16
+last_verified: 2026-10-18
 sources:
   - src/admin/
   - supabase/functions/admin/index.ts
@@ -43,11 +43,24 @@ Every button is a state-machine transition, and **the server only offers the one
 actually accept**, so nobody can reach an impossible state live.
 
 The simulated events include: received by bank, assessment approved and declined, information
-requested and supplied, mortgage to assessment, mortgage requests a document, documents verified,
+requested and supplied, documents checked, mortgage to assessment, mortgage requests a document,
 credit card / joint account / protection approved, pause, resume, complete, abandon, plan move,
 trigger check-in, reach savings target, set savings balance.
 
 No random timers. A presenter presses a button.
+
+Every event a button writes carries the application's name and its `product`, so the narration on
+return can tell an account from a loan: a completed current account or joint account "is open",
+anything else "is complete".
+
+**Documents checked** is the one button that is not a transition. The bank looking at what was
+sent in moves nothing, so `documents_verified` flips `verified` on every document of the
+application and leaves the state alone; it is refused unless the application is with the bank
+(`isWithBank`), and the inspector offers it only while at least one document on the application
+is still unchecked. The event carries the name, the product and how many documents were checked,
+and Baz narrates it on return as "Current account: your documents were checked and accepted."
+The older case-wide **The bank checks the documents** button under *Act as the bank* still marks
+everything unchecked on the case at once.
 
 **Information requested** does more than move the state: it opens a real `application_requests`
 row carrying the wording the presenter typed (the default is "one more payslip"), so the customer

@@ -57,8 +57,9 @@ describe('the need that reaches it', () => {
     expect(need?.suppressions.map((rule) => rule.id)).toContain('already_banks_here')
   })
 
-  it('is low priority, because nobody needs this to get a mortgage', () => {
-    expect(need?.priority).toBe('low')
+  it('is high priority, because a first account is the whole reason some people come', () => {
+    // Below the mortgage, which is very high: nobody needs this to get one.
+    expect(need?.priority).toBe('high')
   })
 
   it('frames it as what it enables rather than as a requirement', () => {

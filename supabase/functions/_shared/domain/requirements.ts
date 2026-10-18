@@ -83,6 +83,11 @@ export type SatisfiedItem = {
    * captured for another application or in general conversation. Drives §53.
    */
   readonly reused: boolean
+  /**
+   * The document that satisfied a `document` requirement, so a card can say it was checked
+   * rather than only received. Absent for everything else.
+   */
+  readonly document?: { readonly verified: boolean }
 }
 
 export type JourneyEvaluation = {
@@ -222,7 +227,12 @@ function activeBranches(journey: Journey, context: RequirementContext): readonly
 // ---------------------------------------------------------------------------
 
 type Verdict =
-  | { readonly status: 'satisfied'; readonly fact: Fact | null; readonly reused: boolean }
+  | {
+      readonly status: 'satisfied'
+      readonly fact: Fact | null
+      readonly reused: boolean
+      readonly document?: { readonly verified: boolean }
+    }
   | { readonly status: 'outstanding'; readonly reason: OutstandingReason; readonly knownFact: Fact | null }
 
 const missing = (): Verdict => ({ status: 'outstanding', reason: 'missing', knownFact: null })
@@ -300,7 +310,9 @@ function evaluateRequirement(requirement: Requirement, context: RequirementConte
         return { status: 'outstanding', reason: 'awaiting_verification', knownFact: null }
       }
 
-      return { status: 'satisfied', fact: null, reused: false }
+      // Which document did it is carried along, so what is shown can say "checked" once the
+      // bank has looked at it rather than only that it arrived (§41).
+      return { status: 'satisfied', fact: null, reused: false, document: { verified: document.verified } }
     }
   }
 }
@@ -334,7 +346,12 @@ export function evaluateJourney(journey: Journey, context: RequirementContext): 
     const verdict = evaluateRequirement(requirement, context)
 
     if (verdict.status === 'satisfied') {
-      satisfiedItems.push({ requirement, fact: verdict.fact, reused: verdict.reused })
+      satisfiedItems.push({
+        requirement,
+        fact: verdict.fact,
+        reused: verdict.reused,
+        ...(verdict.document === undefined ? {} : { document: verdict.document }),
+      })
       continue
     }
 
