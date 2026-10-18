@@ -444,6 +444,15 @@ describe('a card still waiting for a tap', () => {
     expect(digest.awaiting).toEqual({ type: 'product_options', turnsAgo: 1 })
   })
 
+  /** The app reports a tap as an action turn, read before the report is saved. */
+  it('says nothing on the action turn that answers the card', () => {
+    const digest = buildCaseDigest(
+      loaded({ messages: [message('customer'), message('baz', ['plan_proposal'])] }),
+      { acting: true },
+    )
+    expect(digest.awaiting).toBeUndefined()
+  })
+
   it('says nothing when the card was tapped, or when there is none', () => {
     expect(buildCaseDigest(loaded()).awaiting).toBeUndefined()
     const tapped = buildCaseDigest(

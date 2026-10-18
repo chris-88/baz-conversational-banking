@@ -60,7 +60,9 @@ export type ToolExecutor = (name: ToolName, input: unknown) => Promise<ToolOutco
  */
 export const WITHDRAWAL_NOTE =
   'Nothing you wrote before this call reached the customer; it has been withdrawn. ' +
-  'Write your reply again from what the results say.'
+  'Write your reply again from what the results say, in words. Do not call the same tool ' +
+  'again this turn: it will be refused again, and a turn that only calls refused tools says ' +
+  'nothing at all.'
 
 /**
  * Whether a call that never ran leaves the words written beside it wrong.
@@ -329,6 +331,12 @@ export async function* runBazTurn(options: BazTurnOptions): AsyncGenerator<Strea
 
       try {
         const outcome = await options.executeTool(validation.name, validation.input)
+        // A refusal the handler chose is as much a call that came to nothing as a schema
+        // failure, and was the one kind that left no row: six refused offers in one live
+        // conversation read as `refused: 0`.
+        if (outcome.refused === true) {
+          options.onToolRejected?.({ name: toolUse.name, error: outcome.result.slice(0, 200) })
+        }
         settled.push({
           id: toolUse.id,
           content: outcome.result,

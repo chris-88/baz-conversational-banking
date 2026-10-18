@@ -171,6 +171,12 @@ export function buildCaseDigest(
     readonly sensitiveDisclosure?: boolean
     /** Where the conversation has got to, from `stageFor`. Governs what this turn may do. */
     readonly stage?: Stage
+    /**
+     * The turn is the app reporting a tap. The case was read before that report was saved, so
+     * the card it answered still looks untouched here; saying it is waiting would have Baz
+     * pointing at a decision just made.
+     */
+    readonly acting?: boolean
     /** Plans already loaded, described by the plan engine. Kept out of here so the digest
      *  stays synchronous and the database round trip happens once, in the caller. */
     readonly plans?: readonly { readonly title: string; readonly lines: readonly string[] }[]
@@ -194,7 +200,7 @@ export function buildCaseDigest(
   const needs = needContext === null ? [] : evaluateNeeds(needContext, loaded.needs)
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
-  const awaiting = awaitingCard(loaded)
+  const awaiting = options.acting === true ? null : awaitingCard(loaded)
   // What the bank's own form still wants, which is a different list from the journey's.
   const forms = formDigestSection(formDigests(loaded))
 

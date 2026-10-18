@@ -900,6 +900,7 @@ async function handleTurn(request: Request): Promise<Response> {
   const digest = buildCaseDigest(loaded, {
     sensitiveDisclosure: gate.suppressHumour,
     stage,
+    acting: turn.trigger === 'action',
     plans: keptPlans,
     ...(goals.lines.length === 0 ? {} : { goals: [...goals.lines] }),
     ...(suitability.length === 0 ? {} : { suitability }),
@@ -1262,7 +1263,22 @@ async function handleTurn(request: Request): Promise<Response> {
                   })
                 })()
 
-                if (!asked && (!established || !understood) && customerTurns < DISCOVERY_PATIENCE) {
+                /**
+                 * Or did the needs engine establish it? A need that is ready to surface has
+                 * crossed its threshold on explicit or corroborated evidence, and "understand
+                 * their position" is the wrong bar for a product with nothing to assess: a
+                 * graduate who said "I need a bank account" and gave the facts the account pick
+                 * turns on was refused the card for six turns while being asked about a house.
+                 */
+                const wanted = products.some((option) =>
+                  candidates.some(
+                    (candidate) =>
+                      candidate.state === 'ready_to_surface' &&
+                      candidate.need.products.includes(option.product as Product),
+                  ),
+                )
+
+                if (!asked && !wanted && (!established || !understood) && customerTurns < DISCOVERY_PATIENCE) {
                   const ask =
                     leading === null || leading.missing.length === 0
                       ? 'what has changed for them, who else is involved and what they are hoping to do'

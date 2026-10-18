@@ -492,3 +492,28 @@ describe('a round whose tool was refused', () => {
     expect(turn.results).toEqual(['Already joined.'])
   })
 })
+
+/**
+ * A refusal the handler chose used to be the one kind of failed call that left no row: six
+ * refused offers in one live conversation read as `refused: 0` in the console. Now it reports
+ * through the same callback as a schema failure.
+ */
+describe('a refusal the handler chose', () => {
+  it('is reported like any other call that came to nothing', async () => {
+    const rejected: { name: string; error: string }[] = []
+    const base = options([
+      { text: 'Here they are.', tool: 'show_product_options', input: { products: [{ product: 'mortgage', reason: 'They said so.' }] } },
+      { text: 'Tell me a little more first.' },
+    ])
+
+    for await (const _event of runBazTurn({
+      ...base,
+      onToolRejected: (rejection) => rejected.push(rejection),
+      executeTool: () => Promise.resolve({ result: 'Too early to offer anything.', refused: true }),
+    })) {
+      // Drained for its side effects.
+    }
+
+    expect(rejected).toEqual([{ name: 'show_product_options', error: 'Too early to offer anything.' }])
+  })
+})
