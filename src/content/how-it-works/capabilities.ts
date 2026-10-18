@@ -53,7 +53,7 @@ export const MEASURED = {
   formFields: { supersaver: 499, personalLoan: 418 },
   tests: { count: 940, files: 75, basis: 'npm run check' },
   adrs: 8,
-  guardrailCases: 54,
+  guardrailCases: 55,
 } as const
 
 export const capabilities: readonly Capability[] = [

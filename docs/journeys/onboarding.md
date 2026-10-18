@@ -102,6 +102,19 @@ and the sign-in exists to keep the conversation, not to start it.
 - The welcome card, `account_opened`, built on the server when an account completes.
 - The opener in the composer.
 
-Still to do: a fixture script transcribed from the first live run-through, so the Playwright
-suite and the film fallback can play it without the model, and the story chapter on the
-explainer.
+## The first run-through, 18 October
+
+Driven against the live model from a script of Ciara's answers, twice. The first run showed the
+card for the account only on the seventh turn: the "too early" gate in `show_product_options`
+measured how well Baz understood a plan, which is the wrong bar for a product with nothing to
+assess, and the model kept calling the refused tool until a turn said nothing at all. A need
+the engine has established now counts as asked for, a refusal leaves a row, and the withdrawal
+note says not to retry. The second run went from the opener to the welcome card in 14 turns and
+€0.50: the plan on turn four, the Graduate account offered with the tap that kept the plan,
+identity in two messages, two uploads, the review, and on return every one of the bank's four
+moves narrated, with the IBAN on the card. One last thing it taught: "set my salary to come
+here" was refused by the gate as a transaction, so the gate now knows that where pay should
+land is banking.
+
+Still to do: a fixture script transcribed from that run, so the Playwright suite and the film
+fallback can play it without the model, and the story chapter on the explainer.

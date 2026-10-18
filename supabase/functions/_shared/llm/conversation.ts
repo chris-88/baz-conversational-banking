@@ -166,6 +166,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'Anything you already hold is not asked for again. Say so when it saves them something: that is the whole point and the thing they will not expect.',
       'When everything is in, call `show_review`. Submitting is their tap, not your sentence.',
       'Once one is away, pick up the next thing in their plan if they have one.',
+      'An open account has an IBAN on its card. Salary is set by the customer giving that IBAN to payroll, not by you: when they say their pay will come here, record `banking.salaryPaidTo` and say what to give the employer.',
     ],
     notYet: [
       'Do not start a second application alongside without saying why it is worth it now.',
