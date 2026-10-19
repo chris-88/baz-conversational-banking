@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { CalendarClockIcon, CheckIcon, FlagIcon, TargetIcon } from 'lucide-react'
 import { Settling } from '@/baz/cards/Settling'
 import type { Card as CardPayload } from '@contracts/cards.ts'
+import type { Settled } from '@/baz/cardState'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ProgressBar'
@@ -30,7 +31,15 @@ export function PlanProposalCard({
   disabled?: boolean
 }): ReactNode {
   const [busy, setBusy] = useState(false)
-  const [kept, setKept] = useState(false)
+  /**
+   * What became of the card, the moment it did.
+   *
+   * Both decisions settle it. Declining used to leave every control live, so a second tap on
+   * "Keep this plan" sent keep against a plan that was already abandoned and the customer saw
+   * "That plan cannot move from abandoned" (case ad93c361). The settled wording is the same
+   * `cardState` uses on reload, so the card looks identical a second later and a day later.
+   */
+  const [done, setDone] = useState<Settled | undefined>(undefined)
 
   const fraction =
     card.targetAmount !== null && card.targetAmount > 0 && card.currentAmount !== null
@@ -43,11 +52,7 @@ export function PlanProposalCard({
    * return here and a greyed-out full card there, which made a reload look like a change.
    */
   return (
-    <Settling
-      settled={
-        kept ? { label: card.title, note: 'Saved. You can change or stop it any time.' } : undefined
-      }
-    >
+    <Settling settled={done}>
       <Card className="gap-0 overflow-hidden p-0">
         <div className="flex items-start gap-3 p-4">
           <IconTile tone="deep">
@@ -135,7 +140,9 @@ export function PlanProposalCard({
               setBusy(true)
               void Promise.resolve(onConfirm?.(card.planId))
                 .then((accepted) => {
-                  if (accepted === true) setKept(true)
+                  if (accepted === true) {
+                    setDone({ label: card.title, note: 'Saved. You can change or stop it any time.' })
+                  }
                 })
                 .finally(() => setBusy(false))
             }}
@@ -147,7 +154,20 @@ export function PlanProposalCard({
             variant="ghost"
             className="w-full"
             disabled={(disabled ?? false) || busy}
-            onClick={() => void onDecline?.(card.planId)}
+            onClick={() => {
+              if (onDecline === undefined) return
+              setBusy(true)
+              /*
+               * Settles only once the server has recorded the decision. A failure gives the
+               * card back, because then nothing was decided.
+               */
+              void Promise.resolve(onDecline(card.planId))
+                .then(() => {
+                  setDone({ label: 'Left for now', note: card.title })
+                })
+                .catch(() => undefined)
+                .finally(() => setBusy(false))
+            }}
           >
             Not now
           </Button>

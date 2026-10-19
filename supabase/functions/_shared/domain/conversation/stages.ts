@@ -118,7 +118,7 @@ export function stageFor(context: StageContext): Stage {
  * out for all of them turns the one branch somebody actively asked for into the interrogation
  * they were trying to avoid.
  */
-const MAX_GAPS_FOR_PLAN = 2
+export const MAX_GAPS_FOR_PLAN = 2
 
 /** Whether a stage is allowed to put a product in front of somebody. */
 export function mayOfferProducts(stage: Stage): boolean {

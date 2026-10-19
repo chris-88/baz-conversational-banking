@@ -1531,6 +1531,21 @@ that the same address will be asked for. And asking for notifications in Safari 
 now shows the two taps that install the app, in place, rather than a sentence saying they are
 needed: the person has just said what they want, and the taps are the only thing in the way.
 
+## 2026-10-19 — the model is told what gates the plan card, and nothing stands in for it (§6, §10)
+
+Case ad93c361: the customer asked for a plan on turn 3 and said yes twice more, while the stage
+engine withheld `propose_plan` because three of the goal's seven facts were still unknown. The
+gate was right. What the model could not see was that there was a gate, so it drew the empty
+status card twice as "your plan so far" and said "Done as a plan" when nothing was saved. The
+customer typed "im not seeing a plan". Four changes. The goal section now says how many
+unknowns the plan card allows and how many are left, and that a plan is never done before the
+card is tapped. `show_status` refuses on a case with no applications instead of drawing an
+empty card. The discovery guidance names monthly repayments, which the first-home goal needs
+and nothing mentioned. And "Not now" on the plan card settles it, as reload already did, so a
+second tap cannot send keep against an abandoned plan; the decline follow-up says a fresh plan
+can be drawn up rather than that this one is parked, because `abandoned` only moves to
+`archived` and that is deliberate.
+
 ## 2026-10-16 — the explainer tells the §67 story through the real cards (§6, §55, §67)
 
 The page was an engineering case study with the acceptance story nowhere on it. The story is

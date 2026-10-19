@@ -1435,6 +1435,24 @@ async function handleTurn(request: Request): Promise<Response> {
                   }
                 }
 
+                /*
+                 * Nothing to show is a refusal, not an empty card.
+                 *
+                 * On case ad93c361 the model, denied the plan tool by the stage, drew this card
+                 * twice on a case with no applications and narrated "Nothing in progress yet"
+                 * as "your plan so far". A status card is a report on applications; with none,
+                 * there is nothing for it to report and nothing for it to stand in for.
+                 */
+                if (loaded.applications.length === 0) {
+                  return {
+                    result:
+                      'Nothing has been started, so there is no status to show and no card to ' +
+                      'draw. Do not use this card to stand in for a plan or a summary: say in ' +
+                      'words where things are, and ask for what is still needed.',
+                    refused: true,
+                  }
+                }
+
                 const card: Card = {
                   type: 'status',
                   applications: loaded.applications.map((application) => {

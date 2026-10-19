@@ -2,6 +2,7 @@ import { caseFactReader } from './fact-reader.ts'
 import { contentionIn, evaluateGoals, heldForLater, worthRaising } from '../domain/goals/engine.ts'
 import type { GoalBlueprint, GoalCandidate, GoalContext } from '../domain/goals/types.ts'
 import { isGoalId } from '../domain/goals/types.ts'
+import { MAX_GAPS_FOR_PLAN } from '../domain/conversation/stages.ts'
 import { factCatalogue } from '../domain/facts.ts'
 import type { LoadedCase } from './loaded-case.ts'
 import type { LoadedPlan } from './plans.ts'
@@ -74,8 +75,23 @@ export function describeGoals(
     // and a question Baz asks is phrased by Baz, not copied from here.
     const outstanding: string[] = primary.missing.map((key) => factCatalogue[key]?.label ?? key)
 
+    /*
+     * Say what the unknowns gate, not only what they are.
+     *
+     * The plan card does not exist as a tool until at most MAX_GAPS_FOR_PLAN of these are
+     * left, and the model could not see that. On case ad93c361 it was asked for the plan
+     * three times while three facts were missing, drew the empty status card as a stand-in
+     * twice, and told the customer "Done as a plan" when nothing was saved. The customer typed
+     * "im not seeing a plan". The gate was right; the model had no way to know it was there.
+     */
     if (outstanding.length > 0) {
-      lines.push(`Still unknown for it: ${outstanding.slice(0, 4).join(', ')}.`)
+      const over = outstanding.length - MAX_GAPS_FOR_PLAN
+      lines.push(
+        `Still unknown for it: ${outstanding.slice(0, 4).join(', ')}.` +
+          (over > 0
+            ? ` The plan card is not available until at most ${String(MAX_GAPS_FOR_PLAN)} of these are left, so ask for ${String(over)} more before offering to set anything up, and never say a plan is done or saved before the card has been tapped.`
+            : ' The plan card is available now.'),
+      )
     }
   }
 

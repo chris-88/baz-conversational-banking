@@ -661,7 +661,7 @@ export function BazChat({
     onDeclinePlan: async (planId) => {
       await commit(
         { action: 'decide_plan', caseId: caseId ?? '', planId, decision: 'not_now' },
-        'Confirm it is parked and say what would bring it back.',
+        'Say it is set aside, and that you can draw a fresh one up whenever they are ready. Do not say it is parked or paused: it cannot be picked up again as it is.',
       )
     },
     onEnableNotifications: async () => {
