@@ -42,18 +42,10 @@ export const mortgage = defineJourney({
     { kind: 'fact', id: 'employer', fact: 'employment.employerName', subject: 'primary', label: 'Your employer' },
     { kind: 'fact', id: 'income-basic', fact: 'income.annualBasic', subject: 'primary', label: 'Your annual basic salary' },
 
-    // ---- Outgoings, assets, liabilities ----
-    { kind: 'fact', id: 'current-tenure', fact: 'housing.currentTenure', subject: 'household', label: 'Your current housing' },
-    { kind: 'fact', id: 'rent', fact: 'expenditure.monthlyRent', subject: 'household', label: 'Monthly rent' },
+    // ---- Assets and liabilities, whichever kind of mortgage ----
     { kind: 'fact', id: 'savings', fact: 'assets.savingsBalance', subject: 'household', label: 'Your savings' },
-    { kind: 'fact', id: 'deposit', fact: 'assets.depositAmount', subject: 'household', label: 'Deposit available' },
     { kind: 'fact', id: 'loan-repayments', fact: 'liabilities.monthlyLoanRepayments', subject: 'primary', label: 'Monthly loan repayments' },
     { kind: 'fact', id: 'card-balance', fact: 'liabilities.creditCardBalance', subject: 'primary', label: 'Credit card balance' },
-
-    // ---- The purchase ----
-    { kind: 'fact', id: 'purchase-price', fact: 'housing.purchasePrice', subject: 'household', label: 'Property price' },
-    { kind: 'fact', id: 'property-county', fact: 'housing.propertyCounty', subject: 'household', label: 'Where you are buying' },
-    { kind: 'fact', id: 'first-time-buyer', fact: 'housing.firstTimeBuyer', subject: 'household', label: 'First-time buyer' },
 
     // ---- Documents ----
     // Two, not five. Each one is a file picker on camera, and the payslip alone carries the
@@ -65,6 +57,43 @@ export const mortgage = defineJourney({
     { kind: 'declaration', id: 'mortgage-declaration', subject: 'primary', label: 'Mortgage application declaration', fresh: true },
   ],
   branches: [
+    /*
+     * Buying and switching are the same journey with a different middle (§7.1).
+     *
+     * The purchase questions used to be base requirements, so a switcher was asked whether he
+     * pays rent, what deposit he has and whether he is a first-time buyer, and was never asked
+     * who his mortgage is with (case eb37e9b5). The buyer type decides which middle applies; an
+     * unknown type is a purchase, because that is what every mortgage conversation was before
+     * the switcher existed and nothing about it changes.
+     */
+    {
+      id: 'purchase',
+      describe: 'Buying a home, so the price, the deposit and the current housing costs are assessed',
+      when: (facts) => facts.get('mortgage.customerType', 'household') !== 'switcher',
+      requirements: [
+        { kind: 'fact', id: 'current-tenure', fact: 'housing.currentTenure', subject: 'household', label: 'Your current housing' },
+        { kind: 'fact', id: 'rent', fact: 'expenditure.monthlyRent', subject: 'household', label: 'Monthly rent' },
+        { kind: 'fact', id: 'deposit', fact: 'assets.depositAmount', subject: 'household', label: 'Deposit available' },
+        { kind: 'fact', id: 'purchase-price', fact: 'housing.purchasePrice', subject: 'household', label: 'Property price' },
+        { kind: 'fact', id: 'property-county', fact: 'housing.propertyCounty', subject: 'household', label: 'Where you are buying' },
+        { kind: 'fact', id: 'first-time-buyer', fact: 'housing.firstTimeBuyer', subject: 'household', label: 'First-time buyer' },
+      ],
+    },
+    {
+      id: 'switcher',
+      describe: 'Switching an existing mortgage, so the current deal and the property\u2019s value are assessed',
+      when: (facts) => facts.get('mortgage.customerType', 'household') === 'switcher',
+      requirements: [
+        { kind: 'fact', id: 'current-lender', fact: 'mortgage.currentLender', subject: 'household', label: 'Who your mortgage is with now' },
+        { kind: 'fact', id: 'balance', fact: 'mortgage.amountSought', subject: 'household', label: 'Balance left on the mortgage' },
+        { kind: 'fact', id: 'remaining-term', fact: 'mortgage.termYears', subject: 'household', label: 'Years left on the mortgage' },
+        { kind: 'fact', id: 'current-rate', fact: 'mortgage.currentRatePct', subject: 'household', label: 'Your current rate' },
+        { kind: 'fact', id: 'current-rate-ends', fact: 'mortgage.currentRateEndsAt', subject: 'household', label: 'When your current rate ends' },
+        { kind: 'fact', id: 'property-value', fact: 'property.value', subject: 'household', label: 'What the property is worth' },
+        // The bank's own checklist: statements showing the last twelve repayments.
+        { kind: 'document', id: 'doc-mortgage-statements', subject: 'primary', label: 'Statements showing your last 12 mortgage repayments', documentType: 'bank_statement' },
+      ],
+    },
     {
       id: 'second-applicant',
       describe: 'Buying with a partner, so a second applicant is assessed too',

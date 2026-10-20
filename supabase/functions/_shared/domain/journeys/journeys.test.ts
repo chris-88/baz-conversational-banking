@@ -274,3 +274,44 @@ describe('cross-journey reuse', () => {
     expect(partnerIncome?.waitingOn).toBe('partner')
   })
 })
+
+/**
+ * Case eb37e9b5: a switcher was asked for rent, deposit and whether he was a first-time buyer,
+ * and never for his lender. The buyer type now picks the middle of the journey.
+ */
+describe('the mortgage journey for a switcher', () => {
+  const switcherFacts = [
+    fact('mortgage.customerType', 'household', 'switcher'),
+    fact('housing.currentTenure', 'household', 'owner_occupier'),
+    fact('household.buyingWith', 'household', 'alone'),
+  ]
+
+  const labels = (facts: Fact[]) =>
+    evaluateJourney(journeyFor('mortgage'), context({ applicationId: MORTGAGE_APP, facts }))
+      .outstanding.map((item) => item.requirement.id)
+
+  it('asks about the current deal and the property, never about a deposit or rent', () => {
+    const outstanding = labels(switcherFacts)
+    for (const id of ['current-lender', 'balance', 'current-rate', 'current-rate-ends', 'property-value', 'doc-mortgage-statements']) {
+      expect(outstanding, id).toContain(id)
+    }
+    for (const id of ['first-time-buyer', 'deposit', 'rent', 'purchase-price', 'property-county', 'current-tenure']) {
+      expect(outstanding, id).not.toContain(id)
+    }
+  })
+
+  it('treats an unknown buyer type as a purchase, as every conversation did before', () => {
+    const outstanding = labels([])
+    expect(outstanding).toContain('first-time-buyer')
+    expect(outstanding).toContain('deposit')
+    expect(outstanding).not.toContain('current-lender')
+  })
+
+  it('still assesses a second applicant on a joint switch', () => {
+    const outstanding = labels([
+      ...switcherFacts.filter((f) => f.key !== 'household.buyingWith'),
+      fact('household.buyingWith', 'household', 'partner'),
+    ])
+    expect(outstanding).toContain('partner-income-basic')
+  })
+})
