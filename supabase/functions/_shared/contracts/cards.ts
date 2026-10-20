@@ -406,6 +406,27 @@ export const mortgageRatesCardSchema = z.object({
     )
     .min(1)
     .max(4),
+  /**
+   * Each rate set against one the customer already has or has been offered, over the period
+   * either rate is known for. The server's arithmetic from `compareSwitch`; the costs are the
+   * bank's published ones, listed rather than deducted (case eb37e9b5).
+   */
+  comparison: z
+    .object({
+      against: z.object({ label: z.string(), ratePct: z.number(), monthlyEur: z.number() }),
+      rows: z.array(
+        z.object({
+          optionId: z.string(),
+          monthlyDifferenceEur: z.number(),
+          overYears: z.number().int().positive(),
+          repaymentDifferenceEur: z.number(),
+          cashbackDifferenceEur: z.number(),
+          netBeforeCostsEur: z.number(),
+        }),
+      ),
+      costs: z.array(z.object({ label: z.string(), amount: z.string(), note: z.string().nullable() })),
+    })
+    .optional(),
 })
 
 /**

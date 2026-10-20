@@ -28,6 +28,8 @@ import {
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { arrange } from '../_shared/domain/savings/arrange.ts'
+import { compareSwitch } from '../_shared/domain/switch-comparison.ts'
+import { SWITCHING_COSTS } from '../_shared/tenants/boi/switching.ts'
 import { describeReused, formatFactValue, type ReuseEvent } from '../_shared/domain/reuse.ts'
 import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
 import { savingsOptionsFrom } from '../_shared/tenants/boi/savings-options.ts'
@@ -2121,6 +2123,12 @@ async function handleTurn(request: Request): Promise<Response> {
                   ber: BerAnswer
                   amountEur?: number
                   termYears?: number
+                  compareWith?: {
+                    label: string
+                    ratePct: number
+                    cashbackEur?: number
+                    fixedYears?: number
+                  }
                 }
 
                 const selection = selectRates({
@@ -2153,9 +2161,38 @@ async function handleTurn(request: Request): Promise<Response> {
                   }
                 }
 
+                /*
+                 * The rate they have, or have been offered to stay, set against each of ours.
+                 *
+                 * Only with an amount and a term, because the comparison is in euro and a
+                 * percentage against a percentage is what the customer could already do. The
+                 * costs beside it are the published ones, listed rather than subtracted.
+                 */
+                const compareWith = ask.compareWith
+                const comparison =
+                  compareWith !== undefined && ask.amountEur !== undefined && ask.termYears !== undefined
+                    ? compareSwitch({
+                        balanceEur: ask.amountEur,
+                        termYears: ask.termYears,
+                        against: {
+                          label: compareWith.label,
+                          ratePct: compareWith.ratePct,
+                          cashbackEur: compareWith.cashbackEur ?? null,
+                          fixedYears: compareWith.fixedYears ?? null,
+                        },
+                        candidates: selection.options.map((option) => ({
+                          id: option.id,
+                          label: option.label,
+                          ratePct: option.ratePct,
+                          cashbackEur: option.cashbackEur,
+                          fixedYears: option.fixedYears,
+                        })),
+                      })
+                    : null
+
                 const card: Card = {
                   type: 'mortgage_rates',
-                  title: 'Your mortgage rate options',
+                  title: comparison === null ? 'Your mortgage rate options' : 'Our rates against what you have',
                   basis: {
                     buyerType: ask.customerType.replaceAll('_', ' '),
                     ber: ask.ber,
@@ -2174,6 +2211,26 @@ async function handleTurn(request: Request): Promise<Response> {
                     monthlyEur: option.monthlyEur,
                     note: option.note,
                   })),
+                  ...(comparison === null
+                    ? {}
+                    : {
+                        comparison: {
+                          against: comparison.against,
+                          rows: comparison.rows.map((row) => ({
+                            optionId: row.optionId,
+                            monthlyDifferenceEur: row.monthlyDifferenceEur,
+                            overYears: row.overYears,
+                            repaymentDifferenceEur: row.repaymentDifferenceEur,
+                            cashbackDifferenceEur: row.cashbackDifferenceEur,
+                            netBeforeCostsEur: row.netBeforeCostsEur,
+                          })),
+                          costs: SWITCHING_COSTS.map((cost) => ({
+                            label: cost.label,
+                            amount: cost.amount,
+                            note: cost.note,
+                          })),
+                        },
+                      }),
                 }
 
                 const cheapest = selection.options.reduce((low, option) =>

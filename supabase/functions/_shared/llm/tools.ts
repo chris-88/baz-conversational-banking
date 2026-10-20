@@ -184,6 +184,19 @@ export const showMortgageRatesInput = z.object({
   amountEur: z.number().int().positive().max(5_000_000).optional(),
   /** The mortgage term, not the fixed period. */
   termYears: z.number().int().min(5).max(35).optional(),
+  /**
+   * A rate the customer already has, or has been offered to stay, to set each published rate
+   * against. Needs the amount and the term too, since the comparison is in euro.
+   */
+  compareWith: z
+    .object({
+      /** In the customer's terms: "AIB, 4% fixed for 2 years". */
+      label: z.string().min(2).max(80),
+      ratePct: z.number().min(0).max(20),
+      cashbackEur: z.number().int().nonnegative().optional(),
+      fixedYears: z.number().int().min(1).max(30).optional(),
+    })
+    .optional(),
 })
 
 export const showComparisonInput = z.object({
@@ -348,7 +361,11 @@ export const TOOLS: readonly ToolDefinition[] = [
       'property, what they intend to borrow, and over what term. Ask for whichever you are ' +
       'missing — one question at a time — rather than guessing or quoting a range. The server ' +
       'decides which rates they are entitled to see and works out the repayments; you explain ' +
-      'what separates them.',
+      'what separates them. For a switcher, or anyone with a rate in hand, pass compareWith: ' +
+      'the rate they are on or have been offered to stay. The card then shows, for each ' +
+      'published rate, the monthly difference, the difference over the fixed period, the ' +
+      'cashback, and the net figure before switching costs, with the published costs listed. ' +
+      'Never do that arithmetic yourself and never ask the customer to.',
     schema: showMortgageRatesInput,
   },
   {

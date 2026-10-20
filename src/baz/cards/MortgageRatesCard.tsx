@@ -86,9 +86,13 @@ export function MortgageRatesCard({ card }: { card: Payload }): ReactNode {
             {option.note === null ? null : (
               <p className="text-muted-foreground mt-2 text-xs leading-snug">{option.note}</p>
             )}
+
+            <Versus card={card} optionId={option.id} />
           </li>
         ))}
       </ul>
+
+      <SwitchingCosts card={card} />
 
       {/*
         The as-of date, because a rate without one cannot be checked — and this table is the
@@ -99,5 +103,75 @@ export function MortgageRatesCard({ card }: { card: Payload }): ReactNode {
         a full assessment.
       </p>
     </Card>
+  )
+}
+
+const signed = (amount: number): string => `${amount < 0 ? '\u2212' : '+'}${money(Math.abs(amount))}`
+
+/**
+ * This rate against the one they have, in euro, over the period either is known for.
+ *
+ * Four lines, each one a number the customer was doing in their head: the month, the fixed
+ * period, the cashback, and the two together. The net is before switching costs, and says so,
+ * because the costs below are ranges and a figure built on a guess is not a figure.
+ */
+function Versus({ card, optionId }: { card: Payload; optionId: string }): ReactNode {
+  const comparison = card.comparison
+  if (comparison === undefined) return null
+  const row = comparison.rows.find((candidate) => candidate.optionId === optionId)
+  if (row === undefined) return null
+
+  const years = `${String(row.overYears)} year${row.overYears === 1 ? '' : 's'}`
+
+  return (
+    <dl className="bg-muted/40 mt-2.5 space-y-1 rounded-lg px-3 py-2 text-xs">
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Against {comparison.against.label}</dt>
+        <dd className="tabular-nums">{money(comparison.against.monthlyEur)} a month</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Each month</dt>
+        <dd className="tabular-nums">{signed(row.monthlyDifferenceEur)}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Over {years}</dt>
+        <dd className="tabular-nums">{signed(row.repaymentDifferenceEur)}</dd>
+      </div>
+      {row.cashbackDifferenceEur === 0 ? null : (
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">Cashback</dt>
+          <dd className="tabular-nums">{signed(row.cashbackDifferenceEur)}</dd>
+        </div>
+      )}
+      <div className="flex justify-between gap-3 border-t pt-1 font-semibold">
+        <dt>Before switching costs</dt>
+        <dd className="tabular-nums">{signed(row.netBeforeCostsEur)}</dd>
+      </div>
+    </dl>
+  )
+}
+
+/** The published costs of moving, listed and never subtracted. */
+function SwitchingCosts({ card }: { card: Payload }): ReactNode {
+  const comparison = card.comparison
+  if (comparison === undefined || comparison.costs.length === 0) return null
+
+  return (
+    <div className="border-t px-4 py-3">
+      <p className="text-sm font-semibold">What switching costs</p>
+      <ul className="mt-1.5 space-y-1.5">
+        {comparison.costs.map((cost) => (
+          <li key={cost.label} className="text-xs">
+            <div className="flex justify-between gap-3">
+              <span>{cost.label}</span>
+              <span className="text-muted-foreground shrink-0 text-right">{cost.amount}</span>
+            </div>
+            {cost.note === null ? null : (
+              <p className="text-muted-foreground mt-0.5 leading-snug">{cost.note}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
