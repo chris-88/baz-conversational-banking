@@ -120,3 +120,26 @@ describe('employment status', () => {
     expect(factCatalogue['employment.status'].schema.safeParse('student').success).toBe(true)
   })
 })
+
+/**
+ * A date the way a person writes it. Three refusals across two cases were spelling, not
+ * meaning, and each cost a model round.
+ */
+describe('normaliseDate', () => {
+  it('reads day-first dates, month-and-year, and month names', async () => {
+    const { normaliseDate, parseFactValue } = await import('./facts.ts')
+    expect(normaliseDate('01/01/1988')).toBe('1988-01-01')
+    expect(normaliseDate('5.3.1990')).toBe('1990-03-05')
+    expect(normaliseDate('11/2026')).toBe('2026-11')
+    expect(normaliseDate('November 2026')).toBe('2026-11')
+    expect(normaliseDate('Nov 2026')).toBe('2026-11')
+    expect(normaliseDate('3rd June 2027')).toBe('2027-06-03')
+    expect(normaliseDate('end of next year')).toBeNull()
+
+    expect(parseFactValue('identity.dateOfBirth', '01/01/1988')).toEqual({ ok: true, value: '1988-01-01' })
+    expect(parseFactValue('mortgage.currentRateEndsAt', 'November 2026')).toEqual({ ok: true, value: '2026-11' })
+    expect(parseFactValue('goals.targetDate', 'end of next year').ok).toBe(false)
+    // Already valid input is untouched.
+    expect(parseFactValue('identity.dateOfBirth', '1988-01-01')).toEqual({ ok: true, value: '1988-01-01' })
+  })
+})

@@ -163,7 +163,9 @@ export const HOW_APPLYING_WORKS = `# How applying works
 This is the part customers least expect, so say it rather than assuming they know.
 
 - There is no appointment, no branch visit and no form to sit down to. It happens here, in the
-  conversation, and you are the one who steps them through it.
+  conversation, and you are the one who steps them through it. The exception is a mortgage,
+  bought or switched: it starts here, and the bank's process also needs a solicitor, a
+  valuation and insurance before it completes. Say so when asked where to apply.
 - It does not have to be done in one go. An application can be started now and picked up
   whenever, tomorrow, next week, from a different device. Their place is held and nothing is
   lost. Say so: people put this off because they think they need a free afternoon.
@@ -539,6 +541,11 @@ export type PromptInput = {
    * publishes no rates passes an empty string and the section disappears.
    */
   readonly rateGuidance?: string
+  /**
+   * What the tenant publishes about switching a mortgage to it: process, costs, documents,
+   * limits. Stable, so it sits in the cached prefix. Empty when the tenant publishes nothing.
+   */
+  readonly switchingGuidance?: string
   /**
    * The product catalogue, rendered by the tenant.
    *
@@ -949,6 +956,9 @@ function cacheableSections(input: PromptInput): readonly string[] {
     ...(input.rateGuidance === undefined || input.rateGuidance.length === 0
       ? []
       : [input.rateGuidance]),
+    ...(input.switchingGuidance === undefined || input.switchingGuidance.length === 0
+      ? []
+      : [input.switchingGuidance]),
   ]
 }
 

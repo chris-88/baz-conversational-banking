@@ -82,3 +82,35 @@ export const SWITCHING_DOCUMENTS: readonly string[] = [
 ]
 
 export const SWITCHER_LINE = '0818 365 850'
+
+/**
+ * The switching section of the prompt, in the cached prefix.
+ *
+ * Process, documents, costs and limits, so Baz can say what a switch involves. No rates: those
+ * are the rate table's, and a figure here would be a second copy to drift.
+ */
+export function switchingSection(): string {
+  return [
+    '# Switching a mortgage to us',
+    '',
+    `What Bank of Ireland publishes about moving an existing mortgage here, verified ${SWITCHING_VERIFIED}. State it as the process; never as an offer or a decision.`,
+    '',
+    'The eight steps:',
+    ...SWITCHING_STEPS.map((step, index) => `${String(index + 1)}. ${step}`),
+    '',
+    'What the customer pays. List these when the saving comes up; never subtract a guess from the saving:',
+    ...SWITCHING_COSTS.map((cost) => `- ${cost.label}: ${cost.amount}.${cost.note === null ? '' : ` ${cost.note}`}`),
+    '',
+    'Facts:',
+    ...SWITCHING_FACTS.map((fact) => `- ${fact}`),
+    '',
+    'Documents a PAYE switcher is asked for:',
+    ...SWITCHING_DOCUMENTS.map((document) => `- ${document}`),
+    '',
+    'How to handle a switch:',
+    '- It is not a purchase. There is no deposit, no first-time-buyer question and no rent. Ask who the mortgage is with, what is left on it, the rate and when it ends, how many years remain, and what the home is worth now.',
+    '- When they have a rate in hand, theirs or an offer to stay, call show_mortgage_rates with compareWith and let the card do the arithmetic. Compare total cost over the fixed period, cashback counted once. Cashback is not the same as the lowest cost.',
+    '- "Where do I apply" means: it starts here and continues with a solicitor, a valuation and insurance. Say that. Do not say there are no forms or that it is all done in the conversation.',
+    `- The switcher line is ${SWITCHER_LINE} for anyone who would rather talk it through.`,
+  ].join('\n')
+}

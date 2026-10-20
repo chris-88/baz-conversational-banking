@@ -95,6 +95,16 @@ export function describeGoals(
     }
   }
 
+  /*
+   * Said in the digest as well as in the prefix, because the prefix is general and this is
+   * about this customer: the one line that stops a switch being run as a purchase.
+   */
+  if (context.facts.get('mortgage.customerType', 'household') === 'switcher') {
+    lines.push(
+      'This is a switch of a mortgage they already have, not a purchase: no deposit, no first-time-buyer question, no rent. What matters is their current deal, what the home is worth, and the comparison over the fixed period.',
+    )
+  }
+
   const alongside = raise.filter((candidate) => candidate.tier !== 'primary')
   if (alongside.length > 0) {
     lines.push(

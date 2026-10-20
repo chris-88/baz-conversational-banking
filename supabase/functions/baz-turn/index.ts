@@ -29,7 +29,7 @@ import {
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { arrange } from '../_shared/domain/savings/arrange.ts'
 import { compareSwitch } from '../_shared/domain/switch-comparison.ts'
-import { SWITCHING_COSTS } from '../_shared/tenants/boi/switching.ts'
+import { SWITCHING_COSTS, switchingSection } from '../_shared/tenants/boi/switching.ts'
 import { describeReused, formatFactValue, type ReuseEvent } from '../_shared/domain/reuse.ts'
 import { describeArrangement, formatRate, situationFrom } from '../_shared/domain/savings/situation.ts'
 import { savingsOptionsFrom } from '../_shared/tenants/boi/savings-options.ts'
@@ -1080,6 +1080,7 @@ async function handleTurn(request: Request): Promise<Response> {
             domainConfig: boiDomainConfig,
             productCatalogue: knowledgeBaseSection(kb.products),
             rateGuidance: mortgageRatesSection(rateTable),
+            switchingGuidance: switchingSection(),
             sliders: loaded.persona,
             digest,
             sensitive: gate.suppressHumour,

@@ -79,3 +79,13 @@ describe('the goal section and the plan gate', () => {
     expect(line).not.toContain('ask for')
   })
 })
+
+describe('a switcher in the goal section', () => {
+  it('is told it is a switch, not a purchase', () => {
+    const { lines } = describeGoals(
+      contextWith({ 'goals.primaryObjective': 'Switch mortgage', 'mortgage.customerType': 'switcher' }),
+    )
+    expect(lines.some((line) => line.startsWith('This is a switch of a mortgage'))).toBe(true)
+    expect(lines.find((line) => line.startsWith('What they came in about'))).toContain('switch our mortgage')
+  })
+})

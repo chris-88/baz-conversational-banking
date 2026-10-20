@@ -863,6 +863,23 @@ export type FactValueResult =
 export function parseFactValue(key: FactKey, value: unknown): FactValueResult {
   const result = factCatalogue[key].schema.safeParse(value)
   if (result.success) return { ok: true, value: result.data }
+
+  /*
+   * A date the model wrote the way a person says it.
+   *
+   * "01/01/1988", "11/2026" and "November 2026" were each refused for their format, and each
+   * refusal cost a model round to say the same thing again in ISO (cases ad93c361, eb37e9b5).
+   * The value is unambiguous; only its spelling was wrong. Tried only after the schema has
+   * refused, so nothing that already parses is touched.
+   */
+  if (typeof value === 'string') {
+    const normalised = normaliseDate(value)
+    if (normalised !== null && normalised !== value) {
+      const retry = factCatalogue[key].schema.safeParse(normalised)
+      if (retry.success) return { ok: true, value: retry.data }
+    }
+  }
+
   return {
     ok: false,
     issues: result.error.issues.map((issue) =>
@@ -878,4 +895,44 @@ export function isModelExtractable(key: FactKey): boolean {
 
 export function isSpecialCategory(key: FactKey): boolean {
   return factCatalogue[key].sensitivity === 'special'
+}
+
+const MONTHS: Readonly<Record<string, string>> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', sept: '09', oct: '10', nov: '11', dec: '12',
+}
+
+/**
+ * A date as a person writes it, as ISO. Null when it is not a date this recognises.
+ *
+ * Day-first, because this is Ireland: "01/02/1988" is the first of February. A month and a
+ * year become YYYY-MM; a month name is accepted in full or in three letters. Anything looser
+ * ("end of next year") stays with the model, which has the conversation and can ask.
+ */
+export function normaliseDate(value: string): string | null {
+  const text = value.trim()
+
+  const dmy = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(text)
+  if (dmy !== null) {
+    const [, day, month, year] = dmy
+    return `${String(year)}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
+  const my = /^(\d{1,2})[/.-](\d{4})$/.exec(text)
+  if (my !== null) {
+    const [, month, year] = my
+    return `${String(year)}-${String(month).padStart(2, '0')}`
+  }
+
+  const named = /^(?:(\d{1,2})(?:st|nd|rd|th)?\s+)?([A-Za-z]{3,9})\.?\s+(\d{4})$/.exec(text)
+  if (named !== null) {
+    const [, day, name, year] = named
+    const month = MONTHS[String(name).slice(0, 3).toLowerCase()]
+    if (month === undefined) return null
+    return day === undefined
+      ? `${String(year)}-${month}`
+      : `${String(year)}-${month}-${String(day).padStart(2, '0')}`
+  }
+
+  return null
 }

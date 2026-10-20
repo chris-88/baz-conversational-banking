@@ -345,3 +345,19 @@ describe('voice', () => {
     expect(sensitive).toMatch(/Be plain, warm and brief/)
   })
 })
+
+describe('switching guidance', () => {
+  it('sits in the cached prefix when the tenant publishes it, and is absent otherwise', () => {
+    const guidance = '# Switching a mortgage to us\n\nThe eight steps.'
+    const withIt = composeSystemPrompt.withBreakpoint({ ...baseInput(), switchingGuidance: guidance })
+    expect(withIt.stablePrefix).toContain(guidance)
+    expect(withIt.caseSuffix).not.toContain(guidance)
+
+    const without = composeSystemPrompt.withBreakpoint(baseInput())
+    expect(without.stablePrefix).not.toContain('Switching a mortgage')
+  })
+
+  it('tells the model a mortgage is the exception to "no forms"', () => {
+    expect(composeSystemPrompt(baseInput())).toContain('The exception is a mortgage')
+  })
+})
