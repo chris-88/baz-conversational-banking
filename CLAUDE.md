@@ -16,7 +16,8 @@ both are still retrievable from the public git history - see
 The whole documentation tree moved from `docs/` to `vault/docs/` on 2026-10-20, and `vault/` is
 gitignored: the docs are local only from that commit on, but every version committed before it
 remains in the public history. `vault/` is also an Obsidian vault; `relationship-banking.md` at its
-root is the raw export of the white paper and `vault/docs/white-paper.md` is the cleaned 1.0.
+root is the one copy of the white paper draft, and `writing-style.md` is how anything in Chris's
+voice should read.
 
 `vault/docs/README.md` is the map of everything else. This file is the operational summary; where it
 and a document under `vault/docs/` disagree, check the code - this file has been the stale one before.

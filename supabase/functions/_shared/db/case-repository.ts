@@ -153,7 +153,7 @@ export async function loadCase(
     client.from('product_interests').select('product, status, reason').eq('case_id', caseId),
     client
       .from('messages')
-      .select('role, content, cards, created_at')
+      .select('role, content, cards, created_at, usage')
       .eq('case_id', caseId)
       .order('created_at', { ascending: false })
       .limit(options.messages === 'all' ? ALL_MESSAGES : (options.messages ?? MESSAGE_WINDOW)),
@@ -340,6 +340,7 @@ export async function loadCase(
         content: message.content,
         cards: message.cards,
         createdAt: message.created_at,
+        timing: rows.toUsage(message.usage)?.timing ?? null,
       })),
     eventsSinceLastSeen,
     persona,

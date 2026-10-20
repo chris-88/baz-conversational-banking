@@ -2601,6 +2601,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         ],
         conversation: loaded.messages.map((message) => ({
           role: message.role,
+          timing: message.timing,
           content: message.content,
           cards: [...message.cards],
           at: message.createdAt,

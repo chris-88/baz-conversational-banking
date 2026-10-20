@@ -24,6 +24,26 @@ export type TurnUsage = {
   readonly model: ModelUsage
   /** The gate in front of it, which runs on every turn including blocked ones. */
   readonly gate: ModelUsage
+  /** How long it took, where that was measured. Never summed: a conversation has no total. */
+  readonly timing?: TurnTiming
+}
+
+/**
+ * Where a turn's time went, in milliseconds from the request arriving at the function.
+ *
+ * Recorded because "the first reply took ages" is a report with nothing behind it: the saved
+ * timestamps only say when the customer's message was stored (after the gate) and when the
+ * reply was. This says how long the gate took, when the first words reached the screen, how
+ * many model rounds there were, and whether the first round had to write the prefix to cache
+ * rather than read it, which is what a cold start looks like from the inside.
+ */
+export type TurnTiming = {
+  readonly gateMs: number
+  /** Null when nothing was said, which the fallback line then covers. */
+  readonly firstTextMs: number | null
+  readonly totalMs: number
+  readonly rounds: number
+  readonly coldPrefix: boolean
 }
 
 export const EMPTY_USAGE: TurnUsage = {

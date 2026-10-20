@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react'
 import { requireSupabase, supabase } from '@/lib/supabase'
 import { claimPriorConversation, rememberPriorUser } from '@/lib/session'
 
@@ -497,7 +498,16 @@ export async function startEmailSignIn(
     options: { emailRedirectTo: returnTo() },
   })
 
-  if (error) return { ok: false, message: error.message }
+  if (error) {
+    // The code that never arrived used to leave no trace anywhere a person could look: the
+    // mailer had not been asked, and the browser had kept the reason to itself. The address
+    // stays out of it; the service's own message carries none.
+    Sentry.captureMessage('sign-in code could not be sent', {
+      level: 'warning',
+      tags: { stage: 'otp', code: error.code ?? 'unknown', status: String(error.status ?? '') },
+    })
+    return { ok: false, message: error.message }
+  }
 
   rememberKind('email')
   return { ok: true, checkInbox: true }

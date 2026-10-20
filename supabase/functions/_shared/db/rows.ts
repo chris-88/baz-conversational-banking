@@ -80,6 +80,8 @@ export const messageRow = z.object({
   role: z.enum(['customer', 'baz', 'system']),
   content: z.string(),
   created_at: z.string(),
+  /** Measured on Baz's turns only; absent, null or malformed all mean nobody measured it. */
+  usage: z.unknown().optional(),
   /**
    * The cards rendered with this turn. Only their types are needed here — enough to know a
    * card is already on screen without carrying its whole payload through the loader.
@@ -165,10 +167,25 @@ const modelUsageRow = z.object({
   cacheWrite: z.number().nonnegative(),
 })
 
-export const usageRow = z.object({ model: modelUsageRow, gate: modelUsageRow })
+export const timingRow = z.object({
+  gateMs: z.number(),
+  firstTextMs: z.number().nullable(),
+  totalMs: z.number(),
+  rounds: z.number().int(),
+  coldPrefix: z.boolean(),
+})
+
+export const usageRow = z.object({
+  model: modelUsageRow,
+  gate: modelUsageRow,
+  // Tolerant on purpose: a timing that does not parse must not take the cost numbers with it.
+  timing: timingRow.optional().catch(undefined),
+})
 
 /** Null, absent, or malformed all mean the same thing here: nobody measured this turn. */
 export function toUsage(value: unknown): TurnUsage | null {
   const parsed = usageRow.safeParse(value)
-  return parsed.success ? parsed.data : null
+  if (!parsed.success) return null
+  const { timing, ...usage } = parsed.data
+  return timing === undefined ? usage : { ...usage, timing }
 }

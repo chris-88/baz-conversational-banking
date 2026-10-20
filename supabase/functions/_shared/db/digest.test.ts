@@ -435,6 +435,7 @@ describe('a card still waiting for a tap', () => {
     content: '',
     cards,
     createdAt: '2026-10-16T10:00:00.000Z',
+    timing: null,
   })
 
   it('names the card and how far back it is', () => {

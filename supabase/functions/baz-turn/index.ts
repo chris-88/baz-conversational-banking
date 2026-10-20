@@ -58,7 +58,7 @@ import { anthropicProvider } from '../_shared/llm/anthropic-provider.ts'
 import { FIXTURE_BANKING, fixtureProvider } from '../_shared/llm/fixture-provider.ts'
 import type { ModelProvider } from '../_shared/llm/model.ts'
 import { fixtureScript } from './fixtures/index.ts'
-import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnUsage } from '../_shared/domain/cost.ts'
+import { EMPTY_USAGE, addUsage, type ModelUsage, type TurnTiming, type TurnUsage } from '../_shared/domain/cost.ts'
 import { runBazTurn } from '../_shared/llm/baz.ts'
 import { toneBucket } from '../_shared/llm/persona.ts'
 import type { ToolName } from '../_shared/llm/tools.ts'
@@ -280,6 +280,8 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 })
 
 async function handleTurn(request: Request): Promise<Response> {
+  // Everything below is timed from here, so a slow turn can say where the time went.
+  const startedAt = Date.now()
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return errorResponse('bad_request', 'Use POST.')
 
@@ -358,9 +360,16 @@ async function handleTurn(request: Request): Promise<Response> {
    * all in the prices, which live in `domain/cost.ts`.
    */
   let spend: TurnUsage = EMPTY_USAGE
+  let rounds = 0
+  let coldPrefix = false
+  let firstTextMs: number | null = null
 
   const recordModel = (used: ModelUsage): void => {
     spend = addUsage(spend, { model: used, gate: EMPTY_USAGE.gate })
+    rounds += 1
+    // The stable prefix is written, not read, on the first round after the cache went cold.
+    // A later breakpoint writes a few thousand tokens every turn; the prefix is tens.
+    if (rounds === 1 && used.cacheWrite >= 15_000) coldPrefix = true
   }
   const recordGate = (used: ModelUsage): void => {
     spend = addUsage(spend, { model: EMPTY_USAGE.model, gate: used })
@@ -396,6 +405,14 @@ async function handleTurn(request: Request): Promise<Response> {
       })
     : ({ allowed: true, category: 'banking', clarifyInScope: false, suppressHumour: false,
         suppressProductOffers: false, profanity: false, injectionFlagged: false } as const)
+  const gateMs = Date.now() - startedAt
+  const timing = (): TurnTiming => ({
+    gateMs,
+    firstTextMs,
+    totalMs: Date.now() - startedAt,
+    rounds,
+    coldPrefix,
+  })
 
   /**
    * The notice about what is kept, owed to anybody who has typed into the box.
@@ -614,7 +631,7 @@ async function handleTurn(request: Request): Promise<Response> {
       participantId: null,
       role: 'baz',
       content: gate.response,
-      usage: spend,
+      usage: { ...spend, timing: timing() },
       ...(pendingNotice === undefined ? {} : { cards: [pendingNotice] }),
     })
 
@@ -2512,7 +2529,10 @@ async function handleTurn(request: Request): Promise<Response> {
         }
 
         for await (const event of events) {
-          if (event.type === 'text_delta') spoken.push(event.text)
+          if (event.type === 'text_delta') {
+            if (firstTextMs === null) firstTextMs = Date.now() - startedAt
+            spoken.push(event.text)
+          }
           if (event.type === 'card') shown.push(event.card)
           // Withdrawn from the record as well as the screen: the saved reply is what the
           // customer was left reading, not what was said and then taken back.
@@ -2672,7 +2692,7 @@ async function handleTurn(request: Request): Promise<Response> {
           role: 'baz',
           content: text,
           cards: shown,
-          usage: spend,
+          usage: { ...spend, timing: timing() },
         })
 
         /*

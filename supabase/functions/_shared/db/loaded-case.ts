@@ -1,3 +1,4 @@
+import type { TurnTiming } from '../domain/cost.ts'
 import type { CaseKind } from '../domain/case.ts'
 import type { ApplicationId, Fact, ParticipantId, ParticipantRole } from '../domain/facts.ts'
 import type { Product } from '../domain/journey.ts'
@@ -52,6 +53,8 @@ export type LoadedMessage = {
   /** Types of the cards rendered with this turn, oldest first. */
   readonly cards: readonly string[]
   readonly createdAt: string
+  /** Where the turn's time went, on Baz's turns that were measured. */
+  readonly timing: TurnTiming | null
 }
 
 export type LoadedEvent = {

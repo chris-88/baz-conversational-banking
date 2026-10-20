@@ -2,6 +2,16 @@ import { knowledgeProductSchema, mortgageRateSchema } from './catalogue.ts'
 import { z } from 'zod'
 import { CASE_KINDS, CASE_OUTCOMES, CASE_STATUSES } from '../domain/case.ts'
 
+/** Milliseconds from the request arriving: the gate, the first words, the whole turn. */
+export const turnTimingSchema = z.object({
+  gateMs: z.number(),
+  firstTextMs: z.number().nullable(),
+  totalMs: z.number(),
+  rounds: z.number().int(),
+  coldPrefix: z.boolean(),
+})
+export type TurnTimingDto = z.infer<typeof turnTimingSchema>
+
 /** The windows the console can look at. */
 export const PERIODS = ['7d', '30d', '90d', 'all'] as const
 export type Period = (typeof PERIODS)[number]
@@ -682,6 +692,8 @@ export const adminCaseSchema = z.object({
       content: z.string(),
       cards: z.array(z.string()),
       at: z.string(),
+      /** Where the turn's time went, on Baz's turns that were measured. */
+      timing: turnTimingSchema.nullable(),
     }),
   ),
   planSteps: z.array(z.string()),

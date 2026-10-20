@@ -179,6 +179,20 @@ function Turn({ message }: { readonly message: AdminCase['conversation'][number]
         >
           <span className="text-muted-foreground text-2xs font-medium">
             {customer ? 'Customer' : 'Baz'} · {at}
+            {message.timing !== null && !customer && (
+              /* Where the time went, so "the first reply took ages" has a number behind it. */
+              <span
+                className="text-muted-foreground/80"
+                title={`Gate ${seconds(message.timing.gateMs)}; first words at ${
+                  message.timing.firstTextMs === null ? 'never' : seconds(message.timing.firstTextMs)
+                }; ${String(message.timing.rounds)} model round${message.timing.rounds === 1 ? '' : 's'}${
+                  message.timing.coldPrefix ? '; the prefix was cold and had to be written to cache' : ''
+                }`}
+              >
+                {' '}· {seconds(message.timing.totalMs)}
+                {message.timing.coldPrefix ? ' (cold)' : ''}
+              </span>
+            )}
           </span>
           {message.cards.map((card) => (
             <Badge key={card} variant="outline" className="text-2xs">
@@ -328,4 +342,9 @@ function DeleteCase({ caseId, who }: { readonly caseId: string; readonly who: st
       </AlertDialog>
     </>
   )
+}
+
+/** 10120 → "10.1 s". A turn is seconds; nobody reads it in milliseconds. */
+function seconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`
 }
