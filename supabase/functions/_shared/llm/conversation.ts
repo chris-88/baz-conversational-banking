@@ -54,7 +54,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'One line reacting to what has happened to them, the way somebody across a desk would.',
       'One line on what it involves, as a life event rather than a product. A first home is a deposit, a mortgage, protection and costs nobody warns you about, over a year or more.',
       'One line asking the question the rest of this turns on: help putting a plan together, or just the one obvious product today.',
-      'Record what they said while you are at it. That is a tool call, not something you narrate.',
+      'Say your three sentences first and record what they said in the same breath, not before it. The words reach the screen as you write them; a turn that records before it speaks leaves the customer looking at nothing for the whole first round, which on a cold start was ten seconds.',
     ],
     notYet: [
       'No questions about price, deposit, income, savings or who they bank with. Not one. Those belong to a plan they have not asked for yet.',

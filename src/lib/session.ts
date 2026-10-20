@@ -12,17 +12,36 @@ import {
  * on a case (§12, §28). The anonymous user persists in browser storage, so returning to the
  * tab returns to the same conversation.
  */
+/**
+ * One sign-in at a time.
+ *
+ * Two callers on first load both found no session and both created an anonymous user, a
+ * millisecond apart, and each then started a case of its own: pairs of empty cases a quarter
+ * of a second apart, all through the morning, each pair one visitor and two of the audience
+ * cap. The second caller now waits for the first.
+ */
+let signingIn: Promise<string> | null = null
+
 export async function ensureAnonymousUser(): Promise<string> {
   const supabase = requireSupabase()
 
   const existing = await supabase.auth.getSession()
   if (existing.data.session) return existing.data.session.access_token
 
-  const created = await supabase.auth.signInAnonymously()
-  if (created.error || !created.data.session) {
-    throw new Error(created.error?.message ?? 'Could not start a session.')
+  if (signingIn === null) {
+    signingIn = supabase.auth
+      .signInAnonymously()
+      .then((created) => {
+        if (created.error || !created.data.session) {
+          throw new Error(created.error?.message ?? 'Could not start a session.')
+        }
+        return created.data.session.access_token
+      })
+      .finally(() => {
+        signingIn = null
+      })
   }
-  return created.data.session.access_token
+  return signingIn
 }
 
 /**
