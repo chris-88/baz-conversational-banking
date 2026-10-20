@@ -4,17 +4,22 @@
 
 Baz is a conversational orchestration layer over (simulated) Bank of Ireland product journeys. The customer says what they are trying to do. Baz discovers needs, the customer chooses products, facts are collected once and reused across concurrent applications, and the case persists across channels, sessions, a partner and time.
 
-Source of truth, in `docs/`:
+Source of truth, in `vault/docs/`:
 
 - `03-baz-conversational-banking-poc-requirements.md`: the spec. Cite sections as §N.
 - `01-conversational-banking-poc-vision.md`: intent and tone.
 
-Where they conflict, the requirements doc wins. Both are gitignored (the repo is public) and
+Where they conflict, the requirements doc wins. Both were always gitignored (the repo is public) and
 both are still retrievable from the public git history - see
-`docs/security/public-repository-review.md`.
+`vault/docs/security/public-repository-review.md`.
 
-`docs/README.md` is the map of everything else. This file is the operational summary; where it
-and a document under `docs/` disagree, check the code - this file has been the stale one before.
+The whole documentation tree moved from `docs/` to `vault/docs/` on 2026-10-20, and `vault/` is
+gitignored: the docs are local only from that commit on, but every version committed before it
+remains in the public history. `vault/` is also an Obsidian vault; `relationship-banking.md` at its
+root is the raw export of the white paper and `vault/docs/white-paper.md` is the cleaned 1.0.
+
+`vault/docs/README.md` is the map of everything else. This file is the operational summary; where it
+and a document under `vault/docs/` disagree, check the code - this file has been the stale one before.
 
 The only test that matters is §67: a customer comes for a mortgage, Baz discovers the wider life event, the customer picks products, facts are reused across applications, the customer moves from public web to the app without restarting, the spouse joins separately and advances several applications, the personal loan is deliberately held, the customer leaves, the bank moves, a notification arrives, the customer returns and Baz knows exactly what changed.
 
@@ -176,7 +181,7 @@ picks golden years, third level, graduate, basic or personal in that order from 
 employment status, `education.graduatedYear` and `banking.holdsIrishPaymentAccount`, citing the
 pack's own eligibility and fee lines. The pick goes into the digest while the `everyday_banking`
 need is live, and `show_product_options` swaps whatever current account the model named for it
-(`product_swapped` event). The onboarding use case this serves is `docs/journeys/onboarding.md`.
+(`product_swapped` event). The onboarding use case this serves is `vault/docs/journeys/onboarding.md`.
 
 ### Application state machine
 
@@ -378,9 +383,9 @@ Gate output:
 ## Repo layout
 
 ```
-docs/                       README.md is the map; start-here, dev, architecture,
-                            design, features, journeys, decisions, learnings,
-                            security, operations, archive
+vault/docs/                 gitignored since 2026-10-20. README.md is the map; start-here,
+                            dev, architecture, design, features, journeys, decisions,
+                            learnings, security, operations, archive
 src/
   app/                      router, providers, lazy boundaries, stale-deploy
   baz/                      portable chat UI, cards/, card registry, hooks
@@ -440,7 +445,7 @@ Soft-read, unset in production: `LLM_PROVIDER` (`fixture` replays a script) and 
 
 Set on the project but read nowhere: `TWILIO_*` and `SENTRY_DSN` (never built) and
 `AUDIENCE_MAX_TURNS` (declared, never implemented). Removed from the `.env.example` files on
-2026-10-15; `docs/dev/environment-variables.md` is the full reference.
+2026-10-15; `vault/docs/dev/environment-variables.md` is the full reference.
 
 GitHub: repo vars for the `VITE_*` values; secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`.
 
@@ -477,13 +482,13 @@ Each milestone ends deployed.
 
 - Read the relevant § before implementing. Reference §N in commit messages.
 - Domain logic goes in `_shared/domain` as pure functions, with tests written first.
-- Where the spec is silent, choose the fastest credible option (§68) and add one line to `docs/decisions.md`: date, decision, §.
+- Where the spec is silent, choose the fastest credible option (§68) and add one line to `vault/docs/decisions.md`: date, decision, §.
 - Ask before adding any dependency outside the stack.
 - When a journey is matched against its recording, set `status: 'final'` and fill `source`.
-- A change that invalidates a document under `docs/` updates it in the same change, and bumps its
+- A change that invalidates a document under `vault/docs/` updates it in the same change, and bumps its
   `last_verified`. Never describe something unbuilt in the present tense.
 - Any change that moves what a turn costs — prompt size, cache breakpoints or TTLs, model
-  choice, tool rounds, reply length — updates `docs/04-cost-of-running-a-conversational-assistant.md`,
+  choice, tool rounds, reply length — updates `vault/docs/04-cost-of-running-a-conversational-assistant.md`,
   including its changelog. The numbers in it are measured; do not revise them from memory.
 - A live model is for checking what the model does. Layout, card ordering and copy placement
   are not that, and running a full conversation to check them is how an API budget disappears.

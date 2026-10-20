@@ -1946,10 +1946,16 @@ async function handleTurn(request: Request): Promise<Response> {
                  * exactly what a concierge is for. A goal whose blueprint has money milestones
                  * still needs a figure; one whose milestones are facts and applications does not.
                  */
-                const target = input_.targetAmount ?? gap?.target ?? null
                 const blueprint = blueprintFor(input_.goal)
                 const needsFigure =
                   blueprint?.milestones.some((candidate) => candidate.binding?.kind === 'numeric') ?? false
+                /*
+                 * The deposit gap stands in for a target only on a goal that saves towards one.
+                 * It used to fill in for every goal, so a mortgage switch on an €850,000 house
+                 * got an €85,000 "deposit" nobody had mentioned, and keeping the plan wrote it
+                 * down as a fact (case eb37e9b5).
+                 */
+                const target = input_.targetAmount ?? (needsFigure ? (gap?.target ?? null) : null)
 
                 if (target === null && needsFigure) {
                   return {

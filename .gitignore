@@ -65,3 +65,9 @@ deno.lock
 .google-oauth
 client_secret*.json
 *oauth-client*.json
+
+# Second Brain / Docs. The whole `docs/` tree moved to `vault/docs/` on 2026-10-20 so that
+# nothing under it is published from here on. Everything committed before that date is still
+# in the public history (see vault/docs/security/public-repository-review.md).
+vault/
+.obsidian/

@@ -679,6 +679,53 @@ export const factCatalogue = {
     extractable: true,
     label: 'Property BER',
   },
+
+  // ---- Switching an existing mortgage ----
+  /*
+   * A switch is not a purchase. Case eb37e9b5 stored the lender and the rate end in the
+   * transcript only, the house value as a purchase price and the rate end as a goal date, and
+   * everything downstream read it as a first home. These give a switch somewhere to live.
+   */
+  'mortgage.currentLender': {
+    schema: z.string().min(2).max(80),
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Current mortgage lender',
+  },
+  'mortgage.currentRatePct': {
+    schema: z.number().min(0).max(20),
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Current mortgage rate (%)',
+  },
+  'mortgage.currentRateType': {
+    schema: z.enum(['fixed', 'variable', 'tracker']),
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Current rate type',
+  },
+  'mortgage.currentRateEndsAt': {
+    schema: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/, 'expected YYYY-MM or YYYY-MM-DD'),
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'When the current rate ends',
+  },
+  'property.value': {
+    schema: positiveEuro,
+    subject: 'household',
+    reuse: 'confirm',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Property value',
+  },
   'borrowing.requestedAmount': {
     schema: positiveEuro,
     subject: 'household',

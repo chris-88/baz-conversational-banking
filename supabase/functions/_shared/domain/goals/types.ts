@@ -70,6 +70,7 @@ export const GOAL_IDS = [
   // housing
   'buy_first_home',
   'move_home',
+  'switch_mortgage',
   'renovate_home',
   // family
   'shared_household_finances',

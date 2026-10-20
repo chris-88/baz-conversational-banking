@@ -83,6 +83,19 @@ const isTrue = (key: FactKey) => (context: GoalContext): boolean =>
 const tenureIs = (value: string) => (context: GoalContext): boolean =>
   context.facts.get('housing.currentTenure', 'household') === value
 
+/**
+ * Moving an existing mortgage, as opposed to taking one out.
+ *
+ * "Switch mortgage" contains the word mortgage, and for a week that made it a first home: a
+ * deposit target derived from the house's value, a plan with nothing to save towards, and an
+ * application that asked a homeowner whether he pays rent (case eb37e9b5). A switch is said in
+ * its own words or recorded as a buyer type, and either one takes precedence over a purchase.
+ */
+const switching = (context: GoalContext): boolean =>
+  /switch|remortgag|re-mortgag|rate (is |will be )?(ending|rolling|expir|running out)|better rate|cheaper rate/.test(
+    objective(context),
+  ) || context.facts.get('mortgage.customerType', 'household') === 'switcher'
+
 const employmentIs = (...values: readonly string[]) => (context: GoalContext): boolean =>
   values.includes(text(context, 'employment.status', 'primary'))
 
@@ -498,7 +511,10 @@ export const goalCatalogue: readonly GoalBlueprint[] = [
         declaration: true,
         strength: 'explicit',
         describe: 'they said they want to buy a home',
-        when: stated(/first home|buy.*(home|house|place)|mortgage|get on the ladder/),
+        // "mortgage" counts only when it is not a switch of one they already have.
+        when: (context) =>
+          stated(/first home|buy.*(home|house|place)|get on the ladder/)(context) ||
+          (stated(/mortgage/)(context) && !switching(context)),
       },
       {
         id: 'first-time-buyer',
@@ -630,6 +646,86 @@ export const goalCatalogue: readonly GoalBlueprint[] = [
     suppressions: [],
     deferrals: [],
     draws: 'savings',
+  },
+  {
+    id: 'switch_mortgage',
+    name: 'Switch our mortgage',
+    category: 'housing',
+    description: 'Move an existing mortgage to a better rate, counting the costs of the move.',
+    signals: [
+      {
+        id: 'said-so',
+        declaration: true,
+        strength: 'explicit',
+        describe: 'they said they want to switch their mortgage',
+        when: (context) =>
+          /switch|remortgag|re-mortgag|rate (is |will be )?(ending|rolling|expir|running out)|better rate|cheaper rate/.test(
+            objective(context),
+          ),
+      },
+      {
+        id: 'switcher-type',
+        strength: 'strong_inferred',
+        describe: 'they are a switcher',
+        when: (context) => context.facts.get('mortgage.customerType', 'household') === 'switcher',
+      },
+      {
+        id: 'owner-with-a-lender',
+        strength: 'soft_inferred',
+        describe: 'they own their home and have a mortgage elsewhere',
+        when: (context) => tenureIs('owner_occupier')(context) && has('mortgage.currentLender')(context),
+      },
+    ],
+    // No deposit and no purchase price: a switch is priced on what is owed, what the home is
+    // worth, and what the current deal costs.
+    informationNeeded: [
+      'mortgage.currentLender',
+      'mortgage.amountSought',
+      'mortgage.termYears',
+      'mortgage.currentRatePct',
+      'mortgage.currentRateEndsAt',
+      'property.value',
+      'income.annualBasic',
+    ],
+    milestones: [
+      milestone('CURRENT_DEAL_UNDERSTOOD', 'Current deal understood', 'financial', true,
+        knows('mortgage.currentLender', 'mortgage.amountSought', 'mortgage.currentRatePct')),
+      milestone('COMPARISON_DONE', 'Rates compared over the fixed period', 'financial', true,
+        knows('mortgage.termYears', 'property.value')),
+      milestone('COSTS_COUNTED', 'Switching costs counted', 'financial', true, null),
+      milestone('DECISION_MADE', 'Decided whether to switch', 'life', true,
+        knows('mortgage.withThisBank')),
+      milestone('SWITCH_SUBMITTED', 'Switcher application submitted', 'process', true,
+        application('mortgage', 'submitted')),
+      milestone('SWITCH_APPROVED', 'Switcher mortgage approved', 'process', true,
+        application('mortgage', 'approved')),
+      milestone('PROTECTION_ASSIGNED', 'Mortgage protection and buildings cover in place', 'process', true, null),
+      milestone('SWITCH_COMPLETE', 'Old mortgage repaid, new one live', 'life', true,
+        application('mortgage', 'completed')),
+    ],
+    relationships: {
+      related: ['family_protection', 'renovate_home'],
+      prerequisites: [],
+      followOn: ['build_emergency_fund', 'renovate_home'],
+      conflicts: ['new_unsecured_borrowing_before_mortgage_complete'],
+    },
+    linkedNeeds: ['switch_mortgage', 'mortgage_protection', 'home_insurance'],
+    checkins: [
+      {
+        kind: 'scheduled',
+        everyMonths: 1,
+        purpose: 'Check the switch against the rate end date',
+        agenda: [
+          'Confirm when the current rate ends and whether a break fee applies',
+          'See whether the comparison still holds at the published rates',
+          'Check the solicitor, valuation and insurance are moving',
+        ],
+      },
+    ],
+    completion: ['SWITCH_COMPLETE'],
+    suppressions: [],
+    deferrals: [],
+    draws: null,
   },
   {
     id: 'renovate_home',

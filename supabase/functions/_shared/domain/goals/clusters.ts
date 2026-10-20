@@ -93,7 +93,9 @@ export const lifeEventClusters: readonly LifeEventCluster[] = [
         describe: 'they are saving towards a deposit',
         when: (context) =>
           (context.facts.number('assets.depositAmount', 'household') ?? 0) > 0 ||
-          context.facts.number('housing.purchasePrice', 'household') !== null,
+          // A switcher's house has a value, not a price; it is not a deposit being saved.
+          (context.facts.number('housing.purchasePrice', 'household') !== null &&
+            context.facts.get('mortgage.customerType', 'household') !== 'switcher'),
       },
       {
         id: 'renting-now',

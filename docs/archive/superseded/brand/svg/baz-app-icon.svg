@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-  <title id="title">Baz app icon</title>
-  <desc id="desc">Baz app icon</desc>
-  <rect x="18" y="18" width="220" height="220" rx="54" fill="#1D4ED8"/>
-  <circle cx="128" cy="138" r="62" fill="#FFFFFF"/>
-  <circle cx="105" cy="138" r="8" fill="#1D4ED8"/>
-  <circle cx="151" cy="138" r="8" fill="#1D4ED8"/>
-  <circle cx="188" cy="70" r="14" fill="#FFFFFF"/>
-</svg>

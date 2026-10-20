@@ -92,7 +92,60 @@ export function depositGap(context: NeedContext): { target: number; saved: numbe
   return { target, saved, short: Math.max(0, target - saved) }
 }
 
+/** Moving a mortgage they already have, which the word "mortgage" alone does not reveal. */
+const switchingMortgage = (context: NeedContext): boolean =>
+  /switch|remortgag|re-mortgag|rate (is |will be )?(ending|rolling|expir|running out)|better rate|cheaper rate/i.test(
+    objective(context),
+  ) || context.facts.get('mortgage.customerType', 'household') === 'switcher'
+
 export const needCatalogue: readonly NeedDefinition[] = [
+  {
+    id: 'switch_mortgage',
+    name: 'Switch a mortgage',
+    family: 'mortgages',
+    sensitive: false,
+    priority: 'very_high',
+    signals: [
+      {
+        id: 'said-so',
+        strength: 'explicit',
+        describe: 'they said they want to switch their mortgage',
+        when: (context) =>
+          /switch|remortgag|re-mortgag|rate (is |will be )?(ending|rolling|expir|running out)|better rate|cheaper rate/i.test(
+            objective(context),
+          ),
+      },
+      {
+        id: 'switcher-type',
+        strength: 'strong_inferred',
+        describe: 'they are a switcher',
+        when: (context) => context.facts.get('mortgage.customerType', 'household') === 'switcher',
+      },
+    ],
+    clarifying: [
+      {
+        question: 'Who is the mortgage with at the moment, and roughly what is left on it?',
+        answeredWhen: (context) =>
+          context.facts.has('mortgage.currentLender', 'household') &&
+          context.facts.has('mortgage.amountSought', 'household'),
+      },
+      {
+        question: 'What rate are you on now, and when does it end?',
+        answeredWhen: (context) =>
+          context.facts.has('mortgage.currentRatePct', 'household') &&
+          context.facts.has('mortgage.currentRateEndsAt', 'household'),
+      },
+      {
+        question: 'Roughly what is the house worth now?',
+        answeredWhen: (context) => context.facts.has('property.value', 'household'),
+      },
+    ],
+    products: ['mortgage'],
+    framing:
+      'Switching moves the mortgage you already have to a new lender. What matters is the total cost over the period you compare, counting the switching costs and any cashback, not the rate or the cashback on its own.',
+    suppressions: [],
+    deferrals: [],
+  },
   {
     id: 'first_home_mortgage',
     name: 'Buy a first home',
@@ -105,9 +158,8 @@ export const needCatalogue: readonly NeedDefinition[] = [
         strength: 'explicit',
         describe: 'they said they want to buy a home',
         when: (context) =>
-          /buy|purchas|mortgage|first home|own place|deposit|house|new build/i.test(
-            objective(context),
-          ),
+          /buy|purchas|first home|own place|deposit|house|new build/i.test(objective(context)) ||
+          (/mortgage/i.test(objective(context)) && !switchingMortgage(context)),
       },
       {
         id: 'first-time-buyer',

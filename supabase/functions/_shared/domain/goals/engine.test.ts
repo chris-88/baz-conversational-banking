@@ -530,3 +530,46 @@ describe('knowing what a goal needs before acting on it', () => {
     )
   })
 })
+
+/**
+ * Case eb37e9b5: "Switch mortgage" from a homeowner with an €850,000 house was read as a first
+ * home, because the first-home signal fired on the bare word "mortgage" and the life-stage
+ * cluster read the house's value as a purchase price. The plan then had a deposit target.
+ */
+describe('switching is not buying', () => {
+  const switcher = contextOf({
+    'goals.primaryObjective': 'Switch mortgage',
+    'mortgage.customerType': 'switcher',
+    'housing.currentTenure': 'owner_occupier',
+    'housing.purchasePrice': 850_000,
+    'mortgage.amountSought': 300_000,
+  })
+
+  it('makes the switch the primary goal, and the first home nothing of the kind', () => {
+    const candidates = evaluateGoals(switcher)
+    expect(primaryGoal(candidates)?.goal.id).toBe('switch_mortgage')
+    expect(find(candidates, 'buy_first_home').tier).not.toBe('primary')
+    expect(find(candidates, 'buy_first_home').evidence.map((e) => e.describe)).not.toContain(
+      'they said they want to buy a home',
+    )
+  })
+
+  it('does not put a switcher in the first-home life stage on the strength of a house value', () => {
+    expect(matchedClusters(switcher).map((cluster) => cluster.id)).not.toContain(
+      'FIRST_HOME_LIFE_STAGE',
+    )
+  })
+
+  it('still reads "we want a mortgage" as buying', () => {
+    const buyer = contextOf({ 'goals.primaryObjective': 'We want a mortgage for our first place' })
+    expect(primaryGoal(evaluateGoals(buyer))?.goal.id).toBe('buy_first_home')
+  })
+
+  it('asks for the current deal, not a deposit', () => {
+    const missing = find(evaluateGoals(switcher), 'switch_mortgage').missing
+    expect(missing).toContain('mortgage.currentLender')
+    expect(missing).toContain('mortgage.currentRateEndsAt')
+    expect(missing).not.toContain('assets.depositAmount')
+    expect(find(evaluateGoals(switcher), 'switch_mortgage').goal.draws).toBeNull()
+  })
+})

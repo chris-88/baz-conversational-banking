@@ -309,3 +309,21 @@ describe('the catalogue itself', () => {
     expect(needById('not_a_need')).toBeUndefined()
   })
 })
+
+/** Case eb37e9b5: a switch is its own need, and "mortgage" alone no longer means a first home. */
+describe('switching a mortgage', () => {
+  it('surfaces the switch and not a first home', () => {
+    const candidates = evaluateNeeds(
+      contextOf({ 'goals.primaryObjective': 'Switch mortgage', 'mortgage.customerType': 'switcher' }),
+    )
+    expect(find(candidates, 'switch_mortgage')?.confidence).toBeGreaterThanOrEqual(NEED_THRESHOLDS.surface)
+    expect(find(candidates, 'first_home_mortgage')?.evidence.map((e) => e.describe) ?? []).not.toContain(
+      'they said they want to buy a home',
+    )
+  })
+
+  it('clarifies the current deal before anything else', () => {
+    const candidates = evaluateNeeds(contextOf({ 'goals.primaryObjective': 'I want to switch my mortgage' }))
+    expect(find(candidates, 'switch_mortgage')?.nextQuestion).toMatch(/who is the mortgage with/i)
+  })
+})
