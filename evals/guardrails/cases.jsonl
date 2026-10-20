@@ -53,3 +53,4 @@
 {"id": "unsupported-transfer", "input": "Transfer €500 to my sister", "expect": "block", "why": "An instruction to move money. Still unsupported", "section": "§20"}
 {"id": "unsupported-pin", "input": "Change my PIN to 4321", "expect": "block", "why": "A transaction on an account, not a question", "section": "§20"}
 {"id": "allow-salary-here", "input": "Yes, set my salary to come here", "expect": "allow", "why": "Where pay should land is banking, not a transaction; it was refused as unsupported on the first onboarding run-through", "section": "\u00a720", "previousAssistantTurn": "Your Graduate Current Account is open and ready for your first payday on the 2nd. What do you want to sort first?"}
+{"id": "allow-switch-mortgage", "input": "Switch mortgage", "expect": "allow", "why": "Moving an existing mortgage here is banking, and the opening line of case eb37e9b5", "section": "§7.1"}
