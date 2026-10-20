@@ -172,6 +172,12 @@ const STATUS_CARD_WINDOW = 2
 const OPTIONS_CARD_WINDOW = 2
 
 /**
+ * Longer than the options window: the split does not change between turns unless a fact does,
+ * and the engine recomputes it from the case either way, so a fresh copy says nothing new.
+ */
+const ARRANGEMENT_CARD_WINDOW = 6
+
+/**
  * Longer than the options window: a quote is read and compared rather than acted on, so it
  * stays useful further up the conversation, and a second copy of the same figures is noise.
  */
@@ -1515,6 +1521,27 @@ async function handleTurn(request: Request): Promise<Response> {
                * share one `savings` journey and one tap has to start the right ones.
                */
               case 'show_arrangement': {
+                /*
+                 * One arrangement card, not one per turn. Asked "show me the rest first" and
+                 * then given a name and address, the model drew the same split four times in a
+                 * row on one live case, each copy waiting for the same tap. The one on screen
+                 * still works until something is started from it, and the digest already says
+                 * it is waiting.
+                 */
+                const arrangementOnScreen = loaded.messages
+                  .slice(-ARRANGEMENT_CARD_WINDOW)
+                  .some((message) => message.cards.includes('arrangement'))
+                const startedSince = loaded.applications.some(
+                  (application) => application.product === 'savings',
+                )
+                if (arrangementOnScreen && !startedSince) {
+                  return {
+                    result:
+                      'The arrangement card is already on screen from an earlier turn and still works. ' +
+                      'Point at it in your own words, or answer what they asked; do not draw another.',
+                  }
+                }
+
                 /*
                  * From the case as it is now, not as it was when the turn began.
                  *
