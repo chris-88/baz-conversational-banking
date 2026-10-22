@@ -161,6 +161,28 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
     scope: z.array(z.enum(CONSENT_SCOPE)).min(1),
   }),
   z.object({ action: z.literal('revoke_accounts'), caseId }),
+
+  /**
+   * Feedback from the conversation (§44). A thumbs on one of Baz's replies, with an optional
+   * line on a thumbs-down, or a rating of the whole thing from the menu with some words and
+   * an address if they want a reply. Kept against the case and the message.
+   */
+  z.object({
+    action: z.literal('give_feedback'),
+    caseId,
+    kind: z.literal('turn'),
+    messageId: z.uuid(),
+    rating: z.union([z.literal(1), z.literal(-1)]),
+    comment: z.string().trim().max(500).optional(),
+  }),
+  z.object({
+    action: z.literal('give_feedback'),
+    caseId,
+    kind: z.literal('session'),
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().trim().max(2000).optional(),
+    replyTo: z.string().trim().email().max(200).optional(),
+  }),
   z.object({
     action: z.literal('initiate_transfer'),
     caseId,

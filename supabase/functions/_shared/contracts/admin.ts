@@ -143,6 +143,9 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('tag_test_case'), caseId: z.uuid() }),
   /** Open banking, simulated: the receiving bank settles an initiated transfer. */
   z.object({ action: z.literal('settle_transfer'), transferId: z.uuid() }),
+  /** §44 — what people said, and who asked to work on this. */
+  z.object({ action: z.literal('list_feedback'), period: z.enum(PERIODS).default('30d') }),
+  z.object({ action: z.literal('list_collaborators') }),
 
   /**
    * Everything about one form application, side by side.
@@ -383,6 +386,25 @@ export const analyticsSchema = z.object({
 
   /** Where applications got to. Each stage counts applications that reached it or passed it. */
   funnel: z.array(z.object({ stage: z.string(), label: z.string(), count: z.number().int() })),
+  /**
+   * The journey after a show and tell: how far arrivals got, step by step, with the drop
+   * between steps implied by the counts. Each step is a count of cases in the period.
+   */
+  journey: z
+    .array(z.object({ step: z.string(), label: z.string(), count: z.number().int() }))
+    .default([]),
+  /** Where arrivals came from, from `cases.source`; `unknown` for the rest. */
+  sources: z.array(z.object({ source: z.string(), count: z.number().int() })).default([]),
+  /** Where conversations stalled: the detector events, counted. */
+  stalls: z.array(z.object({ type: z.string(), label: z.string(), count: z.number().int() })).default([]),
+  feedback: z
+    .object({
+      thumbsUp: z.number().int(),
+      thumbsDown: z.number().int(),
+      ratings: z.number().int(),
+      averageRating: z.number().nullable(),
+    })
+    .default({ thumbsUp: 0, thumbsDown: 0, ratings: 0, averageRating: null }),
 
   /** What was discovered, most often first. Needs the `goal_identified` event. */
   topGoals: z.array(z.object({ goal: z.string(), name: z.string(), count: z.number().int() })),
@@ -510,6 +532,21 @@ export const notificationSchema = z.object({
   subscriptions: z.number().int(),
   delivered: z.number().int(),
 })
+
+/** §44 — one piece of feedback, with enough of its context to read it in the console. */
+export const feedbackItemSchema = z.object({
+  id: z.uuid(),
+  caseId: z.uuid(),
+  kind: z.enum(['turn', 'session']),
+  rating: z.number().int(),
+  comment: z.string().nullable(),
+  replyTo: z.string().nullable(),
+  /** The reply the thumbs was on, trimmed, when it was a turn. */
+  about: z.string().nullable(),
+  createdAt: z.string(),
+})
+export const feedbackListSchema = z.object({ items: z.array(feedbackItemSchema) })
+export type FeedbackItem = z.infer<typeof feedbackItemSchema>
 
 export const adminCaseSchema = z.object({
   caseId: z.uuid(),
@@ -639,6 +676,8 @@ export const adminCaseSchema = z.object({
       createdAt: z.string(),
     }),
   ),
+  /** §44: what this customer said about it, newest first. */
+  feedback: z.array(feedbackItemSchema),
   /**
    * What the needs engine makes of this case, and what the bank has committed to watching
    * for. The presenter can answer "why did Baz offer that" without reading the prompt.
@@ -793,3 +832,16 @@ export const catalogueWriteSchema = z.object({ version: z.number().int().nonnega
 export const catalogueLoadSchema = z.object({ inserted: z.number().int().nonnegative() })
 export type CatalogueWrite = z.infer<typeof catalogueWriteSchema>
 export type CatalogueLoad = z.infer<typeof catalogueLoadSchema>
+
+export const collaboratorSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.string(),
+  organisation: z.string().nullable(),
+  role: z.string().nullable(),
+  interest: z.string(),
+  source: z.string().nullable(),
+  createdAt: z.string(),
+})
+export const collaboratorListSchema = z.object({ items: z.array(collaboratorSchema) })
+export type Collaborator = z.infer<typeof collaboratorSchema>

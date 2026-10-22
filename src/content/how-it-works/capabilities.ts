@@ -176,8 +176,8 @@ export const capabilities: readonly Capability[] = [
   // ---- For the bank ----
   {
     group: 'bank',
-    title: 'A console with seven sections',
-    body: 'Cases, Goals & needs, Products & rates, Analytics, Digital forms, Guardrails, Persona. Behind a real sign-in and an admin role checked on every call.',
+    title: 'A console with nine sections',
+    body: 'Cases, Goals & needs, Products & rates, Analytics, Digital forms, Guardrails, Persona, Feedback, Collaborators. Behind a real sign-in and an admin role checked on every call.',
     claim: 'poc',
     source: 'src/admin/AdminConsole.tsx',
   },

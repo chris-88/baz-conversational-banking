@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { ChatBubble } from '@/baz/ChatBubble'
 import { TypingBubble } from '@/baz/TypingBubble'
+import { TurnFeedback } from '@/baz/TurnFeedback'
 import { Composer } from '@/baz/Composer'
 import { SuggestionList, type Suggestion } from '@/baz/SuggestionList'
 import { ZeroState } from '@/baz/ZeroState'
@@ -54,6 +55,7 @@ export function BazChat({
   onStarted,
   onCase,
   mode = 'new',
+  source,
   footer,
   composerClassName,
   className,
@@ -72,6 +74,11 @@ export function BazChat({
   onCase?: ((caseId: string | null) => void) | undefined
   /** `fresh` knows nothing about the visitor; `demo` joins the seeded customer (§46). */
   mode?: 'new' | 'known'
+  /**
+   * Where they came in from, when the address said (§44). Sent with the first start only;
+   * the starts that follow a sign-in or a reset are the same arrival.
+   */
+  source?: string | null | undefined
   /** Shown once there is something worth carrying into the app (§29). */
   footer?: (caseId: string) => ReactNode
   /** Extra space under the composer, for shells with a fixed bar of their own. */
@@ -258,7 +265,7 @@ export function BazChat({
     if (!isBackendConfigured) return
 
     let cancelled = false
-    startSession(mode)
+    startSession(mode, source)
       .then(async (session) => {
         if (cancelled) return
         setCaseId(session.caseId)
@@ -288,8 +295,9 @@ export function BazChat({
     return () => {
       cancelled = true
     }
-    // loadFrom is stable; listed to satisfy the exhaustive-deps rule honestly.
-  }, [loadFrom, mode])
+    // loadFrom is stable; listed to satisfy the exhaustive-deps rule honestly. `source` is
+    // read once by the screen and never changes, so it does not re-run this either.
+  }, [loadFrom, mode, source])
 
   useEffect(() => {
     onCase?.(caseId)
@@ -789,7 +797,7 @@ export function BazChat({
           const endsRun =
             next === undefined || next.kind !== 'message' || next.author !== entry.author
 
-          return (
+          const bubble = (
             <ChatBubble
               key={entry.id}
               author={entry.author}
@@ -801,6 +809,24 @@ export function BazChat({
             >
               <MessageText text={entry.text} />
             </ChatBubble>
+          )
+
+          /*
+           * Thumbs under a reply, once it is a row (§44).
+           *
+           * Only Baz's turns, and only with a message id: a reply still streaming has none,
+           * so the thumbs appear when the turn finishes and not under half a sentence. The
+           * thinking bubble and the system notes never reach here.
+           */
+          if (entry.author !== 'baz' || entry.messageId === undefined || caseId === null) {
+            return bubble
+          }
+
+          return (
+            <div key={entry.id} className="space-y-1">
+              {bubble}
+              <TurnFeedback caseId={caseId} messageId={entry.messageId} />
+            </div>
           )
         })}
 

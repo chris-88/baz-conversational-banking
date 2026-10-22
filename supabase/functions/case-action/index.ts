@@ -905,6 +905,56 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       break
     }
 
+    /**
+     * §44: what they thought of it.
+     *
+     * A thumbs lands on one of Baz's replies, so the message has to be one of Baz's and on
+     * this case: a thumbs on the customer's own line, or on a reply from somebody else's
+     * conversation, is refused as not found rather than written against the wrong thing. The
+     * summary is for the confirmation line only; the client does not send it as a turn, and
+     * the next turn's digest does not mention it, because the model has nothing to add to a
+     * rating.
+     */
+    case 'give_feedback': {
+      if (action.kind === 'turn') {
+        const message = await admin
+          .from('messages')
+          .select('id')
+          .eq('id', action.messageId)
+          .eq('case_id', caseId)
+          .eq('role', 'baz')
+          .maybeSingle()
+        if (!message.data) return errorResponse('not_found', 'That reply is not on this case.')
+      }
+
+      mustWrite(
+        await admin.from('feedback').insert({
+          case_id: caseId,
+          participant_id: session.participant_id,
+          message_id: action.kind === 'turn' ? action.messageId : null,
+          kind: action.kind,
+          rating: action.rating,
+          comment: action.comment === undefined || action.comment.length === 0 ? null : action.comment,
+          reply_to: action.kind === 'session' ? (action.replyTo ?? null) : null,
+        }),
+        'the feedback',
+      )
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'feedback_given',
+        actor: 'customer',
+        payload: {
+          kind: action.kind,
+          rating: action.rating,
+          ...(action.kind === 'turn' ? { messageId: action.messageId } : {}),
+        },
+      })
+
+      summary = 'Thanks, noted.'
+      break
+    }
+
     case 'pause_application':
     case 'resume_application': {
       const application = findApplication(loaded, action.applicationId)

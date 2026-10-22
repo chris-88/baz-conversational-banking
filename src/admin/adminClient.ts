@@ -16,6 +16,8 @@ import { callFunction } from '@/lib/callFunction'
 import {
   analyticsSchema,
   catalogueOverridesSchema,
+  collaboratorListSchema,
+  feedbackListSchema,
   guardrailTestSchema,
   personaPreviewSchema,
   purgeResultSchema,
@@ -25,7 +27,11 @@ import {
   type PersonaPreview,
   type Period,
   type PurgeResult,
-} from '@contracts/admin.ts' 
+} from '@contracts/admin.ts'
+import type { z } from 'zod'
+
+type FeedbackList = z.infer<typeof feedbackListSchema>
+type CollaboratorList = z.infer<typeof collaboratorListSchema>
 import {
   adminCaseSchema,
   adminOverviewSchema,
@@ -56,6 +62,12 @@ export const adminApi = {
     guardrailTestSchema.parse(await call({ action: 'test_guardrail', message })),
   analytics: async (period: Period): Promise<Analytics> =>
     analyticsSchema.parse(await call({ action: 'analytics', period })),
+
+  // §44: what people said about it, and who asked to work on it.
+  listFeedback: async (period: Period): Promise<FeedbackList> =>
+    feedbackListSchema.parse(await call({ action: 'list_feedback', period })),
+  listCollaborators: async (): Promise<CollaboratorList> =>
+    collaboratorListSchema.parse(await call({ action: 'list_collaborators' })),
   catalogueOverrides: async (): Promise<CatalogueOverrides> =>
     catalogueOverridesSchema.parse(await call({ action: 'catalogue_overrides' })),
 

@@ -216,6 +216,7 @@ export type Database = {
           kind: string
           label: string | null
           last_seen_at: string | null
+          source: string | null
           updated_at: string
         }
         Insert: {
@@ -226,6 +227,7 @@ export type Database = {
           kind?: string
           label?: string | null
           last_seen_at?: string | null
+          source?: string | null
           updated_at?: string
         }
         Update: {
@@ -236,6 +238,7 @@ export type Database = {
           kind?: string
           label?: string | null
           last_seen_at?: string | null
+          source?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -287,6 +290,42 @@ export type Database = {
           summary?: string | null
           updated_at?: string
           version?: number
+        }
+        Relationships: []
+      }
+      collaborators: {
+        Row: {
+          consent: boolean
+          created_at: string
+          email: string
+          id: string
+          interest: string
+          name: string
+          organisation: string | null
+          role: string | null
+          source: string | null
+        }
+        Insert: {
+          consent?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          interest: string
+          name: string
+          organisation?: string | null
+          role?: string | null
+          source?: string | null
+        }
+        Update: {
+          consent?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          interest?: string
+          name?: string
+          organisation?: string | null
+          role?: string | null
+          source?: string | null
         }
         Relationships: []
       }
@@ -559,6 +598,64 @@ export type Database = {
             columns: ["superseded_by"]
             isOneToOne: false
             referencedRelation: "facts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          case_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          kind: string
+          message_id: string | null
+          participant_id: string | null
+          rating: number
+          reply_to: string | null
+        }
+        Insert: {
+          case_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          message_id?: string | null
+          participant_id?: string | null
+          rating: number
+          reply_to?: string | null
+        }
+        Update: {
+          case_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message_id?: string | null
+          participant_id?: string | null
+          rating?: number
+          reply_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
             referencedColumns: ["id"]
           },
         ]

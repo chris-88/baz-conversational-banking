@@ -97,11 +97,22 @@ describe('the measured counts', () => {
     expect(MEASURED.guardrailCases).toBe(cases.length)
   })
 
-  it('names the seven console sections as the console does', () => {
+  it('names the nine console sections as the console does', () => {
     const console_ = readFileSync('src/admin/AdminConsole.tsx', 'utf8')
     const tile = capabilities.find((capability) => capability.title.startsWith('A console with'))
     expect(tile).toBeDefined()
-    for (const label of ['Cases', 'Goals & needs', 'Products & rates', 'Analytics', 'Digital forms', 'Guardrails', 'Persona']) {
+    expect(tile?.title).toBe('A console with nine sections')
+    for (const label of [
+      'Cases',
+      'Goals & needs',
+      'Products & rates',
+      'Analytics',
+      'Digital forms',
+      'Guardrails',
+      'Persona',
+      'Feedback',
+      'Collaborators',
+    ]) {
       expect(console_).toContain(`label: '${label}'`)
       expect(tile?.body).toContain(label)
     }

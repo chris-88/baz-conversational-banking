@@ -6,6 +6,7 @@ import { BazWordmark } from '@/baz/BazWordmark'
 import { ConversationMenu } from '@/baz/ConversationMenu'
 import { IdentityBadge } from '@/baz/IdentityBadge'
 import { rememberPresenterKey } from '@/lib/session'
+import { readArrivalSource, stripArrivalSourceFromPath } from '@/lib/arrival'
 import { routes } from '@/app/routes'
 import { cn } from '@/lib/utils'
 import { useViewportHeight } from '@/lib/useViewportHeight'
@@ -56,6 +57,24 @@ export function BazScreen(): ReactNode {
     next.delete('presenter')
     setSearchParams(next, { replace: true })
   }, [presenter, searchParams, setSearchParams])
+
+  /*
+   * Where they came in from, read once and then taken out of the address the same way (§44).
+   *
+   * Read into state on the first render rather than from the URL each time, because the
+   * effect below removes it from the URL and the conversation still needs it for the first
+   * start. It can sit before the hash (`/?src=qr#/baz`, which is what a printed code encodes)
+   * or inside it; both are stripped.
+   */
+  const [source] = useState(() => readArrivalSource())
+  const hashSource = searchParams.get('src')
+  useEffect(() => {
+    stripArrivalSourceFromPath()
+    if (hashSource === null) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('src')
+    setSearchParams(next, { replace: true })
+  }, [hashSource, searchParams, setSearchParams])
 
   return (
     /*
@@ -116,6 +135,7 @@ export function BazScreen(): ReactNode {
         className="mx-auto flex w-full max-w-md min-h-0 flex-1 flex-col"
         openingMessage={searchParams.get('say')}
         mode="new"
+        source={source}
         /*
          * The old greeting opened by denying it was another useless bot, which is a strange
          * thing to lead with: it raises the doubt before anyone had it, and then promises only

@@ -16,6 +16,7 @@ import {
   PERIOD_DAYS,
   type AdminCase,
   type AdminOverview,
+  type FeedbackItem,
   type GuardrailTest,
 } from '../_shared/contracts/admin.ts'
 import Anthropic from '@anthropic-ai/sdk'
@@ -86,6 +87,55 @@ import { buildPlan } from '../_shared/domain/needs/plan.ts'
 import { env } from '../_shared/env.ts'
 import { LINKABLE_BANKS } from '../_shared/contracts/cards.ts'
 import { maskIban } from '../_shared/domain/open-banking/synthesise.ts'
+import { cameBack, countJourney, countStalls, summariseFeedback } from '../_shared/domain/arrivals.ts'
+
+/**
+ * §44: feedback as the console reads it, newest first.
+ *
+ * The reply a thumbs was on comes along, trimmed, because a thumbs down with nothing beside it
+ * says only that something was wrong; the first line of what Baz said is usually enough to
+ * see what. Read through the message's own row rather than copied at the time, so a reply
+ * that was retracted or edited is shown as it is, not as it was.
+ */
+async function loadFeedback(
+  admin: Db,
+  where: { caseId?: string; since?: string },
+): Promise<{ items: FeedbackItem[]; error: string | null }> {
+  let query = admin
+    .from('feedback')
+    .select('id, case_id, kind, rating, comment, reply_to, created_at, messages(content)')
+    .order('created_at', { ascending: false })
+  if (where.caseId !== undefined) query = query.eq('case_id', where.caseId)
+  if (where.since !== undefined) query = query.gte('created_at', where.since)
+
+  const result = await query
+  if (result.error !== null) return { items: [], error: result.error.message }
+
+  const rows = result.data as unknown as {
+    id: string
+    case_id: string
+    kind: string
+    rating: number
+    comment: string | null
+    reply_to: string | null
+    created_at: string
+    messages: { content: string } | null
+  }[]
+
+  return {
+    error: null,
+    items: rows.map((row) => ({
+      id: row.id,
+      caseId: row.case_id,
+      kind: row.kind === 'turn' ? 'turn' : 'session',
+      rating: row.rating,
+      comment: row.comment,
+      replyTo: row.reply_to,
+      about: row.kind === 'turn' && row.messages !== null ? row.messages.content.slice(0, 160) : null,
+      createdAt: row.created_at,
+    })),
+  }
+}
 
 /**
  * Copy the published file into its table, leaving any row already there alone (§51).
@@ -915,6 +965,111 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         count: outcomeCounts.get(outcome) ?? 0,
       })).filter((entry) => entry.count > 0)
 
+      /*
+       * §44: the journey after a show and tell: the cases that arrived in the period, and
+       * how far each got.
+       *
+       * A cohort, not a window: as with the outcomes, the period decides which cases are
+       * counted and the whole of each case decides how far it got. Somebody who scanned the
+       * code on the day and submitted a week later is a submission on the day they arrived,
+       * which is the day the funnel is about. `all` has no start, so nobody is left out of it.
+       *
+       * Test cases are left out of everything here. The probes create them, say something and
+       * delete them, and a funnel that counted them would show a room full of people who were
+       * never there.
+       */
+      const testCases = await admin.from('cases').select('id').eq('kind', 'test')
+      if (testCases.error !== null) return errorResponse('conflict', testCases.error.message)
+      const testIds = new Set((testCases.data as { id: string }[]).map((row) => row.id))
+
+      let arrivedQuery = admin.from('cases').select('id, source').neq('kind', 'test')
+      if (days !== null) arrivedQuery = arrivedQuery.gte('created_at', from.toISOString())
+      const arrivedRows = await arrivedQuery
+      if (arrivedRows.error !== null) return errorResponse('conflict', arrivedRows.error.message)
+
+      const arrived = arrivedRows.data as { id: string; source: string | null }[]
+      const arrivedIds = arrived.map((row) => row.id)
+
+      const [arrivalEvents, arrivalMessages, feedbackRows] = await Promise.all([
+        arrivedIds.length === 0
+          ? Promise.resolve({ data: [], error: null })
+          : admin
+              .from('events')
+              .select('case_id, type, created_at')
+              .in('case_id', arrivedIds)
+              .in('type', [
+                'plan_created',
+                'application_created',
+                'application_submitted',
+                'customer_signed_in',
+                'notification_sent',
+                'feedback_given',
+              ]),
+        arrivedIds.length === 0
+          ? Promise.resolve({ data: [], error: null })
+          : admin
+              .from('messages')
+              .select('case_id, role, created_at')
+              .in('case_id', arrivedIds),
+        admin
+          .from('feedback')
+          .select('case_id, kind, rating')
+          .gte('created_at', from.toISOString())
+          .lt('created_at', to.toISOString()),
+      ])
+
+      for (const result of [arrivalEvents, arrivalMessages, feedbackRows]) {
+        if (result.error !== null) return errorResponse('conflict', result.error.message)
+      }
+
+      const eventsByCase = new Map<string, { types: Set<string>; notifiedAt: string[] }>()
+      for (const row of arrivalEvents.data as { case_id: string; type: string; created_at: string }[]) {
+        const entry = eventsByCase.get(row.case_id) ?? { types: new Set<string>(), notifiedAt: [] }
+        entry.types.add(row.type)
+        if (row.type === 'notification_sent') entry.notifiedAt.push(row.created_at)
+        eventsByCase.set(row.case_id, entry)
+      }
+
+      const messagesByCase = new Map<string, { customer: number; at: string[] }>()
+      for (const row of arrivalMessages.data as { case_id: string; role: string; created_at: string }[]) {
+        const entry = messagesByCase.get(row.case_id) ?? { customer: 0, at: [] }
+        if (row.role === 'customer') entry.customer += 1
+        if (row.role === 'customer' || row.role === 'baz') entry.at.push(row.created_at)
+        messagesByCase.set(row.case_id, entry)
+      }
+
+      const journey = countJourney(
+        arrived.map((row) => {
+          const happened = eventsByCase.get(row.id) ?? { types: new Set<string>(), notifiedAt: [] }
+          const said = messagesByCase.get(row.id) ?? { customer: 0, at: [] }
+          return {
+            eventTypes: happened.types,
+            customerMessages: said.customer,
+            cameBack: cameBack(happened.notifiedAt, said.at),
+          }
+        }),
+      )
+
+      const sourceCounts = new Map<string, number>()
+      for (const row of arrived) {
+        const source = row.source ?? 'unknown'
+        sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1)
+      }
+      const sources = [...sourceCounts.entries()]
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count)
+
+      // Stalls are events in the window, as the headline counts are, minus the probes.
+      const stalls = countStalls(
+        rows.filter((row) => !testIds.has(row.case_id)).map((row) => row.type),
+      )
+
+      const feedback = summariseFeedback(
+        (feedbackRows.data as { case_id: string; kind: string; rating: number }[]).filter(
+          (row) => !testIds.has(row.case_id),
+        ),
+      )
+
       return json(
         ok({
           period: action.period,
@@ -929,6 +1084,10 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
             ),
           ],
           funnel,
+          journey,
+          sources,
+          stalls,
+          feedback,
           topGoals,
           guardrails,
           outcomes,
@@ -2467,6 +2626,52 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       return json(ok({ transferId: transfer.id, state: 'settled', settledAt }), 200)
     }
 
+    /** §44: what people said about it, over the same periods the analytics screen offers. */
+    case 'list_feedback': {
+      const days = PERIOD_DAYS[action.period]
+      const since =
+        days === null ? undefined : new Date(Date.now() - days * 86_400_000).toISOString()
+      const feedback = await loadFeedback(admin, since === undefined ? {} : { since })
+      if (feedback.error !== null) return errorResponse('conflict', feedback.error)
+      return json(ok({ items: feedback.items }), 200)
+    }
+
+    /** §44: who asked to be contacted about working on this. Read by nobody else. */
+    case 'list_collaborators': {
+      const result = await admin
+        .from('collaborators')
+        .select('id, name, email, organisation, role, interest, source, created_at')
+        .order('created_at', { ascending: false })
+      if (result.error !== null) return errorResponse('conflict', result.error.message)
+
+      const rows = result.data as {
+        id: string
+        name: string
+        email: string
+        organisation: string | null
+        role: string | null
+        interest: string
+        source: string | null
+        created_at: string
+      }[]
+
+      return json(
+        ok({
+          items: rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            organisation: row.organisation,
+            role: row.role,
+            interest: row.interest,
+            source: row.source,
+            createdAt: row.created_at,
+          })),
+        }),
+        200,
+      )
+    }
+
     case 'inspect_case': {
       const loaded = await loadCase(admin, action.caseId, { messages: 'all' })
       if (!loaded) return errorResponse('not_found', 'No such case.')
@@ -2556,6 +2761,9 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         .eq('case_id', action.caseId)
         .order('uploaded_at', { ascending: true })
       if (documentRows.error !== null) return errorResponse('conflict', documentRows.error.message)
+
+      const feedback = await loadFeedback(admin, { caseId: action.caseId })
+      if (feedback.error !== null) return errorResponse('conflict', feedback.error)
 
       const spoken = loaded.messages.filter((message) => message.role === 'customer')
       const days = new Set(spoken.map((message) => message.createdAt.slice(0, 10)))
@@ -2794,6 +3002,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
             createdAt: transfer.createdAt,
           }
         }),
+        feedback: feedback.items,
       }
 
       return json(ok(inspected), 200)

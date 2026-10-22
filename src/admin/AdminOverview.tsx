@@ -10,6 +10,8 @@ import { CasesWorkspace } from '@/admin/CasesWorkspace'
 import { EngineScreen } from '@/admin/EngineScreen'
 import { ProductsScreen } from '@/admin/ProductsScreen'
 import { AnalyticsScreen } from '@/admin/AnalyticsScreen'
+import { FeedbackScreen } from '@/admin/FeedbackScreen'
+import { CollaboratorsScreen } from '@/admin/CollaboratorsScreen'
 import { PeriodSelect } from '@/admin/parts'
 import { ProfileScreen } from '@/admin/ProfileScreen'
 import { useAdminAuth } from '@/admin/useAdminAuth'
@@ -33,6 +35,8 @@ type Section =
   | 'catalogue'
   | 'analytics'
   | 'forms'
+  | 'feedback'
+  | 'collaborators'
   | 'profile'
 
 /** The screens that read the shared overview. The others fetch their own. */
@@ -49,6 +53,8 @@ export function AdminOverview({ section }: { readonly section?: Section }): Reac
   if (section === 'catalogue') return <ProductsScreen />
   if (section === 'forms') return <FormsScreen />
   if (section === 'analytics') return <Analytics />
+  if (section === 'feedback') return <Feedback />
+  if (section === 'collaborators') return <CollaboratorsScreen />
   if (section === 'profile') return <Profile />
 
   return <WithOverview section={section ?? 'cases'} />
@@ -73,6 +79,20 @@ function Analytics(): ReactNode {
         <PeriodSelect value={period} onChange={setPeriod} />
       </div>
       <AnalyticsScreen period={period} />
+    </div>
+  )
+}
+
+/** Same window as the rest of the console, so "this month's feedback" is this month's. */
+function Feedback(): ReactNode {
+  const [period, setPeriod] = usePeriod()
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <PeriodSelect value={period} onChange={setPeriod} />
+      </div>
+      <FeedbackScreen period={period} />
     </div>
   )
 }

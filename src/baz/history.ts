@@ -26,6 +26,8 @@ export type HistoryEntry =
       readonly id: string
       readonly author: 'baz' | 'customer'
       readonly text: string
+      /** The row's own id, which is what feedback on a reply is kept against (§44). */
+      readonly messageId?: string
     }
   | {
       readonly kind: 'card'
@@ -69,6 +71,7 @@ export async function loadHistory(caseId: string): Promise<readonly HistoryEntry
         id: message.id,
         author: message.role === 'customer' ? ('customer' as const) : ('baz' as const),
         text: message.content,
+        messageId: message.id,
       },
       ...message.cards.flatMap((raw, index): HistoryEntry[] => {
         const parsed = cardSchema.safeParse(raw)

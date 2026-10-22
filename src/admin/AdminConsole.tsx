@@ -3,7 +3,9 @@ import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router-dom'
 import {
   CompassIcon,
   ChartLineIcon,
+  HandshakeIcon,
   MessagesSquareIcon,
+  MessageSquareHeartIcon,
   ShieldAlertIcon,
   SlidersHorizontalIcon,
   FileJsonIcon,
@@ -96,6 +98,20 @@ const SECTIONS = [
     label: 'Persona',
     hint: 'How it speaks',
     icon: SlidersHorizontalIcon,
+    end: false,
+  },
+  {
+    to: routes.admin.feedback,
+    label: 'Feedback',
+    hint: 'What people said',
+    icon: MessageSquareHeartIcon,
+    end: false,
+  },
+  {
+    to: routes.admin.collaborators,
+    label: 'Collaborators',
+    hint: 'Who wants to work on this',
+    icon: HandshakeIcon,
     end: false,
   },
 ] as const

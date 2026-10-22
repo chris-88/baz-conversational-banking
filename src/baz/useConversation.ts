@@ -10,6 +10,14 @@ export type TurnEntry =
       readonly id: string
       readonly author: 'baz' | 'customer'
       readonly text: string
+      /**
+       * The persisted row, once there is one (§44).
+       *
+       * A reply streams under a local id and is only a message the server knows about when
+       * `done` names it. Feedback on a reply is kept against that id, so the thumbs appear
+       * when it arrives and not before: there is nothing to rate until the turn is over.
+       */
+      readonly messageId?: string
     }
   | {
       readonly kind: 'card'
@@ -165,8 +173,21 @@ export function useConversation(caseId: string | null) {
                 setError(event.error.message)
                 break
 
+              case 'done': {
+                // The reply is now a row. Nothing else about the entry changes, so the bubble
+                // keeps its key and only the thumbs under it appear.
+                const messageId = event.messageId
+                setEntries((current) =>
+                  current.map((entry) =>
+                    entry.id === replyId && entry.kind === 'message'
+                      ? { ...entry, messageId }
+                      : entry,
+                  ),
+                )
+                break
+              }
+
               case 'status':
-              case 'done':
                 break
             }
           },

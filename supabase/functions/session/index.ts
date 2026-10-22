@@ -584,6 +584,52 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     return await sessionFor((primary.data as any).id, target, 'primary', false)
   }
 
+  /**
+   * §44: somebody who wants to work on this.
+   *
+   * Not case activity, so no event row and no case: a collaborator is a person who read the
+   * site, not a conversation that happened. The form is public and the caller is anonymous,
+   * which is why there is a honeypot and a daily cap in front of a plain insert. The
+   * honeypot answer is `ok`, deliberately: a form that says "refused" to a bot is a form that
+   * tells the bot which field gave it away.
+   */
+  if (parsed.data.action === 'register_interest') {
+    const interest = parsed.data
+
+    if (interest.website !== undefined && interest.website.length > 0) {
+      console.warn('register_interest: honeypot filled, nothing written')
+      return json(ok({ registered: true }), 200)
+    }
+
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const recent = await admin
+      .from('collaborators')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', dayAgo)
+
+    if ((recent.count ?? 0) >= 50) {
+      return errorResponse(
+        'rate_limited',
+        'A lot of people have registered today. Try again tomorrow.',
+      )
+    }
+
+    mustWrite(
+      await admin.from('collaborators').insert({
+        name: interest.name,
+        email: interest.email,
+        organisation: interest.organisation ?? null,
+        role: interest.role ?? null,
+        interest: interest.interest,
+        consent: interest.consent,
+        source: interest.source ?? null,
+      }),
+      'the registration',
+    )
+
+    return json(ok({ registered: true }), 200)
+  }
+
   const startMode = parsed.data.action === 'start' ? parsed.data.mode : parsed.data.mode
 
   // Already attached? Return the same case — this is what makes a PWA and a browser tab land
@@ -625,9 +671,17 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
    * when they sign in, which is the same thing that happens to a real customer and the reason
    * the reuse story lands at all.
    */
+  /*
+   * Where they came in from, kept on the case from the start and never rewritten: a visit that
+   * began from the poster began from the poster whatever link they open later. `new_case`
+   * carries none, because a second conversation started from inside the first did not arrive
+   * from anywhere.
+   */
+  const source = parsed.data.action === 'start' ? (parsed.data.source ?? null) : null
+
   const created = await admin
     .from('cases')
-    .insert({ kind: 'customer', auth_level: 'anonymous', label: null })
+    .insert({ kind: 'customer', auth_level: 'anonymous', label: null, source })
     .select('id')
     .single()
 

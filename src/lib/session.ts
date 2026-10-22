@@ -4,8 +4,15 @@ import {
   listCasesResponseSchema,
   sessionResponseSchema,
   type ListCasesResponse,
+  type SessionRequest,
   type SessionResponse,
 } from '@contracts/session.ts'
+
+/** The registration as the contract defines it, without the discriminator the client adds. */
+export type RegisterInterest = Omit<
+  Extract<SessionRequest, { action: 'register_interest' }>,
+  'action'
+>
 
 /**
  * Every visitor gets an anonymous Supabase user, which `session` then maps to a participant
@@ -78,8 +85,34 @@ async function invoke(body: Record<string, unknown>): Promise<unknown> {
   }
 }
 
-export async function startSession(mode: 'new' | 'known' = 'new'): Promise<SessionResponse> {
-  return sessionResponseSchema.parse(await invoke({ action: 'start', mode }))
+/**
+ * `source` is where they came in from, when the address said (§44). Sent on the first start
+ * only: the server keeps it against the case it creates, and a re-run of `start` after a
+ * sign-in or a reset is the same person, not a second arrival.
+ */
+export async function startSession(
+  mode: 'new' | 'known' = 'new',
+  source?: string | null,
+): Promise<SessionResponse> {
+  return sessionResponseSchema.parse(
+    await invoke({
+      action: 'start',
+      mode,
+      ...(source === undefined || source === null ? {} : { source }),
+    }),
+  )
+}
+
+/**
+ * Somebody who wants to work on this (§44).
+ *
+ * Goes through `session` because that is the one function an anonymous visitor can already
+ * reach, and the public pages have no case to hang it on. The server's own message comes back
+ * on a refusal, so the form can say "too many today" or "that looked automated" in the
+ * server's words rather than guessing.
+ */
+export async function registerInterest(input: RegisterInterest): Promise<void> {
+  await invoke({ action: 'register_interest', ...input })
 }
 
 /**

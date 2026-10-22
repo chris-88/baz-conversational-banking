@@ -10,6 +10,8 @@ export const sessionRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('start'),
     mode: z.enum(['new', 'known']).default('new'),
+    /** Where they came in: `qr`, `poster`, `link`, or whatever the address carried. */
+    source: z.string().trim().max(40).optional(),
   }),
   /** §29 — hands the case to the app. The code is opaque and single-use. */
 
@@ -31,6 +33,23 @@ export const sessionRequestSchema = z.discriminatedUnion('action', [
 
   /** Leave the current conversation where it is and begin a fresh one. */
   z.object({ action: z.literal('new_case'), mode: z.enum(['new', 'known']).default('new') }),
+
+  /**
+   * Somebody who wants to be contacted about working on this, from the public site. Anonymous,
+   * so a daily cap sits in front of it and the `website` field is a honeypot a person never
+   * sees: anything in it is refused as sent.
+   */
+  z.object({
+    action: z.literal('register_interest'),
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(200),
+    organisation: z.string().trim().max(120).optional(),
+    role: z.string().trim().max(120).optional(),
+    interest: z.string().trim().min(5).max(2000),
+    consent: z.literal(true),
+    source: z.string().trim().max(40).optional(),
+    website: z.string().max(200).optional(),
+  }),
 
   /**
    * Carry the conversation across a change of auth user (§12, §28).
@@ -60,6 +79,7 @@ export const handoffResponseSchema = z.object({ code: z.string() })
 
 export const sessionStartRequestSchema = z.object({
   action: z.literal('start'),
+  source: z.string().trim().max(40).optional(),
   /**
    * `new` is somebody the bank has never met. `known` is an existing customer, signed in with
    * the details the bank already holds — the difference a real customer would feel, and where

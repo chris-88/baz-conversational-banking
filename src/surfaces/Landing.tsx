@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { InstallButton } from '@/surfaces/InstallButton'
+import { Collaborate } from '@/surfaces/Collaborate'
 import { routes } from '@/app/routes'
 import qrCode from '@/assets/qr/open-baz.svg'
 
@@ -78,6 +79,9 @@ export function Landing(): ReactNode {
             description="Plans, decisions and what you already told it carry across every conversation."
           />
         </section>
+
+        {/* After the tiles: somebody who has read what it does is the somebody this is for. */}
+        <Collaborate page="landing" className="mt-12" />
 
         {/*
           The one persistent way to the notice. Not in the chat header, which is the wordmark

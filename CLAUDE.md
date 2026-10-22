@@ -85,7 +85,7 @@ Edge Functions (service role; hold ANTHROPIC_API_KEY, VAPID keys, PRESENTER_KEY)
                 config, case inspection, metrics
 
 Postgres
-  29 tables. Core: cases, participants, participant_sessions, customers
+  31 tables. Core: cases, participants, participant_sessions, customers
   (synthetic bank-held), facts, messages, events, consents, tokens.
   Applications: applications, application_requests, application_confirmations,
   documents, product_interests.
@@ -96,6 +96,7 @@ Postgres
   product_catalogue, mortgage_rates,
   admin_users, push_subscriptions.
   Open banking, simulated: linked_accounts, linked_transactions, transfers.
+  Feedback and collaborators: feedback, collaborators.
 ```
 
 ### A Baz turn (`baz-turn`)
@@ -361,6 +362,20 @@ Gate output:
 - Notify, persona sliders and presets, domain category view, audience metrics.
 - Reset restores the canonical presenter case from `_shared/domain/seed/canonical.ts`. Build a minimal reset in M1; you will need it constantly.
 - Purge audience cases. Global kill switch that makes the gate return a "demo paused" response.
+
+## Feedback, traffic and collaborators (§44, §53)
+
+- Feedback comes from the conversation: a thumbs on a Baz reply (`give_feedback`, kind `turn`,
+  kept against the message) or a 1 to 5 rating with words from the menu (kind `session`). It
+  is never a turn: Baz does not reply to feedback. `feedback_given` is the event; the console
+  lists feedback by period and shows a turn's thumbs beside the turn.
+- A case carries `source`, the entry point it arrived through (`?src=qr|poster|link`), set on
+  creation only. The analytics screen shows the journey after a show and tell (arrived, said
+  something, kept a plan, started, submitted, signed in, came back, gave feedback), the
+  sources, where conversations stalled (the detector events) and the feedback figures.
+- Collaborators are people who asked to be contacted about taking this further: `register_interest`
+  on `session`, anonymous, with a daily cap and a honeypot field; `collaborators` is read by
+  the console only, with CSV export. Not case activity, so no event.
 
 ## Audience (§45 to §47)
 

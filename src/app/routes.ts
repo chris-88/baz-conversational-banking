@@ -36,6 +36,9 @@ export const routes = {
     analytics: '/admin/analytics',
     forms: '/admin/forms',
     formApplication: (id: string) => `/admin/forms/${id}`,
+    /** §44: what people said about it, and who asked to work on it. */
+    feedback: '/admin/feedback',
+    collaborators: '/admin/collaborators',
     profile: '/admin/profile',
   },
 } as const

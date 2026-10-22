@@ -19,6 +19,7 @@ import { Build } from './how-it-works/Build'
 import { Lessons } from './how-it-works/Lessons'
 import { Economics } from './how-it-works/Economics'
 import { FullReplay } from './how-it-works/FullReplay'
+import { Collaborate } from '@/surfaces/Collaborate'
 
 /**
  * The explainer: what this is, how it works, how it got here, and what it costs.
@@ -117,6 +118,14 @@ export function HowItWorks(): ReactNode {
             <Lessons />
             <Economics />
             <FullReplay />
+
+            {/*
+              The ask, last. Somebody who has read to the end of a case study is somebody
+              deciding whether to do something about it, and the form is where they can.
+            */}
+            <div className="border-t pt-14 sm:pt-20">
+              <Collaborate page="how-it-works" />
+            </div>
           </main>
         </div>
       </div>

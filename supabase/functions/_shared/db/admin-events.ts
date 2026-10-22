@@ -36,6 +36,7 @@ const SIGNALS = new Set([
   'accounts_revoked',
   'transfer_initiated',
   'transfer_settled',
+  'feedback_given',
 ])
 
 const text = (payload: Record<string, unknown>, key: string): string | null => {
@@ -164,6 +165,16 @@ export function describeAdminEvent(
         return `Transfer settled: ${money(payload, 'amount') ?? 'an amount'} arrived in ${
           text(payload, 'to') ?? 'the application'
         }`
+      // §44: a thumbs on one reply, or a mark out of five for the whole conversation.
+      case 'feedback_given': {
+        const rating = typeof payload['rating'] === 'number' ? payload['rating'] : null
+        if (payload['kind'] === 'turn') {
+          return `Gave a thumbs ${rating !== null && rating < 0 ? 'down' : 'up'} on a reply`
+        }
+        return rating === null
+          ? 'Rated the conversation'
+          : `Rated the conversation ${String(rating)} of 5`
+      }
       default:
         // Readable rather than raw, so a new event type is still legible before anyone
         // writes a sentence for it.

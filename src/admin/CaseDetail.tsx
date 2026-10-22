@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { LandmarkIcon, Trash2Icon } from 'lucide-react'
+import { LandmarkIcon, MessageSquareHeartIcon, Trash2Icon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,6 +30,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { HandoffNote } from '@/admin/HandoffNote'
 import { CaseInspector } from '@/admin/CaseInspector'
 import { DemoActions } from '@/admin/DemoActions'
+import { Rating } from '@/admin/FeedbackScreen'
 import type { AdminCase } from '@contracts/admin.ts'
 
 /**
@@ -94,8 +95,9 @@ export function CaseDetail({
       </div>
 
       <div className="@container min-h-0 flex-1 overflow-y-auto p-4">
-        <TabsContent value="conversation">
+        <TabsContent value="conversation" className="space-y-6">
           <Conversation conversation={data.conversation} />
+          <CaseFeedback feedback={data.feedback} />
         </TabsContent>
 
         <TabsContent value="act" className="space-y-6">
@@ -218,6 +220,66 @@ function Turn({ message }: { readonly message: AdminCase['conversation'][number]
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * What this customer said about it (§44).
+ *
+ * A list under the transcript rather than a thumb beside each turn: the DTO carries the
+ * reply's trimmed text with each piece of feedback but no message id, and the turns above
+ * carry no id either, so there is nothing to join on. The quoted line is enough to find the
+ * reply by eye in a conversation this length.
+ */
+function CaseFeedback({ feedback }: { readonly feedback: AdminCase['feedback'] }): ReactNode {
+  if (feedback.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquareHeartIcon className="size-4" />
+          Feedback
+        </CardTitle>
+        <CardDescription>
+          {feedback.length === 1 ? 'One thing' : `${String(feedback.length)} things`} this customer
+          said about it. Nothing here was shown to Baz.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y">
+          {feedback.map((item) => (
+            <li key={item.id} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Rating item={item} />
+                <Badge variant="outline" className="text-2xs">
+                  {item.kind === 'turn' ? 'reply' : 'conversation'}
+                </Badge>
+                <span className="text-muted-foreground text-xs">
+                  {item.createdAt.slice(0, 16).replace('T', ' ')}
+                </span>
+                {item.replyTo !== null && (
+                  <a
+                    href={`mailto:${item.replyTo}`}
+                    className="text-primary text-xs underline-offset-4 hover:underline"
+                  >
+                    {item.replyTo}
+                  </a>
+                )}
+              </div>
+              {item.comment !== null && item.comment.length > 0 && (
+                <p className="text-sm whitespace-pre-wrap">{item.comment}</p>
+              )}
+              {item.about !== null && item.about.length > 0 && (
+                <blockquote className="text-muted-foreground border-l-2 pl-3 text-xs leading-relaxed">
+                  {item.about}
+                </blockquote>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   )
 }
 

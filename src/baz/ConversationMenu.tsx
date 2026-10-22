@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  MessageSquareHeart,
   Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,7 @@ import { listCases, startNewCase, switchCase } from '@/lib/session'
 import { pushPermission, subscribeToPush, type SubscribeResult } from '@/lib/push'
 import { ANONYMOUS, currentIdentity, lastKnownAddress, signOutIdentity } from '@/lib/identity'
 import { SignInForm } from '@/baz/SignInForm'
+import { FeedbackSheet } from '@/baz/FeedbackSheet'
 import { InstallSteps } from '@/baz/InstallSteps'
 import { isInstalled, platform } from '@/lib/installed'
 import { supabase } from '@/lib/supabase'
@@ -404,6 +406,25 @@ export function ConversationMenu({
                 That conversation would not open. {goTo.error.message}
               </p>
             )}
+          </section>
+
+          <Separator />
+
+          {/*
+            Asked for here, not in the transcript (§44). The thumbs under each reply are about
+            one answer; this is about the whole thing, and the menu is the one place that is
+            about the conversation rather than in it.
+          */}
+          <section className="p-4">
+            <h3 className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+              <MessageSquareHeart className="size-3.5" />
+              Feedback
+            </h3>
+            <p className="text-muted-foreground mb-2.5 text-xs leading-relaxed">
+              This is a prototype, and what you make of it is the point. A person reads every
+              word.
+            </p>
+            <FeedbackSheet caseId={caseId} />
           </section>
         </div>
 

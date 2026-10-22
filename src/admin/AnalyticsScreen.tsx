@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { StarIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ChartContainer,
@@ -44,10 +45,11 @@ const SPARKS = {
 /**
  * What the console has actually seen (§9).
  *
- * Seven panels, not the spec's nine. Channel mix and new-versus-returning are not here because
- * there is no channel field and no identity across sessions, and §9 is explicit that a dashboard
- * should not be populated with numbers that have nothing behind them. Two empty panels would say
- * less about the product than their absence does.
+ * Seven panels, not the spec's nine, plus the four about arrivals added after the show and
+ * tell (§44). Channel mix and new-versus-returning are not here because there is no channel
+ * field and no identity across sessions, and §9 is explicit that a dashboard should not be
+ * populated with numbers that have nothing behind them. Two empty panels would say less about
+ * the product than their absence does.
  */
 export function AnalyticsScreen({ period }: { readonly period: Period }): ReactNode {
   const analytics = useQuery({
@@ -131,6 +133,8 @@ function Panels({ data }: { readonly data: Analytics }): ReactNode {
       </div>
 
       <Insights data={data} />
+
+      <Arrivals data={data} />
 
       {nothing ? (
         <Empty className="border border-dashed py-16">
@@ -230,6 +234,176 @@ function Insights({ data }: { readonly data: Analytics }): ReactNode {
         </Card>
       ))}
     </div>
+  )
+}
+
+/**
+ * What happened after the show and tell (§44).
+ *
+ * Four panels about arrivals rather than applications: how far people got, where they came
+ * from, where the conversation stopped, and what they said. Counted from cases rather than
+ * from messages, so the first step includes the people who opened Baz and typed nothing,
+ * which is exactly the drop worth seeing. Shown even when nobody spoke, for that reason.
+ */
+function Arrivals({ data }: { readonly data: Analytics }): ReactNode {
+  const arrived = data.journey.reduce((most, step) => Math.max(most, step.count), 0)
+  const anyFeedback =
+    data.feedback.thumbsUp + data.feedback.thumbsDown + data.feedback.ratings > 0
+
+  if (arrived === 0 && data.sources.length === 0 && !anyFeedback) return null
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Panel
+        title="Where arrivals got to"
+        description="Each step counts the cases that reached it. The grey figure is the drop from the step before."
+      >
+        <Journey steps={data.journey} />
+      </Panel>
+
+      <div className="grid gap-4">
+        <Panel
+          title="Where they came from"
+          description="The source on the address they arrived by. Unknown is a plain link, or a code printed before there was one."
+        >
+          <Sources sources={data.sources} />
+        </Panel>
+
+        <FeedbackTile feedback={data.feedback} />
+      </div>
+
+      <Panel
+        title="Where it stalled"
+        description="The point a conversation stopped moving, by what the detectors saw."
+      >
+        <Stalls stalls={data.stalls} />
+      </Panel>
+    </div>
+  )
+}
+
+/** The same bars as the application funnel, with the drop said as a count as well as a share. */
+function Journey({ steps }: { readonly steps: Analytics['journey'] }): ReactNode {
+  const widest = Math.max(...steps.map((step) => step.count), 1)
+
+  if (steps.length === 0 || steps.every((step) => step.count === 0)) {
+    return <Nothing>Nobody has arrived in this window.</Nothing>
+  }
+
+  return (
+    <div className="space-y-3">
+      {steps.map((step, index) => {
+        const previous = steps[index - 1]
+        const dropped =
+          previous === undefined || previous.count === 0 ? null : previous.count - step.count
+
+        return (
+          <div key={step.step} className="space-y-1">
+            <div className="flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 text-sm">{step.label}</span>
+              {dropped !== null && dropped > 0 && previous !== undefined && (
+                <span className="text-muted-foreground tabular text-2xs">
+                  −{dropped} ({Math.round((dropped / previous.count) * 100)}%)
+                </span>
+              )}
+              <span className="tabular text-sm font-medium">{step.count}</span>
+            </div>
+            <Progress value={(step.count / widest) * 100} className="h-2" />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Sources({ sources }: { readonly sources: Analytics['sources'] }): ReactNode {
+  if (sources.length === 0) return <Nothing>No arrivals in this window.</Nothing>
+
+  const most = Math.max(...sources.map((entry) => entry.count), 1)
+  const total = sources.reduce((sum, entry) => sum + entry.count, 0)
+
+  return (
+    <div className="space-y-3">
+      {sources.map((entry) => (
+        <div key={entry.source} className="space-y-1">
+          <div className="flex items-baseline gap-2">
+            <Badge variant="secondary" className="text-2xs shrink-0">
+              {entry.source}
+            </Badge>
+            <span className="flex-1" />
+            <span className="text-muted-foreground tabular text-2xs">
+              {Math.round((entry.count / total) * 100)}%
+            </span>
+            <span className="tabular text-sm font-medium">{entry.count}</span>
+          </div>
+          <Progress value={(entry.count / most) * 100} className="h-2" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Stalls({ stalls }: { readonly stalls: Analytics['stalls'] }): ReactNode {
+  if (stalls.length === 0 || stalls.every((entry) => entry.count === 0)) {
+    return <Nothing>Nothing stalled in this window, or nothing was detected.</Nothing>
+  }
+
+  const most = Math.max(...stalls.map((entry) => entry.count), 1)
+
+  return (
+    <div className="space-y-3">
+      {stalls.map((entry) => (
+        <div key={entry.type} className="space-y-1">
+          <div className="flex items-baseline gap-2">
+            <span className="min-w-0 flex-1 text-sm">{entry.label}</span>
+            <span className="tabular text-sm font-medium">{entry.count}</span>
+          </div>
+          <Progress value={(entry.count / most) * 100} className="h-2" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Three figures in one card rather than three cards.
+ *
+ * Thumbs up and down are one pair, and a rating is a different question asked in a different
+ * place, so they sit together under one heading and the metric row above stays four wide.
+ */
+function FeedbackTile({ feedback }: { readonly feedback: Analytics['feedback'] }): ReactNode {
+  const total = feedback.thumbsUp + feedback.thumbsDown
+
+  return (
+    <Card className="gap-1 py-4 lg:gap-2 lg:py-6">
+      <CardHeader className="px-4 lg:px-6">
+        <CardDescription className="text-xs lg:text-sm">Feedback</CardDescription>
+        <CardTitle className="tabular flex flex-wrap items-baseline gap-x-4 gap-y-1 text-2xl lg:text-3xl">
+          <span className="inline-flex items-baseline gap-1.5">
+            <ThumbsUpIcon className="text-success size-4 self-center" aria-hidden />
+            {feedback.thumbsUp}
+          </span>
+          <span className="inline-flex items-baseline gap-1.5">
+            <ThumbsDownIcon className="text-destructive size-4 self-center" aria-hidden />
+            {feedback.thumbsDown}
+          </span>
+          <span className="inline-flex items-baseline gap-1.5">
+            <StarIcon className="fill-primary text-primary size-4 self-center" aria-hidden />
+            {feedback.averageRating === null ? '–' : feedback.averageRating.toFixed(1)}
+            <span className="text-muted-foreground text-sm font-normal">
+              of {String(feedback.ratings)}
+            </span>
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 lg:px-6">
+        <p className="text-muted-foreground text-xs">
+          {total === 0 && feedback.ratings === 0
+            ? 'Nobody has rated a reply or the conversation yet.'
+            : `${String(total)} ${total === 1 ? 'thumb' : 'thumbs'} on replies; the average is of ${String(feedback.ratings)} ${feedback.ratings === 1 ? 'rating' : 'ratings'} out of five from the menu.`}
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
