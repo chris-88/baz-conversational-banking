@@ -916,7 +916,14 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
      * rating.
      */
     case 'give_feedback': {
-      if (action.kind === 'turn') {
+      // What each kind requires, since the schema carries both in one member.
+      if (action.kind === 'turn' && (action.messageId === undefined || Math.abs(action.rating) !== 1)) {
+        return errorResponse('bad_request', 'A thumbs needs the reply it is on and is up or down.')
+      }
+      if (action.kind === 'session' && (action.rating < 1 || action.rating > 5)) {
+        return errorResponse('bad_request', 'A rating is one to five.')
+      }
+      if (action.kind === 'turn' && action.messageId !== undefined) {
         const message = await admin
           .from('messages')
           .select('id')
@@ -931,7 +938,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         await admin.from('feedback').insert({
           case_id: caseId,
           participant_id: session.participant_id,
-          message_id: action.kind === 'turn' ? action.messageId : null,
+          message_id: action.kind === 'turn' ? (action.messageId ?? null) : null,
           kind: action.kind,
           rating: action.rating,
           comment: action.comment === undefined || action.comment.length === 0 ? null : action.comment,
@@ -947,7 +954,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         payload: {
           kind: action.kind,
           rating: action.rating,
-          ...(action.kind === 'turn' ? { messageId: action.messageId } : {}),
+          ...(action.kind === 'turn' && action.messageId !== undefined ? { messageId: action.messageId } : {}),
         },
       })
 

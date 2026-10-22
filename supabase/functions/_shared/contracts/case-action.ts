@@ -170,16 +170,12 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('give_feedback'),
     caseId,
-    kind: z.literal('turn'),
-    messageId: z.uuid(),
-    rating: z.union([z.literal(1), z.literal(-1)]),
-    comment: z.string().trim().max(500).optional(),
-  }),
-  z.object({
-    action: z.literal('give_feedback'),
-    caseId,
-    kind: z.literal('session'),
-    rating: z.number().int().min(1).max(5),
+    // One member, because a discriminated union cannot carry the same action twice. What
+    // each kind requires (a message and a thumbs for `turn`, one to five for `session`) is
+    // checked by the handler, which refuses with a reason rather than a schema error.
+    kind: z.enum(['turn', 'session']),
+    messageId: z.uuid().optional(),
+    rating: z.number().int().min(-1).max(5),
     comment: z.string().trim().max(2000).optional(),
     replyTo: z.string().trim().email().max(200).optional(),
   }),
