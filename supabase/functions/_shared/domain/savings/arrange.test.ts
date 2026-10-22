@@ -137,10 +137,16 @@ describe('arranging a customer’s saving across the catalogue', () => {
     expect(found('savings.advantage_fixed', result)?.termMonths).toBe(18)
   })
 
-  /** No date at all means no basis for locking money away. */
-  it('will not lock money up when it does not know when they need it', () => {
+  /** No date at all means no basis for locking money away, so the date is asked for first. */
+  it('asks when they need the money before leaving the fixed term out', () => {
     const result = arrange({ ...dublin, monthsToTarget: null }, CATALOGUE)
     expect(found('savings.advantage_fixed', result)).toBeUndefined()
+    expect(result?.needs.map((need) => need.key)).toEqual(['goals.targetDate'])
+  })
+
+  it('does not ask for a date when there is no lump sum to lock away', () => {
+    const result = arrange({ ...dublin, lumpSum: null, monthsToTarget: null }, CATALOGUE)
+    expect(result?.needs ?? []).toEqual([])
   })
 })
 

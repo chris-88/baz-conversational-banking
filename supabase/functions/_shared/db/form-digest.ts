@@ -153,7 +153,9 @@ export function formDigestSection(digests: readonly FormDigest[]): string {
   return [
     'THE BANK FORM BEHIND THIS APPLICATION',
     'These are the questions the real application form still needs. Ask for them in',
-    'conversation, a couple at a time, in your own words. Never read the list out, never',
+    'conversation, two or three at a time grouped by what they are about (who you are, where',
+    'you live, your work, the money), in your own words, and say roughly how many are left so',
+    'it does not feel endless. Anything the facts already answer, answer from them. Never read the list out, never',
     'present them as a form, and never ask for anything already filled in. Where a question',
     'has a fixed set of answers, the customer must end up on one of them.',
     'When the customer answers one, record it with record_form_answers in the same turn,',

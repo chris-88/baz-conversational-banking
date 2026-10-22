@@ -44,6 +44,12 @@ export type StageGuide = {
 
 /** Available in every stage: recording what somebody says, and saying where things stand. */
 const ALWAYS: readonly ToolName[] = ['record_facts', 'show_status']
+/**
+ * The two turns before anything can have started. Offered `show_status` there, the model
+ * reached for it on the first and second turn of most conversations, was refused, and the
+ * refusal's "nothing to track" leaked into the reply.
+ */
+const RECORD_ONLY: readonly ToolName[] = ['record_facts']
 
 /**
  * Open banking, simulated: once a conversation is past the fork. Not in the opening or while
@@ -68,7 +74,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'No products. Naming one answers the question you are about to ask them.',
       'No plan card. They have not said they want a plan.',
     ],
-    tools: ALWAYS,
+    tools: RECORD_ONLY,
   },
 
   direction: {
@@ -86,7 +92,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'Do not start the discovery. That is the plan branch, and they have not chosen it.',
       'Do not offer a product to move things along. That decides it for them.',
     ],
-    tools: [...ALWAYS, ...LINKING],
+    tools: [...RECORD_ONLY, ...LINKING],
   },
 
   discovering: {

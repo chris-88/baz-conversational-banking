@@ -109,7 +109,7 @@ export type Allocation = {
 
 /** A fact that would change the arrangement if it were known, and why it is worth asking. */
 export type ArrangementNeed = {
-  readonly key: 'mortgage.withThisBank' | 'housing.firstTimeBuyer'
+  readonly key: 'mortgage.withThisBank' | 'housing.firstTimeBuyer' | 'goals.targetDate'
   readonly why: string
 }
 
@@ -151,6 +151,27 @@ export function arrange(
   let monthlyLeft = Math.max(0, situation.monthly ?? 0)
 
   // ---- The bonus first, because it is worth more than any rate on this page -------------
+  /*
+   * A lump sum with no date is a lump sum the engine will not lock away, and the best rates
+   * are the locked ones. On a live case that put €20,000 into the bonus account and €12,000
+   * into a 31-day notice account at 1% for a customer who then said they were not buying for
+   * a long while and wanted the lot in the 18-month fixed term. The question costs one line.
+   */
+  if (
+    situation.lumpSum !== null &&
+    situation.lumpSum > 0 &&
+    situation.monthsToTarget === null &&
+    catalogue.some((option) => option.terms !== undefined && option.terms.length > 0)
+  ) {
+    needs.push({
+      key: 'goals.targetDate',
+      why:
+        'When they expect to need the money. Nothing can be locked away without it, and the ' +
+        'fixed-term rates, the best on offer, are the locked ones. Roughly is fine: a month ' +
+        'and a year, or "not for a couple of years", recorded as `goals.targetDate`.',
+    })
+  }
+
   const bonusOption = bestBonus(situation, catalogue, monthlyLeft, notes, needs)
 
   if (bonusOption !== null && bonusOption.bonus !== undefined) {
