@@ -469,8 +469,8 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     name: 'show_transfer',
     description:
-      'Offer to move money from a linked account into an application that is open or opened ' +
-      'here: the lump sum into the savings account that was just opened, or a monthly amount ' +
+      'Offer to move money from a linked account into a savings or current account application ' +
+      'started here, from the moment it is started (it waits as initiated until the account opens): the lump sum into the savings account that was just opened, or a monthly amount ' +
       'as a standing order. Name the application; the server reads the balance and caps the ' +
       'amount. Nothing moves until the customer taps. One line of why, nothing asked in the ' +
       'same turn.',

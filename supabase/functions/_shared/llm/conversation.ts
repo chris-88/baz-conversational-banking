@@ -80,12 +80,13 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'Then put the choice back to them, in different words from last time, not as a repeated question.',
       'Take any answer. "Just the account", "what would the plan involve", "we are not sure" are all answers, and the last one means explain what each would look like in a sentence each.',
       'Record it as `goals.approach` the moment it is clear: `plan` or `product`.',
+      'If their money sits at another bank, offer to link it now with `show_connect_accounts`, before anything else: once linked you can see the balance, the salary and the outgoings instead of asking for them, and the money can be moved when an account opens.',
     ],
     notYet: [
       'Do not start the discovery. That is the plan branch, and they have not chosen it.',
       'Do not offer a product to move things along. That decides it for them.',
     ],
-    tools: ALWAYS,
+    tools: [...ALWAYS, ...LINKING],
   },
 
   discovering: {
@@ -149,6 +150,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'When several products could genuinely do the job, call `show_comparison` first. Two to four, never the whole family.',
       'Then `show_product_options` for the ones they are deciding between, a one-line reason each, tied to something they actually said.',
       'If they have a plan, say where this sits in it.',
+      'Savings or salary at another bank and nothing linked: offer `show_connect_accounts` first. Linked, and they ask to move the money: `show_transfer` for the application it is for, as soon as that application is started; it waits as initiated until the account opens.',
     ],
     notYet: [
       'Do not start an application yourself. Tapping the card is what starts one.',
@@ -177,7 +179,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'When everything is in, call `show_review`. Submitting is their tap, not your sentence.',
       'Once one is away, pick up the next thing in their plan if they have one.',
       'An open account has an IBAN on its card. Salary is set by the customer giving that IBAN to payroll, not by you: when they say their pay will come here, record `banking.salaryPaidTo` and say what to give the employer.',
-      'If an application wants statements or payslips and nothing is linked, offer to link the accounts with `show_connect_accounts` instead of asking for uploads; an opened savings or current account with savings held elsewhere is the moment to offer the transfer with `show_transfer`.',
+      'If an application wants statements or payslips and nothing is linked, offer to link the accounts with `show_connect_accounts` instead of asking for uploads; a started or opened savings or current account with savings held elsewhere is the moment to offer the transfer with `show_transfer`, and when they ask to move the money, offer it in that turn.',
     ],
     notYet: [
       'Do not start a second application alongside without saying why it is worth it now.',

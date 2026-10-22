@@ -644,9 +644,9 @@ function linkedAccountsLines(linked: DigestLinkedAccounts): readonly string[] {
       (account) => `- ${account.bank} ${account.name} (${account.type}): ${euro(account.balance)}`,
     ),
     seen.join(' '),
-    'Where this covers a payslip or statement an application wants, the applications below no',
-    'longer list it: do not ask for that upload. Quote none of the figures: `show_accounts`',
-    'puts them on screen.',
+    'A covered payslip or statement is no longer listed below: do not ask for it. Quote no',
+    'figures: `show_accounts` shows them. `show_transfer` moves money held here into any',
+    'savings or current account application on the case; offer it the turn they ask.',
     ...linked.transfers.map(
       (transfer) =>
         `- Transfer ${euro(transfer.amount)} ${transfer.cadence === 'once' ? 'once' : 'a month'} ` +
