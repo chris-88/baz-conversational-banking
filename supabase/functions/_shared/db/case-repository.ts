@@ -34,6 +34,7 @@ import {
 import type { Application } from '../domain/state-machine.ts'
 import { slidersFor, type PersonaSliders } from '../llm/persona.ts'
 import type { LoadedCase } from './loaded-case.ts'
+import { loadLinkedAccounts, loadTransfers } from './linked.ts'
 import * as rows from './rows.ts'
 
 /**
@@ -137,6 +138,8 @@ export async function loadCase(
     formApplicationsData,
     customerNameResult,
     eventsSinceLastSeen,
+    linkedAccounts,
+    transfers,
   ] = await Promise.all([
     client.from('participants').select('id, role, display_name').eq('case_id', caseId),
     client
@@ -188,6 +191,11 @@ export async function loadCase(
      */
     loadCustomerName(client, theCase.customer_id),
     loadEventsSince(client, caseId, theCase.last_seen_at),
+    // Open banking, simulated: the accounts under a standing consent and the transfers out
+    // of them. Two more reads in the same batch, so a case with nothing linked pays one
+    // round trip for the answer and not two in series.
+    loadLinkedAccounts(client, caseId),
+    loadTransfers(client, caseId),
   ])
 
   /*
@@ -297,6 +305,8 @@ export async function loadCase(
     facts,
     applications,
     formApplications,
+    linkedAccounts,
+    transfers,
     // Confirmations and requests are not scoped by case in the query, so they are filtered
     // to this case's applications here.
     confirmations: rows.confirmationRow

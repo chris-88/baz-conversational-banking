@@ -114,3 +114,46 @@ describe('counting what was carried over', () => {
     ).toBe(0)
   })
 })
+
+describe('a document the linked accounts covered (open banking, simulated)', () => {
+  it('is one row per requirement, named from the event, with the bank it was seen at', () => {
+    const rows = describeReused(
+      [
+        { key: 'income.annualBasic', source: 'bank_held', applicationName: 'Mortgage' },
+        {
+          key: null,
+          source: 'account_data',
+          applicationName: 'Mortgage',
+          requirementId: 'payslip',
+          label: 'Two recent payslips',
+          bank: 'AIB',
+        },
+        {
+          key: null,
+          source: 'account_data',
+          applicationName: 'Personal loan',
+          requirementId: 'payslip',
+          label: 'Two recent payslips',
+          bank: 'AIB',
+        },
+      ],
+      [fact('income.annualBasic', 92_000)],
+    )
+
+    expect(rows.map((row) => row.key)).toEqual(['income.annualBasic', 'document:payslip'])
+    expect(rows[1]).toMatchObject({
+      label: 'Two recent payslips',
+      source: 'account_data',
+      provenance: 'seen in your linked AIB account',
+      usedFor: ['Mortgage', 'Personal loan'],
+    })
+  })
+
+  it('says only that it was seen in a linked account when no bank is named', () => {
+    const rows = describeReused(
+      [{ key: null, source: 'account_data', applicationName: 'Mortgage', requirementId: 'statement', label: 'Statements' }],
+      [],
+    )
+    expect(rows[0]?.provenance).toBe('seen in your linked account')
+  })
+})

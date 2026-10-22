@@ -13,8 +13,10 @@ import { defineJourney, type Requirement } from './journey.ts'
 import {
   confirmationsForReview,
   evaluateJourney,
+  evidenceCovers,
   outstanding,
   readyForReview,
+  type AccountEvidence,
   type RequirementContext,
 } from './requirements.ts'
 
@@ -362,6 +364,92 @@ describe('declarations, confirmations and documents', () => {
       context({ documents: [{ requirementId: 'photo-id', verified: true }] }),
     )
     expect(checked.satisfied[0]?.document).toEqual({ verified: true })
+  })
+})
+
+describe('what the linked accounts show stands in for a document (open banking, simulated)', () => {
+  const payslip: Requirement = {
+    kind: 'document',
+    id: 'payslip',
+    subject: 'primary',
+    label: 'Two recent payslips',
+    documentType: 'payslip',
+  }
+  const statement: Requirement = {
+    kind: 'document',
+    id: 'statement',
+    subject: 'primary',
+    label: 'Three months of bank statements',
+    documentType: 'bank_statement',
+  }
+  const photoId: Requirement = {
+    kind: 'document',
+    id: 'photo-id',
+    subject: 'primary',
+    label: 'Photo ID',
+    documentType: 'photo_id',
+  }
+
+  const evidence = (over: Partial<AccountEvidence> = {}): AccountEvidence => ({
+    salaryObserved: { monthly: 4_100, annualised: 49_200, employer: 'Acme Ltd', months: 3 },
+    rentObserved: { monthly: 1_800 },
+    savingsObserved: 32_000,
+    daysOfHistory: 90,
+    ...over,
+  })
+
+  it('a payslip is met by pay seen arriving for at least two months', () => {
+    const journey = journeyWith(payslip)
+    const met = evaluateJourney(journey, context({ accountEvidence: evidence() }))
+    expect(met.outstanding).toEqual([])
+    expect(met.satisfied[0]).toMatchObject({ reused: true, reason: 'account_data', fact: null })
+
+    const oneMonth = evidence({
+      salaryObserved: { monthly: 4_100, annualised: 49_200, employer: 'Acme Ltd', months: 1 },
+    })
+    expect(outstanding(journey, context({ accountEvidence: oneMonth }))[0]?.reason).toBe(
+      'awaiting_document',
+    )
+    expect(
+      outstanding(journey, context({ accountEvidence: evidence({ salaryObserved: null }) }))[0]
+        ?.reason,
+    ).toBe('awaiting_document')
+  })
+
+  it('a statement is met by sixty days of history, and not by fifty-nine', () => {
+    const journey = journeyWith(statement)
+    expect(outstanding(journey, context({ accountEvidence: evidence({ daysOfHistory: 60 }) }))).toEqual([])
+    expect(
+      outstanding(journey, context({ accountEvidence: evidence({ daysOfHistory: 59 }) }))[0]?.reason,
+    ).toBe('awaiting_document')
+  })
+
+  it('never covers a document that is not in a transaction feed', () => {
+    expect(outstanding(journeyWith(photoId), context({ accountEvidence: evidence() }))[0]?.reason).toBe(
+      'awaiting_document',
+    )
+  })
+
+  it('changes nothing when nothing is linked', () => {
+    expect(outstanding(journeyWith(payslip, statement), context())).toHaveLength(2)
+  })
+
+  it('an upload still counts as the upload, so a checked document stays checked', () => {
+    const uploaded = evaluateJourney(
+      journeyWith(payslip),
+      context({
+        accountEvidence: evidence(),
+        documents: [{ requirementId: 'payslip', verified: true }],
+      }),
+    )
+    expect(uploaded.satisfied[0]).toMatchObject({ reused: false, document: { verified: true } })
+    expect(uploaded.satisfied[0]?.reason).toBeUndefined()
+  })
+
+  it('evidenceCovers says the same thing on its own', () => {
+    expect(evidenceCovers(payslip, evidence())).toBe(true)
+    expect(evidenceCovers(statement, evidence({ daysOfHistory: 10 }))).toBe(false)
+    expect(evidenceCovers(payslip, undefined)).toBe(false)
   })
 })
 

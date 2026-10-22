@@ -111,6 +111,8 @@ export const adminApi = {
     }>,
   demoAction: (caseId: string, move: Extract<AdminRequest, { action: 'demo_action' }>['move']) =>
     call({ action: 'demo_action', caseId, move }),
+  /** Open banking, simulated: the console is the receiving bank, and this is it settling. */
+  settleTransfer: (transferId: string) => call({ action: 'settle_transfer', transferId }),
   setKillSwitch: (enabled: boolean) => call({ action: 'set_kill_switch', enabled }),
   setPersona: (body: Omit<Extract<AdminRequest, { action: 'set_persona' }>, 'action'>) =>
     call({ action: 'set_persona', ...body }),

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { Trash2Icon } from 'lucide-react'
+import { LandmarkIcon, Trash2Icon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -100,6 +100,7 @@ export function CaseDetail({
 
         <TabsContent value="act" className="space-y-6">
           <DemoActions caseId={caseId} moves={data.demoActions} onChanged={onChanged} />
+          <OpenBanking data={data} onChanged={onChanged} />
           <CaseInspector caseId={caseId} show="handling" />
         </TabsContent>
 
@@ -283,6 +284,124 @@ function Events({ events }: { readonly events: AdminCase['events'] }): ReactNode
     </Card>
   )
 }
+
+/**
+ * Open banking, simulated: the receiving bank's desk.
+ *
+ * A transfer the customer initiated sits as "on its way" until somebody here settles it, and
+ * the next turn narrates the landing. The client never settles anything by itself: the money
+ * has arrived when the bank says so, and on this console the bank is whoever is reading this.
+ */
+function OpenBanking({
+  data,
+  onChanged,
+}: {
+  readonly data: AdminCase
+  readonly onChanged: () => void
+}): ReactNode {
+  const settle = useMutation({
+    mutationFn: (transferId: string) => adminApi.settleTransfer(transferId),
+    onSuccess: onChanged,
+  })
+
+  const { linkedAccounts, transfers } = data
+  if (linkedAccounts.length === 0 && transfers.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <LandmarkIcon className="size-4" />
+          Linked accounts
+        </CardTitle>
+        <CardDescription>
+          What Nexus shares under the customer's consent, and the transfers they have initiated
+          from it. Simulated end to end; the shapes are the real ones.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 px-0">
+        {linkedAccounts.length === 0 ? (
+          <p className="text-muted-foreground px-6 text-sm">Nothing linked, or the consent was revoked.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Account</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
+                <TableHead className="w-28">Consent until</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {linkedAccounts.map((account) => (
+                /* No row id in the DTO; a masked IBAN is unique within one customer's accounts. */
+                <TableRow key={account.ibanMasked}>
+                  <TableCell className="align-top">
+                    <span className="text-sm font-medium">
+                      {account.bank} · {account.displayName}
+                    </span>
+                    <span className="text-muted-foreground block text-xs tabular-nums">
+                      {account.ibanMasked}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right align-top text-sm tabular-nums">
+                    {euro(account.balance)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground align-top text-xs">
+                    {account.consentExpiresAt.slice(0, 10)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+
+        <div className="space-y-2 px-6">
+          <h4 className="text-sm font-medium">Transfers</h4>
+          {transfers.length === 0 ? (
+            <p className="text-muted-foreground text-xs">None initiated.</p>
+          ) : (
+            <ul className="divide-y">
+              {transfers.map((transfer) => (
+                <li key={transfer.id} className="flex items-center gap-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <span className="font-medium tabular-nums">{euro(transfer.amount)}</span>
+                      <span className="text-muted-foreground">
+                        {transfer.cadence === 'monthly' ? ' a month' : ''} from {transfer.fromLabel}{' '}
+                        to {transfer.toLabel}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {transfer.createdAt.slice(0, 16).replace('T', ' ')}
+                    </p>
+                  </div>
+                  {transfer.state === 'initiated' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      disabled={settle.isPending}
+                      onClick={() => settle.mutate(transfer.id)}
+                    >
+                      {settle.isPending && settle.variables === transfer.id ? 'Settling…' : 'Settle'}
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-2xs">
+                      {transfer.state}
+                    </Badge>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {settle.isError && <p className="text-destructive text-xs">{settle.error.message}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+const euro = (amount: number): string => `€${amount.toLocaleString('en-IE')}`
 
 /**
  * Removing one conversation.

@@ -1,5 +1,5 @@
 import { requireSupabase } from '@/lib/supabase'
-import type { Card } from '@contracts/cards.ts'
+import { LINKABLE_BANKS, type Card } from '@contracts/cards.ts'
 
 /**
  * What became of a card, read from the case rather than remembered.
@@ -42,31 +42,57 @@ export type CaseState = {
   readonly signedIn: boolean
   /** Requirements satisfied without asking, per application: the §53 count, from `events`. */
   readonly reusedBy: ReadonlyMap<string, number>
+  /**
+   * Open banking, simulated. Accounts linked through the consent card, revoked ones included,
+   * so a card can say "stopped sharing" rather than reopening the offer; and the transfers
+   * initiated from them, so a transfer card knows whether its tap landed.
+   */
+  readonly linkedAccounts: readonly {
+    readonly id: string
+    readonly bank: string
+    readonly revoked_at: string | null
+  }[]
+  readonly transfers: readonly {
+    readonly to_application_id: string | null
+    readonly amount: number
+    readonly state: string
+  }[]
 }
 
 /** Everything a card might need to know about, in one round of parallel reads. */
 export async function loadCaseState(caseId: string): Promise<CaseState> {
   const supabase = requireSupabase()
 
-  const [applications, interests, plans, requests, formApplications, user, reused] =
-    await Promise.all([
-      supabase
-        .from('applications')
-        .select('id, product, state, catalogue_id')
-        .eq('case_id', caseId),
-      supabase.from('product_interests').select('product, status').eq('case_id', caseId),
-      supabase.from('plans').select('id, status').eq('case_id', caseId),
-      supabase.from('application_requests').select('id, status'),
-      supabase.from('form_applications').select('id').eq('case_id', caseId),
-      supabase.auth.getUser(),
-      // The same rows the admin's "questions avoided" metric counts (§53), under the customer's
-      // own RLS. A settled card can then say what it saved them rather than only what it started.
-      supabase
-        .from('events')
-        .select('application_id')
-        .eq('case_id', caseId)
-        .eq('type', 'context_reused'),
-    ])
+  const [
+    applications,
+    interests,
+    plans,
+    requests,
+    formApplications,
+    user,
+    reused,
+    linkedAccounts,
+    transfers,
+  ] = await Promise.all([
+    supabase
+      .from('applications')
+      .select('id, product, state, catalogue_id')
+      .eq('case_id', caseId),
+    supabase.from('product_interests').select('product, status').eq('case_id', caseId),
+    supabase.from('plans').select('id, status').eq('case_id', caseId),
+    supabase.from('application_requests').select('id, status'),
+    supabase.from('form_applications').select('id').eq('case_id', caseId),
+    supabase.auth.getUser(),
+    // The same rows the admin's "questions avoided" metric counts (§53), under the customer's
+    // own RLS. A settled card can then say what it saved them rather than only what it started.
+    supabase
+      .from('events')
+      .select('application_id')
+      .eq('case_id', caseId)
+      .eq('type', 'context_reused'),
+    supabase.from('linked_accounts').select('id, bank, revoked_at').eq('case_id', caseId),
+    supabase.from('transfers').select('to_application_id, amount, state').eq('case_id', caseId),
+  ])
 
   const reusedBy = new Map<string, number>()
   for (const row of (reused.data ?? []) as { application_id: string | null }[]) {
@@ -98,6 +124,13 @@ export async function loadCaseState(caseId: string): Promise<CaseState> {
     formAnswers,
     signedIn: user.data.user !== null && user.data.user.is_anonymous !== true,
     reusedBy,
+    linkedAccounts: linkedAccounts.data ?? [],
+    // `numeric` columns arrive as strings from PostgREST. A card compares its amount as a number.
+    transfers: ((transfers.data ?? []) as {
+      to_application_id: string | null
+      amount: number | string
+      state: string
+    }[]).map((row) => ({ ...row, amount: Number(row.amount) })),
   }
 }
 
@@ -254,6 +287,56 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
      * commit something should fail here and be thought about, not silently stay tappable
      * forever.
      */
+    /*
+     * Settled by the consent existing, or having existed. A revoked consent is not an open
+     * offer: the customer stopped sharing on purpose, and the card says so rather than asking
+     * again. Declining writes nothing, so a declined card settles on the spot and reopens on
+     * reload; that is the one gap, and it is the same one the quote and comparison cards have.
+     */
+    case 'connect_accounts': {
+      if (state.linkedAccounts.length === 0) return undefined
+      const live = state.linkedAccounts.find((account) => account.revoked_at === null)
+      if (live === undefined) {
+        return { label: 'Stopped sharing', note: 'Nothing from your other accounts is held now.' }
+      }
+      const name =
+        card.banks.find((bank) => bank.id === live.bank)?.name ??
+        LINKABLE_BANKS.find((bank) => bank.id === live.bank)?.name ??
+        live.bank
+      return {
+        label: `Linked ${name}`,
+        note: `Shared through Nexus for ${String(card.consentDays)} days. Stop it any time from the menu.`,
+      }
+    }
+
+    /*
+     * Settled once a transfer for this application and amount exists, in whatever state the
+     * receiving side has reported. On its way is on its way: the card never says landed until
+     * the console has settled it.
+     */
+    case 'transfer': {
+      const transfer = state.transfers.find(
+        (candidate) =>
+          candidate.to_application_id === card.toApplicationId &&
+          Math.abs(candidate.amount - card.amount) < 0.005,
+      )
+      if (transfer === undefined) return undefined
+      if (transfer.state === 'settled') {
+        return {
+          label: `${euro(card.amount)} landed in ${card.toLabel}`,
+          note: card.cadence === 'monthly' ? 'The first of them. The rest follow each month.' : 'Settled.',
+        }
+      }
+      if (transfer.state === 'failed') {
+        return {
+          label: `${euro(card.amount)} did not reach ${card.toLabel}`,
+          note: 'Nothing left your account. Say the word to try again.',
+        }
+      }
+      return settledTransfer(card)
+    }
+
+    case 'accounts_overview':
     case 'account_opened':
     case 'comparison':
     case 'reuse':
@@ -267,3 +350,28 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
       return undefined
   }
 }
+
+/**
+ * What a transfer settles to the moment it is sent.
+ *
+ * Shared with the card itself, so the tap and the reload say the same thing: the card and the
+ * record of it must not disagree about whether the money has arrived. It has not, until the
+ * console says so.
+ */
+export function settledTransfer(transfer: {
+  readonly amount: number
+  readonly cadence: 'once' | 'monthly'
+  readonly toLabel: string
+}): Settled {
+  return transfer.cadence === 'monthly'
+    ? {
+        label: `${euro(transfer.amount)} a month to ${transfer.toLabel}`,
+        note: 'Set up. The first one is on its way; Baz will say when it lands.',
+      }
+    : {
+        label: `${euro(transfer.amount)} on its way to ${transfer.toLabel}`,
+        note: 'Baz will say when it lands.',
+      }
+}
+
+const euro = (amount: number): string => `€${Math.round(amount).toLocaleString('en-IE')}`

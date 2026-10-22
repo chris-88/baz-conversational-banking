@@ -44,6 +44,8 @@ function loaded(overrides: Partial<LoadedCase> = {}): LoadedCase {
     requests: [],
     productInterests: [],
     formApplications: [{ id: 'fa-1', formId: '1833', answers: {} }],
+    linkedAccounts: [],
+    transfers: [],
     messages: [],
     eventsSinceLastSeen: [],
     persona: slidersFor('default'),

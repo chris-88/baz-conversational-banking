@@ -61,6 +61,8 @@ function loaded(overrides: Partial<LoadedCase> = {}): LoadedCase {
     requests: [],
     productInterests: [],
   formApplications: [],
+  linkedAccounts: [],
+  transfers: [],
     messages: [],
     eventsSinceLastSeen: [],
     persona: slidersFor('default'),
@@ -471,5 +473,91 @@ describe('a card still waiting for a tap', () => {
     expect(section).toContain('product options card from your last reply')
     expect(section).toContain('ask nothing new')
     expect(awaitingSection({ type: 'review', turnsAgo: 3 })).toContain('review card from 3 replies ago')
+  })
+})
+
+describe('linked accounts (open banking, simulated)', () => {
+  const monthly = (day: string, amount: number, description: string, category: string) =>
+    ['2026-08', '2026-09', '2026-10'].map((month) => ({
+      bookedOn: `${month}-${day}`,
+      amount,
+      description,
+      category,
+    }))
+
+  const linked = (id: string, accountType: 'current' | 'savings', balance: number) => ({
+    id,
+    bank: 'AIB',
+    displayName: accountType === 'savings' ? 'Online Saver' : 'Current Account',
+    accountType,
+    iban: 'IE29AIBK93115212345678',
+    balance,
+    consentScope: ['balances', 'transactions', 'payments'],
+    consentExpiresAt: '2027-01-20T09:00:00.000Z',
+    createdAt: '2026-10-22T09:00:00.000Z',
+    transactions:
+      accountType === 'current'
+        ? [
+            ...monthly('25', 4_100, 'ACME LTD SALARY', 'income'),
+            ...monthly('01', -1_800, 'SO RENT', 'housing'),
+            { bookedOn: '2026-07-24', amount: -42.1, description: 'TESCO', category: 'groceries' },
+          ]
+        : [],
+  })
+
+  const CURRENT = '55555555-5555-4555-8555-000000000001'
+  const SAVER = '55555555-5555-4555-8555-000000000002'
+
+  it('is absent when nothing is linked: silence, not a line about nothing', () => {
+    expect(buildCaseDigest(loaded()).linkedAccounts).toBeUndefined()
+  })
+
+  it('carries the accounts, what the transactions show, the consent and any transfer', () => {
+    const digest = buildCaseDigest(
+      loaded({
+        linkedAccounts: [linked(CURRENT, 'current', 2_340), linked(SAVER, 'savings', 32_000)],
+        transfers: [
+          {
+            id: '66666666-6666-4666-8666-000000000001',
+            fromAccountId: SAVER,
+            toApplicationId: null,
+            toLabel: 'SuperSaver',
+            amount: 32_000,
+            cadence: 'once',
+            state: 'initiated',
+            createdAt: '2026-10-22T10:00:00.000Z',
+          },
+        ],
+      }),
+      { today: '2026-10-22' },
+    )
+
+    expect(digest.linkedAccounts).toMatchObject({
+      accounts: [
+        { bank: 'AIB', name: 'Current Account', type: 'current', balance: 2_340 },
+        { bank: 'AIB', name: 'Online Saver', type: 'savings', balance: 32_000 },
+      ],
+      salary: { monthly: 4_100, annualised: 49_200, employer: 'ACME LTD SALARY', months: 3 },
+      rent: { monthly: 1_800 },
+      savingsHeld: 32_000,
+      daysOfHistory: 91,
+      consentEndsOn: '2027-01-20',
+      transfers: [{ amount: 32_000, cadence: 'once', toLabel: 'SuperSaver', state: 'initiated' }],
+    })
+  })
+
+  /** Invariant 2: the digest's outstanding list and the status card come from one evaluation. */
+  it('no longer lists a payslip or statement the linked account covers', () => {
+    const mortgage = application('mortgage', 'in_progress')
+    const before = buildCaseDigest(loaded({ applications: [mortgage] }), { today: '2026-10-22' })
+    const after = buildCaseDigest(
+      loaded({ applications: [mortgage], linkedAccounts: [linked(CURRENT, 'current', 2_340)] }),
+      { today: '2026-10-22' },
+    )
+    const documents = (lines: readonly string[]) =>
+      lines.filter((line) => /payslip|statement/i.test(line))
+
+    expect(documents(before.applications[0]?.outstanding ?? []).length).toBeGreaterThan(0)
+    expect(documents(after.applications[0]?.outstanding ?? [])).toEqual([])
   })
 })

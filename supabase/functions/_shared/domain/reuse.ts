@@ -18,13 +18,24 @@ export type ReuseEvent = {
   readonly key: string | null
   readonly source: string | null
   readonly applicationName: string
+  /**
+   * For a document the linked accounts stood in for (`source: 'account_data'`): there is no
+   * fact behind it, so the event itself names the requirement and the bank it was seen at.
+   */
+  readonly requirementId?: string | null
+  readonly label?: string | null
+  readonly bank?: string | null
 }
 
+/** A fact's source, or the one thing that satisfies a requirement without being a fact. */
+export type ReuseSource = FactSource | 'account_data'
+
 export type ReusedFact = {
-  readonly key: FactKey
+  /** A fact key, or `document:<requirementId>` for a document the account data covered. */
+  readonly key: string
   readonly label: string
   readonly value: string
-  readonly source: FactSource
+  readonly source: ReuseSource
   /** Where the bank got it, in the customer's terms. */
   readonly provenance: string
   /** The applications it satisfied something in, in the order they were started. */
@@ -32,13 +43,19 @@ export type ReusedFact = {
 }
 
 /** Second person, because it is the customer reading it. */
-export const PROVENANCE: Readonly<Record<FactSource, string>> = {
+export const PROVENANCE: Readonly<Record<ReuseSource, string>> = {
   bank_held: 'the bank already had it',
   customer_stated: 'you told me earlier',
   partner_stated: 'your partner told me',
   document_extracted: 'from a document you sent',
   document_verified: 'from a document you sent, checked',
   system_derived: 'from your account',
+  account_data: 'seen in your linked account',
+}
+
+/** "seen in your linked AIB account" when the bank is known, the plain line when it is not. */
+export function accountDataProvenance(bank: string | null | undefined): string {
+  return bank ? `seen in your linked ${bank} account` : PROVENANCE.account_data
 }
 
 type KnownFact = Pick<Fact, 'key' | 'value' | 'source' | 'supersededBy'>
@@ -55,8 +72,27 @@ export function describeReused(
   facts: readonly KnownFact[],
 ): readonly ReusedFact[] {
   const byKey = new Map<FactKey, { readonly usedFor: string[] }>()
+  /*
+   * A document the linked accounts covered has no fact to look up: the row is built from the
+   * event alone, and a value is what the customer would otherwise have sent in. Grouped by
+   * requirement so the payslip the mortgage and the loan both wanted is one row.
+   */
+  const byDocument = new Map<
+    string,
+    { readonly label: string; readonly bank: string | null; readonly usedFor: string[] }
+  >()
 
   for (const event of events) {
+    if (event.source === 'account_data' && typeof event.requirementId === 'string') {
+      const entry = byDocument.get(event.requirementId) ?? {
+        label: event.label ?? 'Document',
+        bank: event.bank ?? null,
+        usedFor: [],
+      }
+      if (!entry.usedFor.includes(event.applicationName)) entry.usedFor.push(event.applicationName)
+      byDocument.set(event.requirementId, entry)
+      continue
+    }
     if (event.key === null || !(event.key in factCatalogue)) continue
     const key = event.key as FactKey
     const entry = byKey.get(key) ?? { usedFor: [] }
@@ -77,6 +113,18 @@ export function describeReused(
       value: formatFactValue(key, fact.value),
       source: fact.source,
       provenance: PROVENANCE[fact.source],
+      usedFor: entry.usedFor,
+    })
+  }
+
+  // After the facts: what was never typed comes before what was never sent in.
+  for (const [requirementId, entry] of byDocument) {
+    described.push({
+      key: `document:${requirementId}`,
+      label: entry.label,
+      value: 'Not needed',
+      source: 'account_data',
+      provenance: accountDataProvenance(entry.bank),
       usedFor: entry.usedFor,
     })
   }

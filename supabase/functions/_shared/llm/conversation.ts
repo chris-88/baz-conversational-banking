@@ -45,6 +45,13 @@ export type StageGuide = {
 /** Available in every stage: recording what somebody says, and saying where things stand. */
 const ALWAYS: readonly ToolName[] = ['record_facts', 'show_status']
 
+/**
+ * Open banking, simulated: once a conversation is past the fork. Not in the opening or while
+ * the fork is open, because an offer to link accounts answers the question those stages are
+ * asking. The transfer joins later, when there is an application for money to go into.
+ */
+const LINKING: readonly ToolName[] = ['show_connect_accounts', 'show_accounts']
+
 export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
   opening: {
     name: 'Opening',
@@ -90,13 +97,14 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'Ask about preferences as well as figures. Whether they would want the mortgage here (record it as `mortgage.withThisBank`; for a first-time buyer it decides a €2,000 bonus), whether they want to bank together, whether anyone else is putting money in.',
       'Figures where a plan genuinely needs them: what is saved, what they can add, roughly what they earn, and what they already repay each month. Enough to make the plan real, not enough to underwrite it. The case digest says which are still unknown and how many the plan card needs.',
       'Two things at a time, in one natural sentence, and say what you have taken something as when it was rough.',
+      'If their savings or salary sit at another bank, offer to link the accounts with `show_connect_accounts` before asking for figures you could read.',
       'Stop when you could write the plan. Anything else the products need can be asked when they are being applied for.',
     ],
     notYet: [
       'No products. They asked for a plan, and the products come out of the plan.',
       'This is not a mortgage application. Do not work through income, existing loans, gifted deposits and salary accounts as a checklist: that is the interrogation this stage exists to avoid.',
     ],
-    tools: ALWAYS,
+    tools: [...ALWAYS, ...LINKING],
   },
 
   planning: {
@@ -112,7 +120,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'No product cards yet. The plan says what is needed and in what order; the products come after it.',
       'Do not name specific accounts inside the plan as though they had been chosen.',
     ],
-    tools: [...ALWAYS, 'propose_plan', 'show_quote'],
+    tools: [...ALWAYS, ...LINKING, 'propose_plan', 'show_quote'],
   },
 
   arranging: {
@@ -128,7 +136,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'No product cards and no comparison. This is the arrangement, not a menu; the single-account offers come after it if they want something different.',
       'Do not ask anything. They start it with one tap or they say what they would change.',
     ],
-    tools: [...ALWAYS, 'show_arrangement'],
+    tools: [...ALWAYS, ...LINKING, 'show_arrangement'],
   },
 
   choosing: {
@@ -148,6 +156,8 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
     ],
     tools: [
       ...ALWAYS,
+      ...LINKING,
+      'show_transfer',
       'show_arrangement',
       'show_comparison',
       'show_product_options',
@@ -167,6 +177,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'When everything is in, call `show_review`. Submitting is their tap, not your sentence.',
       'Once one is away, pick up the next thing in their plan if they have one.',
       'An open account has an IBAN on its card. Salary is set by the customer giving that IBAN to payroll, not by you: when they say their pay will come here, record `banking.salaryPaidTo` and say what to give the employer.',
+      'If an application wants statements or payslips and nothing is linked, offer to link the accounts with `show_connect_accounts` instead of asking for uploads; an opened savings or current account with savings held elsewhere is the moment to offer the transfer with `show_transfer`.',
     ],
     notYet: [
       'Do not start a second application alongside without saying why it is worth it now.',
@@ -174,6 +185,8 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
     ],
     tools: [
       ...ALWAYS,
+      ...LINKING,
+      'show_transfer',
       'show_review',
       'request_upload',
       'show_form',
@@ -269,6 +282,10 @@ export function plainCardName(type: AwaitingCardType): string {
       return 'comparison'
     case 'quote':
       return 'quote'
+    case 'connect_accounts':
+      return 'link your accounts'
+    case 'transfer':
+      return 'transfer'
   }
 }
 

@@ -85,7 +85,7 @@ Edge Functions (service role; hold ANTHROPIC_API_KEY, VAPID keys, PRESENTER_KEY)
                 config, case inspection, metrics
 
 Postgres
-  26 tables. Core: cases, participants, participant_sessions, customers
+  29 tables. Core: cases, participants, participant_sessions, customers
   (synthetic bank-held), facts, messages, events, consents, tokens.
   Applications: applications, application_requests, application_confirmations,
   documents, product_interests.
@@ -95,6 +95,7 @@ Postgres
   Config and ops: persona_config, domain_config, catalogue_overrides,
   product_catalogue, mortgage_rates,
   admin_users, push_subscriptions.
+  Open banking, simulated: linked_accounts, linked_transactions, transfers.
 ```
 
 ### A Baz turn (`baz-turn`)
@@ -204,6 +205,21 @@ A requirement satisfied by a fact that was bank-held or captured for a different
 
 The knowledge base the prompt is built from (`kb-prompt.ts`) and the mortgage rate table (`mortgage-rates-select.ts`) take their data as an argument. Every turn reads `product_catalogue` and `mortgage_rates` at the start (`_shared/db/catalogue.ts`) and passes the rows in when there are any, the compiled files when there are none. The console's Products & rates screen loads the files into rows, then edits, adds, switches off and restores them; each payload is validated against the file's own shape (`contracts/catalogue.ts`) on the way in, and a row is re-validated on the way out, so Baz can be handed a different catalogue but never a malformed one. A write to an empty table copies the file in first, so one edited product never becomes the whole catalogue.
 
+### Open banking, simulated
+
+A stand-in aggregator, Nexus, links the accounts a customer holds at other banks (§6, §53).
+Nothing connects to a bank: `link_accounts` generates one current and, when a savings balance
+is held, one savings account with ninety days of transactions from the case's own facts
+(`_shared/domain/open-banking/synthesise.ts`), so what the overview shows agrees with what was
+said. Consent has a scope (balances, transactions, payments) and a ninety-day expiry, and is
+revoked from the menu. Three cards: `connect_accounts` (the consent tap), `accounts_overview`
+(server-built, read only), `transfer` (the tap initiates; the console settles). The requirement
+engine satisfies a payslip or bank-statement document from `accountEvidence` (two months of
+salary seen, sixty days of history), recorded as `account_data` reuse. The tables are
+`linked_accounts`, `linked_transactions`, `transfers`. Tools: `show_connect_accounts`,
+`show_accounts`, `show_transfer`. Smoke and mirrors by design: the shapes are real, the data is
+synthetic, and the document says so (`vault/docs/features/open-banking.md`).
+
 ### Product interests
 
 `offered | accepted | declined | deferred`. Declined products are listed in the case digest as "do not raise again" (§49).
@@ -281,7 +297,7 @@ Every tool input is Zod-validated before any effect. Invalid input returns a too
   server reads the facts and the published rates. One tap starts every account on it through
   `select_products`.
 
-Sixteen tools. **Which ones a turn is offered is decided by the conversation's stage** - the
+Nineteen tools. **Which ones a turn is offered is decided by the conversation's stage** - the
 form tools are gated further on a form existing. Withholding a tool is enforcement; telling the
 model not to use one is advice.
 

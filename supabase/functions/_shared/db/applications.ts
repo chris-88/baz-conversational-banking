@@ -3,6 +3,7 @@ import { asApplicationId, type ApplicationId } from '../domain/facts.ts'
 import { journeyFor } from '../domain/journeys/index.ts'
 import type { Product } from '../domain/journey.ts'
 import { withBankRequests } from '../domain/bank-requests.ts'
+import { accountEvidence } from '../domain/open-banking/evidence.ts'
 import {
   evaluateJourney,
   type JourneyEvaluation,
@@ -40,6 +41,22 @@ export function evaluateFor(loaded: LoadedCase, application: Application): Journ
     documents: loaded.documents
       .filter((document) => document.applicationId === application.id)
       .map((document) => ({ requirementId: document.requirementId, verified: document.verified })),
+    /*
+     * What the linked accounts show, so a payslip or a statement the journey asks for can be
+     * met by the data rather than an upload (open banking, simulated). Computed here and
+     * nowhere else, because this is the one evaluation every caller reads: the digest, the
+     * status card and `request_upload` all have to agree about whether the document is still
+     * wanted (Invariant 2).
+     */
+    ...(loaded.linkedAccounts.length === 0
+      ? {}
+      : {
+          accountEvidence: accountEvidence(
+            loaded.linkedAccounts,
+            loaded.linkedAccounts.flatMap((account) => account.transactions),
+            new Date().toISOString().slice(0, 10),
+          ),
+        }),
   }
 
   const journey = journeyFor(application.product)
@@ -369,7 +386,15 @@ export async function recordReuse(
          * and not a second home for personal data.
          */
         key: item.fact?.key ?? null,
-        source: item.fact?.source ?? null,
+        /*
+         * A document the linked accounts covered has no fact: its source is `account_data`,
+         * and the bank it was seen at is named so the card can say "seen in your linked AIB
+         * account" rather than something vaguer.
+         */
+        source: item.fact?.source ?? item.reason ?? null,
+        ...(item.reason === 'account_data'
+          ? { bank: loaded.linkedAccounts[0]?.bank ?? null }
+          : {}),
       },
     })
   }

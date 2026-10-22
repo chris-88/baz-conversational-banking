@@ -693,6 +693,42 @@ export function BazChat({
         await commit({ action: 'pause_application', applicationId }, 'I have put that on hold.')
       }
     },
+
+    /*
+     * Open banking, simulated. The link is the consent; the server generates the accounts
+     * under it and the summary says what it can now see. A refusal commits nothing, so it is
+     * told to Baz the way a declined quote is: as something that happened, not something said.
+     */
+    onLinkAccounts: async (bank, scope) => {
+      await commit(
+        { action: 'link_accounts', caseId: caseId ?? '', bank, scope: [...scope] },
+        'Say in one line what you can now see, then show them their money in one place. ' +
+          'Do not list the accounts in words: the card does that.',
+      )
+    },
+    onDeclineLink: async () => {
+      await send(
+        'Decided not to link other accounts for now.',
+        'action',
+        'Acknowledge in a few words and carry on from what they tell you. Do not offer the ' +
+          'link again unless they ask for it.',
+      )
+    },
+    onTransfer: async (transfer) => {
+      await commit(
+        { action: 'initiate_transfer', caseId: caseId ?? '', ...transfer },
+        'Say it is on its way and what happens when it lands. Do not say it has landed: it ' +
+          'has not yet, and you will be told when it does.',
+      )
+    },
+    onDeclineTransfer: async (toLabel) => {
+      await send(
+        `Decided not to move money into ${toLabel} for now.`,
+        'action',
+        'Acknowledge briefly: the money stays where it is. Do not offer the transfer again ' +
+          'unless they ask.',
+      )
+    },
   }
 
   return (

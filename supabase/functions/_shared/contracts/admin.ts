@@ -141,6 +141,8 @@ export const adminRequestSchema = z.discriminatedUnion('action', [
    * anyone choose for themselves.
    */
   z.object({ action: z.literal('tag_test_case'), caseId: z.uuid() }),
+  /** Open banking, simulated: the receiving bank settles an initiated transfer. */
+  z.object({ action: z.literal('settle_transfer'), transferId: z.uuid() }),
 
   /**
    * Everything about one form application, side by side.
@@ -610,6 +612,31 @@ export const adminCaseSchema = z.object({
       reason: z.string(),
       revisitWhen: z.string().nullable(),
       ready: z.boolean(),
+    }),
+  ),
+  /**
+   * Open banking, simulated: what Nexus is sharing under a consent that stands, and the
+   * transfers out of it. The IBAN is masked here as it is everywhere a screen shows one.
+   */
+  linkedAccounts: z.array(
+    z.object({
+      bank: z.string(),
+      displayName: z.string(),
+      accountType: z.enum(['current', 'savings']),
+      ibanMasked: z.string(),
+      balance: z.number(),
+      consentExpiresAt: z.string(),
+    }),
+  ),
+  transfers: z.array(
+    z.object({
+      id: z.uuid(),
+      fromLabel: z.string(),
+      toLabel: z.string(),
+      amount: z.number(),
+      cadence: z.enum(['once', 'monthly']),
+      state: z.enum(['initiated', 'settled', 'failed']),
+      createdAt: z.string(),
     }),
   ),
   /**

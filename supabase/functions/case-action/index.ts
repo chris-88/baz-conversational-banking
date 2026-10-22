@@ -39,6 +39,9 @@ import {
 } from '../_shared/db/applications.ts'
 import { countReusedFacts } from '../_shared/domain/reuse.ts'
 import type { SatisfiedItem } from '../_shared/domain/requirements.ts'
+import { LINKABLE_BANKS } from '../_shared/contracts/cards.ts'
+import { CONSENT_DAYS, synthesiseAccounts } from '../_shared/domain/open-banking/synthesise.ts'
+import { caseFactReader, emptyFactReader } from '../_shared/db/fact-reader.ts'
 
 /**
  * `case-action` — the customer's taps (Invariant 1, §27, §48).
@@ -688,6 +691,209 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       break
     }
 
+    /**
+     * Open banking, simulated (§6, §53): the consent tap on the `connect_accounts` card.
+     *
+     * There is no aggregator to call. The accounts Nexus would return are generated from the
+     * case's own facts and written as if they had been read, so everything downstream (the
+     * overview, the evidence an assessment takes, a transfer) works on the real shapes and
+     * the figures agree with the conversation because they came from it. The consent is the
+     * real part: a scope, an expiry, and nothing read outside either.
+     */
+    case 'link_accounts': {
+      const bank = LINKABLE_BANKS.find((candidate) => candidate.id === action.bank)
+      if (!bank) return errorResponse('bad_request', 'That bank cannot be linked.')
+
+      // Linking the same bank twice is linking it once. The rows already there are the answer.
+      if (loaded.linkedAccounts.some((account) => account.bank === action.bank)) {
+        summary = `Your ${bank.name} accounts are already linked.`
+        break
+      }
+
+      const today = new Date().toISOString().slice(0, 10)
+      const generated = synthesiseAccounts({
+        bank: action.bank,
+        bankName: bank.name,
+        facts: caseFactReader(loaded) ?? emptyFactReader,
+        today,
+        // The case and the bank, so the same customer sees the same statement on every visit
+        // and a second bank is a different one.
+        seed: `${caseId}:${action.bank}`,
+      })
+
+      const consentExpiresAt = new Date(Date.now() + CONSENT_DAYS * 86_400_000).toISOString()
+      const written = mustWrite(
+        await admin
+          .from('linked_accounts')
+          .insert(
+            generated.accounts.map((account) => ({
+              case_id: caseId,
+              bank: account.bank,
+              display_name: account.displayName,
+              account_type: account.accountType,
+              iban: account.iban,
+              balance: account.balance,
+              consent_scope: [...action.scope],
+              consent_expires_at: consentExpiresAt,
+            })),
+          )
+          .select('id, account_type'),
+        'the linked accounts',
+      )
+
+      const idByType = new Map((written.data ?? []).map((row) => [row.account_type, row.id]))
+      const transactions = generated.transactions.flatMap((transaction) => {
+        const accountId = idByType.get(transaction.account)
+        return accountId === undefined
+          ? []
+          : [
+              {
+                account_id: accountId,
+                booked_on: transaction.bookedOn,
+                amount: transaction.amount,
+                description: transaction.description,
+                category: transaction.category,
+              },
+            ]
+      })
+      if (transactions.length > 0) {
+        mustWrite(await admin.from('linked_transactions').insert(transactions), 'the linked transactions')
+      }
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'accounts_linked',
+        actor: 'customer',
+        payload: {
+          bank: action.bank,
+          bankName: bank.name,
+          accounts: generated.accounts.length,
+          scope: [...action.scope],
+          consentExpiresAt,
+        },
+      })
+
+      const count = generated.accounts.length
+      summary =
+        `Linked ${String(count)} ${count === 1 ? 'account' : 'accounts'} at ${bank.name}. ` +
+        `Nexus will share ${describeScope(action.scope)} for ${String(CONSENT_DAYS)} days.`
+      break
+    }
+
+    /**
+     * Withdrawing the consent. The rows stay, marked, so the inspector can still say what was
+     * linked and when it was let go; nothing downstream reads a revoked account again.
+     */
+    case 'revoke_accounts': {
+      if (loaded.linkedAccounts.length === 0) {
+        summary = 'Nothing is linked.'
+        break
+      }
+
+      mustWrite(
+        await admin
+          .from('linked_accounts')
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('case_id', caseId)
+          .is('revoked_at', null),
+        'the revocation',
+      )
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'accounts_revoked',
+        actor: 'customer',
+        payload: {
+          accounts: loaded.linkedAccounts.length,
+          banks: [...new Set(loaded.linkedAccounts.map((account) => account.bank))],
+        },
+      })
+
+      summary = 'Nexus access withdrawn. Nothing more will be read from those accounts.'
+      break
+    }
+
+    /**
+     * The tap on a `transfer` card. Payment initiation, as an aggregator would do it: the
+     * consent must cover payments and still stand, the money must be there, and the
+     * destination must be an application on this case. The row is `initiated` until the
+     * console settles it, because that is what happens to a real one. A one-off leaves the
+     * linked balance at once; a monthly one is a standing order and moves nothing today.
+     */
+    case 'initiate_transfer': {
+      const from = loaded.linkedAccounts.find((account) => account.id === action.fromAccountId)
+      if (!from) return errorResponse('not_found', 'That account is not linked.')
+      if (!from.consentScope.includes('payments')) {
+        return errorResponse('forbidden', 'Nexus was not allowed to make payments from that account.')
+      }
+      if (Date.parse(from.consentExpiresAt) < Date.now()) {
+        return errorResponse('forbidden', 'The consent for that account has expired.')
+      }
+
+      const application = findApplication(loaded, action.toApplicationId)
+      if (!application) return errorResponse('not_found', 'That application does not exist.')
+
+      if (action.cadence === 'once' && action.amount > from.balance) {
+        return errorResponse(
+          'bad_request',
+          `That is more than the account holds (€${from.balance.toLocaleString('en-IE')}).`,
+        )
+      }
+
+      const bankName = LINKABLE_BANKS.find((bank) => bank.id === from.bank)?.name ?? from.bank
+      const toLabel = applicationName(application, nameFor)
+
+      const inserted = mustWrite(
+        await admin
+          .from('transfers')
+          .insert({
+            case_id: caseId,
+            from_account_id: from.id,
+            to_application_id: action.toApplicationId,
+            to_label: toLabel,
+            amount: action.amount,
+            cadence: action.cadence,
+          })
+          .select('id')
+          .single(),
+        'the transfer',
+      )
+      const transferId = (inserted.data as { id: string }).id
+
+      if (action.cadence === 'once') {
+        mustWrite(
+          await admin
+            .from('linked_accounts')
+            .update({ balance: Math.round((from.balance - action.amount) * 100) / 100 })
+            .eq('id', from.id),
+          'the balance',
+        )
+      }
+
+      await writeEvent(admin, {
+        caseId,
+        type: 'transfer_initiated',
+        actor: 'customer',
+        applicationId: action.toApplicationId,
+        payload: {
+          transferId,
+          amount: action.amount,
+          from: bankName,
+          fromAccount: from.displayName,
+          to: toLabel,
+          cadence: action.cadence,
+          applicationName: toLabel,
+        },
+      })
+
+      const amount = `€${action.amount.toLocaleString('en-IE')}`
+      summary =
+        action.cadence === 'once'
+          ? `${amount} on its way from ${bankName} to your ${toLabel}.`
+          : `${amount} a month will go from ${bankName} to your ${toLabel}.`
+      break
+    }
+
     case 'pause_application':
     case 'resume_application': {
       const application = findApplication(loaded, action.applicationId)
@@ -765,6 +971,13 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     200,
   )
 })
+
+/** "balances and transactions", "balances, transactions and payments you approve". */
+function describeScope(scope: readonly string[]): string {
+  const words = scope.map((item) => (item === 'payments' ? 'payments you approve' : item))
+  if (words.length <= 1) return words.join('')
+  return `${words.slice(0, -1).join(', ')} and ${words.at(-1) ?? ''}`
+}
 
 async function caseIdForApplication(
   admin: Db,

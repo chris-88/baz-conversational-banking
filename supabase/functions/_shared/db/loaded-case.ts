@@ -47,6 +47,39 @@ export type LoadedProductInterest = {
   readonly reason: string | null
 }
 
+export type LoadedLinkedTransaction = {
+  readonly bookedOn: string
+  /** Negative is money out. */
+  readonly amount: number
+  readonly description: string
+  readonly category: string
+}
+
+export type LoadedLinkedAccount = {
+  readonly id: string
+  readonly bank: string
+  readonly displayName: string
+  readonly accountType: 'current' | 'savings'
+  readonly iban: string
+  readonly balance: number
+  readonly consentScope: readonly string[]
+  readonly consentExpiresAt: string
+  readonly createdAt: string
+  /** Newest first. */
+  readonly transactions: readonly LoadedLinkedTransaction[]
+}
+
+export type LoadedTransfer = {
+  readonly id: string
+  readonly fromAccountId: string
+  readonly toApplicationId: string | null
+  readonly toLabel: string
+  readonly amount: number
+  readonly cadence: 'once' | 'monthly'
+  readonly state: 'initiated' | 'settled' | 'failed'
+  readonly createdAt: string
+}
+
 export type LoadedMessage = {
   readonly role: 'customer' | 'baz' | 'system'
   readonly content: string
@@ -92,6 +125,13 @@ export type LoadedCase = {
    * what a form still wants is part of what Baz knows about a case.
    */
   readonly formApplications: readonly LoadedFormApplication[]
+
+  /**
+   * Open banking, simulated: accounts linked under a consent that has not been revoked, with
+   * their transactions, and the transfers initiated from them. Empty on most cases.
+   */
+  readonly linkedAccounts: readonly LoadedLinkedAccount[]
+  readonly transfers: readonly LoadedTransfer[]
 
   /** Oldest first. Only the tail is sent to the model. */
   readonly messages: readonly LoadedMessage[]

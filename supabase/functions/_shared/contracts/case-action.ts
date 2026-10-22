@@ -1,3 +1,4 @@
+import { CONSENT_SCOPE, LINKABLE_BANK_IDS } from './cards.ts'
 import { z } from 'zod'
 import { PRODUCTS } from '../domain/journey.ts'
 import { APPLICATION_STATES } from '../domain/state-machine.ts'
@@ -145,6 +146,28 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
       .array(z.object({ key: z.string().min(1), value: z.unknown() }))
       .min(1)
       .max(20),
+  }),
+
+  /**
+   * Open banking, simulated. Linking is the consent tap on the `connect_accounts` card: the
+   * server generates the accounts and ninety days of transactions from the case's own facts.
+   * Revoking removes the consent and everything read under it. A transfer is the tap on a
+   * `transfer` card; the server initiates it and the console settles it.
+   */
+  z.object({
+    action: z.literal('link_accounts'),
+    caseId,
+    bank: z.enum(LINKABLE_BANK_IDS),
+    scope: z.array(z.enum(CONSENT_SCOPE)).min(1),
+  }),
+  z.object({ action: z.literal('revoke_accounts'), caseId }),
+  z.object({
+    action: z.literal('initiate_transfer'),
+    caseId,
+    fromAccountId: z.uuid(),
+    toApplicationId: applicationId,
+    amount: z.number().positive().max(1_000_000),
+    cadence: z.enum(['once', 'monthly']),
   }),
 ])
 

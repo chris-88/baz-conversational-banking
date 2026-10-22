@@ -361,3 +361,44 @@ describe('switching guidance', () => {
     expect(composeSystemPrompt(baseInput())).toContain('The exception is a mortgage')
   })
 })
+
+describe('linked accounts in the digest (open banking, simulated)', () => {
+  it('says nothing at all when nothing is linked', () => {
+    expect(composeSystemPrompt(baseInput())).not.toContain('## Linked accounts')
+  })
+
+  it('lists each account, what was read off the transactions, and any transfer', () => {
+    const input = baseInput()
+    const prompt = composeSystemPrompt({
+      ...input,
+      digest: {
+        ...input.digest,
+        linkedAccounts: {
+          accounts: [
+            { bank: 'AIB', name: 'Current Account', type: 'current', balance: 2_340.5 },
+            { bank: 'AIB', name: 'Online Saver', type: 'savings', balance: 32_000 },
+          ],
+          salary: { monthly: 4_100, annualised: 49_200, employer: 'Acme Ltd', months: 3 },
+          rent: { monthly: 1_800 },
+          savingsHeld: 32_000,
+          daysOfHistory: 90,
+          consentEndsOn: '2027-01-20',
+          transfers: [{ amount: 32_000, cadence: 'once', toLabel: 'SuperSaver', state: 'initiated' }],
+        },
+      },
+    })
+
+    const section = prompt.slice(prompt.indexOf('## Linked accounts'), prompt.indexOf('## Applications'))
+    expect(section).toContain('- AIB Current Account (current): €2,341')
+    expect(section).toContain('- AIB Online Saver (savings): €32,000')
+    expect(section).toContain('Salary seen: €4,100 a month from Acme Ltd, 3 months (about €49,200 a year).')
+    expect(section).toContain('Rent seen: €1,800 a month.')
+    expect(section).toContain('Savings held there: €32,000.')
+    expect(section).toContain('consent that ends 2027-01-20; 90 days of history')
+    expect(section).toContain('- Transfer €32,000 once to SuperSaver: initiated')
+    // Sits with what is known, before the applications.
+    expect(prompt.indexOf('## What you already know')).toBeLessThan(prompt.indexOf('## Linked accounts'))
+    // Short: it is read on every round of every turn once something is linked.
+    expect(section.length).toBeLessThan(700)
+  })
+})

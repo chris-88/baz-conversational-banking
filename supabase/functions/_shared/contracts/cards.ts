@@ -490,6 +490,73 @@ export const accountOpenedCardSchema = z.object({
   next: z.array(z.string()).min(1).max(4),
 })
 
+/**
+ * Open banking, simulated (Nexus, a stand-in aggregator). Three cards.
+ *
+ * `connect_accounts` is the consent: the customer picks the bank and allows exactly the scope
+ * listed. `accounts_overview` is something to read, built on the server from the linked rows.
+ * `transfer` is a payment the customer initiates with a tap; nothing moves until they do.
+ */
+export const LINKABLE_BANKS = [
+  { id: 'aib', name: 'AIB' },
+  { id: 'ptsb', name: 'PTSB' },
+  { id: 'revolut', name: 'Revolut' },
+  { id: 'n26', name: 'N26' },
+  { id: 'an_post', name: 'An Post Money' },
+  { id: 'credit_union', name: 'Credit Union' },
+] as const
+export const LINKABLE_BANK_IDS = LINKABLE_BANKS.map((bank) => bank.id) as [
+  (typeof LINKABLE_BANKS)[number]['id'],
+  ...(typeof LINKABLE_BANKS)[number]['id'][],
+]
+export const CONSENT_SCOPE = ['balances', 'transactions', 'payments'] as const
+
+export const connectAccountsCardSchema = z.object({
+  type: z.literal('connect_accounts'),
+  /** Why Baz is asking, tied to what the customer said. One line. */
+  why: z.string(),
+  banks: z.array(z.object({ id: z.enum(LINKABLE_BANK_IDS), name: z.string() })).min(1),
+  scope: z.array(z.enum(CONSENT_SCOPE)).min(1),
+  /** Days the consent runs for, as the consent screen states it. */
+  consentDays: z.number().int().positive(),
+})
+
+export const linkedAccountSchema = z.object({
+  id: z.uuid(),
+  bank: z.string(),
+  displayName: z.string(),
+  accountType: z.enum(['current', 'savings']),
+  /** Masked for a screen: the last four only. */
+  ibanMasked: z.string(),
+  balance: z.number(),
+})
+
+export const accountsOverviewCardSchema = z.object({
+  type: z.literal('accounts_overview'),
+  asOf: z.string(),
+  accounts: z.array(linkedAccountSchema).min(1),
+  /** This calendar month so far, across every linked account. */
+  month: z.object({ moneyIn: z.number(), moneyOut: z.number() }),
+  /** What arrives as pay, detected from the transactions. Null when nothing regular is seen. */
+  salary: z.object({ amount: z.number(), employer: z.string(), lastOn: z.string() }).nullable(),
+  /** The largest regular outgoings, detected. */
+  regular: z.array(z.object({ label: z.string(), amount: z.number(), cadence: z.string() })).max(5),
+  /** What is in savings-type accounts, the figure a transfer is offered against. */
+  savingsHeld: z.number(),
+})
+
+export const transferCardSchema = z.object({
+  type: z.literal('transfer'),
+  fromAccountId: z.uuid(),
+  fromLabel: z.string(),
+  toApplicationId: applicationId,
+  toLabel: z.string(),
+  amount: z.number().positive(),
+  cadence: z.enum(['once', 'monthly']),
+  /** Why this amount, in the customer's terms. One line. */
+  why: z.string(),
+})
+
 export const cardSchema = z.discriminatedUnion('type', [
   quoteCardSchema,
   planProposalCardSchema,
@@ -510,6 +577,9 @@ export const cardSchema = z.discriminatedUnion('type', [
   dataNoticeCardSchema,
   signInCardSchema,
   accountOpenedCardSchema,
+  connectAccountsCardSchema,
+  accountsOverviewCardSchema,
+  transferCardSchema,
 ])
 
 export type Card = z.infer<typeof cardSchema>
@@ -535,6 +605,9 @@ export const CARD_TYPES = [
   'data_notice',
   'sign_in',
   'account_opened',
+  'connect_accounts',
+  'accounts_overview',
+  'transfer',
 ] as const satisfies readonly CardType[]
 
 /**
@@ -566,6 +639,8 @@ export const AWAITING_CARDS = [
   'health_form',
   'quote',
   'sign_in',
+  'connect_accounts',
+  'transfer',
 ] as const satisfies readonly CardType[]
 
 const AWAITING: ReadonlySet<string> = new Set(AWAITING_CARDS)

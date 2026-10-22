@@ -19,6 +19,8 @@ export const queryKeys = {
     participants: (caseId: string) => ['case', caseId, 'participants'] as const,
     productInterests: (caseId: string) => ['case', caseId, 'product-interests'] as const,
     metrics: (caseId: string) => ['case', caseId, 'metrics'] as const,
+    /** Accounts linked through Nexus, for the menu's "Linked accounts" section. */
+    linkedAccounts: (caseId: string) => ['case', caseId, 'linked-accounts'] as const,
   },
 
   plans: {

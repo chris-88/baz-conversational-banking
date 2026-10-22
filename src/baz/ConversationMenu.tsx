@@ -1,7 +1,27 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, BellRing, Check, LogIn, LogOut, Menu, MessageSquare, Plus } from 'lucide-react'
+import {
+  Bell,
+  BellRing,
+  Check,
+  Landmark,
+  LogIn,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Plus,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Sheet,
   SheetContent,
@@ -19,6 +39,8 @@ import { SignInForm } from '@/baz/SignInForm'
 import { InstallSteps } from '@/baz/InstallSteps'
 import { isInstalled, platform } from '@/lib/installed'
 import { supabase } from '@/lib/supabase'
+import { runCaseAction } from '@/lib/caseActions'
+import { LINKABLE_BANKS } from '@contracts/cards.ts'
 import { cn } from '@/lib/utils'
 
 /**
@@ -84,6 +106,49 @@ function useNotifications(caseId: string | null) {
   })
 }
 
+type LinkedAccount = {
+  readonly id: string
+  readonly bank: string
+  readonly displayName: string
+  readonly consentUntil: string
+}
+
+/**
+ * The accounts the customer has let Nexus share, read under their own RLS.
+ *
+ * Only consents still standing: a revoked row stays in the table for the card that offered
+ * it to settle against, but it is nothing the customer needs to see here.
+ */
+function useLinkedAccounts(caseId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.case.linkedAccounts(caseId ?? 'none'),
+    enabled: enabled && caseId !== null && supabase !== null,
+    queryFn: async (): Promise<readonly LinkedAccount[]> => {
+      if (!supabase || !caseId) return []
+      const rows = await supabase
+        .from('linked_accounts')
+        .select('id, bank, display_name, consent_expires_at')
+        .eq('case_id', caseId)
+        .is('revoked_at', null)
+        .order('created_at', { ascending: true })
+
+      return (
+        (rows.data ?? []) as {
+          id: string
+          bank: string
+          display_name: string
+          consent_expires_at: string
+        }[]
+      ).map((row) => ({
+        id: row.id,
+        bank: LINKABLE_BANKS.find((bank) => bank.id === row.bank)?.name ?? row.bank,
+        displayName: row.display_name,
+        consentUntil: row.consent_expires_at,
+      }))
+    },
+  })
+}
+
 export function ConversationMenu({
   caseId,
   className,
@@ -103,6 +168,7 @@ export function ConversationMenu({
   })
 
   const [permission, setPermission] = useState(() => pushPermission())
+  const linked = useLinkedAccounts(caseId, open)
 
   /**
    * Who is signed in. Read when the menu opens rather than held in a store: it changes exactly
@@ -265,6 +331,26 @@ export function ConversationMenu({
             )}
           </section>
 
+          {/*
+            Only while something is shared. The consent screen promised "stop it any time from
+            the menu", so this is where that promise is kept; with nothing linked there is
+            nothing to stop, and a section saying so is noise.
+          */}
+          {caseId !== null && linked.data !== undefined && linked.data.length > 0 && (
+            <>
+              <Separator />
+              <LinkedAccounts
+                caseId={caseId}
+                accounts={linked.data}
+                onRevoked={() =>
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.case.linkedAccounts(caseId),
+                  })
+                }
+              />
+            </>
+          )}
+
           <Separator />
 
           <section className="p-4">
@@ -378,6 +464,109 @@ export function ConversationMenu({
       </SheetContent>
     </Sheet>
   )
+}
+
+/**
+ * What is being shared, and the way to stop it.
+ *
+ * Revoking is a `case-action` like any other commitment, and it removes everything read under
+ * the consent, so it asks first. The card in the conversation settles to "stopped sharing" on
+ * its own: the state comes from the database, not from this menu.
+ */
+function LinkedAccounts({
+  caseId,
+  accounts,
+  onRevoked,
+}: {
+  readonly caseId: string
+  readonly accounts: readonly LinkedAccount[]
+  readonly onRevoked: () => Promise<unknown>
+}): ReactNode {
+  const [confirming, setConfirming] = useState(false)
+  const revoke = useMutation({
+    mutationFn: () => runCaseAction({ action: 'revoke_accounts', caseId }),
+    onSuccess: async () => {
+      setConfirming(false)
+      await onRevoked()
+    },
+  })
+
+  const banks = [...new Set(accounts.map((account) => account.bank))]
+  const until = accounts[0]?.consentUntil ?? null
+
+  return (
+    <section className="p-4">
+      <h3 className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+        <Landmark className="size-3.5" />
+        Linked accounts
+      </h3>
+
+      <ul className="space-y-1">
+        {accounts.map((account) => (
+          <li key={account.id} className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate">
+              <span className="font-medium">{account.bank}</span>
+              <span className="text-muted-foreground"> · {account.displayName}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+        Shared through Nexus{until === null ? '' : ` until ${longDate(until)}`}. Balances and
+        transactions only; nothing moves unless you tap.
+      </p>
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-3 w-full"
+        disabled={revoke.isPending}
+        onClick={() => setConfirming(true)}
+      >
+        Stop sharing
+      </Button>
+      {revoke.isError && (
+        <p className="text-destructive mt-2 text-xs">{revoke.error.message}</p>
+      )}
+
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Stop sharing with Baz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nexus stops sharing your {joinNames(banks)} accounts, and everything Baz read
+              under that consent is removed. You can link them again whenever you like.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep sharing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                // Stays open until the server has answered, so a failure has somewhere to show.
+                event.preventDefault()
+                revoke.mutate()
+              }}
+            >
+              {revoke.isPending ? 'Stopping…' : 'Stop sharing'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  )
+}
+
+function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? ''
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`
+}
+
+/** "20 January 2027": a consent's end date is worth saying in full. */
+function longDate(iso: string): string {
+  const at = new Date(iso)
+  return Number.isNaN(at.getTime())
+    ? iso
+    : at.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 /** What to say about a subscription attempt, in the customer's terms rather than the API's. */

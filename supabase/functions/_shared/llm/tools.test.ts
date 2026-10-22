@@ -79,13 +79,22 @@ describe('the model has no tool that takes an action', () => {
     // it holds and the published rates and works the split out; the model cannot pass a figure
     // because there is no figure it could pass that it did not make up. One tap on the card
     // starts every account on it, through `select_products` like any other start.
+    //
+    // `show_connect_accounts`, `show_accounts` and `show_transfer` are the seventeenth to the
+    // nineteenth, open banking simulated. The first takes a line of why and shows a consent the
+    // customer gives by tapping; linking is `link_accounts` in case-action. The second takes
+    // nothing and is read off the linked rows. The third is the one that could look like
+    // acting, because it is about moving money: it names an application, the server picks the
+    // account, reads the balance and caps the amount, and `initiate_transfer` is the tap.
     expect([...TOOL_NAMES].sort()).toEqual([
       'propose_plan',
       'record_facts',
       'record_form_answers',
       'request_upload',
+      'show_accounts',
       'show_arrangement',
       'show_comparison',
+      'show_connect_accounts',
       'show_form',
       'show_form_declarations',
       'show_form_upload',
@@ -96,6 +105,7 @@ describe('the model has no tool that takes an action', () => {
       'show_quote',
       'show_review',
       'show_status',
+      'show_transfer',
     ])
   })
 

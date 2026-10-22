@@ -32,6 +32,10 @@ const SIGNALS = new Set([
   'request_blocked',
   'tool_rejected',
   'customer_repeated',
+  'accounts_linked',
+  'accounts_revoked',
+  'transfer_initiated',
+  'transfer_settled',
 ])
 
 const text = (payload: Record<string, unknown>, key: string): string | null => {
@@ -145,6 +149,21 @@ export function describeAdminEvent(
         return 'Case reset to the seed'
       case 'handoff_created':
         return 'Handed over to the app'
+      // Open banking, simulated: the consent, its withdrawal, and the money moving.
+      case 'accounts_linked':
+        return `Linked ${
+          typeof payload['accounts'] === 'number' ? String(payload['accounts']) : 'their'
+        } ${text(payload, 'bankName') ?? 'other-bank'} accounts through Nexus`
+      case 'accounts_revoked':
+        return 'Withdrew the Nexus consent: linked accounts no longer read'
+      case 'transfer_initiated':
+        return `Transfer started: ${money(payload, 'amount') ?? 'an amount'}${
+          payload['cadence'] === 'monthly' ? ' a month' : ''
+        } from ${text(payload, 'from') ?? 'a linked account'} to ${text(payload, 'to') ?? 'an application'}`
+      case 'transfer_settled':
+        return `Transfer settled: ${money(payload, 'amount') ?? 'an amount'} arrived in ${
+          text(payload, 'to') ?? 'the application'
+        }`
       default:
         // Readable rather than raw, so a new event type is still legible before anyone
         // writes a sentence for it.

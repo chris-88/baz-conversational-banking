@@ -94,6 +94,17 @@ export function welcomeCardFor(
   const employment = facts?.get('employment.status', 'primary')
   const saving = loaded.applications.some((candidate) => candidate.product === 'savings')
 
+  /*
+   * Open banking, simulated: savings sitting in a linked account at another bank are the
+   * first thing to do with the new one, ahead of the salary. The line names the figure and
+   * the bank so the digest tells the model the same thing, and `show_transfer` follows.
+   */
+  const held = loaded.linkedAccounts.filter(
+    (account) => account.accountType === 'savings' && account.balance > 0,
+  )
+  const heldElsewhere = held.reduce((sum, account) => sum + account.balance, 0)
+  const heldAt = [...new Set(held.map((account) => account.bank))].join(' and ')
+
   return {
     type: ACCOUNT_OPENED_CARD,
     applicationId: String(application.id),
@@ -104,6 +115,9 @@ export function welcomeCardFor(
     // only that it is on its way.
     cardTo: typeof address === 'string' ? address : null,
     next: [
+      ...(heldElsewhere > 0
+        ? [`Move your €${Math.round(heldElsewhere).toLocaleString('en-IE')} from ${heldAt} into it`]
+        : []),
       EMPLOYED.has(employment)
         ? 'Give your employer this IBAN for your salary'
         : 'Use this IBAN wherever money needs to reach you',

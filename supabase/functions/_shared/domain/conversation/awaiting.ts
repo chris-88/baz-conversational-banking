@@ -200,5 +200,15 @@ function settled(type: AwaitingCardType, since: Since, loaded: AwaitingContext):
     case 'comparison':
     case 'quote':
       return true
+
+    /*
+     * Open banking, simulated. Linking and moving money are both taps the app reports, and
+     * neither the linked accounts nor the transfers are in this context, so the tap is the
+     * whole of the evidence. Somebody who declines to link says so in words, and words leave
+     * the offer standing, which is right: the card still works whenever they want it.
+     */
+    case 'connect_accounts':
+    case 'transfer':
+      return since.tapped
   }
 }

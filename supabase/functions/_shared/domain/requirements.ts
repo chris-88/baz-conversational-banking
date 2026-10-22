@@ -15,6 +15,8 @@ import type {
   Requirement,
   RequirementSubject,
 } from './journey.ts'
+import type { AccountEvidence } from './open-banking/evidence.ts'
+export type { AccountEvidence }
 
 /**
  * What does this application still require?
@@ -43,6 +45,45 @@ export type RequirementContext = {
    */
   readonly confirmations: readonly string[]
   readonly documents: readonly { readonly requirementId: string; readonly verified: boolean }[]
+  /**
+   * What the customer's linked accounts show, when they have linked any (open banking,
+   * simulated). A payslip is asked for to see a salary arriving, and a statement to see how
+   * money moves; ninety days of booked transactions show both, so a document requirement can
+   * be met by the data without anything being uploaded. Absent on most cases.
+   */
+  readonly accountEvidence?: AccountEvidence
+}
+
+/** Two payslips is what the bank asks for, so two months of pay seen arriving is the bar. */
+const PAYSLIP_MONTHS_OBSERVED = 2
+/** A statement covers a period; sixty days of history covers the two-month version of it. */
+const STATEMENT_DAYS_OBSERVED = 60
+
+/**
+ * Whether what the linked accounts show stands in for a document the journey asks for.
+ *
+ * Only a payslip or a statement, because those are what the data is: pay arriving and money
+ * moving. Photo ID and proof of address are not in a transaction feed, and the bank's own
+ * post-submission requests are asked for by people who have already seen the data.
+ */
+export function evidenceCovers(
+  requirement: Extract<Requirement, { kind: 'document' }>,
+  evidence: AccountEvidence | undefined,
+): boolean {
+  if (evidence === undefined) return false
+  switch (requirement.documentType) {
+    case 'payslip':
+      return (
+        evidence.salaryObserved !== null && evidence.salaryObserved.months >= PAYSLIP_MONTHS_OBSERVED
+      )
+    case 'bank_statement':
+      return evidence.daysOfHistory >= STATEMENT_DAYS_OBSERVED
+    case 'photo_id':
+    case 'proof_of_address':
+    case 'salary_certificate':
+    case 'bank_request':
+      return false
+  }
 }
 
 export type OutstandingReason =
@@ -88,6 +129,12 @@ export type SatisfiedItem = {
    * rather than only received. Absent for everything else.
    */
   readonly document?: { readonly verified: boolean }
+  /**
+   * `account_data` when a document requirement was met by what the customer's linked accounts
+   * show rather than by an upload, so a card can say "seen in your linked account" and the
+   * §53 record can say what was never sent in. Absent for everything else.
+   */
+  readonly reason?: 'account_data'
 }
 
 export type JourneyEvaluation = {
@@ -232,6 +279,7 @@ type Verdict =
       readonly fact: Fact | null
       readonly reused: boolean
       readonly document?: { readonly verified: boolean }
+      readonly reason?: 'account_data'
     }
   | { readonly status: 'outstanding'; readonly reason: OutstandingReason; readonly knownFact: Fact | null }
 
@@ -301,6 +349,11 @@ function evaluateRequirement(requirement: Requirement, context: RequirementConte
     case 'document': {
       const document = context.documents.find((d) => d.requirementId === requirement.id)
       if (document === undefined) {
+        // Nothing uploaded, but the linked accounts may already show what the document would.
+        // Reused, because it was satisfied without the customer being asked for it (§53).
+        if (evidenceCovers(requirement, context.accountEvidence)) {
+          return { status: 'satisfied', fact: null, reused: true, reason: 'account_data' }
+        }
         return { status: 'outstanding', reason: 'awaiting_document', knownFact: null }
       }
 
@@ -351,6 +404,7 @@ export function evaluateJourney(journey: Journey, context: RequirementContext): 
         fact: verdict.fact,
         reused: verdict.reused,
         ...(verdict.document === undefined ? {} : { document: verdict.document }),
+        ...(verdict.reason === undefined ? {} : { reason: verdict.reason }),
       })
       continue
     }

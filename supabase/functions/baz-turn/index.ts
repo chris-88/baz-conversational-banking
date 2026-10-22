@@ -6,7 +6,7 @@ import type { Database } from '../_shared/db/database.types.ts'
 import { bazTurnRequestSchema } from '../_shared/contracts/baz-turn.ts'
 import { fail, statusFor } from '../_shared/contracts/common.ts'
 import { toSseFrame, withdraw, type StreamEvent } from '../_shared/contracts/stream.ts'
-import { awaitsCustomer } from '../_shared/contracts/cards.ts'
+import { awaitsCustomer, CONSENT_SCOPE, LINKABLE_BANKS } from '../_shared/contracts/cards.ts'
 import type { Card } from '../_shared/contracts/cards.ts'
 import { journeyFor } from '../_shared/domain/journeys/index.ts'
 import { evaluateAdvisories } from '../_shared/domain/advisories.ts'
@@ -19,7 +19,7 @@ import {
 } from '../_shared/db/applications.ts'
 import { confirmationsForReview, readyForReview } from '../_shared/domain/requirements.ts'
 import { factCatalogue } from '../_shared/domain/facts.ts'
-import { stateLabel } from '../_shared/domain/state-machine.ts'
+import { APPLICATION_STATES, stateLabel, type ApplicationState } from '../_shared/domain/state-machine.ts'
 import { DATA_NOTICE_EVENT, dataNoticeCard } from '../_shared/llm/data-notice.ts'
 import {
   SIGN_IN_PROMPT_EVENT,
@@ -28,6 +28,8 @@ import {
 } from '../_shared/llm/sign-in-prompt.ts'
 import { soundsLikeReturning } from '../_shared/domain/continuity.ts'
 import { arrange } from '../_shared/domain/savings/arrange.ts'
+import { summariseAccounts } from '../_shared/domain/open-banking/summarise.ts'
+import { maskIban } from '../_shared/domain/open-banking/synthesise.ts'
 import { compareSwitch } from '../_shared/domain/switch-comparison.ts'
 import { SWITCHING_COSTS, switchingSection } from '../_shared/tenants/boi/switching.ts'
 import { describeReused, formatFactValue, type ReuseEvent } from '../_shared/domain/reuse.ts'
@@ -182,6 +184,34 @@ const ARRANGEMENT_CARD_WINDOW = 6
  * stays useful further up the conversation, and a second copy of the same figures is noise.
  */
 const QUOTE_CARD_WINDOW = 4
+
+/**
+ * Open banking, simulated. The consent card waits for a decision the customer may take a few
+ * turns to make, so it stays "on screen" about as long as the arrangement; a transfer is
+ * acted on or passed over sooner.
+ */
+const CONNECT_CARD_WINDOW = 6
+const TRANSFER_CARD_WINDOW = 4
+/** How long the consent runs, as the consent screen states it. */
+const CONSENT_DAYS = 90
+
+/** The applications money can be moved into: an account, not a loan or a policy. */
+const TRANSFER_PRODUCTS: ReadonlySet<Product> = new Set<Product>([
+  'savings',
+  'current_account',
+  'joint_account',
+])
+
+/**
+ * From `waiting_customer` on, an application is real enough to be the destination of a
+ * transfer the customer initiates; `declined` is the one later state with nothing to pay into.
+ */
+function transferable(state: ApplicationState): boolean {
+  return (
+    APPLICATION_STATES.indexOf(state) >= APPLICATION_STATES.indexOf('waiting_customer') &&
+    state !== 'declined'
+  )
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -1535,6 +1565,220 @@ async function handleTurn(request: Request): Promise<Response> {
                * journey product and the catalogue id separately, because nine savings accounts
                * share one `savings` journey and one tap has to start the right ones.
                */
+              /*
+               * Open banking, simulated (§6, §53). Three cards: the consent, the overview and
+               * the transfer. Nothing is linked and nothing moves until the customer taps, and
+               * every figure on every card is read from the linked rows by the server. The
+               * model supplies one line of why for the consent and the name of an application
+               * for the transfer, and nothing else.
+               */
+              case 'show_connect_accounts': {
+                const { why } = input as { why: string }
+
+                if (loaded.linkedAccounts.length > 0) {
+                  return {
+                    result: 'Their accounts are already linked; use show_accounts to show them.',
+                    refused: true,
+                  }
+                }
+
+                // One consent card, not one per turn. The one on screen still works, and the
+                // digest says when something has been linked from it.
+                const onScreen = loaded.messages
+                  .slice(-CONNECT_CARD_WINDOW)
+                  .some((message) => message.cards.includes('connect_accounts'))
+                if (onScreen) {
+                  return {
+                    result:
+                      'The link-your-accounts card is already on screen from an earlier turn and ' +
+                      'still works. Point at it in your own words; do not draw another.',
+                  }
+                }
+
+                const card: Card = {
+                  type: 'connect_accounts',
+                  why,
+                  banks: LINKABLE_BANKS.map((bank) => ({ id: bank.id, name: bank.name })),
+                  scope: [...CONSENT_SCOPE],
+                  consentDays: CONSENT_DAYS,
+                }
+
+                return {
+                  result:
+                    'Link card shown. Nothing is linked until they pick a bank and consent. Say ' +
+                    'one line about why, and stop: nothing about what the accounts hold, because ' +
+                    'nothing can be seen yet.',
+                  card,
+                }
+              }
+
+              case 'show_accounts': {
+                if (loaded.linkedAccounts.length === 0) {
+                  return {
+                    result: 'Nothing is linked; offer show_connect_accounts instead.',
+                    refused: true,
+                  }
+                }
+
+                const today = new Date().toISOString().slice(0, 10)
+                const summary = summariseAccounts(
+                  loaded.linkedAccounts,
+                  loaded.linkedAccounts.flatMap((account) => account.transactions),
+                  today,
+                )
+
+                const card: Card = {
+                  type: 'accounts_overview',
+                  asOf: today,
+                  accounts: loaded.linkedAccounts.map((account) => ({
+                    id: account.id,
+                    bank: account.bank,
+                    displayName: account.displayName,
+                    accountType: account.accountType,
+                    ibanMasked: maskIban(account.iban),
+                    balance: account.balance,
+                  })),
+                  month: summary.month,
+                  salary: summary.salary,
+                  regular: summary.regular.map((item) => ({
+                    label: item.label,
+                    amount: item.amount,
+                    cadence: item.cadence,
+                  })),
+                  savingsHeld: summary.savingsHeld,
+                }
+
+                return {
+                  result:
+                    'Overview shown, every figure read from the linked accounts. Say one line ' +
+                    'about what stands out for what they are doing, and quote no figure: they ' +
+                    'are on the card.',
+                  card,
+                }
+              }
+
+              case 'show_transfer': {
+                const {
+                  applicationId,
+                  amount,
+                  cadence = 'once',
+                } = input as {
+                  applicationId: string
+                  amount?: number
+                  cadence?: 'once' | 'monthly'
+                }
+                const application = findApplication(loaded, applicationId)
+                if (!application) return { result: 'There is no such application.', refused: true }
+
+                const toLabel = applicationName(application, nameFor)
+                if (!TRANSFER_PRODUCTS.has(application.product)) {
+                  return {
+                    result:
+                      `Money can only be moved into an account. ${toLabel} is not one; ` +
+                      'do not offer a transfer for it.',
+                    refused: true,
+                  }
+                }
+                if (!transferable(application.state)) {
+                  return {
+                    result:
+                      `${toLabel} is ${stateLabel(application.state).toLowerCase()}; there is ` +
+                      'nothing to move money into yet. Collect what it needs first.',
+                    refused: true,
+                  }
+                }
+
+                // The money comes from savings where they hold any, else from the current
+                // account, and only ever from an account with something in it.
+                const from = [...loaded.linkedAccounts]
+                  .filter((account) => account.balance > 0)
+                  .sort((a, b) =>
+                    a.accountType === b.accountType
+                      ? b.balance - a.balance
+                      : a.accountType === 'savings'
+                        ? -1
+                        : 1,
+                  )[0]
+                if (from === undefined) {
+                  return {
+                    result:
+                      loaded.linkedAccounts.length === 0
+                        ? 'Nothing is linked, so there is nothing to move from; offer show_connect_accounts first.'
+                        : 'None of the linked accounts holds anything to move.',
+                    refused: true,
+                  }
+                }
+
+                const savingsHeld = loaded.linkedAccounts
+                  .filter((account) => account.accountType === 'savings')
+                  .reduce((sum, account) => sum + account.balance, 0)
+
+                let figure: number
+                if (cadence === 'once') {
+                  figure = Math.min(amount ?? (savingsHeld > 0 ? savingsHeld : from.balance), from.balance)
+                } else {
+                  const monthly = amount ?? caseFactReader(loaded)?.number('goals.monthlySaving') ?? null
+                  if (monthly === null) {
+                    return {
+                      result:
+                        'How much they can put away each month is not known. Ask it, record ' +
+                        '`goals.monthlySaving`, and offer the transfer next turn.',
+                      refused: true,
+                    }
+                  }
+                  figure = monthly
+                }
+                if (figure <= 0) {
+                  return { result: 'There is no amount to move.', refused: true }
+                }
+
+                /*
+                 * One transfer card per application, not one per turn. The one on screen still
+                 * works until a transfer is made from it, which the case shows.
+                 */
+                const recent = loaded.messages
+                  .slice(-TRANSFER_CARD_WINDOW)
+                  .some((message) => message.cards.includes('transfer'))
+                const last = recent ? await lastTransferOffered(admin, turn.caseId) : null
+                const movedSince =
+                  last !== null && loaded.transfers.some((transfer) => transfer.createdAt > last.createdAt)
+                if (last !== null && last.toApplicationId === String(application.id) && !movedSince) {
+                  return {
+                    result:
+                      'The transfer card is already on screen from an earlier turn and still ' +
+                      'works. Point at it in your own words; do not draw another.',
+                  }
+                }
+
+                // Written here, from the figures, so the line on the card is the server's.
+                const destination =
+                  application.state === 'completed'
+                    ? 'the account you have just opened'
+                    : `the ${toLabel} you are opening`
+                const why =
+                  cadence === 'once'
+                    ? `Your ${from.accountType === 'savings' ? 'savings' : 'money'} sitting in ${from.bank}, moved to ${destination}`
+                    : `${money(figure)} a month from your ${from.bank} account into ${destination}, as a standing order`
+
+                const card: Card = {
+                  type: 'transfer',
+                  fromAccountId: from.id,
+                  fromLabel: `${from.bank} ${from.displayName}`,
+                  toApplicationId: String(application.id),
+                  toLabel,
+                  amount: figure,
+                  cadence,
+                  why,
+                }
+
+                return {
+                  result:
+                    'Transfer card shown, the amount read from the linked account. Nothing moves ' +
+                    'until they tap. Say one line about why, quote no figure, and ask nothing.',
+                  card,
+                }
+              }
+
               case 'show_arrangement': {
                 /*
                  * One arrangement card, not one per turn. Asked "show me the rest first" and
@@ -2861,6 +3105,27 @@ async function lastOptionsOffered(admin: Db, caseId: string): Promise<ReadonlySe
       return typeof id === 'string' ? [id] : []
     }),
   )
+}
+
+/** The most recent transfer card, from its stored payload: where it was to, and when. */
+async function lastTransferOffered(
+  admin: Db,
+  caseId: string,
+): Promise<{ readonly toApplicationId: string; readonly createdAt: string } | null> {
+  const result = await admin
+    .from('messages')
+    .select('cards, created_at')
+    .eq('case_id', caseId)
+    .contains('cards', [{ type: 'transfer' }])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const row = result.data as { cards?: unknown; created_at?: unknown } | null
+  if (row === null || typeof row.created_at !== 'string') return null
+  const cards = (row.cards ?? []) as { type?: unknown; toApplicationId?: unknown }[]
+  const card = cards.find((candidate) => candidate.type === 'transfer')
+  if (card === undefined || typeof card.toApplicationId !== 'string') return null
+  return { toApplicationId: card.toApplicationId, createdAt: row.created_at }
 }
 
 function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {

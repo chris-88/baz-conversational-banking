@@ -3,12 +3,17 @@ import { awaitingCard } from '../domain/conversation/awaiting.ts'
 import { describeEvent } from '../domain/narration.ts'
 export { NARRATABLE_EVENTS } from '../domain/narration.ts'
 export type { NarratableEvent } from '../domain/narration.ts'
-import { journeyFor } from '../domain/journeys/index.ts'
-import { withBankRequests } from '../domain/bank-requests.ts'
-import { evaluateJourney, type OutstandingItem, type RequirementContext } from '../domain/requirements.ts'
+import { accountEvidence } from '../domain/open-banking/evidence.ts'
+import type { OutstandingItem } from '../domain/requirements.ts'
 import { evaluateAdvisories } from '../domain/advisories.ts'
 import { stateLabel } from '../domain/state-machine.ts'
-import type { CaseDigest, DigestApplication, DigestFact, DigestNeeds } from '../llm/prompt.ts'
+import type {
+  CaseDigest,
+  DigestApplication,
+  DigestFact,
+  DigestLinkedAccounts,
+  DigestNeeds,
+} from '../llm/prompt.ts'
 import { needContextFor } from './needs.ts'
 import { formDigestSection, formDigests } from './form-digest.ts'
 import type { Stage } from '../domain/conversation/stages.ts'
@@ -16,7 +21,7 @@ import { deferred, evaluateNeeds, nextToClarify, readyToSurface } from '../domai
 import { buildPlan } from '../domain/needs/plan.ts'
 import type { DigestPlan } from '../llm/prompt.ts'
 import { participantFor, type LoadedCase } from './loaded-case.ts'
-import { applicationName } from './applications.ts'
+import { applicationName, evaluateFor } from './applications.ts'
 
 /**
  * Builds the case digest the model sees (§14, Invariant 2).
@@ -70,29 +75,10 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
   if (primary === null) return []
 
   return loaded.applications.map((application) => {
-    const context: RequirementContext = {
-      applicationId: application.id,
-      participants: { primary, partner: participantFor(loaded, 'partner') },
-      facts: loaded.facts,
-      confirmations: loaded.confirmations
-        .filter((confirmation) => confirmation.applicationId === application.id)
-        .map((confirmation) => confirmation.requirementId),
-      documents: loaded.documents
-        .filter((document) => document.applicationId === application.id)
-        .map((document) => ({
-          requirementId: document.requirementId,
-          verified: document.verified,
-        })),
-    }
-
-    const journey = journeyFor(application.product)
-    // With what the bank asked for after submission, so this and the status card agree about
-    // whether anything is left (Invariant 2, §41).
-    const evaluation = withBankRequests(
-      journey,
-      evaluateJourney(journey, context),
-      loaded.requests.filter((request) => request.applicationId === application.id),
-    )
+    // The one evaluation everything reads, so this, the status card and `request_upload`
+    // agree about whether anything is left: the bank's post-submission requests and what the
+    // linked accounts cover are both in it (Invariant 2, §41).
+    const evaluation = evaluateFor(loaded, application)
 
     // Only blocking items: an optional extra is not something to chase anyone for. An
     // application can be waiting on the customer AND the partner at the same time, so the two
@@ -153,6 +139,48 @@ function digestApplications(loaded: LoadedCase): readonly DigestApplication[] {
   })
 }
 
+/**
+ * Open banking, simulated: what the model is told about the accounts the customer linked.
+ *
+ * The balances are the rows; the salary, rent and savings are what `accountEvidence` read off
+ * the transactions, the same reading the requirement engine assesses from, so the digest and
+ * the assessment never disagree about what was seen. Undefined when nothing is linked: silence
+ * is the signal, and a line saying "nothing linked" on every case would be read as a prompt
+ * to link on every case.
+ */
+function digestLinkedAccounts(loaded: LoadedCase, today: string): DigestLinkedAccounts | undefined {
+  if (loaded.linkedAccounts.length === 0) return undefined
+
+  const evidence = accountEvidence(
+    loaded.linkedAccounts,
+    loaded.linkedAccounts.flatMap((account) => account.transactions),
+    today,
+  )
+  const consentEndsOn = [...loaded.linkedAccounts]
+    .map((account) => account.consentExpiresAt.slice(0, 10))
+    .sort()[0]
+
+  return {
+    accounts: loaded.linkedAccounts.map((account) => ({
+      bank: account.bank,
+      name: account.displayName,
+      type: account.accountType,
+      balance: account.balance,
+    })),
+    salary: evidence.salaryObserved,
+    rent: evidence.rentObserved,
+    savingsHeld: evidence.savingsObserved,
+    daysOfHistory: evidence.daysOfHistory,
+    consentEndsOn: consentEndsOn ?? today,
+    transfers: loaded.transfers.map((transfer) => ({
+      amount: transfer.amount,
+      cadence: transfer.cadence,
+      toLabel: transfer.toLabel,
+      state: transfer.state,
+    })),
+  }
+}
+
 /** §36 — what changed while they were away, in the customer's language. */
 /**
  * Events a customer would recognise as news, and the only ones that bring them back (§36).
@@ -192,8 +220,14 @@ export function buildCaseDigest(
     readonly arrangement?: readonly string[]
     /** What the savings engine needs to know before it will arrange anything. */
     readonly arrangementNeeds?: readonly string[]
+    /** `YYYY-MM-DD`. What the linked accounts are read as of; defaults to the real day. */
+    readonly today?: string
   } = {},
 ): CaseDigest {
+  const linkedAccounts = digestLinkedAccounts(
+    loaded,
+    options.today ?? new Date().toISOString().slice(0, 10),
+  )
   const needContext = needContextFor(loaded, {
     sensitiveDisclosure: options.sensitiveDisclosure ?? false,
   })
@@ -282,6 +316,7 @@ export function buildCaseDigest(
     ...(awaiting === null ? {} : { awaiting }),
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
+    ...(linkedAccounts === undefined ? {} : { linkedAccounts }),
     applications,
     ...(forms === '' ? {} : { forms }),
     declinedProducts: loaded.productInterests

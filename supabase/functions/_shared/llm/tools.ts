@@ -117,6 +117,22 @@ export const showPausePromptInput = z.object({ applicationId })
  */
 export const showArrangementInput = z.object({})
 
+/**
+ * Open banking, simulated. Connecting takes one line of why; the banks, the scope and the
+ * consent period are the server's. The overview takes nothing: it is read off the linked
+ * rows. A transfer names the application the money is for and, optionally, how much and how
+ * often; the server reads the balance, caps the amount at it, and the customer's tap moves it.
+ */
+export const showConnectAccountsInput = z.object({
+  why: z.string().min(1).max(300),
+})
+export const showAccountsInput = z.object({})
+export const showTransferInput = z.object({
+  applicationId: z.string().min(1),
+  amount: z.number().positive().optional(),
+  cadence: z.enum(['once', 'monthly']).optional(),
+})
+
 export const showStatusInput = z.object({
   /** Omit for every application on the case. */
   applicationId: applicationId.optional(),
@@ -256,6 +272,9 @@ export const TOOL_INPUTS = {
   show_status: showStatusInput,
   show_arrangement: showArrangementInput,
   show_form: showFormInput,
+  show_connect_accounts: showConnectAccountsInput,
+  show_accounts: showAccountsInput,
+  show_transfer: showTransferInput,
 } as const
 
 export type ToolName = keyof typeof TOOL_INPUTS
@@ -425,6 +444,37 @@ export const TOOLS: readonly ToolDefinition[] = [
       'line of your own before it and nothing after: do not ask the customer anything in the ' +
       'turn you show it.',
     schema: showArrangementInput,
+  },
+  {
+    name: 'show_connect_accounts',
+    description:
+      'Offer to link the accounts the customer holds at other banks, so Baz can see balances ' +
+      'and transactions and, with their consent, move money. Use it when they mention savings ' +
+      'or salary held elsewhere, when an application would otherwise need statements or ' +
+      'payslips, or when they ask to see everything in one place. Pass one line of why, in ' +
+      'their terms. The card carries the banks, what is shared and for how long; linking is ' +
+      'their tap. Say nothing about the accounts until they are linked.',
+    schema: showConnectAccountsInput,
+  },
+  {
+    name: 'show_accounts',
+    description:
+      "Show the customer's linked accounts in one place: balances, this month's money in and " +
+      'out, the salary the server has detected and the largest regular outgoings. Only once ' +
+      'accounts are linked; you pass nothing and quote none of the figures, they are on the ' +
+      'card. Use it when they ask where they stand or when the figures it holds would answer ' +
+      'what you were about to ask.',
+    schema: showAccountsInput,
+  },
+  {
+    name: 'show_transfer',
+    description:
+      'Offer to move money from a linked account into an application that is open or opened ' +
+      'here: the lump sum into the savings account that was just opened, or a monthly amount ' +
+      'as a standing order. Name the application; the server reads the balance and caps the ' +
+      'amount. Nothing moves until the customer taps. One line of why, nothing asked in the ' +
+      'same turn.',
+    schema: showTransferInput,
   },
 ]
 

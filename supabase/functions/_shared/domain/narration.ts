@@ -19,6 +19,8 @@ export const NARRATABLE_EVENTS = [
   'savings_target_reached',
   'plan_milestone_reached',
   'checkin_due',
+  'accounts_linked',
+  'transfer_settled',
 ] as const
 
 export type NarratableEvent = (typeof NARRATABLE_EVENTS)[number]
@@ -85,6 +87,24 @@ export function describeEvent(event: {
       return typeof event.payload['applicationName'] === 'string'
         ? `${name}: your documents were checked and accepted.`
         : 'Your documents were checked and accepted.'
+    /*
+     * Open banking, simulated. Linking is narrated so a customer who consented on one
+     * device and came back on another is told it took; settlement is the one thing that
+     * happens to a transfer after the tap, and it happens while they are away.
+     */
+    case 'accounts_linked':
+      return typeof event.payload['bankName'] === 'string'
+        ? `Your ${event.payload['bankName']} accounts were linked.`
+        : 'Your accounts at the other bank were linked.'
+    case 'transfer_settled': {
+      const amount =
+        typeof event.payload['amount'] === 'number'
+          ? `€${event.payload['amount'].toLocaleString('en-IE')}`
+          : 'The transfer'
+      const from = typeof event.payload['from'] === 'string' ? ` from ${event.payload['from']}` : ''
+      const to = typeof event.payload['to'] === 'string' ? event.payload['to'] : name
+      return `${amount}${from} arrived in your ${to}.`
+    }
     default:
       return null
   }

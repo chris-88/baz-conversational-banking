@@ -3,7 +3,7 @@ import type { ClaimKind } from '@/components/Primitives'
 import { ARRANGEMENT_CARD, PLAN_CARD, RATES_CARD, REVIEW_CARD } from './story'
 
 /**
- * Six of the nineteen cards, rendered through the real components for the capabilities chapter.
+ * Six of the twenty-two cards, rendered through the real components for the capabilities chapter.
  *
  * Four are the story's own. The two that are not, the comparison and the quote, are built here
  * from the same catalogue helpers the server uses: the comparison's names, rates and features

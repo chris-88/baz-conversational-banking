@@ -436,6 +436,33 @@ export type PlanWatchDetail =
   | { readonly kind: 'savings_target'; readonly target: number; readonly describe: string }
   | { readonly kind: 'date'; readonly on: string; readonly describe: string }
 
+/** What the model is told about linked accounts. Figures are the server's, read for context. */
+export type DigestLinkedAccounts = {
+  readonly accounts: readonly {
+    readonly bank: string
+    readonly name: string
+    readonly type: 'current' | 'savings'
+    readonly balance: number
+  }[]
+  readonly salary: {
+    readonly monthly: number
+    readonly annualised: number
+    readonly employer: string
+    readonly months: number
+  } | null
+  readonly rent: { readonly monthly: number } | null
+  readonly savingsHeld: number
+  readonly daysOfHistory: number
+  /** `YYYY-MM-DD`, the earliest consent to end. */
+  readonly consentEndsOn: string
+  readonly transfers: readonly {
+    readonly amount: number
+    readonly cadence: 'once' | 'monthly'
+    readonly toLabel: string
+    readonly state: 'initiated' | 'settled' | 'failed'
+  }[]
+}
+
 export type CaseDigest = {
   readonly customerName: string | null
   readonly authLevel: 'anonymous' | 'authenticated'
@@ -459,6 +486,12 @@ export type CaseDigest = {
    * a case with no form-backed application, which is most of them.
    */
   readonly forms?: string
+  /**
+   * Open banking, simulated: the accounts the customer linked from other banks, what the
+   * server read off their transactions, and any transfer started from them. Present only when
+   * something is linked; silence means nothing is, and nothing at another bank can be seen.
+   */
+  readonly linkedAccounts?: DigestLinkedAccounts
   /**
    * Areas where special-category information is held but deliberately withheld from you
    * (Invariant 6). Counts and labels only, never values.
@@ -586,6 +619,42 @@ function factLine(fact: DigestFact): string {
   return `- ${fact.label}: ${fact.value} (${provenance}${fact.verified ? ', verified' : ''})`
 }
 
+const euro = (amount: number): string => `€${Math.round(amount).toLocaleString('en-IE')}`
+
+/**
+ * The linked accounts, as the model reads them. Under about 120 tokens for two accounts: one
+ * line per account, one line of what the transactions show, one of what follows from it.
+ */
+function linkedAccountsLines(linked: DigestLinkedAccounts): readonly string[] {
+  const seen: string[] = []
+  if (linked.salary !== null) {
+    seen.push(
+      `Salary seen: ${euro(linked.salary.monthly)} a month from ${linked.salary.employer}, ` +
+        `${String(linked.salary.months)} months (about ${euro(linked.salary.annualised)} a year).`,
+    )
+  }
+  if (linked.rent !== null) seen.push(`Rent seen: ${euro(linked.rent.monthly)} a month.`)
+  seen.push(`Savings held there: ${euro(linked.savingsHeld)}.`)
+
+  return [
+    '## Linked accounts',
+    `Read by the server under a consent that ends ${linked.consentEndsOn}; ` +
+      `${String(linked.daysOfHistory)} days of history.`,
+    ...linked.accounts.map(
+      (account) => `- ${account.bank} ${account.name} (${account.type}): ${euro(account.balance)}`,
+    ),
+    seen.join(' '),
+    'Where this covers a payslip or statement an application wants, the applications below no',
+    'longer list it: do not ask for that upload. Quote none of the figures: `show_accounts`',
+    'puts them on screen.',
+    ...linked.transfers.map(
+      (transfer) =>
+        `- Transfer ${euro(transfer.amount)} ${transfer.cadence === 'once' ? 'once' : 'a month'} ` +
+        `to ${transfer.toLabel}: ${transfer.state}`,
+    ),
+  ]
+}
+
 function applicationLines(application: DigestApplication): readonly string[] {
   const lines = [
     `### ${application.displayName}, ${application.stateLabel}`,
@@ -649,6 +718,15 @@ function digestSection(digest: CaseDigest): string {
     ...digest.facts.map(factLine),
     '',
   )
+
+  /*
+   * Right after what is known, because it is more of the same: figures the server read rather
+   * than figures the customer typed. Kept short; it sits after the cache breakpoint and is
+   * read on every round of every turn once something is linked.
+   */
+  if (digest.linkedAccounts !== undefined) {
+    lines.push(...linkedAccountsLines(digest.linkedAccounts), '')
+  }
 
   /**
    * §15, §19, the engine has already decided what is relevant, what is worth asking about and

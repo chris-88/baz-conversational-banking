@@ -655,6 +655,81 @@ export type Database = {
           },
         ]
       }
+      linked_accounts: {
+        Row: {
+          account_type: string
+          balance: number
+          bank: string
+          case_id: string
+          consent_expires_at: string
+          consent_scope: string[]
+          created_at: string
+          currency: string
+          display_name: string
+          iban: string
+          id: string
+          provider: string
+          revoked_at: string | null
+        }
+        Insert: {
+          account_type: string
+          balance: number
+          bank: string
+          case_id: string
+          consent_expires_at: string
+          consent_scope: string[]
+          created_at?: string
+          currency?: string
+          display_name: string
+          iban: string
+          id?: string
+          provider?: string
+          revoked_at?: string | null
+        }
+        Update: {
+          account_type?: string
+          balance?: number
+          bank?: string
+          case_id?: string
+          consent_expires_at?: string
+          consent_scope?: string[]
+          created_at?: string
+          currency?: string
+          display_name?: string
+          iban?: string
+          id?: string
+          provider?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
+      linked_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          booked_on: string
+          category: string
+          description: string
+          id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          booked_on: string
+          category: string
+          description: string
+          id?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          booked_on?: string
+          category?: string
+          description?: string
+          id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           cards: Json
@@ -1226,6 +1301,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transfers: {
+        Row: {
+          amount: number
+          cadence: string
+          case_id: string
+          created_at: string
+          from_account_id: string
+          id: string
+          settled_at: string | null
+          state: string
+          to_application_id: string | null
+          to_label: string
+        }
+        Insert: {
+          amount: number
+          cadence: string
+          case_id: string
+          created_at?: string
+          from_account_id: string
+          id?: string
+          settled_at?: string | null
+          state?: string
+          to_application_id?: string | null
+          to_label: string
+        }
+        Update: {
+          amount?: number
+          cadence?: string
+          case_id?: string
+          created_at?: string
+          from_account_id?: string
+          id?: string
+          settled_at?: string | null
+          state?: string
+          to_application_id?: string | null
+          to_label?: string
+        }
+        Relationships: []
       }
     }
     Views: {

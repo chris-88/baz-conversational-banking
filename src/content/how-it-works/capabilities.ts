@@ -46,8 +46,8 @@ export const GROUPS: readonly {
 /** Measured counts, with the date. The test recomputes the ones it can. */
 export const MEASURED = {
   measuredAt: '2026-10-16',
-  cards: 19,
-  tools: 16,
+  cards: 22,
+  tools: 19,
   journeys: 7,
   mortgageRates: 133,
   formFields: { supersaver: 499, personalLoan: 418 },

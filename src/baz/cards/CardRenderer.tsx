@@ -20,6 +20,10 @@ import { HealthFormCard } from '@/baz/cards/HealthFormCard'
 import { PartnerInviteCard } from '@/baz/cards/PartnerInviteCard'
 import { UploadRequestCard } from '@/baz/cards/UploadRequestCard'
 import { PlanProposalCard } from '@/baz/cards/PlanProposalCard'
+import { ConnectAccountsCard } from '@/baz/cards/ConnectAccountsCard'
+import { AccountsOverviewCard } from '@/baz/cards/AccountsOverviewCard'
+import { TransferCard } from '@/baz/cards/TransferCard'
+import type { CONSENT_SCOPE, LINKABLE_BANKS } from '@contracts/cards.ts'
 import { Settling } from '@/baz/cards/Settling'
 
 /**
@@ -73,6 +77,23 @@ export type CardActions = {
     applicationId: string,
     fieldIds: readonly string[],
   ) => Promise<void> | void
+  /**
+   * Open banking, simulated. The consent tap on the connect card, and its refusal; the tap on
+   * a transfer card, and its refusal. Allowing is what reads the accounts; moving is what
+   * initiates the payment. Nothing is read or moved before the tap (Invariant 1).
+   */
+  readonly onLinkAccounts?: (
+    bank: (typeof LINKABLE_BANKS)[number]['id'],
+    scope: readonly (typeof CONSENT_SCOPE)[number][],
+  ) => Promise<void> | void
+  readonly onDeclineLink?: () => Promise<void> | void
+  readonly onTransfer?: (transfer: {
+    fromAccountId: string
+    toApplicationId: string
+    amount: number
+    cadence: 'once' | 'monthly'
+  }) => Promise<void> | void
+  readonly onDeclineTransfer?: (toLabel: string) => Promise<void> | void
 }
 
 export function CardRenderer({
@@ -252,6 +273,29 @@ function LiveCard({
         <UploadRequestCard
           card={card}
           {...(actions.onUpload ? { onUpload: actions.onUpload } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'connect_accounts':
+      return (
+        <ConnectAccountsCard
+          card={card}
+          {...(actions.onLinkAccounts ? { onAllow: actions.onLinkAccounts } : {})}
+          {...(actions.onDeclineLink ? { onDecline: actions.onDeclineLink } : {})}
+          {...(disabled === undefined ? {} : { disabled })}
+        />
+      )
+
+    case 'accounts_overview':
+      return <AccountsOverviewCard card={card} />
+
+    case 'transfer':
+      return (
+        <TransferCard
+          card={card}
+          {...(actions.onTransfer ? { onMove: actions.onTransfer } : {})}
+          {...(actions.onDeclineTransfer ? { onDecline: actions.onDeclineTransfer } : {})}
           {...(disabled === undefined ? {} : { disabled })}
         />
       )

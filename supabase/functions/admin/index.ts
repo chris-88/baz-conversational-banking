@@ -84,6 +84,8 @@ import { goalContextFor } from '../_shared/db/goals.ts'
 import { buildHandoffNote, handoffAsText } from '../_shared/db/handoff.ts'
 import { buildPlan } from '../_shared/domain/needs/plan.ts'
 import { env } from '../_shared/env.ts'
+import { LINKABLE_BANKS } from '../_shared/contracts/cards.ts'
+import { maskIban } from '../_shared/domain/open-banking/synthesise.ts'
 
 /**
  * Copy the published file into its table, leaving any row already there alone (§51).
@@ -407,6 +409,12 @@ function headlineCounts(counts: ReadonlyMap<string, number>): {
     applicationsStarted: counts.get('application_created') ?? 0,
     requestsBlocked: counts.get('request_blocked') ?? 0,
   }
+}
+
+/** The bank as the customer knows it, or the id when it is not one the card offers. */
+function bankNameOf(bank: string | null): string {
+  if (bank === null) return 'a linked account'
+  return LINKABLE_BANKS.find((candidate) => candidate.id === bank)?.name ?? bank
 }
 
 /** What an event was about, from whatever the payload names. */
@@ -2402,6 +2410,63 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       return json(ok({ deleted: action.caseId }), 200)
     }
 
+    /**
+     * Open banking, simulated: the receiving side settles.
+     *
+     * A payment initiated through an aggregator is `initiated` until the receiving bank
+     * confirms it, and that confirmation arrives later, from somewhere else. The console is
+     * that somewhere else here, the same way it is the bank for every other §41 event. The
+     * event it writes is narrated on return, which is the customer being told their money
+     * landed while they were away.
+     */
+    case 'settle_transfer': {
+      const found = await admin
+        .from('transfers')
+        .select('id, case_id, from_account_id, to_application_id, to_label, amount, cadence, state')
+        .eq('id', action.transferId)
+        .maybeSingle()
+
+      if (found.error) return errorResponse('conflict', found.error.message)
+      const transfer = found.data
+      if (!transfer) return errorResponse('not_found', 'No such transfer.')
+      if (transfer.state !== 'initiated') {
+        return errorResponse('conflict', `That transfer is already ${transfer.state}.`)
+      }
+
+      const account = await admin
+        .from('linked_accounts')
+        .select('bank')
+        .eq('id', transfer.from_account_id)
+        .maybeSingle()
+      const from = bankNameOf(account.data?.bank ?? null)
+
+      const settledAt = new Date().toISOString()
+      mustWrite(
+        await admin
+          .from('transfers')
+          .update({ state: 'settled', settled_at: settledAt })
+          .eq('id', transfer.id),
+        'the transfer',
+      )
+
+      await writeEvent(admin, {
+        caseId: transfer.case_id,
+        type: 'transfer_settled',
+        actor: 'admin',
+        applicationId: transfer.to_application_id,
+        payload: {
+          transferId: transfer.id,
+          amount: Number(transfer.amount),
+          to: transfer.to_label,
+          from,
+          cadence: transfer.cadence,
+          applicationName: transfer.to_label,
+        },
+      })
+
+      return json(ok({ transferId: transfer.id, state: 'settled', settledAt }), 200)
+    }
+
     case 'inspect_case': {
       const loaded = await loadCase(admin, action.caseId, { messages: 'all' })
       if (!loaded) return errorResponse('not_found', 'No such case.')
@@ -2704,6 +2769,31 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
           ...describeAdminEvent(row.type, row.payload ?? {}),
         })),
         parked,
+        linkedAccounts: loaded.linkedAccounts.map((account) => ({
+          bank: bankNameOf(account.bank),
+          displayName: account.displayName,
+          accountType: account.accountType,
+          ibanMasked: maskIban(account.iban),
+          balance: account.balance,
+          consentExpiresAt: account.consentExpiresAt,
+        })),
+        transfers: loaded.transfers.map((transfer) => {
+          // Revoked accounts are not loaded, so a transfer from one is labelled as such
+          // rather than dropped: the money moved whether or not the consent still stands.
+          const from = loaded.linkedAccounts.find((account) => account.id === transfer.fromAccountId)
+          return {
+            id: transfer.id,
+            fromLabel:
+              from === undefined
+                ? 'An account no longer linked'
+                : `${bankNameOf(from.bank)} ${from.displayName}`,
+            toLabel: transfer.toLabel,
+            amount: transfer.amount,
+            cadence: transfer.cadence,
+            state: transfer.state,
+            createdAt: transfer.createdAt,
+          }
+        }),
       }
 
       return json(ok(inspected), 200)

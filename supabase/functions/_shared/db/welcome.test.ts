@@ -64,6 +64,8 @@ function loaded(overrides: Partial<LoadedCase> = {}): LoadedCase {
     requests: [],
     productInterests: [],
     formApplications: [],
+    linkedAccounts: [],
+    transfers: [],
     messages: [],
     eventsSinceLastSeen: [],
     persona: slidersFor('default'),
@@ -178,6 +180,43 @@ describe('welcomeCardFor', () => {
         welcomeCardFor(theCase, new Set([first.applicationId, second.applicationId])),
       ).toBeUndefined()
     }
+  })
+})
+
+describe('savings held at a linked bank (open banking, simulated)', () => {
+  const linked = (bank: string, accountType: 'current' | 'savings', balance: number) => ({
+    id: `55555555-5555-4555-8555-00000000000${String(balance % 10)}`,
+    bank,
+    displayName: accountType === 'savings' ? 'Online Saver' : 'Current Account',
+    accountType,
+    iban: 'IE29AIBK93115212345678',
+    balance,
+    consentScope: ['balances', 'transactions', 'payments'],
+    consentExpiresAt: '2027-01-20T00:00:00.000Z',
+    createdAt: '2026-10-22T10:00:00.000Z',
+    transactions: [],
+  })
+
+  it('puts moving the savings first, naming the figure and the bank', () => {
+    const card = welcome(
+      loaded({
+        applications: [OPENED],
+        facts: [fact('employment.status', PRIMARY, 'employed_full_time')],
+        linkedAccounts: [linked('AIB', 'current', 2_340), linked('AIB', 'savings', 32_000)],
+      }),
+    )
+    expect(card.next).toEqual([
+      'Move your €32,000 from AIB into it',
+      'Give your employer this IBAN for your salary',
+      'Your debit card is on its way, and 365 online and the app are ready',
+    ])
+  })
+
+  it('says nothing about moving money when only a current account is linked, or it is empty', () => {
+    const current = welcome(loaded({ applications: [OPENED], linkedAccounts: [linked('AIB', 'current', 2_340)] }))
+    expect(current.next[0]).toBe('Use this IBAN wherever money needs to reach you')
+    const empty = welcome(loaded({ applications: [OPENED], linkedAccounts: [linked('AIB', 'savings', 0)] }))
+    expect(empty.next[0]).toBe('Use this IBAN wherever money needs to reach you')
   })
 })
 
