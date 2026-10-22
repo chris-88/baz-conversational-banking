@@ -41,7 +41,7 @@ describe('reading the situation off the case', () => {
     expect(situationFrom(reader({}), '2026-10-15')).toEqual({
       lumpSum: null,
       monthly: null,
-      firstTimeBuyer: false,
+      firstTimeBuyer: null,
       mortgageWithThisBank: null,
       monthsToTarget: null,
     })

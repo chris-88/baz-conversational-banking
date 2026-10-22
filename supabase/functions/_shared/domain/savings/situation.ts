@@ -15,7 +15,7 @@ export function situationFrom(facts: FactReader, today: string): SavingsSituatio
   return {
     lumpSum: facts.number('assets.savingsBalance', 'household'),
     monthly: facts.number('goals.monthlySaving', 'household'),
-    firstTimeBuyer: facts.boolean('housing.firstTimeBuyer', 'household') === true,
+    firstTimeBuyer: facts.boolean('housing.firstTimeBuyer', 'household'),
     mortgageWithThisBank: facts.boolean('mortgage.withThisBank', 'household'),
     monthsToTarget: typeof target === 'string' ? monthsUntil(today, target) : null,
   }

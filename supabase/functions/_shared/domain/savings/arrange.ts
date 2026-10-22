@@ -76,7 +76,12 @@ export type SavingsSituation = {
   readonly lumpSum: number | null
   /** What they can put away each month. */
   readonly monthly: number | null
-  readonly firstTimeBuyer: boolean
+  /**
+   * Three-valued like the mortgage question below. "I want to buy a house next year" does not
+   * say first home, and a bonus that turns on it was left out of a live arrangement because
+   * unknown read as no; the customer raised the bonus themselves two turns later.
+   */
+  readonly firstTimeBuyer: boolean | null
   /**
    * Whether the mortgage is going to be taken here.
    *
@@ -104,7 +109,7 @@ export type Allocation = {
 
 /** A fact that would change the arrangement if it were known, and why it is worth asking. */
 export type ArrangementNeed = {
-  readonly key: 'mortgage.withThisBank'
+  readonly key: 'mortgage.withThisBank' | 'housing.firstTimeBuyer'
   readonly why: string
 }
 
@@ -256,13 +261,26 @@ function bestBonus(
     if (bonus === undefined) return false
     if (monthly < bonus.minMonthly) return false
     if (bonus.requiresMortgageHere && situation.mortgageWithThisBank !== true) return false
-    if (!situation.firstTimeBuyer) return false
+    if (situation.firstTimeBuyer !== true) return false
     return true
   })
 
   if (reachable.length === 0) {
+    if (situation.firstTimeBuyer === null) {
+      needs.push({
+        key: 'housing.firstTimeBuyer',
+        why:
+          'Whether this is their first home. A first-time-buyer bonus worth €2,000 depends ' +
+          'on it, and it decides whether €200 a month goes into the account that carries it.',
+      })
+      notes.push(
+        'There is a first-time-buyer bonus worth having, but nobody has said whether this is ' +
+          'a first home, so nothing has been arranged around it.',
+      )
+      return null
+    }
     const asked = candidates.some(
-      (option) => option.bonus?.requiresMortgageHere === true && situation.firstTimeBuyer,
+      (option) => option.bonus?.requiresMortgageHere === true && situation.firstTimeBuyer === true,
     )
     if (asked && situation.mortgageWithThisBank === null) {
       needs.push({

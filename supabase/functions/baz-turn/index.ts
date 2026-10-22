@@ -1333,7 +1333,22 @@ async function handleTurn(request: Request): Promise<Response> {
                   .slice(-OPTIONS_CARD_WINDOW)
                   .some((message) => message.cards.includes('product_options'))
 
-                if (justOffered) {
+                /*
+                 * The same set is a repeat; a different set is a new offer. The customer said
+                 * "keep the fixed term too", the model asked for three accounts where two were
+                 * on screen, was told the card was already there, and told the customer the
+                 * three were on the card. Only the types are loaded with the case, so the last
+                 * card's options are read back when it matters.
+                 */
+                const onScreen = justOffered ? await lastOptionsOffered(admin, turn.caseId) : new Set<string>()
+                const sameAsOnScreen =
+                  onScreen.size > 0 &&
+                  setsEqual(
+                    onScreen,
+                    new Set(products.map((option) => String(option.catalogueId ?? option.product))),
+                  )
+
+                if (justOffered && sameAsOnScreen) {
                   return {
                     result:
                       'Those options are already on screen from the previous turn and still work. Answer what they asked and point at the card; do not show it again.',
@@ -1528,13 +1543,20 @@ async function handleTurn(request: Request): Promise<Response> {
                  * still works until something is started from it, and the digest already says
                  * it is waiting.
                  */
-                const arrangementOnScreen = loaded.messages
+                const lastArrangement = [...loaded.messages]
                   .slice(-ARRANGEMENT_CARD_WINDOW)
-                  .some((message) => message.cards.includes('arrangement'))
+                  .reverse()
+                  .find((message) => message.cards.includes('arrangement'))
                 const startedSince = loaded.applications.some(
                   (application) => application.product === 'savings',
                 )
-                if (arrangementOnScreen && !startedSince) {
+                // A fact recorded since the card went up can change the split: on a live case
+                // the customer said they wanted the bonus, the mortgage question got answered,
+                // and the card still on screen was the one without MortgageSaver.
+                const factsSince =
+                  lastArrangement !== undefined &&
+                  loaded.facts.some((fact) => fact.capturedAt > lastArrangement.createdAt)
+                if (lastArrangement !== undefined && !startedSince && !factsSince) {
                   return {
                     result:
                       'The arrangement card is already on screen from an earlier turn and still works. ' +
@@ -2818,6 +2840,33 @@ async function handleTurn(request: Request): Promise<Response> {
 }
 
 /** Whether something has already happened once on this case. */
+/** The catalogue ids (or products) on the most recent options card, from its stored payload. */
+async function lastOptionsOffered(admin: Db, caseId: string): Promise<ReadonlySet<string>> {
+  const result = await admin
+    .from('messages')
+    .select('cards')
+    .eq('case_id', caseId)
+    .contains('cards', [{ type: 'product_options' }])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const cards = ((result.data as { cards?: unknown } | null)?.cards ?? []) as {
+    type?: unknown
+    options?: { product?: unknown; catalogueId?: unknown }[]
+  }[]
+  const card = cards.find((candidate) => candidate.type === 'product_options')
+  return new Set(
+    (card?.options ?? []).flatMap((option) => {
+      const id = option.catalogueId ?? option.product
+      return typeof id === 'string' ? [id] : []
+    }),
+  )
+}
+
+function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size === b.size && [...a].every((item) => b.has(item))
+}
+
 async function caseHasEvent(admin: Db, caseId: string, type: string): Promise<boolean> {
   const found = await admin
     .from('events')

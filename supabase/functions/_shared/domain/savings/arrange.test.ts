@@ -170,6 +170,14 @@ describe('when the bonus is not actually available', () => {
     expect(result?.notes.some((note) => /mortgage/i.test(note))).toBe(true)
   })
 
+  /** "I want to buy a house next year" does not say first home, and unknown is not no. */
+  it('asks whether it is a first home before leaving the bonus out', () => {
+    const result = arrange({ ...dublin, firstTimeBuyer: null, mortgageWithThisBank: null }, CATALOGUE)
+
+    expect(found('savings.mortgagesaver', result)).toBeUndefined()
+    expect(result?.needs.map((need) => need.key)).toEqual(['housing.firstTimeBuyer'])
+  })
+
   it('needs nothing once the question is answered either way', () => {
     expect(arrange(dublin, CATALOGUE)?.needs).toEqual([])
     expect(arrange({ ...dublin, mortgageWithThisBank: false }, CATALOGUE)?.needs).toEqual([])
