@@ -561,3 +561,19 @@ describe('linked accounts (open banking, simulated)', () => {
     expect(documents(after.applications[0]?.outstanding ?? [])).toEqual([])
   })
 })
+
+/**
+ * Whether they bank here decides where moved money can land. A linked customer banks here by
+ * definition; a stated answer wins; nothing known is said as not known, so the model asks once
+ * rather than assumes.
+ */
+describe('whether they bank here', () => {
+  it('is true for a linked customer, false when they said so, and null when nobody knows', () => {
+    expect(buildCaseDigest(loaded()).banksHere).toBe(true)
+    expect(buildCaseDigest(loaded({ customerName: null })).banksHere).toBeNull()
+    expect(
+      buildCaseDigest(loaded({ customerName: null, facts: [fact('banking.existingCustomer', PRIMARY, false)] }))
+        .banksHere,
+    ).toBe(false)
+  })
+})

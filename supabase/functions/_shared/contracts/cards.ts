@@ -549,7 +549,8 @@ export const transferCardSchema = z.object({
   type: z.literal('transfer'),
   fromAccountId: z.uuid(),
   fromLabel: z.string(),
-  toApplicationId: applicationId,
+  /** Null when the money lands in an account the customer already holds here. */
+  toApplicationId: applicationId.nullable(),
   toLabel: z.string(),
   amount: z.number().positive(),
   cadence: z.enum(['once', 'monthly']),

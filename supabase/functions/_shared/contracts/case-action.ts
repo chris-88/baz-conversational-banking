@@ -165,7 +165,8 @@ export const caseActionRequestSchema = z.discriminatedUnion('action', [
     action: z.literal('initiate_transfer'),
     caseId,
     fromAccountId: z.uuid(),
-    toApplicationId: applicationId,
+    /** Null means the current account they already hold here, which the case must know of. */
+    toApplicationId: applicationId.nullable(),
     amount: z.number().positive().max(1_000_000),
     cadence: z.enum(['once', 'monthly']),
   }),

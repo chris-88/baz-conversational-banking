@@ -127,7 +127,9 @@ export const showConnectAccountsInput = z.object({
   why: z.string().min(1).max(300),
 })
 export const showAccountsInput = z.object({})
+export const EXISTING_ACCOUNT_HERE = 'existing_account_here'
 export const showTransferInput = z.object({
+  /** An application on the case, or `existing_account_here` for an account they already hold. */
   applicationId: z.string().min(1),
   amount: z.number().positive().optional(),
   cadence: z.enum(['once', 'monthly']).optional(),
@@ -470,7 +472,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     name: 'show_transfer',
     description:
       'Offer to move money from a linked account into a savings or current account application ' +
-      'started here, from the moment it is started (it waits as initiated until the account opens): the lump sum into the savings account that was just opened, or a monthly amount ' +
+      'started here, from the moment it is started (it waits as initiated until the account opens), ' +
+      'or, when the case says they already bank here, into the current account they hold: pass ' +
+      '`existing_account_here`. Nowhere for it to land means say so and offer the account first: the lump sum into the savings account that was just opened, or a monthly amount ' +
       'as a standing order. Name the application; the server reads the balance and caps the ' +
       'amount. Nothing moves until the customer taps. One line of why, nothing asked in the ' +
       'same turn.',

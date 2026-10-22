@@ -830,8 +830,18 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         return errorResponse('forbidden', 'The consent for that account has expired.')
       }
 
-      const application = findApplication(loaded, action.toApplicationId)
-      if (!application) return errorResponse('not_found', 'That application does not exist.')
+      const application =
+        action.toApplicationId === null ? undefined : findApplication(loaded, action.toApplicationId)
+      if (action.toApplicationId !== null && !application) {
+        return errorResponse('not_found', 'That application does not exist.')
+      }
+      // Into an account they already hold here only when the case knows they hold one.
+      if (
+        action.toApplicationId === null &&
+        caseFactReader(loaded)?.boolean('banking.existingCustomer', 'primary') !== true
+      ) {
+        return errorResponse('bad_request', 'There is no account here to move the money into yet.')
+      }
 
       if (action.cadence === 'once' && action.amount > from.balance) {
         return errorResponse(
@@ -841,7 +851,8 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
       }
 
       const bankName = LINKABLE_BANKS.find((bank) => bank.id === from.bank)?.name ?? from.bank
-      const toLabel = applicationName(application, nameFor)
+      const toLabel =
+        application === undefined ? 'Your Bank of Ireland current account' : applicationName(application, nameFor)
 
       const inserted = mustWrite(
         await admin
@@ -874,7 +885,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         caseId,
         type: 'transfer_initiated',
         actor: 'customer',
-        applicationId: action.toApplicationId,
+        ...(action.toApplicationId === null ? {} : { applicationId: action.toApplicationId }),
         payload: {
           transferId,
           amount: action.amount,

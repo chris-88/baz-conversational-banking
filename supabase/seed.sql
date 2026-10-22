@@ -58,14 +58,15 @@ values
   ('00000000-0000-4000-8000-000000000002', 'employment.employerName', '00000000-0000-4000-8000-000000000003', 'participant', '"Ardán Software Limited"'::jsonb, 'bank_held', false),
   ('00000000-0000-4000-8000-000000000002', 'income.annualBasic', '00000000-0000-4000-8000-000000000003', 'participant', '92000'::jsonb, 'bank_held', false),
   ('00000000-0000-4000-8000-000000000002', 'liabilities.creditCardBalance', '00000000-0000-4000-8000-000000000003', 'participant', '0'::jsonb, 'bank_held', true),
-  ('00000000-0000-4000-8000-000000000002', 'liabilities.monthlyLoanRepayments', '00000000-0000-4000-8000-000000000003', 'participant', '0'::jsonb, 'bank_held', true);
+  ('00000000-0000-4000-8000-000000000002', 'liabilities.monthlyLoanRepayments', '00000000-0000-4000-8000-000000000003', 'participant', '0'::jsonb, 'bank_held', true),
+  ('00000000-0000-4000-8000-000000000002', 'banking.existingCustomer', '00000000-0000-4000-8000-000000000003', 'participant', 'true'::jsonb, 'bank_held', true);
 
 insert into public.events (case_id, type, actor, payload)
 values (
   '00000000-0000-4000-8000-000000000002',
   'case_reset',
   'admin',
-  '{"seed":"canonical","facts":14}'::jsonb
+  '{"seed":"canonical","facts":15}'::jsonb
 );
 
 commit;

@@ -89,7 +89,7 @@ export type CardActions = {
   readonly onDeclineLink?: () => Promise<void> | void
   readonly onTransfer?: (transfer: {
     fromAccountId: string
-    toApplicationId: string
+    toApplicationId: string | null
     amount: number
     cadence: 'once' | 'monthly'
   }) => Promise<void> | void

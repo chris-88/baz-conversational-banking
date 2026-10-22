@@ -1,4 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
+import { EXISTING_ACCOUNT_HERE } from '../_shared/llm/tools.ts'
 import Anthropic from '@anthropic-ai/sdk'
 import { serveJson } from '../_shared/http/serve.ts'
 import { createClient } from '@supabase/supabase-js'
@@ -1667,11 +1668,35 @@ async function handleTurn(request: Request): Promise<Response> {
                   amount?: number
                   cadence?: 'once' | 'monthly'
                 }
-                const application = findApplication(loaded, applicationId)
-                if (!application) return { result: 'There is no such application.', refused: true }
+                const banksHere = caseFactReader(loaded)?.boolean('banking.existingCustomer', 'primary') ?? null
+                const application =
+                  applicationId === EXISTING_ACCOUNT_HERE ? undefined : findApplication(loaded, applicationId)
+                if (!application) {
+                  /*
+                   * Nowhere for the money to land. Somebody new to the bank has no account here
+                   * until one is started on this case, and the honest answer is to say so and
+                   * offer the account, not to pretend a transfer can be made into thin air.
+                   */
+                  if (applicationId !== EXISTING_ACCOUNT_HERE || banksHere !== true) {
+                    const started = loaded.applications.some(
+                      (candidate) => TRANSFER_PRODUCTS.has(candidate.product) && transferable(candidate.state),
+                    )
+                    return {
+                      result: started
+                        ? 'There is no such application. Name one of the savings or current account applications on the case.'
+                        : banksHere === true
+                          ? 'Pass `existing_account_here` to move money into the current account they already hold, or start an account on the case.'
+                          : 'They hold no account here to receive it, and none is started on this case. Say so plainly, offer the savings or current account with show_product_options, and offer the transfer once it is started.',
+                      refused: true,
+                    }
+                  }
+                }
 
-                const toLabel = applicationName(application, nameFor)
-                if (!TRANSFER_PRODUCTS.has(application.product)) {
+                const toLabel =
+                  application === undefined
+                    ? 'your Bank of Ireland current account'
+                    : applicationName(application, nameFor)
+                if (application !== undefined && !TRANSFER_PRODUCTS.has(application.product)) {
                   return {
                     result:
                       `Money can only be moved into an account. ${toLabel} is not one; ` +
@@ -1679,7 +1704,7 @@ async function handleTurn(request: Request): Promise<Response> {
                     refused: true,
                   }
                 }
-                if (!transferable(application.state)) {
+                if (application !== undefined && !transferable(application.state)) {
                   return {
                     result:
                       `${toLabel} is ${stateLabel(application.state).toLowerCase()}; there is ` +
@@ -1742,7 +1767,8 @@ async function handleTurn(request: Request): Promise<Response> {
                 const last = recent ? await lastTransferOffered(admin, turn.caseId) : null
                 const movedSince =
                   last !== null && loaded.transfers.some((transfer) => transfer.createdAt > last.createdAt)
-                if (last !== null && last.toApplicationId === String(application.id) && !movedSince) {
+                const toId = application === undefined ? null : String(application.id)
+                if (last !== null && last.toApplicationId === toId && !movedSince) {
                   return {
                     result:
                       'The transfer card is already on screen from an earlier turn and still ' +
@@ -1752,9 +1778,11 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 // Written here, from the figures, so the line on the card is the server's.
                 const destination =
-                  application.state === 'completed'
-                    ? 'the account you have just opened'
-                    : `the ${toLabel} you are opening`
+                  application === undefined
+                    ? 'the current account you already hold with us'
+                    : application.state === 'completed'
+                      ? 'the account you have just opened'
+                      : `the ${toLabel} you are opening`
                 const why =
                   cadence === 'once'
                     ? `Your ${from.accountType === 'savings' ? 'savings' : 'money'} sitting in ${from.bank}, moved to ${destination}`
@@ -1764,7 +1792,7 @@ async function handleTurn(request: Request): Promise<Response> {
                   type: 'transfer',
                   fromAccountId: from.id,
                   fromLabel: `${from.bank} ${from.displayName}`,
-                  toApplicationId: String(application.id),
+                  toApplicationId: toId,
                   toLabel,
                   amount: figure,
                   cadence,
@@ -3111,7 +3139,7 @@ async function lastOptionsOffered(admin: Db, caseId: string): Promise<ReadonlySe
 async function lastTransferOffered(
   admin: Db,
   caseId: string,
-): Promise<{ readonly toApplicationId: string; readonly createdAt: string } | null> {
+): Promise<{ readonly toApplicationId: string | null; readonly createdAt: string } | null> {
   const result = await admin
     .from('messages')
     .select('cards, created_at')
@@ -3124,8 +3152,11 @@ async function lastTransferOffered(
   if (row === null || typeof row.created_at !== 'string') return null
   const cards = (row.cards ?? []) as { type?: unknown; toApplicationId?: unknown }[]
   const card = cards.find((candidate) => candidate.type === 'transfer')
-  if (card === undefined || typeof card.toApplicationId !== 'string') return null
-  return { toApplicationId: card.toApplicationId, createdAt: row.created_at }
+  if (card === undefined) return null
+  return {
+    toApplicationId: typeof card.toApplicationId === 'string' ? card.toApplicationId : null,
+    createdAt: row.created_at,
+  }
 }
 
 function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {

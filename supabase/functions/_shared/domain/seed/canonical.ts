@@ -83,6 +83,7 @@ export const bankHeldFacts: readonly SeedFact[] = [
   { key: 'income.annualBasic', subject: 'primary', value: 92_000, source: 'bank_held', verified: false },
   { key: 'liabilities.creditCardBalance', subject: 'primary', value: 0, source: 'bank_held', verified: true },
   { key: 'liabilities.monthlyLoanRepayments', subject: 'primary', value: 0, source: 'bank_held', verified: true },
+  { key: 'banking.existingCustomer', subject: 'primary', value: true, source: 'bank_held', verified: true },
 ]
 
 /**

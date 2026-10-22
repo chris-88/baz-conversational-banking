@@ -27,7 +27,7 @@ export function TransferCard({
   card: Payload
   onMove?: (transfer: {
     fromAccountId: string
-    toApplicationId: string
+    toApplicationId: string | null
     amount: number
     cadence: Payload['cadence']
   }) => Promise<void> | void

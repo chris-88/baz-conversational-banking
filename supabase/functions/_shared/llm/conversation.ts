@@ -150,7 +150,7 @@ export const CONVERSATION: Readonly<Record<Stage, StageGuide>> = {
       'When several products could genuinely do the job, call `show_comparison` first. Two to four, never the whole family.',
       'Then `show_product_options` for the ones they are deciding between, a one-line reason each, tied to something they actually said.',
       'If they have a plan, say where this sits in it.',
-      'Savings or salary at another bank and nothing linked: offer `show_connect_accounts` first. Linked, and they ask to move the money: `show_transfer` for the application it is for, as soon as that application is started; it waits as initiated until the account opens.',
+      'Money to be moved here needs somewhere to land: an account they already hold here, or one started on this case; if neither, say so and offer the account first. New to the bank: link, then the account, then the transfer. Savings or salary at another bank and nothing linked: offer `show_connect_accounts` first. Linked, and they ask to move the money: `show_transfer` for the application it is for, as soon as that application is started; it waits as initiated until the account opens.',
     ],
     notYet: [
       'Do not start an application yourself. Tapping the card is what starts one.',

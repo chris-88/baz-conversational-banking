@@ -454,6 +454,19 @@ export const factCatalogue = {
    * account's eligibility turns on exactly this. Person-level because two applicants can have
    * arrived from different places.
    */
+  /**
+   * Whether they already bank here. Bank-held on a linked customer, stated otherwise. It
+   * decides where money moved here can land: an account they already hold, or one started on
+   * this case, and if neither, Baz has to say so before offering a transfer.
+   */
+  'banking.existingCustomer': {
+    schema: z.boolean(),
+    subject: 'person',
+    reuse: 'auto',
+    sensitivity: 'standard',
+    extractable: true,
+    label: 'Already banks here',
+  },
   'banking.holdsIrishPaymentAccount': {
     schema: z.boolean(),
     subject: 'person',

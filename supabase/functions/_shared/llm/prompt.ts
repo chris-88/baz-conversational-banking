@@ -554,6 +554,11 @@ export type CaseDigest = {
    */
   readonly awaiting?: AwaitingCard
   /**
+   * Whether they already bank here: true, false, or not known. Decides where money moved
+   * here can land, and whether the account has to come first.
+   */
+  readonly banksHere?: boolean | null
+  /**
    * Where the customer is trying to get to, from the Goal Engine. Already shortlisted and
    * already reasoned about, what is primary, what is worth mentioning once, what is being held
    * and why, and anything two goals are both laying claim to.
@@ -709,6 +714,7 @@ function digestSection(digest: CaseDigest): string {
    */
   if (digest.stage !== undefined) lines.push(stageSection(digest.stage), '')
   if (digest.awaiting !== undefined) lines.push(awaitingSection(digest.awaiting), '')
+  if (digest.banksHere !== undefined) lines.push(banksHereSection(digest.banksHere), '')
 
   lines.push('## What you already know')
   lines.push(
@@ -1076,3 +1082,20 @@ function withBreakpoint(input: PromptInput): {
 }
 
 export const composeSystemPrompt = Object.assign(compose, { withBreakpoint })
+
+/**
+ * Whether they bank here already, and what follows from it when money is to be moved.
+ *
+ * A new customer who wants their savings moved "over to you" has nowhere for it to land until
+ * an account is started on the case; an existing one has their current account. Both are the
+ * server's to know and the model's to say, so the line is short and the rule is explicit.
+ */
+function banksHereSection(banksHere: boolean | null): string {
+  const status =
+    banksHere === true
+      ? 'They already bank here, so money moved here can land in the current account they hold (`show_transfer` with `existing_account_here`) or in an account started on this case.'
+      : banksHere === false
+        ? 'They are new to the bank: no account here yet. Money moved here needs an account started on this case first; say so plainly and offer the account before any transfer. Linking their other accounts (`show_connect_accounts`) is still the quickest way to see what they have.'
+        : 'Not known whether they bank here. Ask once, only when it matters: when money is to be moved here or an account would be reused. Record `banking.existingCustomer`.'
+  return ['## Banking here', '', status].join('\n')
+}

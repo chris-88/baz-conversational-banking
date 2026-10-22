@@ -1,5 +1,6 @@
 import { factCatalogue, type Fact } from '../domain/facts.ts'
 import { awaitingCard } from '../domain/conversation/awaiting.ts'
+import { caseFactReader } from './fact-reader.ts'
 import { describeEvent } from '../domain/narration.ts'
 export { NARRATABLE_EVENTS } from '../domain/narration.ts'
 export type { NarratableEvent } from '../domain/narration.ts'
@@ -235,6 +236,10 @@ export function buildCaseDigest(
   const partnerParticipant = loaded.participants.find((participant) => participant.role === 'partner')
   const applications = digestApplications(loaded)
   const awaiting = options.acting === true ? null : awaitingCard(loaded)
+  // Bank-held on a linked customer, stated otherwise; a linked customer banks here by definition.
+  const banksHere =
+    caseFactReader(loaded)?.boolean('banking.existingCustomer', 'primary') ??
+    (loaded.customerName !== null ? true : null)
   // What the bank's own form still wants, which is a different list from the journey's.
   const forms = formDigestSection(formDigests(loaded))
 
@@ -314,6 +319,7 @@ export function buildCaseDigest(
     // The card still waiting for a tap, read from the transcript and the case, never from the
     // model (which is what took "Great" for the tap).
     ...(awaiting === null ? {} : { awaiting }),
+    banksHere,
     authLevel: loaded.authLevel,
     facts: digestFacts(loaded),
     ...(linkedAccounts === undefined ? {} : { linkedAccounts }),
