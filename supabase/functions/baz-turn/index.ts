@@ -590,7 +590,15 @@ async function handleTurn(request: Request): Promise<Response> {
       .from('messages')
       .select('cards')
       .eq('case_id', turn.caseId)
-      .contains('cards', [{ type: ACCOUNT_OPENED_CARD }])
+      .contains('cards', JSON.stringify([{ type: ACCOUNT_OPENED_CARD }]))
+    /*
+     * A JSON string, not an array: supabase-js serialises an array for `cs` as a Postgres
+     * array literal, which a jsonb column refuses, and the refused read came back as "nobody
+     * has been welcomed" on every turn of a live case. Six welcomes in a row.
+     */
+    if (welcomed.error !== null) {
+      console.error(`welcomed accounts could not be read: ${welcomed.error.message}`)
+    }
     pendingWelcome = welcomeCardFor(loaded, welcomedAccounts(welcomed.data ?? []))
   }
 
@@ -3118,7 +3126,7 @@ async function lastOptionsOffered(admin: Db, caseId: string): Promise<ReadonlySe
     .from('messages')
     .select('cards')
     .eq('case_id', caseId)
-    .contains('cards', [{ type: 'product_options' }])
+    .contains('cards', JSON.stringify([{ type: 'product_options' }]))
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -3144,7 +3152,7 @@ async function lastTransferOffered(
     .from('messages')
     .select('cards, created_at')
     .eq('case_id', caseId)
-    .contains('cards', [{ type: 'transfer' }])
+    .contains('cards', JSON.stringify([{ type: 'transfer' }]))
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
