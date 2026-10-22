@@ -701,7 +701,15 @@ export type Database = {
           provider?: string
           revoked_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "linked_accounts_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       linked_transactions: {
         Row: {
@@ -728,7 +736,15 @@ export type Database = {
           description?: string
           id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "linked_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "linked_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -1339,7 +1355,29 @@ export type Database = {
           to_application_id?: string | null
           to_label?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transfers_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "linked_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_to_application_id_fkey"
+            columns: ["to_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
