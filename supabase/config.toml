@@ -442,6 +442,14 @@ verify_jwt = true
 import_map = "./functions/deno.json"
 entrypoint = "./functions/admin/index.ts"
 
+# Baz as a tool for somebody else's agent. MCP clients carry no Supabase JWT; the function
+# makes the agent a customer itself and calls the other functions as that customer.
+[functions.mcp]
+enabled = true
+verify_jwt = false
+import_map = "./functions/deno.json"
+entrypoint = "./functions/mcp/index.ts"
+
 [functions.partner]
 enabled = true
 verify_jwt = true

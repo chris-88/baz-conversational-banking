@@ -83,6 +83,9 @@ Edge Functions (service role; hold ANTHROPIC_API_KEY, VAPID keys, PRESENTER_KEY)
   upload        the only way a document enters a case
   admin         simulate events, send notification, reset, persona/domain
                 config, case inspection, metrics
+  mcp           Baz as a tool for somebody else's agent: stateless MCP over HTTP;
+                four tools (start, say, act, status) that call the functions above
+                as a customer the server creates for the conversation
 
 Postgres
   31 tables. Core: cases, participants, participant_sessions, customers
