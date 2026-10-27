@@ -19,7 +19,7 @@
     "metrics:build": "node scripts/build-metrics.mjs",
     "check:bundle": "node scripts/check-bundle-secrets.ts",
     "compare:models": "node --env-file=.env scripts/compare-models.ts",
-    "typecheck:functions": "deno check --config supabase/functions/deno.json supabase/functions/*/index.ts",
+    "typecheck:functions": "deno check --config supabase/functions/deno.json supabase/functions/*/index.ts && deno check infra/mcp-proxy/main.ts",
     "db:types": "supabase gen types typescript --linked > supabase/functions/_shared/db/database.types.ts",
     "check": "npm run typecheck && npm run lint && npm run seed:check && npm run test && npm run build && npm run check:bundle"
   },
