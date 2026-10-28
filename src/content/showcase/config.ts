@@ -22,21 +22,21 @@ export const showcaseConfig = {
   chapters: {
     opportunity: {
       id: 'opportunity',
-      label: 'The opportunity',
+      label: 'Opportunity',
       src: opportunityMp3,
       durationTargetMs: 47_040,
       captions: opportunityVtt,
     },
     walkthrough: {
       id: 'walkthrough',
-      label: 'Product demonstration',
+      label: 'Product',
       src: walkthroughMp3,
       durationTargetMs: 129_200,
       captions: walkthroughVtt,
     },
     risk: {
       id: 'risk',
-      label: 'The customer relationship at risk',
+      label: 'Change',
       src: riskMp3,
       durationTargetMs: 50_560,
       captions: riskVtt,
