@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -110,7 +110,9 @@ describe('the explainer', () => {
     )
   }
 
-  it('tells the §67 story, every beat on the page, with nothing startable', async () => {
+  // Nineteen beats and every card they carry: two seconds alone, and the suite runs the
+  // showcase and the article beside it now. Timed out at five under load; given room.
+  it('tells the §67 story, every beat on the page, with nothing startable', { timeout: 15_000 }, async () => {
     const { story, STAGE_NAMES } = await import('@/content/how-it-works/story')
     await withStillPage('/how-it-works/story')
 
@@ -163,6 +165,10 @@ describe('the explainer', () => {
  * nothing play before the click, does one click start it, does the close persist.
  */
 describe('the showcase', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   class FakeAudio extends EventTarget {
     src = ''
     currentTime = 0
@@ -207,8 +213,9 @@ describe('the showcase', () => {
         removeListener: () => undefined,
         dispatchEvent: () => false,
       }) as MediaQueryList
-    window.requestAnimationFrame = (): number => 0
-    window.cancelAnimationFrame = (): void => undefined
+    // Stubbed, not assigned: the explainer's tests in this file need the real one back.
+    vi.stubGlobal('requestAnimationFrame', (): number => 0)
+    vi.stubGlobal('cancelAnimationFrame', (): void => undefined)
 
     const main = new FakeAudio()
     let handed = 0
@@ -278,5 +285,34 @@ describe('the showcase', () => {
     expect(screen.getByRole('link', { name: /read the article/i })).toBeInTheDocument()
     // Nothing on the close is on a timer.
     expect(audio.playCalls).toBe(3)
+  })
+})
+
+describe('the article', () => {
+  it('reads top to bottom with every claim sourced and the draft label on', async () => {
+    const { Article } = await import('@/surfaces/Article')
+    const { article } = await import('@/content/article/copy')
+    renderSurface(<Article />)
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/who owns the customer relationship/i)
+    for (const section of article.sections) {
+      expect(screen.getByRole('heading', { name: section.heading })).toBeInTheDocument()
+    }
+    // Every footnote marker in the copy points at a source that exists, and every source is linked.
+    const markers = new Set(
+      article.sections.flatMap((section) =>
+        [...section.paragraphs, ...(section.columns?.flatMap((column) => column.items) ?? [])].flatMap(
+          (text) => [...text.matchAll(/\[\^(\d+)\]/g)].map((match) => Number(match[1])),
+        ),
+      ),
+    )
+    for (const n of markers) {
+      expect(article.sources.some((source) => source.n === n), `source ${String(n)}`).toBe(true)
+    }
+    for (const source of article.sources) {
+      expect(screen.getByRole('link', { name: source.url })).toHaveAttribute('href', source.url)
+    }
+    expect(screen.getAllByText(/draft for discussion/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/not a banking service/i)).toBeInTheDocument()
   })
 })

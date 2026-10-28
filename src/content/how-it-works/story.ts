@@ -426,7 +426,7 @@ export const ARRANGEMENT_CARD: Card = {
 }
 
 /** Reasons are the canonical seed's, which is where the live case's interests come from. */
-const OPTIONS_CARD: Card = {
+export const OPTIONS_CARD: Card = {
   type: 'product_options',
   options: [
     {
@@ -528,14 +528,14 @@ const REUSE_ITEMS = [
 /** One `context_reused` event per requirement per application: the §53 count. */
 export const REUSED_ROWS = REUSE_ITEMS.reduce((sum, item) => sum + item.usedFor.length, 0)
 
-const REUSE_CARD: Card = {
+export const REUSE_CARD: Card = {
   type: 'reuse',
   title: `${String(REUSE_ITEMS.length)} things you never had to type`,
   started: [NAME.mortgage, NAME.joint_account, NAME.credit_card, NAME.personal_loan],
   items: REUSE_ITEMS,
 }
 
-const STATUS_AT_START: Card = {
+export const STATUS_AT_START: Card = {
   type: 'status',
   applications: [
     statusRow(IDS.mortgage, 'mortgage', 'in_progress', MORTGAGE_STEPS, MORTGAGE_DONE_AT_START),

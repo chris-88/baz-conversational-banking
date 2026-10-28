@@ -25,6 +25,9 @@ export const routes = {
   /** The narrated showcase: five minutes for a room, started by one click and nothing else. */
   showcase: '/showcase',
 
+  /** The executive article the showcase ends on. A draft until the copy is approved. */
+  article: '/article',
+
   /** §33 — a second applicant, arriving on a single-use link. */
   partnerJoin: (token = ':token') => `/join/${token}`,
 

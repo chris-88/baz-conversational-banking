@@ -1,3 +1,5 @@
+import type { Card } from '@contracts/cards.ts'
+
 /**
  * The shapes the showcase is built from.
  *
@@ -76,3 +78,62 @@ export function nextChapter(chapter: ChapterId): ChapterId | 'explore' {
 export function isChapter(stage: ShowcaseStage): stage is ChapterId {
   return (CHAPTERS as readonly string[]).includes(stage)
 }
+
+/* ---------------------------------------------------------------------------------------- */
+/* The walkthrough's transcript, as events in chapter time.                                  */
+/* ---------------------------------------------------------------------------------------- */
+
+/** What replaces the phone during a cutaway. */
+export type CutawayView =
+  | {
+      readonly kind: 'admin'
+      readonly screen: 'cases' | 'case' | 'guardrails' | 'persona' | 'analytics'
+    }
+  | { readonly kind: 'payload' }
+
+/**
+ * One thing that happens on the phone, at a moment in the chapter.
+ *
+ * The transcript on screen at any time is a pure function of these and the clock, which is
+ * what makes a seek to ninety-five seconds show exactly what continuous playback would.
+ */
+export type TranscriptEvent =
+  | {
+      readonly kind: 'customer'
+      readonly id: string
+      /** When the message is sent and becomes a bubble. */
+      readonly atMs: number
+      readonly text: string
+      /** When the composer starts filling. Short: fast confident typing, not a typewriter. */
+      readonly typeFromMs: number
+    }
+  | {
+      readonly kind: 'baz'
+      readonly id: string
+      readonly atMs: number
+      readonly text: string
+      /** When the thinking bubble appears. */
+      readonly thinkingFromMs: number
+    }
+  | {
+      readonly kind: 'card'
+      readonly id: string
+      readonly atMs: number
+      readonly card: Card
+      /** When the customer taps, after which the card shows its settled state. */
+      readonly settleAtMs?: number
+      readonly settled?: { readonly label: string; readonly note?: string }
+    }
+  | {
+      /** Time compression: everything before this leaves the screen. */
+      readonly kind: 'cut'
+      readonly id: string
+      readonly atMs: number
+    }
+  | {
+      readonly kind: 'cutaway'
+      readonly id: string
+      readonly atMs: number
+      readonly untilMs: number
+      readonly view: CutawayView
+    }

@@ -46,7 +46,7 @@ export function OpportunityScene({
   const p = still ? 1 : progress
 
   return (
-    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] items-center gap-8 px-6 py-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:gap-16 lg:py-8">
+    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_auto] items-center gap-8 overflow-y-auto px-6 py-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:overflow-hidden lg:gap-16 lg:py-8">
       <PresenterPanel
         presenter={cue.presenter}
         cueId={cue.id}
@@ -55,7 +55,7 @@ export function OpportunityScene({
         still={still}
         size="lg"
       />
-      <Visual cueId={cue.id} still={still} className="flex items-center justify-center">
+      <Visual cueId={cue.id} still={still} className="min-h-[60vh] lg:min-h-0">
         <Picture scene={cue.scene} p={p} still={still} />
       </Visual>
     </div>
