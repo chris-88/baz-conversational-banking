@@ -10,6 +10,7 @@ import { visibleTranscript } from './transcript'
 import { PhoneFrame } from './PhoneFrame'
 import { ShowcaseTranscript } from './ShowcaseTranscript'
 import { AdminCutaway } from './AdminCutaway'
+import { useNarrow } from './useNarrow'
 
 /**
  * The proof: the product on a phone, and nothing competing with it.
@@ -30,26 +31,32 @@ export function WalkthroughScene({
   readonly still: boolean
 }): ReactNode {
   const actions = usePlaybackActions()
+  const narrow = useNarrow()
   const view = useMemo(() => visibleTranscript(WALKTHROUGH_EVENTS, localTimeMs), [localTimeMs])
   const cutawayKey = view.cutaway === null ? 'phone' : JSON.stringify(view.cutaway)
 
+  /* On a phone the product's screen fills the stage edge to edge: a drawn phone inside a real one would shrink it to a strip. */
   const stage =
-    view.cutaway === null ? (
+    view.cutaway !== null ? (
+      <AdminCutaway view={view.cutaway} />
+    ) : narrow ? (
+      <div className="bg-background flex h-full w-full flex-col overflow-hidden rounded-2xl border shadow-sm">
+        <ShowcaseTranscript view={view} still={still} />
+      </div>
+    ) : (
       <PhoneFrame>
         <ShowcaseTranscript view={view} still={still} />
       </PhoneFrame>
-    ) : (
-      <AdminCutaway view={view.cutaway} />
     )
 
   const title = (
-    <h2 className="text-center text-xl font-semibold tracking-tight text-balance lg:text-2xl">
+    <h2 className="text-center text-lg font-semibold tracking-tight text-balance sm:text-xl lg:text-2xl">
       {cue.presenter?.title}
     </h2>
   )
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col gap-4 overflow-hidden px-4 py-4 sm:px-6 lg:gap-5 lg:py-5">
+    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col gap-3 overflow-hidden px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:gap-5 lg:py-5">
       <ol className="grid grid-cols-7 gap-1" aria-label="Steps in the demonstration">
         {WALKTHROUGH_CUES.map((step, index) => {
           const current = step.id === cue.id

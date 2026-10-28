@@ -24,6 +24,7 @@ import { Surface, Tile } from '@/components/Primitives'
 import { PresenterPanel } from './PresenterPanel'
 import { Arrive, Chip, JourneyCard, Link, Node, Visual, Wires } from './scene-parts'
 import { settle } from './ease'
+import { FitWidth } from './FitWidth'
 
 /**
  * The first sixty seconds, drawn.
@@ -46,7 +47,7 @@ export function OpportunityScene({
   const p = still ? 1 : progress
 
   return (
-    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_auto] items-center gap-8 overflow-y-auto px-6 py-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:overflow-hidden lg:gap-16 lg:py-8">
+    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_auto] content-center gap-6 overflow-y-auto px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:items-center lg:gap-16 lg:overflow-hidden lg:py-8">
       <PresenterPanel
         presenter={cue.presenter}
         cueId={cue.id}
@@ -55,8 +56,10 @@ export function OpportunityScene({
         still={still}
         size="lg"
       />
-      <Visual cueId={cue.id} still={still} className="min-h-[60vh] lg:min-h-0">
-        <Picture scene={cue.scene} p={p} still={still} />
+      <Visual cueId={cue.id} still={still}>
+        <FitWidth designWidth={768}>
+          <Picture scene={cue.scene} p={p} still={still} />
+        </FitWidth>
       </Visual>
     </div>
   )

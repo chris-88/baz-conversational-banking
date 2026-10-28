@@ -49,8 +49,10 @@ export function PresenterPanel({
         <>
           <h2
             className={cn(
-              'mt-4 max-w-[18ch] leading-[1.1] font-bold tracking-tight text-balance',
-              size === 'lg' ? 'text-[2.25rem] xl:text-[2.75rem]' : 'text-[1.75rem] xl:text-[2.25rem]',
+              'mt-3 max-w-[18ch] leading-[1.1] font-bold tracking-tight text-balance lg:mt-4',
+              size === 'lg'
+                ? 'text-[1.75rem] sm:text-[2.25rem] xl:text-[2.75rem]'
+                : 'text-2xl sm:text-[1.75rem] xl:text-[2.25rem]',
             )}
           >
             {presenter.title}
@@ -58,15 +60,15 @@ export function PresenterPanel({
           {presenter.body !== undefined && (
             <p
               className={cn(
-                'text-muted-foreground mt-4 max-w-[46ch] leading-relaxed text-pretty',
-                size === 'lg' ? 'text-lg xl:text-xl' : 'text-[15px] xl:text-lg',
+                'text-muted-foreground mt-3 max-w-[46ch] leading-relaxed text-pretty lg:mt-4',
+                size === 'lg' ? 'text-base sm:text-lg xl:text-xl' : 'text-[15px] xl:text-lg',
               )}
             >
               {presenter.body}
             </p>
           )}
           {presenter.bullets !== undefined && presenter.bullets.length > 0 && (
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-4 space-y-2 lg:mt-6 lg:space-y-3">
               {presenter.bullets.map((bullet) => (
                 <li key={bullet} className="flex items-start gap-3">
                   <span
@@ -83,7 +85,7 @@ export function PresenterPanel({
             </ul>
           )}
           {presenter.technicalNote !== undefined && (
-            <p className="text-muted-foreground mt-6 max-w-[52ch] border-t pt-4 font-mono text-[11.5px] leading-relaxed">
+            <p className="text-muted-foreground mt-6 hidden max-w-[52ch] border-t pt-4 font-mono text-[11.5px] leading-relaxed sm:block">
               <span className="text-foreground font-semibold">Under the hood.</span>{' '}
               {presenter.technicalNote}
             </p>

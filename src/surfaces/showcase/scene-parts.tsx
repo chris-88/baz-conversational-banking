@@ -28,15 +28,15 @@ export function Visual({
 }): ReactNode {
   if (still) {
     return (
-      <div className={cn('relative flex h-full min-h-0 w-full items-center justify-center', className)}>
+      <div className={cn('relative flex h-full min-h-0 w-full min-w-0 items-center justify-center', className)}>
         {children}
       </div>
     )
   }
   return (
-    <div className={cn('relative h-full min-h-0 w-full', className)}>
+    <div className={cn('relative h-full min-h-0 w-full min-w-0', className)}>
       <AnimatePresence mode="wait" initial={false}>
-        <m.div key={cueId} className="flex h-full w-full items-center justify-center" {...fade}>
+        <m.div key={cueId} className="flex h-full w-full min-w-0 items-center justify-center" {...fade}>
           {children}
         </m.div>
       </AnimatePresence>

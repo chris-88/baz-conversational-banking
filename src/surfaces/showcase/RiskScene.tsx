@@ -20,6 +20,7 @@ import { Claim, Surface, Tile } from '@/components/Primitives'
 import { PresenterPanel } from './PresenterPanel'
 import { Arrive, Link, Node, Visual, Wires } from './scene-parts'
 import { settle } from './ease'
+import { FitWidth } from './FitWidth'
 import { cn } from '@/lib/utils'
 
 /**
@@ -50,7 +51,7 @@ export function RiskScene({
         <Visual cueId={cue.id} still={still} className="min-h-[60vh] lg:min-h-0">
           <div className="text-center">
             <Arrive order={0} still={still}>
-              <h2 className="max-w-[16ch] text-[3rem] leading-[1.05] font-bold tracking-tight text-balance sm:text-6xl xl:text-7xl">
+              <h2 className="max-w-[16ch] text-[2.5rem] leading-[1.05] font-bold tracking-tight text-balance sm:text-6xl xl:text-7xl">
                 {cue.presenter?.title}
               </h2>
             </Arrive>
@@ -66,7 +67,7 @@ export function RiskScene({
   }
 
   return (
-    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_auto] items-center gap-8 overflow-y-auto px-6 py-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:overflow-hidden lg:gap-16 lg:py-8">
+    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_auto] content-center gap-6 overflow-y-auto px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:items-center lg:gap-16 lg:overflow-hidden lg:py-8">
       <PresenterPanel
         presenter={cue.presenter}
         cueId={cue.id}
@@ -75,8 +76,10 @@ export function RiskScene({
         still={still}
         size="lg"
       />
-      <Visual cueId={cue.id} still={still} className="min-h-[60vh] lg:min-h-0">
-        <Picture scene={cue.scene} p={p} still={still} />
+      <Visual cueId={cue.id} still={still}>
+        <FitWidth designWidth={896}>
+          <Picture scene={cue.scene} p={p} still={still} />
+        </FitWidth>
       </Visual>
     </div>
   )
