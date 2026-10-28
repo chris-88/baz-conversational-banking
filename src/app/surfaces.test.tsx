@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -7,6 +7,26 @@ import { Landing } from '@/surfaces/Landing'
 import { BazScreen } from '@/surfaces/BazScreen'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { AdminConsole } from '@/admin/AdminConsole'
+
+/**
+ * jsdom has no `matchMedia`, and motion's `useReducedMotion` caches its answer at the first
+ * call anywhere in the file. The landing page now renders the product's own components, so
+ * that first call happens before the explainer installs its reduced-motion stub below. The
+ * whole file therefore renders still from the start, which is what every test here assumes.
+ */
+beforeAll(() => {
+  window.matchMedia = (query: string): MediaQueryList =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList
+})
 
 /** Surfaces need the query client, so they are rendered the way the app renders them. */
 function renderSurface(element: ReactNode, initialEntries: string[] = ['/']): void {
