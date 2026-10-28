@@ -46,7 +46,6 @@ export function ChapterScene({
           key={seekSerial}
           cue={cue}
           localTimeMs={localTimeMs}
-          position={cueIndex(WALKTHROUGH_CUES, cue)}
           still={still}
         />
       )

@@ -41,7 +41,9 @@ describe('showcase cues', () => {
         for (const cue of cues) {
           if (cue.presenter === undefined) continue
           expect(words(cue.presenter.title), `${cue.id} title`).toBeLessThanOrEqual(12)
-          expect(words(cue.presenter.body), `${cue.id} body`).toBeLessThanOrEqual(35)
+          if (cue.presenter.body !== undefined) {
+            expect(words(cue.presenter.body), `${cue.id} body`).toBeLessThanOrEqual(35)
+          }
           expect(cue.presenter.bullets?.length ?? 0, `${cue.id} bullets`).toBeLessThanOrEqual(3)
         }
       })

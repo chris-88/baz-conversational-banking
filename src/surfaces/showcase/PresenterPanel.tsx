@@ -55,14 +55,16 @@ export function PresenterPanel({
           >
             {presenter.title}
           </h2>
-          <p
-            className={cn(
-              'text-muted-foreground mt-4 max-w-[46ch] leading-relaxed text-pretty',
-              size === 'lg' ? 'text-lg xl:text-xl' : 'text-[15px] xl:text-lg',
-            )}
-          >
-            {presenter.body}
-          </p>
+          {presenter.body !== undefined && (
+            <p
+              className={cn(
+                'text-muted-foreground mt-4 max-w-[46ch] leading-relaxed text-pretty',
+                size === 'lg' ? 'text-lg xl:text-xl' : 'text-[15px] xl:text-lg',
+              )}
+            >
+              {presenter.body}
+            </p>
+          )}
           {presenter.bullets !== undefined && presenter.bullets.length > 0 && (
             <ul className="mt-6 space-y-3">
               {presenter.bullets.map((bullet) => (

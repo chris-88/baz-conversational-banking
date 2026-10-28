@@ -36,7 +36,8 @@ export type Presenter = {
   /** At most twelve words. */
   readonly title: string
   /** At most thirty-five words. */
-  readonly body: string
+  /** Absent where the chapter draws only the title, as the walkthrough does. */
+  readonly body?: string
   /** At most three. */
   readonly bullets?: readonly string[]
   /** "Under the hood": which working capability this is, or what is simulated. */
