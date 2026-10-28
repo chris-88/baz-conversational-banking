@@ -1,7 +1,141 @@
 WEBVTT
 
-NOTE Placeholder. Replace with captions cut from the mastered narration.
-
 1
-00:00:00.000 --> 00:03:00.000
-Product demonstration
+00:00:00.000 --> 00:00:00.900
+Here it is running.
+
+2
+00:00:01.740 --> 00:00:08.760
+The customer types what's going on, in her own words: married in the spring, a baby, renting, and hoping to buy.
+
+3
+00:00:09.540 --> 00:00:11.040
+Baz doesn't reach for a product.
+
+4
+00:00:11.300 --> 00:00:12.780
+It asks one question.
+
+5
+00:00:13.280 --> 00:00:18.100
+And it writes down what it learns, against a catalogue of facts, with where each one came from.
+
+6
+00:00:18.600 --> 00:00:25.200
+A couple of answers later it has the shape of the thing: savings, what they can put away each month, when they'd like to buy.
+
+7
+00:00:25.640 --> 00:00:27.260
+It offers to keep that as a plan.
+
+8
+00:00:27.620 --> 00:00:29.460
+Nothing is kept until she taps.
+
+9
+00:00:29.880 --> 00:00:31.060
+That's the rule all the way through.
+
+10
+00:00:30.860 --> 00:00:36.780
+The model proposes, the customer commits, and the system checks before anything is written.
+
+11
+00:00:37.440 --> 00:00:39.540
+Now the products, and only now.
+
+12
+00:00:40.000 --> 00:00:44.840
+These are what a first home with a new baby usually involves, each with a reason tied to something she said.
+
+13
+00:00:44.640 --> 00:00:50.080
+She picks three, and three applications start at once, sharing what's already known.
+
+14
+00:00:50.560 --> 00:00:52.640
+Ask about rates and you get the published table.
+
+15
+00:00:52.980 --> 00:00:54.200
+Indicative, not advice.
+
+16
+00:00:54.820 --> 00:00:57.040
+She banks here already, so she signs in.
+
+17
+00:00:56.840 --> 00:01:01.240
+On this prototype that's an email code, not the bank's real identity check.
+
+18
+00:01:01.600 --> 00:01:07.380
+What the bank already holds arrives: name, address, PPS number, employer, salary.
+
+19
+00:01:07.960 --> 00:01:09.680
+Then Baz shows her what that saved.
+
+20
+00:01:10.440 --> 00:01:14.240
+Sixteen things she never had to type, and which application each one went to.
+
+21
+00:01:14.480 --> 00:01:16.560
+This is the part I'd want a bank to notice.
+
+22
+00:01:17.000 --> 00:01:19.780
+The personal loan uses the bank's own published form.
+
+23
+00:01:19.980 --> 00:01:24.820
+Baz has read the definition, four hundred and eighteen controls, and filled in what it knows.
+
+24
+00:01:25.080 --> 00:01:30.920
+Now it asks for the rest in the form's own words: its declarations, its payslip, its photo ID.
+
+25
+00:01:31.300 --> 00:01:34.960
+The bank's machinery, driven by a conversation instead of a wizard.
+
+26
+00:01:35.340 --> 00:01:40.300
+One conversation, three applications, and here's where each one stands, straight from the database.
+
+27
+00:01:40.820 --> 00:01:47.540
+Underneath, the application packet is built exactly as the bank's website would send it, every field with where its value came from.
+
+28
+00:01:47.760 --> 00:01:49.240
+Captured, never sent.
+
+29
+00:01:49.480 --> 00:01:52.160
+There's no code path in this prototype that sends it.
+
+30
+00:01:52.280 --> 00:01:53.660
+And the other side of the glass.
+
+31
+00:01:53.900 --> 00:01:57.080
+Every case, with every fact and where it came from.
+
+32
+00:01:57.260 --> 00:01:58.840
+What each conversation is for.
+
+33
+00:01:59.240 --> 00:02:02.680
+The guardrails, which run in front of the model, not inside it.
+
+34
+00:02:02.880 --> 00:02:05.080
+The persona, which is style only.
+
+35
+00:02:06.060 --> 00:02:08.940
+And the numbers, from the events it wrote as it went.

@@ -89,7 +89,7 @@ export function WalkthroughScene({
                       current ? 'bg-primary' : done ? 'bg-primary/40' : 'bg-muted-foreground/20',
                     )}
                   />
-                  <span className={cn('w-full truncate text-[11px] leading-tight font-medium', current ? 'text-foreground' : 'text-muted-foreground')}>
+                  <span className={cn('line-clamp-2 min-h-[2.5em] w-full text-[11px] leading-tight font-medium', current ? 'text-foreground' : 'text-muted-foreground')}>
                     <span className="font-mono tabular-nums">{String(index + 1)}</span> {step.presenter?.eyebrow ?? step.id}
                   </span>
                   <span className="text-muted-foreground font-mono text-[10px] tabular-nums">

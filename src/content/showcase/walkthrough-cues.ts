@@ -13,7 +13,7 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
     id: 'arrive',
     chapter: 'walkthrough',
     startMs: 0,
-    endMs: 25_000,
+    endMs: 18_600,
     scene: 'arrive',
     presenter: {
       eyebrow: 'Life context',
@@ -26,8 +26,8 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
   {
     id: 'understand',
     chapter: 'walkthrough',
-    startMs: 25_000,
-    endMs: 50_000,
+    startMs: 18_600,
+    endMs: 37_400,
     scene: 'understand',
     presenter: {
       eyebrow: 'Discovery',
@@ -44,8 +44,8 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
   {
     id: 'connect',
     chapter: 'walkthrough',
-    startMs: 50_000,
-    endMs: 75_000,
+    startMs: 37_400,
+    endMs: 54_800,
     scene: 'connect',
     presenter: {
       eyebrow: 'Recommendations',
@@ -58,8 +58,8 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
   {
     id: 'authenticate',
     chapter: 'walkthrough',
-    startMs: 75_000,
-    endMs: 100_000,
+    startMs: 54_800,
+    endMs: 74_500,
     scene: 'authenticate',
     presenter: {
       eyebrow: 'Authentication',
@@ -72,8 +72,8 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
   {
     id: 'machinery',
     chapter: 'walkthrough',
-    startMs: 100_000,
-    endMs: 130_000,
+    startMs: 74_500,
+    endMs: 95_300,
     scene: 'machinery',
     presenter: {
       eyebrow: 'Existing forms',
@@ -90,8 +90,8 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
   {
     id: 'action',
     chapter: 'walkthrough',
-    startMs: 130_000,
-    endMs: 155_000,
+    startMs: 95_300,
+    endMs: 112_300,
     scene: 'action',
     presenter: {
       eyebrow: 'Orchestration',
@@ -103,8 +103,8 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
   {
     id: 'govern',
     chapter: 'walkthrough',
-    startMs: 155_000,
-    endMs: 180_000,
+    startMs: 112_300,
+    endMs: 129_200,
     scene: 'govern',
     presenter: {
       eyebrow: 'Governance',
