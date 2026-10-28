@@ -17,7 +17,6 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
     presenter: {
       eyebrow: 'What you’ve just seen',
       title: 'One conversation, several products, nothing asked twice.',
-      body: 'That was a bank-owned assistant sitting on the bank’s own journeys. Now step back and look at where that conversation could happen instead.',
     },
   },
   {
@@ -29,9 +28,6 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
     presenter: {
       eyebrow: 'The shift',
       title: 'Personal AI assistants are becoming the first place people ask.',
-      body: 'Compare mortgages, manage savings, arrange protection, plan ahead. The access an assistant needs mostly exists: PSD2 has obliged banks since 2018 to open accounts to licensed third parties at the customer’s request.',
-      technicalNote:
-        'Directive (EU) 2015/2366 covers payment accounts: account information and payment initiation, with the customer’s consent. Applications need no API at all. A bank’s journey is a public web form.',
     },
   },
   {
@@ -43,7 +39,6 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
     presenter: {
       eyebrow: 'The strategic question',
       title: 'If somebody else owns the conversation, the bank keeps the products.',
-      body: 'The regulated products, the balance sheet and the infrastructure stay with the bank. The context, the relationship and the pricing power move to whoever the customer talks to.',
     },
   },
   {
@@ -55,11 +50,6 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
     presenter: {
       eyebrow: 'Two responses',
       title: 'Baz explores both ways to respond.',
-      body: 'A direct relationship through a bank-owned assistant, and secure, customer-authorised access for the assistants customers choose themselves.',
-      bullets: [
-        'A direct Baz relationship: built and running',
-        'Access for customer-chosen assistants: a strategic possibility, prototyped',
-      ],
     },
   },
   {

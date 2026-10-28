@@ -3,7 +3,7 @@ import type { ChapterId } from '@/content/showcase/types'
 import { OPPORTUNITY_CUES } from '@/content/showcase/opportunity'
 import { WALKTHROUGH_CUES } from '@/content/showcase/walkthrough-cues'
 import { RISK_CUES } from '@/content/showcase/risk'
-import { activeCue, cueIndex, cueProgress } from './cues'
+import { activeCue, cueProgress } from './cues'
 import { OpportunityScene } from './OpportunityScene'
 import { WalkthroughScene } from './WalkthroughScene'
 import { RiskScene } from './RiskScene'
@@ -34,7 +34,6 @@ export function ChapterScene({
           key={seekSerial}
           cue={cue}
           progress={cueProgress(cue, localTimeMs)}
-          position={cueIndex(OPPORTUNITY_CUES, cue)}
           still={still}
         />
       )
@@ -57,7 +56,6 @@ export function ChapterScene({
           key={seekSerial}
           cue={cue}
           progress={cueProgress(cue, localTimeMs)}
-          position={cueIndex(RISK_CUES, cue)}
           still={still}
         />
       )

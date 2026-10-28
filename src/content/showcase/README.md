@@ -33,10 +33,10 @@ All three are cut from the recognised words, one cue per sentence. Captions star
 ## Retiming cues
 
 - `opportunity.ts`, `walkthrough-cues.ts`, `risk.ts`: one cue per window, contiguous, starting
-  at zero and ending on or before the track. Each carries the presenter copy: the opening and
-  closing chapters draw a panel of it beside the picture; the walkthrough draws only the
-  step's name on its rail and the title beneath. The test in `cues.test.ts` enforces the
-  shape and the word limits.
+  at zero and ending on or before the track. Each carries a name (`eyebrow`) and a `title`,
+  which is all any chapter draws: the walkthrough puts the name on its rail, the other two
+  above the title. A `body` is allowed and only the closing question uses one. The test in
+  `cues.test.ts` enforces the shape and the word limits.
 - `walkthrough.ts`: what happens on the phone, as events in chapter milliseconds. A customer
   line types from `typeFromMs` and sends at `atMs`; a Baz line thinks from `thinkingFromMs`;
   a card arrives at `atMs` and settles at `settleAtMs`; a `cut` clears the screen; a `cutaway`

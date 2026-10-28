@@ -7,15 +7,19 @@ import { cn } from '@/lib/utils'
  * The chapter pictures are composed at a design width and cannot reflow: three cards in a
  * row, a diagram with its wires. On a phone they are scaled down as one piece rather than
  * squeezed, so what the room sees and what the phone sees are the same picture. At or above
- * the design width nothing happens. The outer box takes the scaled height so the layout
+ * the design width nothing happens unless `maxScale` lets it grow, which the chapter stages allow so a room
+ * sees it large. The outer box takes the scaled height so the layout
  * around it is honest about the space the picture uses.
  */
 export function FitWidth({
   designWidth,
+  maxScale = 1,
   children,
   className,
 }: {
   readonly designWidth: number
+  /** How far past its design width the picture may grow on a wide screen. 1 means never. */
+  readonly maxScale?: number
   readonly children: ReactNode
   readonly className?: string
 }): ReactNode {
@@ -23,6 +27,7 @@ export function FitWidth({
   const inner = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
   const [height, setHeight] = useState<number | null>(null)
+  const [outerWidth, setOuterWidth] = useState(0)
 
   useLayoutEffect(() => {
     const outerEl = outer.current
@@ -30,8 +35,9 @@ export function FitWidth({
     if (outerEl === null || innerEl === null || typeof ResizeObserver === 'undefined') return
 
     const measure = (): void => {
-      const next = Math.min(1, outerEl.clientWidth / designWidth)
+      const next = Math.min(maxScale, outerEl.clientWidth / designWidth)
       setScale(next)
+      setOuterWidth(outerEl.clientWidth)
       setHeight(innerEl.offsetHeight * next)
     }
     const observer = new ResizeObserver(measure)
@@ -39,7 +45,7 @@ export function FitWidth({
     observer.observe(innerEl)
     measure()
     return () => observer.disconnect()
-  }, [designWidth])
+  }, [designWidth, maxScale])
 
   return (
     <div ref={outer} className={cn('w-full min-w-0 overflow-hidden', className)} style={height === null ? undefined : { height }}>
@@ -48,9 +54,10 @@ export function FitWidth({
         className="mx-auto"
         style={{
           width: designWidth,
-          maxWidth: scale < 1 ? 'none' : '100%',
-          transform: scale < 1 ? `scale(${String(scale)})` : undefined,
+          maxWidth: 'none',
+          transform: scale === 1 ? undefined : `scale(${String(scale)})`,
           transformOrigin: 'top left',
+          marginLeft: scale > 1 ? `${String((outerWidth - designWidth * scale) / 2)}px` : undefined,
         }}
       >
         {children}

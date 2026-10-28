@@ -17,10 +17,9 @@ import { MessageText } from '@/baz/MessageText'
 import { BazMark } from '@/baz/BazMark'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { Claim, Surface, Tile } from '@/components/Primitives'
-import { PresenterPanel } from './PresenterPanel'
+import { ChapterStage } from './ChapterStage'
 import { Arrive, Link, Node, Visual, Wires } from './scene-parts'
 import { settle } from './ease'
-import { FitWidth } from './FitWidth'
 import { cn } from '@/lib/utils'
 
 /**
@@ -35,12 +34,10 @@ import { cn } from '@/lib/utils'
 export function RiskScene({
   cue,
   progress,
-  position,
   still,
 }: {
   readonly cue: ShowcaseCue<Scene>
   readonly progress: number
-  readonly position: { readonly index: number; readonly total: number }
   readonly still: boolean
 }): ReactNode {
   const p = still ? 1 : progress
@@ -67,21 +64,9 @@ export function RiskScene({
   }
 
   return (
-    <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_auto] content-center gap-6 overflow-y-auto px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1 lg:items-center lg:gap-16 lg:overflow-hidden lg:py-8">
-      <PresenterPanel
-        presenter={cue.presenter}
-        cueId={cue.id}
-        index={position.index}
-        total={position.total}
-        still={still}
-        size="lg"
-      />
-      <Visual cueId={cue.id} still={still}>
-        <FitWidth designWidth={896}>
-          <Picture scene={cue.scene} p={p} still={still} />
-        </FitWidth>
-      </Visual>
-    </div>
+    <ChapterStage cueId={cue.id} presenter={cue.presenter} designWidth={896} maxScale={1.35} still={still}>
+      <Picture scene={cue.scene} p={p} still={still} />
+    </ChapterStage>
   )
 }
 
