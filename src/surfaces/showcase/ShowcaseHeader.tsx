@@ -8,15 +8,20 @@ import { routes } from '@/app/routes'
 /**
  * The same bar the explainer wears: wordmark, a divider, the page's name, and a way back.
  *
- * While a chapter plays the right-hand action reads "Exit showcase" rather than "Back to Baz",
- * because leaving mid-narration is a different decision from navigating, and the middle of
- * the bar carries the chapter and the overall progress so the room can see where it is.
+ * While a chapter plays the right-hand action reads "Exit showcase" and returns to the
+ * opening screen with the sound stopped, ready for the next Start, rather than leaving the
+ * page: in a meeting room the thing somebody wants after an interruption is the room-ready
+ * frame, not the product. The middle of the bar carries the chapter and the overall progress
+ * so the room can see where it is.
  */
 export function ShowcaseHeader({
   playing,
+  onExit,
   children,
 }: {
   readonly playing?: boolean
+  /** What "Exit showcase" does while playing. */
+  readonly onExit?: () => void
   /** The chapter readout and global progress, only while playing. */
   readonly children?: ReactNode
 }): ReactNode {
@@ -33,21 +38,19 @@ export function ShowcaseHeader({
           <div className="hidden min-w-0 flex-1 items-center justify-center md:flex">{children}</div>
         )}
 
-        <Button asChild variant="ghost" size="sm" className="shrink-0 gap-1.5">
-          <Link to={routes.baz}>
-            {playing === true ? (
-              <>
-                <XIcon className="size-4" />
-                Exit showcase
-              </>
-            ) : (
-              <>
-                <ArrowLeftIcon className="size-4" />
-                Back to Baz
-              </>
-            )}
-          </Link>
-        </Button>
+        {playing === true ? (
+          <Button variant="ghost" size="sm" className="shrink-0 gap-1.5" onClick={onExit}>
+            <XIcon className="size-4" />
+            Exit showcase
+          </Button>
+        ) : (
+          <Button asChild variant="ghost" size="sm" className="shrink-0 gap-1.5">
+            <Link to={routes.baz}>
+              <ArrowLeftIcon className="size-4" />
+              Back to Baz
+            </Link>
+          </Button>
+        )}
       </div>
     </header>
   )

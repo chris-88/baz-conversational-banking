@@ -282,6 +282,23 @@ describe('usePlayback', () => {
     expect(main.src).toBe('b.mp3')
   })
 
+  it('exit stops the sound and a later start plays the first chapter from the top', () => {
+    const { main, createAudio } = harness()
+    const { result } = renderHook(() => usePlayback(manifests, { createAudio }))
+    act(() => result.current.actions.start())
+    act(() => main.finish())
+    expect(result.current.state.stage).toBe('walkthrough')
+
+    act(() => result.current.actions.exit())
+    expect(main.paused).toBe(true)
+    expect(result.current.state.stage).toBe('idle')
+
+    act(() => result.current.actions.start())
+    expect(main.src).toBe('a.mp3')
+    expect(main.playCalls).toBe(3)
+    expect(result.current.state.stage).toBe('opportunity')
+  })
+
   it('mute reaches the element', () => {
     const { main, createAudio } = harness()
     const { result } = renderHook(() => usePlayback(manifests, { createAudio }))

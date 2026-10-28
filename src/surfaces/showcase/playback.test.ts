@@ -162,6 +162,18 @@ describe('the playback machine', () => {
     expect(snap.stage).toBe('risk')
   })
 
+  it('exit returns to the opening screen with nothing playing, keeping what the viewer set', () => {
+    const muted = run([{ type: 'set_muted', muted: true }, { type: 'tick', ms: 20_000 }], started)
+    const exited = reduce(muted, { type: 'exit' }, manifests)
+    expect(exited.stage).toBe('idle')
+    expect(exited.status).toBe('ready')
+    expect(exited.localTimeMs).toBe(0)
+    expect(exited.muted).toBe(true)
+    expect(reduce(exited, { type: 'exit' }, manifests)).toBe(exited)
+    // And Start works again from there.
+    expect(reduce(exited, { type: 'start' }, manifests).stage).toBe('opportunity')
+  })
+
   it('mute and captions are plain toggles that do not touch time', () => {
     const muted = reduce(started, { type: 'set_muted', muted: true }, manifests)
     expect(muted.muted).toBe(true)

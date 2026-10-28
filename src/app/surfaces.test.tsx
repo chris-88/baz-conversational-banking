@@ -262,6 +262,20 @@ describe('the showcase', () => {
     expect(screen.getAllByText(/the opportunity/i).length).toBeGreaterThan(0)
   })
 
+  it('exit showcase goes back to the opening screen, not to Baz', async () => {
+    const { act, fireEvent } = await import('@testing-library/react')
+    const audio = await renderShowcase()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /start the experience/i }))
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('link', { name: /exit showcase/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /exit showcase/i }))
+    expect(audio.paused).toBe(true)
+    expect(screen.getByRole('button', { name: /start the experience/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to baz/i })).toBeInTheDocument()
+  })
+
   it('three tracks ending in turn reach the close, which stays put', async () => {
     const { act, fireEvent } = await import('@testing-library/react')
     const audio = await renderShowcase()

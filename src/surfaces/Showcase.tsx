@@ -162,7 +162,7 @@ function Playing({ chapter }: { readonly chapter: ChapterId }): ReactNode {
 
   return (
     <div ref={container} className="bg-muted/40 flex h-dvh flex-col">
-      <ShowcaseHeader playing>
+      <ShowcaseHeader playing onExit={actions.exit}>
         <div className="flex w-full max-w-3xl items-center gap-4">
           <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
             {String(STAGE_NUMBER[chapter]).padStart(2, '0')} / {String(STAGE_COUNT).padStart(2, '0')}

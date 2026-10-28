@@ -18,6 +18,7 @@ export const PlaybackActionsContext = createContext<PlaybackActions>({
   pause: noop,
   resume: noop,
   restart: noop,
+  exit: noop,
   seek: noop,
   skipChapter: noop,
   retry: noop,

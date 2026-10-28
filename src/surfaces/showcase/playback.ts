@@ -60,6 +60,8 @@ export type PlaybackAction =
   | { readonly type: 'failed'; readonly message: string }
   | { readonly type: 'retry' }
   | { readonly type: 'restart' }
+  /** Back to the opening screen, with nothing playing. Mute and captions are kept. */
+  | { readonly type: 'exit' }
   | { readonly type: 'set_muted'; readonly muted: boolean }
   | { readonly type: 'set_captions'; readonly on: boolean }
 
@@ -253,6 +255,15 @@ export function reduce(
         needsResume: false,
         settling: true,
         seekSerial: state.seekSerial + 1,
+      }
+
+    case 'exit':
+      if (state.stage === 'idle') return state
+      return {
+        ...INITIAL,
+        knownDurations: state.knownDurations,
+        muted: state.muted,
+        captionsOn: state.captionsOn,
       }
 
     case 'set_muted':

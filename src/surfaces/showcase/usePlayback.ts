@@ -27,6 +27,8 @@ export type PlaybackActions = {
   readonly pause: () => void
   readonly resume: () => void
   readonly restart: () => void
+  /** Back to the opening screen. The next Start begins from the first chapter again. */
+  readonly exit: () => void
   readonly seek: (chapter: ChapterId, ms: number) => void
   readonly skipChapter: () => void
   readonly retry: () => void
@@ -254,6 +256,13 @@ export function usePlayback(
         if (stateRef.current.stage === 'idle') return
         dispatch({ type: 'restart' })
         load('opportunity', 0, true)
+      },
+      exit: () => {
+        if (stateRef.current.stage === 'idle') return
+        audioRef.current?.pause()
+        loadedRef.current = null
+        pendingSeekRef.current = null
+        dispatch({ type: 'exit' })
       },
       seek: (chapter, ms) => {
         const current = stateRef.current
