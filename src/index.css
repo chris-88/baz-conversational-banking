@@ -436,3 +436,14 @@
     animation: none !important;
   }
 }
+
+/*
+ * The showcase's progress rail: a native range input, which is what gives it a keyboard,
+ * coloured with the action token. Cross-browser thumb styling is the one place a native
+ * control needs both vendor rules.
+ */
+.showcase-rail {
+  accent-color: var(--primary);
+  height: 1.5rem;
+  cursor: pointer;
+}

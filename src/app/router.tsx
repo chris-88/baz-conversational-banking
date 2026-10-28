@@ -5,6 +5,7 @@ import { Privacy } from '@/surfaces/Privacy'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { LazyAdminConsole, LazyAdminOverview } from '@/app/lazyAdmin'
 import { LazyHowItWorks } from '@/app/lazyHowItWorks'
+import { LazyShowcase } from '@/app/lazyShowcase'
 import { NotFound } from '@/components/NotFound'
 import { RouteError } from '@/app/RouteError'
 
@@ -15,6 +16,7 @@ const routeObjects: RouteObject[] = [
   { path: '/privacy', element: <Privacy /> },
   { path: '/how-it-works', element: <LazyHowItWorks /> },
   { path: '/how-it-works/:section', element: <LazyHowItWorks /> },
+  { path: '/showcase', element: <LazyShowcase /> },
 
   { path: '/join/:token', element: <PartnerJoin /> },
 

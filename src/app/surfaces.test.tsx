@@ -154,3 +154,129 @@ describe('the explainer', () => {
     expect(screen.getByRole('heading', { name: /guardrails: what gets through/i })).toBeInTheDocument()
   })
 })
+
+/**
+ * The showcase, with the sound stubbed.
+ *
+ * jsdom has no media pipeline, so the page takes its audio element from a factory and the
+ * test hands it one that records what it was asked to do. The questions are the brief's: does
+ * nothing play before the click, does one click start it, does the close persist.
+ */
+describe('the showcase', () => {
+  class FakeAudio extends EventTarget {
+    src = ''
+    currentTime = 0
+    duration = Number.NaN
+    muted = false
+    ended = false
+    paused = true
+    preload = ''
+    error: MediaError | null = null
+    playCalls = 0
+    play(): Promise<void> {
+      this.playCalls += 1
+      this.paused = false
+      return Promise.resolve()
+    }
+    pause(): void {
+      this.paused = true
+    }
+    load(): void {
+      this.ended = false
+    }
+    finish(): void {
+      this.ended = true
+      this.paused = true
+      this.dispatchEvent(new Event('pause'))
+      this.dispatchEvent(new Event('ended'))
+    }
+  }
+
+  const renderShowcase = async (): Promise<FakeAudio> => {
+    const { LazyMotion, domAnimation } = await import('motion/react')
+    const { Showcase } = await import('@/surfaces/Showcase')
+
+    window.matchMedia = (query: string): MediaQueryList =>
+      ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList
+    window.requestAnimationFrame = (): number => 0
+    window.cancelAnimationFrame = (): void => undefined
+
+    const main = new FakeAudio()
+    let handed = 0
+    const createAudio = (): HTMLAudioElement => {
+      handed += 1
+      return (handed === 1 ? main : new FakeAudio()) as unknown as HTMLAudioElement
+    }
+
+    renderSurface(
+      <LazyMotion features={domAnimation}>
+        <Routes>
+          <Route path="/showcase" element={<Showcase createAudio={createAudio} />} />
+        </Routes>
+      </LazyMotion>,
+      ['/showcase'],
+    )
+    return main
+  }
+
+  it('opens finished and silent: a claim, one button, nothing playing', async () => {
+    const audio = await renderShowcase()
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      /what if banking started with a conversation/i,
+    )
+    expect(screen.getByRole('button', { name: /start the experience/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^pause$/i })).not.toBeInTheDocument()
+    expect(audio.playCalls).toBe(0)
+    expect(screen.getByText(/not a banking service/i)).toBeInTheDocument()
+  })
+
+  it('one click starts the first chapter and plays it once', async () => {
+    const { act, fireEvent } = await import('@testing-library/react')
+    const audio = await renderShowcase()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /start the experience/i }))
+      await Promise.resolve()
+    })
+
+    expect(audio.playCalls).toBe(1)
+    expect(audio.src).toMatch(/opportunity/)
+    expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
+    expect(screen.getAllByText(/the opportunity/i).length).toBeGreaterThan(0)
+  })
+
+  it('three tracks ending in turn reach the close, which stays put', async () => {
+    const { act, fireEvent } = await import('@testing-library/react')
+    const audio = await renderShowcase()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /start the experience/i }))
+      await Promise.resolve()
+    })
+    for (let i = 0; i < 3; i += 1) {
+      await act(async () => {
+        audio.finish()
+        await Promise.resolve()
+      })
+    }
+
+    expect(screen.getByRole('heading', { name: /the conversation continues/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /launch baz/i })).toHaveAttribute(
+      'href',
+      'https://baz.chrisquinn.ie/#/baz',
+    )
+    expect(screen.getByRole('link', { name: /read the article/i })).toBeInTheDocument()
+    // Nothing on the close is on a timer.
+    expect(audio.playCalls).toBe(3)
+  })
+})

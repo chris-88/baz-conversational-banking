@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { routes } from '@/app/routes'
+import { showcaseConfig } from '@/content/showcase/config'
 
 /**
  * The QR code is a picture of a URL.
@@ -25,6 +26,12 @@ describe('the QR code on the landing page', () => {
 
   it('still points at the route Baz lives on', () => {
     expect(ENCODES, `routes.baz is ${routes.baz}; regenerate the QR`).toContain(`#${routes.baz}`)
+  })
+
+  it('is the same address the showcase offers under the same picture', () => {
+    // The explore screen shows this code next to a Launch button. If the configured URL moved
+    // and the picture did not, the two would disagree on the one screen built to be scanned.
+    expect(showcaseConfig.liveDemoUrl).toBe(ENCODES)
   })
 
   it('goes straight to the conversation rather than the page it is printed on', () => {

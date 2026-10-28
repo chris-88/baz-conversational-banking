@@ -16,6 +16,7 @@ const surfaces = [
   { route: '/#/baz', name: 'Baz', expect: /what are you trying to do/i, discloses: false },
   { route: '/#/how-it-works', name: 'explainer', expect: /how baz works/i, discloses: true },
   { route: '/#/privacy', name: 'privacy notice', expect: /not a banking service/i, discloses: true },
+  { route: '/#/showcase', name: 'showcase', expect: /what if banking started with a conversation/i, discloses: true },
   // An invalid invite is refused rather than showing a page: the token is the whole gate.
   { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation link isn.{0,3}t valid/i, discloses: false },
   { route: '/#/admin', name: 'presenter console', expect: /sign in/i, discloses: false },
@@ -54,6 +55,24 @@ test('every surface with a footer discloses that it is not a banking service', a
     await page.goto(surface.route)
     await expect(page.getByText(/not a banking service/i).first(), surface.route).toBeVisible()
   }
+})
+
+test('the showcase starts on one click and either plays or asks to be resumed', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/#/showcase')
+
+  // Nothing plays before the click: no controls, no clock.
+  await expect(page.getByRole('button', { name: /pause/i })).toHaveCount(0)
+
+  await page.getByRole('button', { name: /start the experience/i }).click()
+
+  // Headless Chromium honours the click as a gesture and plays the silent track; a browser
+  // that refuses shows the resume prompt instead. Either is the page doing its job.
+  await expect(
+    page.getByRole('button', { name: /^pause$/i }).or(page.getByRole('button', { name: /resume the experience/i })),
+  ).toBeVisible({ timeout: 5_000 })
+
+  expect(errors, 'console errors on /#/showcase after Start').toEqual([])
 })
 
 test('the old entry points land on Baz rather than breaking', async ({ page }) => {

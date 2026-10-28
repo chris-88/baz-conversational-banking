@@ -22,6 +22,9 @@ export const routes = {
   /** What happens to what somebody types. Linked from the notice card and the landing page. */
   privacy: '/privacy',
 
+  /** The narrated showcase: five minutes for a room, started by one click and nothing else. */
+  showcase: '/showcase',
+
   /** §33 — a second applicant, arriving on a single-use link. */
   partnerJoin: (token = ':token') => `/join/${token}`,
 
