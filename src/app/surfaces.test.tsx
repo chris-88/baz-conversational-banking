@@ -302,6 +302,21 @@ describe('the showcase', () => {
   })
 })
 
+describe('questions and collaboration', () => {
+  it('offers a question form and an offer-to-work form, each with its own consent', async () => {
+    const { Ask } = await import('@/surfaces/Ask')
+    renderSurface(<Ask />)
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/ask a question, or work on this/i)
+    expect(screen.getByRole('tab', { name: /ask a question/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /work on this/i })).toBeInTheDocument()
+    // The question form is the one open by default: a room scans this after the showcase.
+    expect(screen.getByLabelText(/your question/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/you can reply to me by email/i)).toBeInTheDocument()
+    expect(screen.getByText(/not a banking service/i)).toBeInTheDocument()
+  })
+})
+
 describe('the article', () => {
   it('reads top to bottom with every claim sourced and the draft label on', async () => {
     const { Article } = await import('@/surfaces/Article')

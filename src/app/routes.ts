@@ -28,6 +28,9 @@ export const routes = {
   /** The executive article the showcase ends on. A draft until the copy is approved. */
   article: '/article',
 
+  /** Questions and offers to work on this, from a phone: the showcase's third QR code opens it. */
+  ask: '/ask',
+
   /** §33 — a second applicant, arriving on a single-use link. */
   partnerJoin: (token = ':token') => `/join/${token}`,
 

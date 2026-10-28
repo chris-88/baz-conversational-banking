@@ -4,6 +4,7 @@ import type { Collaborator } from '@contracts/admin.ts'
 
 const person: Collaborator = {
   id: '11111111-2222-4333-8444-555555555555',
+  kind: 'collaborate',
   name: 'Ada Byrne',
   email: 'ada@example.ie',
   organisation: 'Byrne, Byrne & Co',
@@ -32,9 +33,9 @@ describe('the collaborator export', () => {
   it('writes a header and one row per person', () => {
     const csv = collaboratorsToCsv([person])
     const [header, ...rows] = csv.split('\r\n')
-    expect(header).toBe('name,email,organisation,role,interest,source,createdAt')
+    expect(header).toBe('kind,name,email,organisation,role,interest,source,createdAt')
     expect(rows.join('\r\n')).toBe(
-      'Ada Byrne,ada@example.ie,"Byrne, Byrne & Co",,"A team that has done this\nbefore, and a bank that ""might"".",qr,2026-10-22T09:30:00.000Z\r\n',
+      'collaborate,Ada Byrne,ada@example.ie,"Byrne, Byrne & Co",,"A team that has done this\nbefore, and a bank that ""might"".",qr,2026-10-22T09:30:00.000Z\r\n',
     )
   })
 })

@@ -7,6 +7,7 @@ import type { Collaborator } from '@contracts/admin.ts'
  * the server has to know about spreadsheets.
  */
 export const COLLABORATOR_COLUMNS = [
+  'kind',
   'name',
   'email',
   'organisation',

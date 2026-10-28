@@ -64,6 +64,7 @@ Browser: one SPA on GitHub Pages
   /#/how-it-works    the explainer, for somebody evaluating the work
   /#/showcase        the narrated showcase: five minutes for a room, driven by audio
   /#/article         the executive article the showcase ends on (draft until approved)
+  /#/ask             questions and offers to collaborate, from a phone (the showcase's third QR)
   /#/privacy         what happens to what you type
   /#/join/:token     partner experience
   /#/admin/*         presenter console
@@ -391,8 +392,9 @@ Gate output:
   creation only. The analytics screen shows the journey after a show and tell (arrived, said
   something, kept a plan, started, submitted, signed in, came back, gave feedback), the
   sources, where conversations stalled (the detector events) and the feedback figures.
-- Collaborators are people who asked to be contacted about taking this further: `register_interest`
-  on `session`, anonymous, with a daily cap and a honeypot field; `collaborators` is read by
+- Collaborators are people who asked to be contacted about taking this further, or who asked a
+  question after the showcase: `register_interest` on `session`, anonymous, with a `kind`
+  (`collaborate | question`), a daily cap and a honeypot field; `collaborators` is read by
   the console only, with CSV export. Not case activity, so no event.
 
 ## Audience (§45 to §47)

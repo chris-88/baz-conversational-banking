@@ -835,6 +835,7 @@ export type CatalogueLoad = z.infer<typeof catalogueLoadSchema>
 
 export const collaboratorSchema = z.object({
   id: z.uuid(),
+  kind: z.enum(['collaborate', 'question']),
   name: z.string(),
   email: z.string(),
   organisation: z.string().nullable(),

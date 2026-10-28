@@ -616,6 +616,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
 
     mustWrite(
       await admin.from('collaborators').insert({
+        kind: interest.kind ?? 'collaborate',
         name: interest.name,
         email: interest.email,
         organisation: interest.organisation ?? null,

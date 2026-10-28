@@ -3,6 +3,7 @@ import { Landing } from '@/surfaces/Landing'
 import { BazScreen } from '@/surfaces/BazScreen'
 import { Privacy } from '@/surfaces/Privacy'
 import { Article } from '@/surfaces/Article'
+import { Ask } from '@/surfaces/Ask'
 import { PartnerJoin } from '@/partner/PartnerJoin'
 import { LazyAdminConsole, LazyAdminOverview } from '@/app/lazyAdmin'
 import { LazyHowItWorks } from '@/app/lazyHowItWorks'
@@ -19,6 +20,7 @@ const routeObjects: RouteObject[] = [
   { path: '/how-it-works/:section', element: <LazyHowItWorks /> },
   { path: '/showcase', element: <LazyShowcase /> },
   { path: '/article', element: <Article /> },
+  { path: '/ask', element: <Ask /> },
 
   { path: '/join/:token', element: <PartnerJoin /> },
 

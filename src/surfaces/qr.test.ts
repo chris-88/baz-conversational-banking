@@ -39,3 +39,41 @@ describe('the QR code on the landing page', () => {
     expect(ENCODES).not.toMatch(/#\/$/)
   })
 })
+
+describe('the QR code beside the article', () => {
+  const ENCODES = 'https://baz.chrisquinn.ie/#/article'
+
+  it('still points at the domain the site is served from', () => {
+    const cname = readFileSync('public/CNAME', 'utf8').trim()
+
+    expect(ENCODES, `CNAME is ${cname}; regenerate the QR`).toContain(cname)
+  })
+
+  it('still points at the route the article lives on', () => {
+    expect(ENCODES, `routes.article is ${routes.article}; regenerate the QR`).toContain(`#${routes.article}`)
+  })
+
+  it('is the same address the showcase offers under the same picture', () => {
+    expect(showcaseConfig.articleUrl).toBe(ENCODES)
+    expect(showcaseConfig.articleHref).toBe(`#${routes.article}`)
+  })
+})
+
+describe('the QR code for questions and collaboration', () => {
+  const ENCODES = 'https://baz.chrisquinn.ie/#/ask'
+
+  it('still points at the domain the site is served from', () => {
+    const cname = readFileSync('public/CNAME', 'utf8').trim()
+
+    expect(ENCODES, `CNAME is ${cname}; regenerate the QR`).toContain(cname)
+  })
+
+  it('still points at the route the form lives on', () => {
+    expect(ENCODES, `routes.ask is ${routes.ask}; regenerate the QR`).toContain(`#${routes.ask}`)
+  })
+
+  it('is the same address the showcase offers under the same picture', () => {
+    expect(showcaseConfig.askUrl).toBe(ENCODES)
+    expect(showcaseConfig.askHref).toBe(`#${routes.ask}`)
+  })
+})

@@ -47,6 +47,13 @@ export const showcaseConfig = {
   liveDemoShort: 'baz.chrisquinn.ie/#/baz',
   /** Relative, because the article is a route of this site. */
   articleHref: '#/article',
+  /** What the article's QR code encodes; `qr.test.ts` checks the two agree. */
+  articleUrl: 'https://baz.chrisquinn.ie/#/article',
+  articleShort: 'baz.chrisquinn.ie/#/article',
+  /** Questions and collaboration, on the visitor's own phone. */
+  askHref: '#/ask',
+  askUrl: 'https://baz.chrisquinn.ie/#/ask',
+  askShort: 'baz.chrisquinn.ie/#/ask',
   examplePrompt:
     'We’ve recently married, had our first baby, and are hoping to buy our first home.',
   /** How long a scene change takes. Short enough never to add up. */

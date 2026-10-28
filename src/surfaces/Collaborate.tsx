@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { z } from 'zod'
-import { HandshakeIcon } from 'lucide-react'
+import { HandshakeIcon, MessageCircleQuestionIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -51,15 +51,38 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>
 
+const COPY = {
+  collaborate: {
+    heading: 'Want to work on this?',
+    lead: 'Baz is a proof of concept. If you’d like to take it further, in a bank or alongside one, leave your details.',
+    label: 'What you’d bring',
+    placeholder: 'A bank, a team, a problem this would solve, or just curiosity.',
+    consent: 'You can contact me about this',
+    thanks: 'Thanks. You’ll hear back from a person, not a system.',
+  },
+  question: {
+    heading: 'Ask a question',
+    lead: 'Anything the showcase raised and did not answer. Questions are answered by a person, by email, after the session.',
+    label: 'Your question',
+    placeholder: 'What would you like to know?',
+    consent: 'You can reply to me by email',
+    thanks: 'Thanks. You’ll get an answer from a person, not a system.',
+  },
+} as const
+
 export function Collaborate({
   page,
+  kind = 'collaborate',
   className,
 }: {
   /** Which page the form was on, kept as the source when the address carried none. */
-  readonly page: 'landing' | 'how-it-works'
+  readonly page: 'landing' | 'how-it-works' | 'ask'
+  /** An offer to work on this, or a question to answer. */
+  readonly kind?: 'collaborate' | 'question'
   readonly className?: string
 }): ReactNode {
   const [sent, setSent] = useState(false)
+  const copy = COPY[kind]
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -77,6 +100,7 @@ export function Collaborate({
   const register = useMutation({
     mutationFn: (values: Values) =>
       registerInterest({
+        kind,
         name: values.name,
         email: values.email,
         ...(values.organisation.length === 0 ? {} : { organisation: values.organisation }),
@@ -95,18 +119,19 @@ export function Collaborate({
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-              <HandshakeIcon className="text-primary size-5" aria-hidden />
-              Want to work on this?
+              {kind === 'question' ? (
+                <MessageCircleQuestionIcon className="text-primary size-5" aria-hidden />
+              ) : (
+                <HandshakeIcon className="text-primary size-5" aria-hidden />
+              )}
+              {copy.heading}
             </h2>
-            <p className="text-muted-foreground text-sm text-pretty">
-              Baz is a proof of concept. If you&rsquo;d like to take it further, in a bank or
-              alongside one, leave your details.
-            </p>
+            <p className="text-muted-foreground text-sm text-pretty">{copy.lead}</p>
           </div>
 
           {sent ? (
             <p className="text-success text-sm font-medium" role="status">
-              Thanks. You&rsquo;ll hear back from a person, not a system.
+              {copy.thanks}
             </p>
           ) : (
             <Form {...form}>
@@ -178,13 +203,9 @@ export function Collaborate({
                   name="interest"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>What you&rsquo;d bring</FormLabel>
+                      <FormLabel>{copy.label}</FormLabel>
                       <FormControl>
-                        <Textarea
-                          rows={3}
-                          placeholder="A bank, a team, a problem this would solve, or just curiosity."
-                          {...field}
-                        />
+                        <Textarea rows={3} placeholder={copy.placeholder} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -207,9 +228,7 @@ export function Collaborate({
                             className="mt-0.5"
                           />
                         </FormControl>
-                        <FormLabel className="font-normal leading-snug">
-                          You can contact me about this
-                        </FormLabel>
+                        <FormLabel className="font-normal leading-snug">{copy.consent}</FormLabel>
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -222,9 +241,9 @@ export function Collaborate({
                   out of a screen reader's form mode too.
                 */}
                 <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
-                  <label htmlFor="collaborate-website">Website</label>
+                  <label htmlFor={`collaborate-website-${kind}`}>Website</label>
                   <input
-                    id="collaborate-website"
+                    id={`collaborate-website-${kind}`}
                     type="text"
                     tabIndex={-1}
                     autoComplete="off"

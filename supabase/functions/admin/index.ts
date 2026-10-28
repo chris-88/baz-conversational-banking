@@ -2640,12 +2640,13 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
     case 'list_collaborators': {
       const result = await admin
         .from('collaborators')
-        .select('id, name, email, organisation, role, interest, source, created_at')
+        .select('id, kind, name, email, organisation, role, interest, source, created_at')
         .order('created_at', { ascending: false })
       if (result.error !== null) return errorResponse('conflict', result.error.message)
 
       const rows = result.data as {
         id: string
+        kind: 'collaborate' | 'question'
         name: string
         email: string
         organisation: string | null
@@ -2659,6 +2660,7 @@ serveJson(CORS, async (request: Request): Promise<Response> => {
         ok({
           items: rows.map((row) => ({
             id: row.id,
+            kind: row.kind,
             name: row.name,
             email: row.email,
             organisation: row.organisation,

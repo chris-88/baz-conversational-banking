@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { DownloadIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
@@ -46,7 +47,7 @@ export function CollaboratorsScreen(): ReactNode {
     <div className="space-y-6">
       <PageHeader
         title="Collaborators"
-        description="People who left their details on the landing page or the explainer, and said we could write to them."
+        description="People who left their details on the landing page, the explainer or the showcase's close, and said we could write to them. Questions are marked as such; each deserves a reply."
         actions={
           <Button
             variant="outline"
@@ -72,7 +73,7 @@ export function CollaboratorsScreen(): ReactNode {
         <Empty className="border border-dashed py-16">
           <EmptyHeader>
             <EmptyTitle>Nobody yet</EmptyTitle>
-            <EmptyDescription>The form is on the landing page and at the foot of the explainer.</EmptyDescription>
+            <EmptyDescription>The form is on the landing page, at the foot of the explainer, and on the page the showcase's third QR code opens.</EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}
@@ -83,11 +84,12 @@ export function CollaboratorsScreen(): ReactNode {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Kind</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Organisation</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="min-w-[18rem]">What they&rsquo;d bring</TableHead>
+                  <TableHead className="min-w-[18rem]">What they wrote</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>When</TableHead>
                 </TableRow>
@@ -95,6 +97,11 @@ export function CollaboratorsScreen(): ReactNode {
               <TableBody>
                 {items.map((person) => (
                   <TableRow key={person.id}>
+                    <TableCell className="align-top">
+                      <Badge variant={person.kind === 'question' ? 'secondary' : 'outline'}>
+                        {person.kind === 'question' ? 'Question' : 'Work on this'}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="align-top font-medium">{person.name}</TableCell>
                     <TableCell className="align-top">
                       <a

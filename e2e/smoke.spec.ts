@@ -18,6 +18,7 @@ const surfaces = [
   { route: '/#/privacy', name: 'privacy notice', expect: /not a banking service/i, discloses: true },
   { route: '/#/showcase', name: 'showcase', expect: /what if banking started with a conversation/i, discloses: true },
   { route: '/#/article', name: 'article', expect: /who owns the customer relationship/i, discloses: true },
+  { route: '/#/ask', name: 'questions and collaboration', expect: /ask a question/i, discloses: true },
   // An invalid invite is refused rather than showing a page: the token is the whole gate.
   { route: '/#/join/opaque-token', name: 'partner join', expect: /invitation link isn.{0,3}t valid/i, discloses: false },
   { route: '/#/admin', name: 'presenter console', expect: /sign in/i, discloses: false },

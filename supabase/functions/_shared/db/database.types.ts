@@ -300,6 +300,7 @@ export type Database = {
           email: string
           id: string
           interest: string
+          kind: string
           name: string
           organisation: string | null
           role: string | null
@@ -311,6 +312,7 @@ export type Database = {
           email: string
           id?: string
           interest: string
+          kind?: string
           name: string
           organisation?: string | null
           role?: string | null
@@ -322,6 +324,7 @@ export type Database = {
           email?: string
           id?: string
           interest?: string
+          kind?: string
           name?: string
           organisation?: string | null
           role?: string | null

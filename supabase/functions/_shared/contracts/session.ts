@@ -41,6 +41,8 @@ export const sessionRequestSchema = z.discriminatedUnion('action', [
    */
   z.object({
     action: z.literal('register_interest'),
+    /** An offer to work on this, or a question to answer. Absent means the former. */
+    kind: z.enum(['collaborate', 'question']).optional(),
     name: z.string().trim().min(2).max(120),
     email: z.string().trim().email().max(200),
     organisation: z.string().trim().max(120).optional(),
