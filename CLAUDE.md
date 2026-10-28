@@ -62,6 +62,8 @@ Browser: one SPA on GitHub Pages
   /#/                landing page
   /#/baz             Baz itself - the same screen in a tab and in the installed PWA
   /#/how-it-works    the explainer, for somebody evaluating the work
+  /#/showcase        the narrated showcase: five minutes for a room, driven by audio
+  /#/article         the executive article the showcase ends on (draft until approved)
   /#/privacy         what happens to what you type
   /#/join/:token     partner experience
   /#/admin/*         presenter console
@@ -306,6 +308,19 @@ form tools are gated further on a form existing. Withholding a tool is enforceme
 model not to use one is advice.
 
 Stream events are a Zod discriminated union: `text_delta | retract | card | status | done | error`. A round that spoke and then had a tool refused is withdrawn: `retract` takes its characters back off the screen and out of the record, and the refused result tells the model to write again. A handler marks a refusal with `refused: true`; partial rejections from the two recording tools are not refusals.
+
+## The showcase (`/#/showcase`)
+
+A self-running narrated presentation for a room: idle → opportunity → walkthrough → risk →
+explore. Audio owns the timing: `src/surfaces/showcase/usePlayback.ts` samples the audio
+element's `currentTime` per frame and a chapter advances on `ended` and at no other time.
+Cues, captions and the walkthrough's phone transcript are pure functions of that clock
+(`playback.ts`, `cues.ts`, `vtt.ts`, `transcript.ts`). The phone replays
+`src/content/showcase/walkthrough.ts` through the product's own `ChatBubble` and
+`CardRenderer`, inert. Tracks are modules under `src/assets/showcase/` (hashed, not
+precached). `vault/docs/features/showcase.md` is the feature doc; the content folder's
+README says how to swap a track or retime a cue. The walkthrough narration is pending; its
+script is `vault/docs/showcase/walkthrough-narration.md`.
 
 ## Guardrails (§19 to §27, §39, §47)
 
