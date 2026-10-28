@@ -29,7 +29,9 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
     presenter: {
       eyebrow: 'The shift',
       title: 'Personal AI assistants are becoming the first place people ask.',
-      body: 'Savings, a mortgage, protection. A customer can put the question to an assistant that works across every provider, and increasingly will.',
+      body: 'Compare mortgages, manage savings, arrange protection, plan ahead. The access an assistant needs mostly exists: PSD2 has obliged banks since 2018 to open accounts to licensed third parties at the customer’s request.',
+      technicalNote:
+        'Directive (EU) 2015/2366 covers payment accounts: account information and payment initiation, with the customer’s consent. Applications need no API at all. A bank’s journey is a public web form.',
     },
   },
   {

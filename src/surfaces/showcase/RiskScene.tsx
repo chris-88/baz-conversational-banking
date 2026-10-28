@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import {
   BotIcon,
+  ChevronRightIcon,
   HomeIcon,
   LandmarkIcon,
   LockIcon,
@@ -15,9 +16,9 @@ import { ChatBubble } from '@/baz/ChatBubble'
 import { MessageText } from '@/baz/MessageText'
 import { BazMark } from '@/baz/BazMark'
 import { BazWordmark } from '@/baz/BazWordmark'
-import { Claim, Surface } from '@/components/Primitives'
+import { Claim, Surface, Tile } from '@/components/Primitives'
 import { PresenterPanel } from './PresenterPanel'
-import { Arrive, Chip, Link, Node, Visual, Wires } from './scene-parts'
+import { Arrive, Link, Node, Visual, Wires } from './scene-parts'
 import { settle } from './ease'
 import { cn } from '@/lib/utils'
 
@@ -149,58 +150,146 @@ function Compress({ p, still }: { readonly p: number; readonly still: boolean })
   )
 }
 
-const ASKS = ['Find a mortgage…', 'Compare savings…', 'Arrange protection…'] as const
+/** The asks, in the narrator's order and at the words that name them (10.5, 11.7, 12.8 and 14.1 s of a 13.6 s cue from 5.7 s). */
+const ASKS = [
+  { text: 'Compare mortgages', at: 0.35 },
+  { text: 'Manage savings', at: 0.44 },
+  { text: 'Arrange protection', at: 0.52 },
+  { text: 'Plan ahead', at: 0.62 },
+] as const
 
-/** A neutral assistant beside the customer, wired to products across every provider. */
-function Assistant({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
+/** A dashed line drawn left to right as `draw` rises, with what travels along it written above. */
+function Connector({
+  draw,
+  label,
+  detail,
+  tone = 'muted',
+}: {
+  readonly draw: number
+  readonly label: string
+  readonly detail?: string
+  readonly tone?: 'muted' | 'primary'
+}): ReactNode {
+  const d = settle(draw)
   return (
-    <div className="relative w-full max-w-3xl">
-      <Wires>
-        <Link from={[0.24, 0.22]} to={[0.42, 0.22]} draw={Math.min(p / 0.35, 1)} tone="primary" arrow />
-        {PRODUCTS.map((product, index) => (
-          <Link
-            key={product.label}
-            from={[0.58, 0.22]}
-            to={[0.78, (index + 0.5) / PRODUCTS.length]}
-            draw={Math.min(Math.max((p - 0.3 - index * 0.06) / 0.4, 0), 1)}
-            arrow
-          />
-        ))}
-      </Wires>
-
-      <div className="grid grid-cols-[1fr_1fr_1fr] items-start gap-4 py-2">
-        <Arrive order={0} still={still} className="justify-self-center pt-6">
-          <Node icon={<UserIcon />} label="Customer" size="lg" tone="deep" />
-        </Arrive>
-
-        <Arrive order={1} still={still} className="justify-self-center pt-6">
-          <div className="flex flex-col items-center">
-            <Node icon={<BotIcon />} label="Personal AI assistant" detail="Any platform" size="lg" emphasis={p > 0.2} />
-            <div className="mt-4 flex flex-col items-start gap-1.5">
-              {ASKS.map((ask, index) => (
-                <Chip
-                  key={ask}
-                  className="text-[12px]"
-                  style={{ opacity: Math.min(Math.max((p - 0.15 - index * 0.12) / 0.2, 0), 1) }}
-                >
-                  {ask}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        </Arrive>
-
-        <div className="flex h-full flex-col justify-between gap-4 justify-self-center py-1">
-          {PRODUCTS.map((product, index) => (
-            <Arrive key={product.label} order={2 + index} still={still}>
-              <div className="flex items-center gap-3">
-                <Node icon={product.icon} label={product.label} tone="deep" />
-                <span className="text-muted-foreground text-[11.5px]">Across providers</span>
-              </div>
-            </Arrive>
-          ))}
-        </div>
+    <div className="flex min-w-0 flex-col items-center justify-center px-3" style={{ opacity: 0.2 + 0.8 * d }}>
+      <span
+        className={cn(
+          'mb-1.5 text-center text-[11px] font-semibold tracking-wide uppercase',
+          tone === 'primary' ? 'text-primary' : 'text-muted-foreground',
+        )}
+      >
+        {label}
+      </span>
+      <div className="flex w-full items-center">
+        <span
+          aria-hidden
+          className={cn(
+            'h-0 flex-1 border-t-2 border-dashed',
+            tone === 'primary' ? 'border-primary/60' : 'border-muted-foreground/40',
+          )}
+          style={{ transform: `scaleX(${String(d)})`, transformOrigin: 'left' }}
+        />
+        <ChevronRightIcon
+          aria-hidden
+          className={cn('-ml-1.5 size-4 shrink-0', tone === 'primary' ? 'text-primary/70' : 'text-muted-foreground/60')}
+          style={{ opacity: d }}
+        />
       </div>
+      {detail !== undefined && (
+        <span className="text-muted-foreground mt-1.5 max-w-[22ch] text-center text-[11.5px] leading-snug">{detail}</span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Customer, assistant, and the two ways in. The assistant reaches accounts and payments
+ * through the access PSD2 already makes banks provide, and everything else through the
+ * bank's own public application journeys. Neither route needs the bank's permission.
+ */
+function Assistant({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
+  /** "won't necessarily belong to banks", at 16.7 s. */
+  const notABank = settle((p - 0.8) / 0.1)
+  return (
+    <div className="grid w-full max-w-4xl grid-cols-[auto_minmax(88px,1fr)_auto_minmax(150px,1.2fr)_minmax(0,17rem)] grid-rows-2 items-center gap-y-5">
+      <Arrive order={0} still={still} className="row-span-2 justify-self-center pr-2">
+        <Node icon={<UserIcon />} label="Customer" size="lg" tone="deep" />
+      </Arrive>
+
+      <div className="row-span-2">
+        <Connector draw={p / 0.22} label="Asks first" tone="primary" />
+      </div>
+
+      <Arrive order={1} still={still} className="row-span-2">
+        <Surface
+          lift
+          className={cn('w-[248px] p-5 transition-shadow', p > 0.22 && 'ring-primary/40 ring-2 ring-offset-2')}
+        >
+          <Node icon={<BotIcon />} label="Personal AI assistant" detail="Any platform" size="lg" />
+          <div className="mt-4 space-y-1.5">
+            {ASKS.map((ask) => {
+              const r = settle((ask.at < p ? p - ask.at : -1) / 0.08)
+              return (
+                <div
+                  key={ask.text}
+                  className="bg-primary text-primary-foreground ml-auto w-fit rounded-2xl rounded-br-sm px-3 py-1.5 text-[12.5px]"
+                  style={{ opacity: r, transform: `translateY(${String(6 * (1 - r))}px)` }}
+                >
+                  {ask.text}
+                </div>
+              )
+            })}
+          </div>
+          <p
+            className="text-muted-foreground mt-4 border-t pt-3 text-center text-[12.5px] font-medium"
+            style={{ opacity: notABank }}
+          >
+            Not necessarily a bank’s.
+          </p>
+        </Surface>
+      </Arrive>
+
+      <Connector
+        draw={(p - 0.3) / 0.3}
+        label="PSD2 open banking"
+        detail="Consented access, a legal duty since 2018"
+        tone="primary"
+      />
+      <Arrive order={2} still={still}>
+        <Surface className="p-4">
+          <div className="flex items-center gap-2.5">
+            <Tile tone="deep" size="sm">
+              <WalletIcon />
+            </Tile>
+            <p className="text-[15px] font-semibold">Accounts and payments</p>
+          </div>
+          <p className="text-muted-foreground mt-2 text-[12.5px] leading-snug">
+            Balances, transactions and payments at every bank the customer uses.
+          </p>
+        </Surface>
+      </Arrive>
+
+      <Connector draw={(p - 0.4) / 0.3} label="Public journeys" detail="A web form needs no API" />
+      <Arrive order={3} still={still}>
+        <Surface className="p-4">
+          <div className="flex items-center gap-1.5">
+            <Tile tone="deep" size="sm">
+              <HomeIcon />
+            </Tile>
+            <Tile tone="deep" size="sm">
+              <PiggyBankIcon />
+            </Tile>
+            <Tile tone="deep" size="sm">
+              <ShieldIcon />
+            </Tile>
+            <p className="ml-1 text-[15px] font-semibold">Everything else</p>
+          </div>
+          <p className="text-muted-foreground mt-2 text-[12.5px] leading-snug">
+            Mortgages, savings, protection: any provider’s own application, filled in on the customer’s behalf.
+          </p>
+        </Surface>
+      </Arrive>
     </div>
   )
 }
