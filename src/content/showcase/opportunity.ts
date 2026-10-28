@@ -3,15 +3,15 @@ import type { OpportunityScene, ShowcaseCue } from './types'
 /**
  * The first sixty seconds: why.
  *
- * Provisional times from the brief's choreography. They are retimed against the mastered
- * narration when it arrives, and nothing but these numbers has to change.
+ * Times are where the narrator's words land in `opportunity.mp3`: each cue starts on the
+ * first word of its sentence (word timestamps taken from the track, see the README).
  */
 export const OPPORTUNITY_CUES: readonly ShowcaseCue<OpportunityScene>[] = [
   {
     id: 'headline',
     chapter: 'opportunity',
     startMs: 0,
-    endMs: 9_400,
+    endMs: 7_700,
     scene: 'headline',
     presenter: {
       eyebrow: 'The opportunity',
@@ -22,54 +22,54 @@ export const OPPORTUNITY_CUES: readonly ShowcaseCue<OpportunityScene>[] = [
   {
     id: 'fragments',
     chapter: 'opportunity',
-    startMs: 9_400,
-    endMs: 19_600,
+    startMs: 7_700,
+    endMs: 20_400,
     scene: 'fragments',
     presenter: {
       eyebrow: 'Today’s experience',
       title: 'Those moments become separate journeys.',
-      body: 'A mortgage, an account, protection. Each with its own process, its own questions and its own application, and the same facts typed three times.',
+      body: 'A mortgage, an account, protection. The customer has one life, and we ask them to navigate three processes, typing the same facts into each.',
     },
   },
   {
     id: 'question',
     chapter: 'opportunity',
-    startMs: 19_600,
-    endMs: 29_000,
+    startMs: 20_400,
+    endMs: 24_900,
     scene: 'question',
     presenter: {
       eyebrow: 'A different starting point',
-      title: 'What if we started with the person?',
+      title: 'What if we started with what they’re actually trying to do?',
       body: 'One message, in their own words. Everything the bank needs to know is in it, if something is listening for it.',
     },
   },
   {
     id: 'meet',
     chapter: 'opportunity',
-    startMs: 29_000,
-    endMs: 40_000,
+    startMs: 24_900,
+    endMs: 34_500,
     scene: 'meet',
     presenter: {
       eyebrow: 'Meet Baz',
       title: 'Discover, understand, connect.',
-      body: 'Baz works out what a life event involves, asks only for what it doesn’t know, and connects the answers to the products that fit.',
+      body: 'A conversational banking proof of concept. It begins with the customer’s circumstances, asks relevant questions, and connects their needs to banking services.',
       bullets: [
-        'Understand the circumstances',
-        'Discover the needs behind them',
-        'Connect to the right products',
+        'Begins with the circumstances',
+        'Asks only what it doesn’t know',
+        'Connects needs to services',
       ],
     },
   },
   {
     id: 'capability',
     chapter: 'opportunity',
-    startMs: 40_000,
+    startMs: 34_500,
     endMs: 47_040,
     scene: 'capability',
     presenter: {
       eyebrow: 'Built on what exists',
       title: 'Capabilities the bank already owns.',
-      body: 'The journeys, the forms, the rates and the rules are already there. Baz is the layer that starts with a conversation. Here’s what that looks like.',
+      body: 'The journeys, the forms, the rates and the rules are already there. Baz uses them rather than rebuilding everything underneath. One conversation, a more connected experience.',
     },
   },
 ]

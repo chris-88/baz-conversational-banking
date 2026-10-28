@@ -73,7 +73,7 @@ function Picture({
 }): ReactNode {
   switch (scene) {
     case 'headline':
-      return <LifeEvents still={still} />
+      return <LifeEvents p={p} />
     case 'fragments':
       return <Fragments p={p} still={still} />
     case 'question':
@@ -86,22 +86,89 @@ function Picture({
 }
 
 const EVENTS = [
-  { icon: <HeartIcon />, label: 'Marriage', detail: 'Married in the spring' },
-  { icon: <BabyIcon />, label: 'Family', detail: 'A baby in August' },
-  { icon: <HomeIcon />, label: 'First home', detail: 'Renting, and want to buy' },
+  {
+    icon: <HeartIcon />,
+    label: 'Marriage',
+    detail: 'Married in the spring',
+    brings: ['Two incomes', 'One household'],
+    /** "get married", at 3.6 s of a 7.7 s cue. */
+    at: 0.47,
+  },
+  {
+    icon: <BabyIcon />,
+    label: 'Family',
+    detail: 'A baby in August',
+    brings: ['Someone to provide for', 'New costs'],
+    at: 0.56,
+  },
+  {
+    icon: <HomeIcon />,
+    label: 'First home',
+    detail: 'Renting, and want to buy',
+    brings: ['A deposit', 'What they can afford'],
+    at: 0.7,
+  },
 ] as const
 
-function LifeEvents({ still }: { readonly still: boolean }): ReactNode {
+/** Shows at `at` of the cue, rising into place; before that, faint. Progress-driven, so a seek lands it. */
+function Reveal({
+  at,
+  p,
+  span = 0.08,
+  children,
+  className,
+}: {
+  readonly at: number
+  readonly p: number
+  readonly span?: number
+  readonly children: ReactNode
+  readonly className?: string
+}): ReactNode {
+  const r = settle((p - at) / span)
+  return (
+    <div
+      className={className}
+      style={{ opacity: 0.18 + 0.82 * r, transform: `translateY(${String(10 * (1 - r))}px)` }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Three moments in a life, each arriving as the narrator names it. The frames are there from
+ * the first word, empty: life, before anyone has put a product name on it.
+ */
+function LifeEvents({ p }: { readonly p: number }): ReactNode {
   return (
     <div className="grid w-full max-w-3xl grid-cols-3 gap-5">
-      {EVENTS.map((event, index) => (
-        <Arrive key={event.label} order={index * 2} still={still}>
-          <Surface lift className="flex aspect-[4/5] flex-col justify-end p-5">
-            <Tile size="md">{event.icon}</Tile>
-            <p className="mt-4 text-xl font-bold tracking-tight">{event.label}</p>
-            <p className="text-muted-foreground mt-1 text-[13.5px]">{event.detail}</p>
+      {EVENTS.map((event) => (
+        <Reveal key={event.label} at={event.at} p={p}>
+          <Surface lift className="flex flex-col overflow-hidden">
+            <div className="bg-primary/5 relative flex h-36 items-center justify-center overflow-hidden">
+              <span
+                aria-hidden
+                className="text-primary/10 absolute -right-5 -bottom-6 [&>svg]:size-32 [&>svg]:stroke-[1.25]"
+              >
+                {event.icon}
+              </span>
+              <span className="bg-card text-primary grid size-16 place-items-center rounded-2xl shadow-xs [&>svg]:size-7">
+                {event.icon}
+              </span>
+            </div>
+            <div className="p-5">
+              <p className="text-xl font-bold tracking-tight">{event.label}</p>
+              <p className="text-muted-foreground mt-1 text-[13.5px]">{event.detail}</p>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {event.brings.map((item) => (
+                  <Chip key={item} tone="muted" className="text-[11.5px]">
+                    {item}
+                  </Chip>
+                ))}
+              </div>
+            </div>
           </Surface>
-        </Arrive>
+        </Reveal>
       ))}
     </div>
   )
@@ -113,67 +180,64 @@ const JOURNEYS = [
     title: 'Mortgage',
     steps: ['Application', 'Affordability', 'Documents', 'Assessment'],
     tone: 'primary',
+    /** "a mortgage", "an account", "protection": 12.0, 12.9 and 14.0 s of a 12.7 s cue from 7.7 s. */
+    at: 0.34,
   },
   {
     icon: <WalletIcon />,
     title: 'Accounts',
     steps: ['Identity', 'Account setup', 'Features', 'Confirmation'],
     tone: 'deep',
+    at: 0.41,
   },
   {
     icon: <ShieldIcon />,
     title: 'Protection',
     steps: ['Health questions', 'Cover options', 'Underwriting', 'Confirmation'],
     tone: 'success',
+    at: 0.5,
   },
 ] as const
 
 const REPEATED = ['Name', 'Address', 'Income']
 
-/** Three journeys, drifting apart as the narrator says "separate", each asking the same facts. */
+/**
+ * The same three moments, and the three journeys the bank turns them into, one per word.
+ * The journeys drift apart on "navigate multiple processes" and their forms light up with
+ * the same three facts.
+ */
 function Fragments({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
-  const spread = settle(p)
+  const spread = settle((p - 0.6) / 0.25)
+  const typed = settle((p - 0.76) / 0.12)
   return (
     <div className="flex w-full max-w-3xl flex-col items-center gap-6">
+      <Arrive order={0} still={still}>
+        <div className="flex flex-wrap justify-center gap-2">
+          {EVENTS.map((event) => (
+            <Chip key={event.label} tone="primary" icon={event.icon}>
+              {event.detail}
+            </Chip>
+          ))}
+        </div>
+      </Arrive>
       <div className="flex items-start justify-center gap-4">
         {JOURNEYS.map((journey, index) => (
-          <Arrive key={journey.title} order={index} still={still}>
+          <Reveal key={journey.title} at={journey.at} p={p}>
             <JourneyCard
               icon={journey.icon}
               title={journey.title}
               steps={journey.steps}
+              fields={REPEATED}
+              fieldsOn={typed}
               tone={journey.tone}
-              style={{
-                transform: `translateX(${String((index - 1) * 28 * spread)}px) translateY(${String(Math.abs(index - 1) * 14 * spread)}px)`,
-              }}
+              style={{ transform: `translateX(${String((index - 1) * 22 * spread)}px)` }}
             />
-          </Arrive>
+          </Reveal>
         ))}
       </div>
-      <Arrive order={4} still={still} className="w-full">
-        <div
-          className="grid grid-cols-3 gap-4 transition-opacity"
-          style={{ opacity: Math.min(Math.max((p - 0.45) / 0.3, 0), 1) }}
-        >
-          {JOURNEYS.map((journey) => (
-            <div key={journey.title} className="flex flex-wrap justify-center gap-1.5">
-              {REPEATED.map((fact) => (
-                <Chip key={fact} tone="muted" className="text-[11.5px]">
-                  {fact}
-                </Chip>
-              ))}
-            </div>
-          ))}
-        </div>
-      </Arrive>
-      <Arrive order={6} still={still}>
-        <p
-          className="text-muted-foreground text-center text-sm"
-          style={{ opacity: Math.min(Math.max((p - 0.6) / 0.3, 0), 1) }}
-        >
-          The same facts, typed three times.
-        </p>
-      </Arrive>
+      <p className="text-muted-foreground text-center text-sm" style={{ opacity: typed }}>
+        One life. Three processes. The same facts, typed three times.
+      </p>
     </div>
   )
 }

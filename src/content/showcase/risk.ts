@@ -12,7 +12,7 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
     id: 'compress',
     chapter: 'risk',
     startMs: 0,
-    endMs: 10_100,
+    endMs: 5_700,
     scene: 'compress',
     presenter: {
       eyebrow: 'What you’ve just seen',
@@ -23,8 +23,8 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
   {
     id: 'assistant',
     chapter: 'risk',
-    startMs: 10_100,
-    endMs: 23_600,
+    startMs: 5_700,
+    endMs: 19_300,
     scene: 'assistant',
     presenter: {
       eyebrow: 'The shift',
@@ -35,8 +35,8 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
   {
     id: 'ownership',
     chapter: 'risk',
-    startMs: 23_600,
-    endMs: 36_200,
+    startMs: 19_300,
+    endMs: 35_700,
     scene: 'ownership',
     presenter: {
       eyebrow: 'The strategic question',
@@ -47,8 +47,8 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
   {
     id: 'paths',
     chapter: 'risk',
-    startMs: 36_200,
-    endMs: 44_700,
+    startMs: 35_700,
+    endMs: 44_500,
     scene: 'paths',
     presenter: {
       eyebrow: 'Two responses',
@@ -63,7 +63,7 @@ export const RISK_CUES: readonly ShowcaseCue<RiskScene>[] = [
   {
     id: 'question',
     chapter: 'risk',
-    startMs: 44_700,
+    startMs: 44_500,
     endMs: 50_560,
     scene: 'question',
     presenter: {

@@ -13,8 +13,10 @@ has loaded.
 
 The opening (`opportunity.mp3`, 47.0 s) and closing (`risk.mp3`, 50.6 s) tracks are the
 mastered HeyGen narration. `walkthrough.mp3` (129.2 s) is the ElevenLabs read of the script
-in `vault/docs/showcase/walkthrough-narration.md`; every time in `walkthrough-cues.ts` and
-`walkthrough.ts` was mapped to its word timestamps, and that document records how.
+in `vault/docs/showcase/walkthrough-narration.md`. Every cue in the three chapters, and every
+event in `walkthrough.ts`, sits where its words are spoken: word timestamps were taken off
+each track with a scratch run of faster-whisper (not a project dependency; the narration
+document records how) and the times set from them. A new track means doing that again.
 
 A silent placeholder of any length:
 
@@ -25,9 +27,8 @@ ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 60 -c:a libmp3lame -b:a 32k out.m
 ## Captions
 
 `captions/<chapter>.vtt`, plain WebVTT, parsed by the page rather than handed to a `<track>`.
-The walkthrough's is cut from the recorded words, one cue per sentence. The opening and
-closing files are placeholders with one cue each until their scripts are to hand; the
-transcript drawer is built from the same files.
+All three are cut from the recognised words, one cue per sentence. Captions start off and the
+`c` key or the button turns them on; the transcript drawer is built from the same files.
 
 ## Retiming cues
 

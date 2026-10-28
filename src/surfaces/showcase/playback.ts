@@ -82,7 +82,7 @@ export const INITIAL: PlaybackState = {
   localTimeMs: 0,
   knownDurations: {},
   muted: false,
-  captionsOn: true,
+  captionsOn: false,
   needsResume: false,
   error: null,
   settling: false,

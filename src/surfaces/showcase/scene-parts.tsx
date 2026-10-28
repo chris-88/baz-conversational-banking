@@ -147,11 +147,17 @@ export function Chip({
   )
 }
 
-/** A card standing for one product journey, with the steps it makes a customer walk. */
+/**
+ * A card standing for one product journey, with the steps it makes a customer walk and,
+ * when `fields` is given, the facts its form asks for. `style` moves the whole card, so a
+ * drift reads as the journey moving, never as its contents sliding out of the frame.
+ */
 export function JourneyCard({
   icon,
   title,
   steps,
+  fields,
+  fieldsOn = 1,
   tone,
   style,
   className,
@@ -160,17 +166,16 @@ export function JourneyCard({
   readonly icon: ReactNode
   readonly title: string
   readonly steps: readonly string[]
+  readonly fields?: readonly string[]
+  readonly fieldsOn?: number
   readonly tone?: 'primary' | 'deep' | 'success'
   readonly style?: CSSProperties
   readonly className?: string
   readonly ghost?: boolean
 }): ReactNode {
   return (
-    <Surface
-      lift
-      className={cn('w-[220px] p-4 transition-opacity', ghost === true && 'opacity-40', className)}
-    >
-      <div style={style}>
+    <div style={style} className={cn('transition-opacity', ghost === true && 'opacity-40', className)}>
+      <Surface lift className="w-[232px] p-4">
         <div className="flex items-center gap-2.5">
           <Tile tone={tone ?? 'primary'} size="sm">
             {icon}
@@ -185,11 +190,28 @@ export function JourneyCard({
             </li>
           ))}
         </ul>
+        {fields !== undefined && (
+          <div className="mt-3 space-y-1.5 border-t pt-3" style={{ opacity: 0.25 + 0.75 * fieldsOn }}>
+            {fields.map((field) => (
+              <div
+                key={field}
+                className="bg-muted/60 flex h-7 items-center justify-between rounded-md border px-2 text-[11.5px]"
+              >
+                <span className="text-muted-foreground">{field}</span>
+                <span
+                  aria-hidden
+                  className="bg-foreground/50 h-1.5 rounded-full"
+                  style={{ width: `${String(Math.round(28 * fieldsOn))}px` }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
         <span className="bg-primary text-primary-foreground mt-3.5 block rounded-md px-3 py-1.5 text-center text-[12.5px] font-medium">
           Continue
         </span>
-      </div>
-    </Surface>
+      </Surface>
+    </div>
   )
 }
 
