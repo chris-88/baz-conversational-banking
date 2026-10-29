@@ -1,141 +1,213 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:00.900
+00:00:00.000 --> 00:00:00.850
 Here it is running.
 
 2
-00:00:01.740 --> 00:00:08.760
-The customer types what's going on, in her own words: married in the spring, a baby, renting, and hoping to buy.
+00:00:01.720 --> 00:00:03.370
+The customer types what's going on.
 
 3
-00:00:09.540 --> 00:00:11.040
-Baz doesn't reach for a product.
+00:00:03.620 --> 00:00:07.790
+Married in the spring, a baby, renting, hoping to buy next year.
 
 4
-00:00:11.300 --> 00:00:12.780
-It asks one question.
+00:00:08.240 --> 00:00:09.810
+Baz doesn't reach for a product.
 
 5
-00:00:13.280 --> 00:00:18.100
-And it writes down what it learns, against a catalogue of facts, with where each one came from.
+00:00:10.180 --> 00:00:14.550
+It asks one question, then records what it learns, where each fact came from.
 
 6
-00:00:18.600 --> 00:00:25.200
-A couple of answers later it has the shape of the thing: savings, what they can put away each month, when they'd like to buy.
+00:00:14.980 --> 00:00:18.150
+Each fact sits in a defined catalogue with its source attached.
 
 7
-00:00:25.640 --> 00:00:27.260
-It offers to keep that as a plan.
+00:00:18.820 --> 00:00:21.490
+A couple of answers later, it knows the shape of the plan.
 
 8
-00:00:27.620 --> 00:00:29.460
-Nothing is kept until she taps.
+00:00:21.920 --> 00:00:27.130
+€32,000 saved at AIB, €1,200 a month to put away, a home by next June.
 
 9
-00:00:29.880 --> 00:00:31.060
-That's the rule all the way through.
+00:00:27.580 --> 00:00:30.830
+Baz offers to remember it, but nothing is kept until she taps.
 
 10
-00:00:30.860 --> 00:00:36.780
-The model proposes, the customer commits, and the system checks before anything is written.
+00:00:31.340 --> 00:00:34.270
+She can review what Baz proposes before she approves it.
 
 11
-00:00:37.440 --> 00:00:39.540
-Now the products, and only now.
+00:00:34.560 --> 00:00:38.030
+The model proposes, the customer commits, the system checks.
 
 12
-00:00:40.000 --> 00:00:44.840
-These are what a first home with a new baby usually involves, each with a reason tied to something she said.
+00:00:38.680 --> 00:00:41.230
+The savings are elsewhere, so Baz requests access.
 
 13
-00:00:44.640 --> 00:00:50.080
-She picks three, and three applications start at once, sharing what's already known.
+00:00:41.860 --> 00:00:48.550
+With her consent, open banking brings in the available account data, salary arriving, rent going out, savings balance.
 
 14
-00:00:50.560 --> 00:00:52.640
-Ask about rates and you get the published table.
+00:00:49.100 --> 00:00:51.370
+The consent has a defined scope and expiry.
 
 15
-00:00:52.980 --> 00:00:54.200
-Indicative, not advice.
+00:00:51.840 --> 00:00:54.030
+She authorises it and the picture fills in.
 
 16
-00:00:54.820 --> 00:00:57.040
-She banks here already, so she signs in.
+00:00:53.880 --> 00:00:57.150
+The consent does not authorise a payment or anything else.
 
 17
-00:00:56.840 --> 00:01:01.240
-On this prototype that's an email code, not the bank's real identity check.
+00:00:57.580 --> 00:00:58.590
+No statement to upload.
 
 18
-00:01:01.600 --> 00:01:07.380
-What the bank already holds arrives: name, address, PPS number, employer, salary.
+00:00:59.120 --> 00:01:00.530
+Baz reads the permitted data.
 
 19
-00:01:07.960 --> 00:01:09.680
-Then Baz shows her what that saved.
+00:01:01.020 --> 00:01:02.510
+Now the money gets put to work.
 
 20
-00:01:10.440 --> 00:01:14.240
-Sixteen things she never had to type, and which application each one went to.
+00:01:02.880 --> 00:01:04.530
+This is arithmetic, not opinion.
 
 21
-00:01:14.480 --> 00:01:16.560
-This is the part I'd want a bank to notice.
+00:01:05.000 --> 00:01:08.910
+The lump sum goes into a six month fixed term, ending before she needs it.
 
 22
-00:01:17.000 --> 00:01:19.780
-The personal loan uses the bank's own published form.
+00:01:09.120 --> 00:01:12.990
+€200 a month into MortgageSaver to qualify for the €2,000 bonus.
 
 23
-00:01:19.980 --> 00:01:24.820
-Baz has read the definition, four hundred and eighteen controls, and filled in what it knows.
+00:01:13.460 --> 00:01:15.970
+The remainder into SuperSaver at 3%.
 
 24
-00:01:25.080 --> 00:01:30.920
-Now it asks for the rest in the form's own words: its declarations, its payslip, its photo ID.
+00:01:15.820 --> 00:01:19.510
+Roughly €430 in the first year at the rates shown.
 
 25
-00:01:31.300 --> 00:01:34.960
-The bank's machinery, driven by a conversation instead of a wizard.
+00:01:19.980 --> 00:01:21.950
+One tap starts three account applications.
 
 26
-00:01:35.340 --> 00:01:40.300
-One conversation, three applications, and here's where each one stands, straight from the database.
+00:01:22.280 --> 00:01:24.750
+The calculation is visible and explainable.
 
 27
-00:01:40.820 --> 00:01:47.540
-Underneath, the application packet is built exactly as the bank's website would send it, every field with where its value came from.
+00:01:25.080 --> 00:01:27.050
+She already banks here, so she signs in.
 
 28
-00:01:47.760 --> 00:01:49.240
-Captured, never sent.
+00:01:27.340 --> 00:01:30.910
+The prototype uses an email code, not the bank's real identity check.
 
 29
-00:01:49.480 --> 00:01:52.160
-There's no code path in this prototype that sends it.
+00:01:31.200 --> 00:01:35.870
+Existing customer information appears and six fields are reused across three applications.
 
 30
-00:01:52.280 --> 00:01:53.660
-And the other side of the glass.
+00:01:36.420 --> 00:01:37.950
+Here's the important thing to notice.
 
 31
-00:01:53.900 --> 00:01:57.080
-Every case, with every fact and where it came from.
+00:01:38.400 --> 00:01:42.770
+SuperSaver uses the bank's published form, 499 controls.
 
 32
-00:01:57.260 --> 00:01:58.840
-What each conversation is for.
+00:01:43.300 --> 00:01:48.330
+Baz reads the definition, fills what it knows, then asks for the rest in the form's own words.
 
 33
-00:01:59.240 --> 00:02:02.680
-The guardrails, which run in front of the model, not inside it.
+00:01:48.900 --> 00:01:50.870
+The €32,000 is still in AIB.
 
 34
-00:02:02.880 --> 00:02:05.080
-The persona, which is style only.
+00:01:51.160 --> 00:01:55.570
+She separately authorises a transfer and the money moves towards her current account here.
 
 35
-00:02:06.060 --> 00:02:08.940
-And the numbers, from the events it wrote as it went.
+00:01:55.880 --> 00:02:00.710
+Now the bank can monitor her deposit directly without relying on continued access to the other account.
+
+36
+00:02:01.140 --> 00:02:03.390
+Baz will return when it reaches €40,000.
+
+37
+00:02:03.600 --> 00:02:07.190
+In the console, the fixed term account is opened and the transfer settled.
+
+38
+00:02:07.620 --> 00:02:09.850
+Back on her phone, Baz confirms what's happened.
+
+39
+00:02:10.540 --> 00:02:12.590
+Now we skip ahead, the months have passed.
+
+40
+00:02:13.160 --> 00:02:17.070
+The plan stays in the console, along with the milestone the bank agreed to watch.
+
+41
+00:02:17.660 --> 00:02:19.070
+The balance reaches the target.
+
+42
+00:02:18.920 --> 00:02:22.650
+A notification lands without exposing financial details.
+
+43
+00:02:23.320 --> 00:02:26.610
+She opens it and Baz picks up exactly where they left off.
+
+44
+00:02:27.060 --> 00:02:29.930
+The deposit is ready and it's time to revisit the mortgage.
+
+45
+00:02:30.540 --> 00:02:32.290
+It remembers what she already told it.
+
+46
+00:02:32.620 --> 00:02:33.590
+Nothing asked twice.
+
+47
+00:02:34.480 --> 00:02:35.710
+And the other side of the glass.
+
+48
+00:02:36.420 --> 00:02:38.750
+Every case, every fact and its source.
+
+49
+00:02:39.240 --> 00:02:41.910
+Linked accounts, transfers, the monitored balance.
+
+50
+00:02:42.560 --> 00:02:45.070
+Guardrails ahead of the model, not inside it.
+
+51
+00:02:45.460 --> 00:02:47.750
+Persona controls for style, not policy.
+
+52
+00:02:48.310 --> 00:02:50.330
+Analytics built from recorded events.
+
+53
+00:02:51.080 --> 00:02:54.150
+Operations and controls, built in from day one.

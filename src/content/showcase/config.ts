@@ -31,7 +31,7 @@ export const showcaseConfig = {
       id: 'walkthrough',
       label: 'Product',
       src: walkthroughMp3,
-      durationTargetMs: 129_200,
+      durationTargetMs: 174_400,
       captions: walkthroughVtt,
     },
     risk: {

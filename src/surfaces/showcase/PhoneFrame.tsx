@@ -24,10 +24,13 @@ export const PHONE_HEIGHT = 880
 export function PhoneFrame({
   children,
   maxScale = 1.2,
+  bare = false,
 }: {
   readonly children: ReactNode
   /** How far past its design size the phone may grow in a big box. */
   readonly maxScale?: number
+  /** No status bar or Baz header: the children own the whole screen, as a lock screen does. */
+  readonly bare?: boolean
 }): ReactNode {
   const box = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
@@ -36,7 +39,9 @@ export function PhoneFrame({
     const element = box.current
     if (element === null || typeof ResizeObserver === 'undefined') return
     const measure = (): void => {
-      setScale(Math.min(maxScale, element.clientWidth / PHONE_WIDTH, element.clientHeight / PHONE_HEIGHT))
+      setScale(
+        Math.min(maxScale, element.clientWidth / PHONE_WIDTH, element.clientHeight / PHONE_HEIGHT),
+      )
     }
     const observer = new ResizeObserver(measure)
     observer.observe(element)
@@ -55,27 +60,33 @@ export function PhoneFrame({
         }}
       >
         <div className="bg-background flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-[2.3rem]">
-          <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[12px] font-semibold tabular-nums">
-            <span>9:41</span>
-            <span aria-hidden className="flex items-center gap-1">
-              <span className="bg-foreground h-2 w-0.5 rounded-sm" />
-              <span className="bg-foreground h-2.5 w-0.5 rounded-sm" />
-              <span className="bg-foreground h-3 w-0.5 rounded-sm" />
-              <span className="border-foreground ml-1 h-2.5 w-5 rounded-sm border" />
-            </span>
-          </div>
+          {bare ? (
+            children
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[12px] font-semibold tabular-nums">
+                <span>9:41</span>
+                <span aria-hidden className="flex items-center gap-1">
+                  <span className="bg-foreground h-2 w-0.5 rounded-sm" />
+                  <span className="bg-foreground h-2.5 w-0.5 rounded-sm" />
+                  <span className="bg-foreground h-3 w-0.5 rounded-sm" />
+                  <span className="border-foreground ml-1 h-2.5 w-5 rounded-sm border" />
+                </span>
+              </div>
 
-          <header className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center px-4 py-2">
-            <span aria-hidden className="text-muted-foreground grid size-9 place-items-center">
-              <MenuIcon className="size-5" />
-            </span>
-            <span className="flex justify-center">
-              <BazWordmark className="h-8" />
-            </span>
-            <span />
-          </header>
+              <header className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center px-4 py-2">
+                <span aria-hidden className="text-muted-foreground grid size-9 place-items-center">
+                  <MenuIcon className="size-5" />
+                </span>
+                <span className="flex justify-center">
+                  <BazWordmark className="h-8" />
+                </span>
+                <span />
+              </header>
 
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+              <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+            </>
+          )}
         </div>
       </div>
     </div>

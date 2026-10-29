@@ -63,10 +63,11 @@ export type OpportunityScene = 'headline' | 'fragments' | 'question' | 'meet' | 
 export type WalkthroughScene =
   | 'arrive'
   | 'understand'
-  | 'connect'
+  | 'link'
+  | 'arrange'
   | 'authenticate'
-  | 'machinery'
-  | 'action'
+  | 'move'
+  | 'later'
   | 'govern'
 export type RiskScene = 'compress' | 'assistant' | 'ownership' | 'paths' | 'question'
 
@@ -88,9 +89,11 @@ export function isChapter(stage: ShowcaseStage): stage is ChapterId {
 export type CutawayView =
   | {
       readonly kind: 'admin'
-      readonly screen: 'cases' | 'case' | 'guardrails' | 'persona' | 'analytics'
+      readonly screen: 'cases' | 'case' | 'goals' | 'act' | 'guardrails' | 'persona' | 'analytics'
     }
   | { readonly kind: 'payload' }
+  /** The customer's lock screen: the push notification landing, with nothing about the case in it. */
+  | { readonly kind: 'notification' }
 
 /**
  * One thing that happens on the phone, at a moment in the chapter.

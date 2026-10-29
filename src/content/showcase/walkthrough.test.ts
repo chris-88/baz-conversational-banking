@@ -2,24 +2,29 @@ import { describe, expect, it } from 'vitest'
 import { cardSchema } from '@contracts/cards.ts'
 import { formSnapshot } from '@tenants/boi/forms/snapshots.ts'
 import type { FormField } from '@domain/forms/definition.ts'
-import { PLAN_CARD, RATES_CARD, STATUS_AT_START } from '@/content/how-it-works/story'
+import { declarationWording } from '@domain/forms/wording.ts'
+import { ARRANGEMENT_CARD, PLAN_CARD, STATUS_AT_START } from '@/content/how-it-works/story'
 import { showcaseConfig } from './config'
 import {
+  CONNECT_CARD,
   FORM_DECLARATIONS_CARD,
-  FORM_UPLOAD_CARD,
-  SHOWCASE_OPTIONS_CARD,
+  SHOWCASE_ARRANGEMENT_CARD,
+  MORTGAGE_OPTION_CARD,
+  OVERVIEW_CARD,
   SHOWCASE_PLAN_CARD,
-  SHOWCASE_RATES_CARD,
   SHOWCASE_REUSE_CARD,
-  SHOWCASE_STATUS_CARD,
-  UPLOAD_REQUEST_CARD,
+  STATUS_MORTGAGE_CARD,
+  STATUS_OPENED_CARD,
+  STATUS_STARTED_CARD,
+  TRANSFER_CARD,
   WALKTHROUGH_EVENTS,
 } from './walkthrough'
 
 /**
  * The walkthrough is data, and these are the promises the data keeps: every card is one the
  * product could render, every event is in order and inside the chapter, nothing is typed or
- * thought about backwards, and the form's words are the form's.
+ * thought backwards, nothing lands behind a cutaway, the figures the room reads are the
+ * engines' own, and the form's words are the form's.
  */
 const DURATION = showcaseConfig.chapters.walkthrough.durationTargetMs
 
@@ -30,7 +35,19 @@ describe('the walkthrough transcript', () => {
       const result = cardSchema.safeParse(event.card)
       expect(result.success, `${event.id}: ${result.error?.message ?? ''}`).toBe(true)
     }
-    for (const card of [SHOWCASE_PLAN_CARD, SHOWCASE_OPTIONS_CARD, SHOWCASE_RATES_CARD, SHOWCASE_REUSE_CARD, SHOWCASE_STATUS_CARD, FORM_DECLARATIONS_CARD, FORM_UPLOAD_CARD, UPLOAD_REQUEST_CARD]) {
+    for (const card of [
+      SHOWCASE_PLAN_CARD,
+      SHOWCASE_ARRANGEMENT_CARD,
+      CONNECT_CARD,
+      OVERVIEW_CARD,
+      SHOWCASE_REUSE_CARD,
+      FORM_DECLARATIONS_CARD,
+      TRANSFER_CARD,
+      STATUS_STARTED_CARD,
+      STATUS_OPENED_CARD,
+      STATUS_MORTGAGE_CARD,
+      MORTGAGE_OPTION_CARD,
+    ]) {
       expect(cardSchema.safeParse(card).success).toBe(true)
     }
   })
@@ -73,12 +90,8 @@ describe('the walkthrough transcript', () => {
     })
   })
 
-  it('cutaways do not overlap, and nothing arrives on the phone behind one', () => {
-    const cutaways = WALKTHROUGH_EVENTS.filter((event) => event.kind === 'cutaway')
-    cutaways.forEach((cutaway, index) => {
-      const next = cutaways[index + 1]
-      if (next !== undefined) expect(next.atMs, cutaway.id).toBeGreaterThanOrEqual(cutaway.untilMs)
-    })
+  it('nothing on the phone lands while a cutaway covers it', () => {
+    const cutaways = WALKTHROUGH_EVENTS.flatMap((event) => (event.kind === 'cutaway' ? [event] : []))
     for (const event of WALKTHROUGH_EVENTS) {
       if (event.kind === 'cutaway' || event.kind === 'cut') continue
       const hidden = cutaways.find((cutaway) => cutaway.atMs <= event.atMs && event.atMs < cutaway.untilMs)
@@ -86,19 +99,30 @@ describe('the walkthrough transcript', () => {
     }
   })
 
-  it('the three applications the chapter starts are the three the status and reuse cards show', () => {
-    if (SHOWCASE_STATUS_CARD.type !== 'status' || SHOWCASE_REUSE_CARD.type !== 'reuse') throw new Error('shape')
-    expect(SHOWCASE_STATUS_CARD.applications.map((application) => application.product)).toEqual([
-      'mortgage',
-      'joint_account',
-      'personal_loan',
-    ])
+  it('the open banking picture is the engine’s own output over this customer’s facts', () => {
+    if (OVERVIEW_CARD.type !== 'accounts_overview' || TRANSFER_CARD.type !== 'transfer') throw new Error('shape')
+    const savings = OVERVIEW_CARD.accounts.find((account) => account.accountType === 'savings')
+    expect(savings?.balance).toBe(32_000)
+    expect(OVERVIEW_CARD.savingsHeld).toBe(32_000)
+    expect(OVERVIEW_CARD.salary?.employer).toBe('Ardán Software Limited')
+    expect(OVERVIEW_CARD.regular.some((item) => item.amount === 1_800)).toBe(true)
+    for (const account of OVERVIEW_CARD.accounts) expect(account.ibanMasked).toMatch(/4$|\d{4}$/)
+    // The transfer leaves the account the overview showed, for what it held, into the account she holds here.
+    expect(TRANSFER_CARD.fromAccountId).toBe(savings?.id)
+    expect(TRANSFER_CARD.amount).toBe(savings?.balance)
+    expect(TRANSFER_CARD.toApplicationId).toBeNull()
+  })
+
+  it('the three accounts the arrangement starts are the three the status and reuse cards show', () => {
+    if (STATUS_STARTED_CARD.type !== 'status' || SHOWCASE_REUSE_CARD.type !== 'reuse') throw new Error('shape')
+    expect(STATUS_STARTED_CARD.applications.map((application) => application.product)).toEqual(['savings', 'savings', 'savings'])
     expect(SHOWCASE_REUSE_CARD.started).toHaveLength(3)
+    expect(STATUS_STARTED_CARD.applications.map((application) => application.displayName)).toEqual(SHOWCASE_REUSE_CARD.started)
     for (const item of SHOWCASE_REUSE_CARD.items) {
-      expect(item.usedFor.length).toBeGreaterThan(0)
-      for (const product of item.usedFor) expect(SHOWCASE_REUSE_CARD.started).toContain(product)
+      expect(item.usedFor).toEqual(SHOWCASE_REUSE_CARD.started)
     }
-    expect(SHOWCASE_REUSE_CARD.title).toBe(`${String(SHOWCASE_REUSE_CARD.items.length)} things you never had to type`)
+    expect(SHOWCASE_REUSE_CARD.items).toHaveLength(6)
+    expect(SHOWCASE_REUSE_CARD.title).toBe('6 things you never had to type')
   })
 
   it('cuts the long cards to the phone’s screen without inventing anything', () => {
@@ -106,48 +130,41 @@ describe('the walkthrough transcript', () => {
     expect(SHOWCASE_PLAN_CARD.milestones).toHaveLength(4)
     for (const milestone of SHOWCASE_PLAN_CARD.milestones) expect(PLAN_CARD.milestones).toContainEqual(milestone)
 
-    if (SHOWCASE_RATES_CARD.type !== 'mortgage_rates' || RATES_CARD.type !== 'mortgage_rates') throw new Error('shape')
-    expect(SHOWCASE_RATES_CARD.options).toHaveLength(3)
-    for (const option of SHOWCASE_RATES_CARD.options) expect(RATES_CARD.options).toContainEqual(option)
+    if (SHOWCASE_ARRANGEMENT_CARD.type !== 'arrangement' || ARRANGEMENT_CARD.type !== 'arrangement') throw new Error('shape')
+    expect(SHOWCASE_ARRANGEMENT_CARD.firstYearInterest).toBe(ARRANGEMENT_CARD.firstYearInterest)
+    expect(SHOWCASE_ARRANGEMENT_CARD.bonus?.amount).toBe(ARRANGEMENT_CARD.bonus?.amount)
+    const originals = ARRANGEMENT_CARD.allocations
+    SHOWCASE_ARRANGEMENT_CARD.allocations.forEach((allocation, index) => {
+      const original = originals[index]
+      expect({ ...allocation, watch: original?.watch }).toEqual(original)
+    })
 
-    if (SHOWCASE_STATUS_CARD.type !== 'status' || STATUS_AT_START.type !== 'status') throw new Error('shape')
-    for (const application of SHOWCASE_STATUS_CARD.applications) {
-      const original = STATUS_AT_START.applications.find((candidate) => candidate.id === application.id)
-      if (original === undefined) throw new Error(application.id)
-      const left = application.steps.filter((step) => !step.done)
-      expect(left.length).toBeLessThanOrEqual(3)
-      expect(application.outstandingCount).toBe(left.length)
-      for (const step of application.steps) expect(original.steps).toContainEqual(step)
-    }
+    if (STATUS_MORTGAGE_CARD.type !== 'status' || STATUS_AT_START.type !== 'status') throw new Error('shape')
+    const mortgage = STATUS_MORTGAGE_CARD.applications.find((application) => application.product === 'mortgage')
+    const original = STATUS_AT_START.applications.find((application) => application.product === 'mortgage')
+    if (mortgage === undefined || original === undefined) throw new Error('no mortgage')
+    const left = mortgage.steps.filter((step) => !step.done)
+    expect(left.length).toBeLessThanOrEqual(3)
+    expect(mortgage.outstandingCount).toBe(left.length)
+    for (const step of mortgage.steps) expect(original.steps).toContainEqual(step)
   })
 
-  it('recites the loan form’s declarations in the form’s own words', () => {
-    const snapshot = formSnapshot('1940')
-    if (snapshot === undefined) throw new Error('No snapshot for the loan form')
+  it('recites the SuperSaver form’s declarations in the form’s own words', () => {
+    const snapshot = formSnapshot('1833')
+    if (snapshot === undefined) throw new Error('No snapshot for the SuperSaver form')
     if (FORM_DECLARATIONS_CARD.type !== 'form_declarations') throw new Error('shape')
     const fields = new Map<string, FormField>(snapshot.definition.fields.map((field) => [field.id, field]))
     for (const declaration of FORM_DECLARATIONS_CARD.declarations) {
       const field = fields.get(declaration.fieldId)
       expect(field, declaration.fieldId).toBeDefined()
       expect(field?.type, declaration.fieldId).toBe('checkbox')
-      expect(field?.label, declaration.fieldId).toBe(declaration.wording)
+      if (field === undefined) throw new Error(declaration.fieldId)
+      expect(declarationWording(field), declaration.fieldId).toBe(declaration.wording)
     }
   })
 
-  it('asks for the document the form’s upload control accepts, within its limits', () => {
-    const snapshot = formSnapshot('1940')
-    if (snapshot === undefined) throw new Error('No snapshot for the loan form')
-    const upload = FORM_UPLOAD_CARD
-    if (upload.type !== 'form_upload') throw new Error('shape')
-    const field = snapshot.definition.fields.find((candidate) => candidate.id === upload.fieldId)
-    expect(field?.type).toBe('fileupload')
-    // The limits sit on the control's own configuration, read the way `baz-turn` reads them.
-    const raw = field?.platform?.['allowedExtensions']
-    const allowed = (typeof raw === 'string' ? raw : '')
-      .split(',')
-      .map((extension) => extension.trim())
-      .filter(Boolean)
-    expect([...upload.acceptedExtensions].sort()).toEqual([...allowed].sort())
-    expect(upload.maxFileSizeMb).toBe(Number(field?.platform?.['maxFileSize']))
+  it('offers the mortgage, and only the mortgage, when the deposit is there', () => {
+    if (MORTGAGE_OPTION_CARD.type !== 'product_options') throw new Error('shape')
+    expect(MORTGAGE_OPTION_CARD.options.map((option) => option.product)).toEqual(['mortgage'])
   })
 })

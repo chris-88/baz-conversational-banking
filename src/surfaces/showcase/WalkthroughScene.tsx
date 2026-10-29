@@ -10,6 +10,7 @@ import { visibleTranscript } from './transcript'
 import { PhoneFrame } from './PhoneFrame'
 import { ShowcaseTranscript } from './ShowcaseTranscript'
 import { AdminCutaway } from './AdminCutaway'
+import { LockScreen } from './LockScreen'
 import { useNarrow } from './useNarrow'
 
 /**
@@ -17,7 +18,8 @@ import { useNarrow } from './useNarrow'
  *
  * The phone replays a scripted transcript through the product's own components; nothing on
  * it is a picture. Where a screen is not a phone screen, the console and the captured
- * packet, a desktop inset takes the phone's place. The seven steps run along the top, and
+ * packet, a desktop inset takes the phone's place; the push landing is the phone's own lock
+ * screen. The steps run along the top, and
  * one line names the step. The voice does the rest: a panel of prose beside the phone asked
  * the room to read and watch at once, and it read.
  */
@@ -37,7 +39,17 @@ export function WalkthroughScene({
 
   /* On a phone the product's screen fills the stage edge to edge: a drawn phone inside a real one would shrink it to a strip. */
   const stage =
-    view.cutaway !== null ? (
+    view.cutaway !== null && view.cutaway.kind === 'notification' ? (
+      narrow ? (
+        <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border shadow-sm">
+          <LockScreen />
+        </div>
+      ) : (
+        <PhoneFrame bare>
+          <LockScreen />
+        </PhoneFrame>
+      )
+    ) : view.cutaway !== null ? (
       <AdminCutaway view={view.cutaway} />
     ) : narrow ? (
       <div className="bg-background flex h-full w-full flex-col overflow-hidden rounded-2xl border shadow-sm">
@@ -57,7 +69,13 @@ export function WalkthroughScene({
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col gap-3 overflow-hidden px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:gap-5 lg:py-5">
-      <ol className="grid grid-cols-7 gap-1" aria-label="Steps in the demonstration">
+      <ol
+        className="grid gap-1"
+        style={{
+          gridTemplateColumns: `repeat(${String(WALKTHROUGH_CUES.length)}, minmax(0, 1fr))`,
+        }}
+        aria-label="Steps in the demonstration"
+      >
         {WALKTHROUGH_CUES.map((step, index) => {
           const current = step.id === cue.id
           const done = step.endMs <= localTimeMs
@@ -109,7 +127,11 @@ export function WalkthroughScene({
           <div className="flex h-full w-full items-center justify-center">{stage}</div>
         ) : (
           <AnimatePresence mode="wait" initial={false}>
-            <m.div key={cutawayKey} className="flex h-full w-full items-center justify-center" {...fade}>
+            <m.div
+              key={cutawayKey}
+              className="flex h-full w-full items-center justify-center"
+              {...fade}
+            >
               {stage}
             </m.div>
           </AnimatePresence>

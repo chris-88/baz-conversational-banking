@@ -55,14 +55,15 @@ describe('showcase cues', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('the walkthrough has the seven windows the brief lays out, in order', () => {
+  it('the walkthrough has the eight windows of the savings story, in order', () => {
     expect(CUES_BY_CHAPTER.walkthrough.map((cue) => cue.scene)).toEqual([
       'arrive',
       'understand',
-      'connect',
+      'link',
+      'arrange',
       'authenticate',
-      'machinery',
-      'action',
+      'move',
+      'later',
       'govern',
     ])
   })

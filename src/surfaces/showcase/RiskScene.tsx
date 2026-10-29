@@ -126,7 +126,7 @@ function Compress({ p, still }: { readonly p: number; readonly still: boolean })
             {showcaseConfig.examplePrompt}
           </ChatBubble>
           <ChatBubble author="baz" showAvatar={false}>
-            <MessageText text="Three applications started. Your salary was used by all of them; nobody will ask for it again." />
+            <MessageText text="Your Advantage Fixed Term Deposit Account is open and the €32,000 from AIB has arrived. When the deposit reaches €40,000 I will come back to you about the mortgage." />
           </ChatBubble>
         </div>
       </div>

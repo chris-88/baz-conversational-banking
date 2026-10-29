@@ -56,6 +56,7 @@ import { recordFormAnswers } from '../_shared/db/record-form-answers.ts'
 import { formForProduct } from '../_shared/tenants/boi/forms/mapping.ts'
 import { formSnapshot } from '../_shared/tenants/boi/forms/snapshots.ts'
 import { resolveFormState } from '../_shared/domain/forms/state.ts'
+import { declarationWording } from '../_shared/domain/forms/wording.ts'
 import { createClassifier, type Classifier } from '../_shared/llm/classifier.ts'
 import { anthropicProvider } from '../_shared/llm/anthropic-provider.ts'
 import { FIXTURE_BANKING, fixtureProvider } from '../_shared/llm/fixture-provider.ts'
@@ -2044,7 +2045,7 @@ async function handleTurn(request: Request): Promise<Response> {
 
                 const declarations = state.outstanding
                   .filter((field) => field.type === 'checkbox')
-                  .map((field) => ({ fieldId: field.id, wording: field.label }))
+                  .map((field) => ({ fieldId: field.id, wording: declarationWording(field) }))
 
                 if (declarations.length === 0) {
                   return {

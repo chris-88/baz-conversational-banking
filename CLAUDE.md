@@ -318,10 +318,12 @@ element's `currentTime` per frame and a chapter advances on `ended` and at no ot
 Cues, captions and the walkthrough's phone transcript are pure functions of that clock
 (`playback.ts`, `cues.ts`, `vtt.ts`, `transcript.ts`). The phone replays
 `src/content/showcase/walkthrough.ts` through the product's own `ChatBubble` and
-`CardRenderer`, inert. Tracks are modules under `src/assets/showcase/` (hashed, not
-precached). `vault/docs/features/showcase.md` is the feature doc; the content folder's
-README says how to swap a track or retime a cue. The walkthrough narration is pending; its
-script is `vault/docs/showcase/walkthrough-narration.md`.
+`CardRenderer`, inert. The walkthrough is the savings story (since 2026-10-29): open banking,
+the arrangement, three savings accounts, the deposit moved here, and months later the plan's
+watch met and the mortgage started. Tracks are modules under `src/assets/showcase/` (hashed,
+not precached). `vault/docs/features/showcase.md` is the feature doc; the content folder's
+README says how to swap a track or retime a cue; the narration as recorded is
+`vault/docs/showcase/walkthrough-narration.md`.
 
 ## Guardrails (§19 to §27, §39, §47)
 
@@ -370,9 +372,9 @@ Gate output:
 - Sending a notification is a separate explicit admin action, over Web Push. The console can send the fixed copy or write its own.
 - The copy contains nothing about the application. Link: `/#/app?n=<code>`, carrying an opaque single-use token.
 - On return, `baz-turn` runs with a `return` trigger: the digest includes events since `last_seen_at`. Baz phrases the summary; the status card renders from DB beside it.
-- `src/components/NotificationCard.tsx` is a simulated lock-screen notification, kept as a
-  filming fallback. **Nothing renders it**: push has been confirmed arriving on a real phone,
-  so it has never been needed. Wire it to an admin trigger if that changes.
+- Push has been confirmed arriving on a real phone, so no simulated notification is wired
+  into the product. The showcase draws its own lock screen (`src/surfaces/showcase/LockScreen.tsx`)
+  with the fixed push copy, for the "months later" beat.
 
 ## Admin console (§37 to §44)
 

@@ -12,8 +12,8 @@ in step with the mastered length so the progress rail and cue bounds agree befor
 has loaded.
 
 The opening (`opportunity.mp3`, 47.0 s) and closing (`risk.mp3`, 50.6 s) tracks are the
-mastered HeyGen narration. `walkthrough.mp3` (129.2 s) is the ElevenLabs read of the script
-in `vault/docs/showcase/walkthrough-narration.md`. Every cue in the three chapters, and every
+mastered HeyGen narration. `walkthrough.mp3` (174.4 s) is the ElevenLabs read of the savings
+story in `vault/docs/showcase/walkthrough-narration.md`, as spoken on 2026-10-29. Every cue in the three chapters, and every
 event in `walkthrough.ts`, sits where its words are spoken: word timestamps were taken off
 each track with a scratch run of faster-whisper (not a project dependency; the narration
 document records how) and the times set from them. A new track means doing that again.
@@ -52,13 +52,17 @@ picture), the article route, the example prompt and the chapter labels.
 
 ## Fixtures
 
-- Cards reuse the explainer's (`src/content/how-it-works/story.ts`); the three new ones are
-  built here and validated against `cardSchema`. Three of the explainer's are cut to fit the
-  phone's screen whole (plan milestones, rate rows, status steps): the room cannot scroll, so
-  a card it is meant to read has to fit under the line that introduces it, about 580 design
-  pixels. The test checks every kept row against the original.
+- Cards reuse the explainer's (`src/content/how-it-works/story.ts`) where they exist, and
+  are built here otherwise, validated against `cardSchema`. The open banking cards are the
+  engine's own output: `synthesiseAccounts` and `summariseAccounts` run at module load over
+  the showcase customer's facts with a fixed seed and date, so the balances, the salary and
+  the rent on the overview are what the product would compute. Cards cut to fit the phone's
+  screen whole (plan milestones, the arrangement's watch lines, status steps) are checked
+  row by row against their originals: the room cannot scroll, so a card it is meant to read
+  has to fit under the line that introduces it, about 580 design pixels.
 - `payload.ts` is the loan packet produced by the real form engine over the facts listed in
   it, pinned so the bundle does not carry the 444KB definition. `payload.test.ts` recomputes
-  it. Re-pin by running the same pipeline (the test shows the calls) and copying the counts.
-- `admin.ts` is console fixture data typed against the console's own contract. The analytics
-  figures are illustrative and labelled so on screen.
+  it. The savings story no longer shows the packet; the fixture stays until it is wanted again.
+- `admin.ts` is console fixture data typed against the console's own contract, plus the
+  bank's hand-moves and the plan with its watch for the two drawn console screens. The
+  analytics figures are illustrative and labelled so on screen.
