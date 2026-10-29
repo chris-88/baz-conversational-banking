@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
+import { cn } from '@/lib/utils'
 import { useStill } from '@/lib/motion'
 import { MANIFESTS, showcaseConfig } from '@/content/showcase/config'
 import { CUES_BY_CHAPTER, STAGE_COUNT, STAGE_NUMBER } from '@/content/showcase/chapters'
@@ -187,17 +188,24 @@ function Playing({ chapter }: { readonly chapter: ChapterId }): ReactNode {
         </div>
       </ShowcaseHeader>
 
-      <main className="relative min-h-0 flex-1">
+      {/* The stage keeps a strip for the caption line only while captions are on, and takes the
+          closing question's dark ground itself so that strip is never a light band under it. */}
+      <main
+        className={cn(
+          'relative min-h-0 flex-1',
+          state.captionsOn && 'pb-14 sm:pb-16',
+          chapter === 'risk' && cue.scene === 'question' && 'bg-brand-deep',
+        )}
+      >
         <ChapterScene
           chapter={chapter}
           localTimeMs={state.localTimeMs}
           still={still || state.settling}
           seekSerial={state.seekSerial}
         />
+        <Captions manifest={manifest} localTimeMs={state.localTimeMs} on={state.captionsOn} />
         <ResumeOverlay />
       </main>
-
-      <Captions manifest={manifest} localTimeMs={state.localTimeMs} on={state.captionsOn} />
 
       <Controls
         manifests={MANIFESTS}

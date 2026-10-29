@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import {
   BabyIcon,
   CreditCardIcon,
@@ -22,7 +22,7 @@ import { BazMark } from '@/baz/BazMark'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { Surface, Tile } from '@/components/Primitives'
 import { ChapterStage } from './ChapterStage'
-import { Arrive, Chip, JourneyCard, Link, Node, Wires } from './scene-parts'
+import { Arrive, Arrow, Bus, Chip, JourneyCard, Node } from './scene-parts'
 import { settle } from './ease'
 
 /**
@@ -279,31 +279,25 @@ const VERBS = [
 
 const NEEDS = ['Mortgage', 'Joint account', 'Protection'] as const
 
-/** Baz's mark, its three verbs, and the needs they find. */
+/** Baz's name, its three verbs with an arrow between each, and the needs they find. */
 function MeetBaz({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
   return (
-    <div className="flex w-full max-w-3xl flex-col items-center gap-8">
+    <div className="flex w-full max-w-3xl flex-col items-center gap-10">
       <Arrive order={0} still={still}>
-        <div className="flex items-center gap-4">
-          <span className="text-baz-primary size-16">
-            <BazMark title="Baz" />
-          </span>
-          <BazWordmark className="h-10" />
-        </div>
+        <BazWordmark className="h-16" />
       </Arrive>
 
-      <div className="relative w-full">
-        <Wires>
-          <Link from={[0.27, 0.24]} to={[0.42, 0.24]} draw={Math.min(p / 0.5, 1)} tone="primary" arrow />
-          <Link from={[0.6, 0.24]} to={[0.75, 0.24]} draw={Math.min((p - 0.15) / 0.5, 1)} tone="primary" arrow />
-        </Wires>
-        <div className="grid grid-cols-3 gap-6">
-          {VERBS.map((verb, index) => (
-            <Arrive key={verb.label} order={1 + index * 2} still={still}>
+      <div className="grid w-full grid-cols-[1fr_5.5rem_1fr_5.5rem_1fr] items-start">
+        {VERBS.map((verb, index) => (
+          <Fragment key={verb.label}>
+            {index > 0 && (
+              <Arrow draw={(p - (index - 1) * 0.15) / 0.4} className="pt-[33px]" />
+            )}
+            <Arrive order={1 + index * 2} still={still}>
               <Node icon={verb.icon} label={verb.label} detail={verb.detail} size="lg" />
             </Arrive>
-          ))}
-        </div>
+          </Fragment>
+        ))}
       </div>
 
       <Arrive order={7} still={still}>
@@ -336,7 +330,7 @@ function Capabilities({ p, still }: { readonly p: number; readonly still: boolea
         className="flex w-full flex-col items-center gap-6"
         style={{ opacity: 1 - 0.85 * phone, transform: `scale(${String(1 - 0.04 * phone)})` }}
       >
-      <Arrive order={0} still={still} className="w-full">
+      <Arrive order={0} still={still} className="w-2/3">
         <Surface lift className="flex items-center justify-between gap-4 px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="text-baz-primary size-8">
@@ -348,20 +342,10 @@ function Capabilities({ p, still }: { readonly p: number; readonly still: boolea
         </Surface>
       </Arrive>
 
-      <Arrive order={1} still={still} className="w-full">
-        <div className="relative w-full">
-          <Wires>
-            {CAPABILITIES.map((capability, index) => (
-              <Link
-                key={capability.label}
-                from={[0.5, 0]}
-                to={[(index + 0.5) / CAPABILITIES.length, 0.35]}
-                draw={Math.min(Math.max((p - index * 0.05) / 0.45, 0), 1)}
-                tone="primary"
-              />
-            ))}
-          </Wires>
-          <div className="grid grid-cols-5 gap-3 pt-12">
+      <Arrive order={1} still={still} className="-mt-6 w-full">
+        <div className="w-full">
+          <Bus columns={CAPABILITIES.length} direction="spread" draw={p / 0.6} />
+          <div className="grid grid-cols-5 gap-3 pt-1">
             {CAPABILITIES.map((capability, index) => (
               <Arrive key={capability.label} order={2 + index} still={still}>
                 <Surface className="flex flex-col items-center gap-2 px-2 py-4 text-center">

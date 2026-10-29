@@ -9,7 +9,9 @@ import { cn } from '@/lib/utils'
  * squeezed, so what the room sees and what the phone sees are the same picture. At or above
  * the design width nothing happens unless `maxScale` lets it grow, which the chapter stages allow so a room
  * sees it large. The outer box takes the scaled height so the layout
- * around it is honest about the space the picture uses.
+ * around it is honest about the space the picture uses. A picture narrower than the design
+ * width is centred in it: the closing pictures are mostly 768 wide in an 896 box, and for a
+ * day they sat to its left.
  */
 export function FitWidth({
   designWidth,
@@ -51,7 +53,7 @@ export function FitWidth({
     <div ref={outer} className={cn('w-full min-w-0 overflow-hidden', className)} style={height === null ? undefined : { height }}>
       <div
         ref={inner}
-        className="mx-auto"
+        className="mx-auto flex justify-center"
         style={{
           width: designWidth,
           maxWidth: 'none',

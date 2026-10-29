@@ -215,60 +215,111 @@ export function JourneyCard({
   )
 }
 
-/**
- * A dashed connector between two things in a diagram.
- *
- * Drawn in a full-size SVG over the diagram so it does not fight the layout. Coordinates are
- * fractions of the box, and `draw` is how much of it is drawn, from the cue's progress.
- */
-export function Link({
-  from,
-  to,
-  draw = 1,
-  tone = 'muted',
-  arrow,
-}: {
-  readonly from: readonly [number, number]
-  readonly to: readonly [number, number]
-  readonly draw?: number
-  readonly tone?: 'muted' | 'primary'
-  readonly arrow?: boolean
-}): ReactNode {
-  const x1 = from[0] * 100
-  const y1 = from[1] * 100
-  const x2 = x1 + (to[0] * 100 - x1) * settle(draw)
-  const y2 = y1 + (to[1] * 100 - y1) * settle(draw)
-  const colour = tone === 'primary' ? 'var(--primary)' : 'var(--muted-foreground)'
-  return (
-    <g>
-      <line
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
-        stroke={colour}
-        strokeOpacity={tone === 'primary' ? 0.7 : 0.45}
-        strokeWidth={0.5}
-        strokeDasharray="1.4 1.2"
-        vectorEffect="non-scaling-stroke"
-      />
-      {arrow === true && draw >= 0.98 && (
-        <circle cx={x2} cy={y2} r={0.9} fill={colour} fillOpacity={tone === 'primary' ? 0.9 : 0.6} />
-      )}
-    </g>
+/** An arrowhead, pointing right or down, the colour of the line it ends. */
+function Head({ direction, style }: { readonly direction: 'right' | 'down'; readonly style?: CSSProperties }): ReactNode {
+  return direction === 'right' ? (
+    <svg aria-hidden viewBox="0 0 12 14" className="fill-primary h-3.5 w-3 shrink-0" style={style}>
+      <path d="M0 0 L12 7 L0 14 Z" />
+    </svg>
+  ) : (
+    <svg aria-hidden viewBox="0 0 14 12" className="fill-primary h-3 w-3.5 shrink-0" style={style}>
+      <path d="M0 0 L14 0 L7 12 Z" />
+    </svg>
   )
 }
 
-/** The layer an SVG of `Link`s sits in. */
-export function Wires({ children }: { readonly children: ReactNode }): ReactNode {
+/**
+ * A solid arrow, left to right, drawn as `draw` rises, with a label above it and a line of
+ * detail beneath when there is something to say about what travels along it.
+ *
+ * In the product's blue, with a real head. The dashed hairlines and chevrons these replaced
+ * did not read from the back of a room.
+ */
+export function Arrow({
+  draw = 1,
+  label,
+  detail,
+  className,
+}: {
+  readonly draw?: number
+  readonly label?: string
+  readonly detail?: string
+  readonly className?: string
+}): ReactNode {
+  const d = settle(draw)
+  const head = settle((draw - 0.8) / 0.2)
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      className="pointer-events-none absolute inset-0 h-full w-full"
-    >
-      {children}
-    </svg>
+    <div className={cn('flex min-w-0 flex-col items-center justify-center', className)} style={{ opacity: 0.25 + 0.75 * d }}>
+      {label !== undefined && (
+        <span className="text-primary mb-2 text-center text-[11px] font-semibold tracking-wide uppercase">{label}</span>
+      )}
+      <div className="flex w-full items-center">
+        <span
+          aria-hidden
+          className="bg-primary h-[3px] flex-1 rounded-full"
+          style={{ transform: `scaleX(${String(d)})`, transformOrigin: 'left' }}
+        />
+        <Head direction="right" style={{ opacity: head, marginLeft: -1 }} />
+      </div>
+      {detail !== undefined && (
+        <span className="text-muted-foreground mt-2 max-w-[22ch] text-center text-[11.5px] leading-snug">{detail}</span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One line that becomes many, or many that become one.
+ *
+ * `spread`: a stem from the top centre down to a bar, and from the bar one straight drop with
+ * a head to the centre of each of `columns` equal columns beneath. `gather`: the reverse, a
+ * drop from each column to the bar and one stem with a head down to whatever sits under it.
+ * Drawn in order as `draw` rises, so the room sees the flow go the way the narrator says.
+ */
+export function Bus({
+  columns,
+  direction,
+  draw = 1,
+  className,
+}: {
+  readonly columns: number
+  readonly direction: 'spread' | 'gather'
+  readonly draw?: number
+  readonly className?: string
+}): ReactNode {
+  const stem = settle(direction === 'spread' ? draw / 0.3 : (draw - 0.55) / 0.3)
+  const bar = settle((draw - 0.28) / 0.3)
+  const branch = (index: number): number =>
+    settle(direction === 'spread' ? (draw - 0.5 - index * 0.04) / 0.3 : (draw - index * 0.04) / 0.3)
+  const centre = (index: number): string => `${String(((index + 0.5) / columns) * 100)}%`
+  const line = 'bg-primary absolute rounded-full'
+  return (
+    <div className={cn('relative h-16 w-full', className)} aria-hidden>
+      {/* the bar, growing out from the middle */}
+      <div
+        className={cn(line, 'top-1/2 h-[3px] -translate-y-1/2')}
+        style={{ left: centre(0), width: `${String(((columns - 1) / columns) * 100)}%`, transform: `translateY(-50%) scaleX(${String(bar)})` }}
+      />
+      {/* the stem */}
+      <div
+        className={cn(line, 'left-1/2 w-[3px] -translate-x-1/2', direction === 'spread' ? 'top-0 h-1/2' : 'top-1/2 h-1/2')}
+        style={{ transform: `translateX(-50%) scaleY(${String(stem)})`, transformOrigin: direction === 'spread' ? 'top' : 'top' }}
+      />
+      {direction === 'gather' && (
+        <Head direction="down" style={{ position: 'absolute', left: 'calc(50% - 7px)', bottom: -2, opacity: settle((stem - 0.8) / 0.2) }} />
+      )}
+      {/* the branches */}
+      {Array.from({ length: columns }, (_, index) => (
+        <div key={index} className="absolute top-0 h-full" style={{ left: centre(index) }}>
+          <div
+            className={cn(line, 'w-[3px] -translate-x-1/2', direction === 'spread' ? 'top-1/2 h-1/2' : 'top-0 h-1/2')}
+            style={{ transform: `translateX(-50%) scaleY(${String(branch(index))})`, transformOrigin: 'top' }}
+          />
+          {direction === 'spread' && (
+            <Head direction="down" style={{ position: 'absolute', left: -7, bottom: -2, opacity: settle((branch(index) - 0.8) / 0.2) }} />
+          )}
+        </div>
+      ))}
+    </div>
   )
 }

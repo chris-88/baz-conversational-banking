@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import {
   BotIcon,
-  ChevronRightIcon,
   HomeIcon,
   LandmarkIcon,
   LockIcon,
@@ -18,7 +17,7 @@ import { BazMark } from '@/baz/BazMark'
 import { BazWordmark } from '@/baz/BazWordmark'
 import { Claim, Surface, Tile } from '@/components/Primitives'
 import { ChapterStage } from './ChapterStage'
-import { Arrive, Link, Node, Visual, Wires } from './scene-parts'
+import { Arrive, Arrow, Bus, Node } from './scene-parts'
 import { settle } from './ease'
 import { cn } from '@/lib/utils'
 
@@ -44,21 +43,24 @@ export function RiskScene({
 
   if (cue.scene === 'question') {
     return (
-      <div className="mx-auto flex h-full max-w-[1600px] items-center justify-center px-6 py-8">
-        <Visual cueId={cue.id} still={still} className="min-h-[60vh] lg:min-h-0">
-          <div className="text-center">
-            <Arrive order={0} still={still}>
-              <h2 className="max-w-[16ch] text-[2.5rem] leading-[1.05] font-bold tracking-tight text-balance sm:text-6xl xl:text-7xl">
-                {cue.presenter?.title}
-              </h2>
-            </Arrive>
-            <Arrive order={3} still={still}>
-              <p className="text-muted-foreground mx-auto mt-8 max-w-[40ch] text-lg text-pretty sm:text-2xl">
-                {cue.presenter?.body}
-              </p>
-            </Arrive>
-          </div>
-        </Visual>
+      <div className="bg-brand-deep text-brand-deep-foreground flex h-full w-full items-center justify-center px-6 py-8">
+        <div className="flex flex-col items-center text-center">
+          <Arrive order={0} still={still}>
+            <span className="block size-24 sm:size-32 xl:size-40">
+              <BazMark title="Baz" breathing={!still} />
+            </span>
+          </Arrive>
+          <Arrive order={1} still={still}>
+            <h2 className="mt-8 max-w-[16ch] text-[2.5rem] leading-[1.05] font-bold tracking-tight text-balance sm:text-6xl xl:text-7xl">
+              {cue.presenter?.title}
+            </h2>
+          </Arrive>
+          <Arrive order={4} still={still}>
+            <p className="mx-auto mt-8 max-w-[40ch] text-lg text-pretty opacity-70 sm:text-2xl">
+              {cue.presenter?.body}
+            </p>
+          </Arrive>
+        </div>
       </div>
     )
   }
@@ -146,51 +148,6 @@ const ASKS = [
   { text: 'Plan ahead', at: 0.62 },
 ] as const
 
-/** A dashed line drawn left to right as `draw` rises, with what travels along it written above. */
-function Connector({
-  draw,
-  label,
-  detail,
-  tone = 'muted',
-}: {
-  readonly draw: number
-  readonly label: string
-  readonly detail?: string
-  readonly tone?: 'muted' | 'primary'
-}): ReactNode {
-  const d = settle(draw)
-  return (
-    <div className="flex min-w-0 flex-col items-center justify-center px-3" style={{ opacity: 0.2 + 0.8 * d }}>
-      <span
-        className={cn(
-          'mb-1.5 text-center text-[11px] font-semibold tracking-wide uppercase',
-          tone === 'primary' ? 'text-primary' : 'text-muted-foreground',
-        )}
-      >
-        {label}
-      </span>
-      <div className="flex w-full items-center">
-        <span
-          aria-hidden
-          className={cn(
-            'h-0 flex-1 border-t-2 border-dashed',
-            tone === 'primary' ? 'border-primary/60' : 'border-muted-foreground/40',
-          )}
-          style={{ transform: `scaleX(${String(d)})`, transformOrigin: 'left' }}
-        />
-        <ChevronRightIcon
-          aria-hidden
-          className={cn('-ml-1.5 size-4 shrink-0', tone === 'primary' ? 'text-primary/70' : 'text-muted-foreground/60')}
-          style={{ opacity: d }}
-        />
-      </div>
-      {detail !== undefined && (
-        <span className="text-muted-foreground mt-1.5 max-w-[22ch] text-center text-[11.5px] leading-snug">{detail}</span>
-      )}
-    </div>
-  )
-}
-
 /**
  * Customer, assistant, and the two ways in. The assistant reaches accounts and payments
  * through the access PSD2 already makes banks provide, and everything else through the
@@ -205,8 +162,8 @@ function Assistant({ p, still }: { readonly p: number; readonly still: boolean }
         <Node icon={<UserIcon />} label="Customer" size="lg" tone="deep" />
       </Arrive>
 
-      <div className="row-span-2">
-        <Connector draw={p / 0.22} label="Asks first" tone="primary" />
+      <div className="row-span-2 px-3">
+        <Arrow draw={p / 0.22} label="Asks first" />
       </div>
 
       <Arrive order={1} still={still} className="row-span-2">
@@ -238,12 +195,7 @@ function Assistant({ p, still }: { readonly p: number; readonly still: boolean }
         </Surface>
       </Arrive>
 
-      <Connector
-        draw={(p - 0.3) / 0.3}
-        label="PSD2 open banking"
-        detail="Consented access, a legal duty since 2018"
-        tone="primary"
-      />
+      <Arrow draw={(p - 0.3) / 0.3} label="PSD2 open banking" detail="Consented access, a legal duty since 2018" className="px-3" />
       <Arrive order={2} still={still}>
         <Surface className="p-4">
           <div className="flex items-center gap-2.5">
@@ -258,7 +210,7 @@ function Assistant({ p, still }: { readonly p: number; readonly still: boolean }
         </Surface>
       </Arrive>
 
-      <Connector draw={(p - 0.4) / 0.3} label="Public journeys" detail="A web form needs no API" />
+      <Arrow draw={(p - 0.4) / 0.3} label="Public journeys" detail="A web form needs no API" className="px-3" />
       <Arrive order={3} still={still}>
         <Surface className="p-4">
           <div className="flex items-center gap-1.5">
@@ -286,42 +238,38 @@ function Assistant({ p, still }: { readonly p: number; readonly still: boolean }
 function Ownership({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
   const split = settle(Math.max((p - 0.3) / 0.5, 0))
   return (
-    <div className="w-full max-w-3xl">
-      <div className="relative">
-        <Wires>
-          <Link from={[0.22, 0.3]} to={[0.4, 0.3]} draw={Math.min(p / 0.3, 1)} tone="primary" arrow />
-          <Link from={[0.6, 0.3]} to={[0.78, 0.3]} draw={Math.min(Math.max((p - 0.15) / 0.3, 0), 1)} arrow />
-        </Wires>
-        <div className="grid grid-cols-3 items-start gap-4 py-4">
-          <Arrive order={0} still={still} className="justify-self-center pt-9">
-            <Node icon={<UserIcon />} label="Customer" size="lg" tone="deep" />
-          </Arrive>
+    <div className="grid w-full max-w-3xl grid-cols-[auto_5rem_auto_5rem_auto] items-start justify-center py-4">
+      <Arrive order={0} still={still} className="justify-self-center pt-9">
+        <Node icon={<UserIcon />} label="Customer" size="lg" tone="deep" />
+      </Arrive>
 
-          <Arrive order={1} still={still} className="justify-self-center">
-            <Layer label="Conversation layer" tone="primary" strength={split}>
-              <Node icon={<BotIcon />} label="AI assistant" detail="Whoever the customer talks to" size="lg" />
-              <ul className="mt-3 space-y-1 text-center text-[12.5px]">
-                {['Context', 'Relationship', 'Pricing power'].map((item) => (
-                  <li key={item} className="text-primary font-medium" style={{ opacity: 0.5 + 0.5 * split }}>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </Layer>
-          </Arrive>
+      <Arrow draw={p / 0.3} className="px-2 pt-[70px]" />
 
-          <Arrive order={2} still={still} className="justify-self-center">
-            <Layer label="Regulated products" tone="muted" strength={split}>
-              <Node icon={<LandmarkIcon />} label="Bank" detail="Products, infrastructure, risk" size="lg" tone="deep" />
-              <ul className="text-muted-foreground mt-3 space-y-1 text-center text-[12.5px]">
-                {['Products', 'Infrastructure', 'Balance sheet'].map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </Layer>
-          </Arrive>
-        </div>
-      </div>
+      <Arrive order={1} still={still} className="justify-self-center">
+        <Layer label="Conversation layer" tone="primary" strength={split}>
+          <Node icon={<BotIcon />} label="AI assistant" detail="Whoever the customer talks to" size="lg" />
+          <ul className="mt-3 space-y-1 text-center text-[12.5px]">
+            {['Context', 'Relationship', 'Pricing power'].map((item) => (
+              <li key={item} className="text-primary font-medium" style={{ opacity: 0.5 + 0.5 * split }}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Layer>
+      </Arrive>
+
+      <Arrow draw={(p - 0.15) / 0.3} className="px-2 pt-[70px]" />
+
+      <Arrive order={2} still={still} className="justify-self-center">
+        <Layer label="Regulated products" tone="muted" strength={split}>
+          <Node icon={<LandmarkIcon />} label="Bank" detail="Products, infrastructure, risk" size="lg" tone="deep" />
+          <ul className="text-muted-foreground mt-3 space-y-1 text-center text-[12.5px]">
+            {['Products', 'Infrastructure', 'Balance sheet'].map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </Layer>
+      </Arrive>
     </div>
   )
 }
@@ -374,8 +322,7 @@ function Paths({ p, still }: { readonly p: number; readonly still: boolean }): R
             </div>
             <p className="mt-4 text-lg font-bold tracking-tight">A direct Baz relationship</p>
             <p className="text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
-              The bank’s own assistant, on the bank’s own journeys. What you just watched. Built
-              and running.
+              The bank’s own assistant, on its own journeys. What you just watched.
             </p>
           </Surface>
         </Arrive>
@@ -387,24 +334,18 @@ function Paths({ p, still }: { readonly p: number; readonly still: boolean }): R
               </span>
               <Claim kind="production" />
             </div>
-            <p className="mt-4 text-lg font-bold tracking-tight">Secure access through customer-chosen assistants</p>
+            <p className="mt-4 text-lg font-bold tracking-tight">Secure access for other assistants</p>
             <p className="text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
-              A strategic possibility. Baz already exposes itself as a tool another agent can
-              call, with every guardrail unchanged; what a bank would need around that is the
-              open question.
+              Baz is already an MCP server: any assistant can call it, every guardrail unchanged.
             </p>
           </Surface>
         </Arrive>
       </div>
 
-      <div className="relative mt-6 h-16">
-        <Wires>
-          <Link from={[0.25, 0]} to={[0.5, 0.9]} draw={Math.min(Math.max((p - 0.3) / 0.4, 0), 1)} tone="primary" />
-          <Link from={[0.75, 0]} to={[0.5, 0.9]} draw={Math.min(Math.max((p - 0.4) / 0.4, 0), 1)} />
-        </Wires>
-      </div>
-      <Arrive order={4} still={still} className="flex justify-center">
-        <Node icon={<LandmarkIcon />} label="The bank’s capabilities" detail="Either way, the products stay regulated and the bank’s" tone="deep" />
+      <Bus columns={2} direction="gather" draw={(p - 0.25) / 0.5} className="mt-2" />
+
+      <Arrive order={4} still={still} className="flex justify-center pt-2">
+        <Node icon={<LandmarkIcon />} label="The bank’s capabilities" detail="Either way, regulated and the bank’s" tone="deep" />
       </Arrive>
     </div>
   )
