@@ -296,7 +296,7 @@ const VERBS = [
   { icon: <LinkIcon />, label: 'Connect', detail: 'To the products that fit' },
 ] as const
 
-const NEEDS = ['Mortgage', 'Joint account', 'Protection'] as const
+const NEEDS = ['Mortgage', 'Joint account', 'Savings'] as const
 
 /** Baz's name, its three verbs with an arrow between each, and the needs they find. */
 function MeetBaz({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
