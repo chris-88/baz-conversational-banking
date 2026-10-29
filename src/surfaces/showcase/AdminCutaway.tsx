@@ -151,7 +151,7 @@ function Screen({
                 <Badge className="text-[10px]">Settled</Badge>
               </div>
               <p className="text-muted-foreground mt-1">
-                Once. Initiated by the customer; settled by the bank.
+                Once, under PSD2 through Nexus. Initiated by the customer; settled by the bank.
               </p>
             </div>
             <p className="text-muted-foreground mt-4 text-[11px] font-semibold tracking-[0.12em] uppercase">

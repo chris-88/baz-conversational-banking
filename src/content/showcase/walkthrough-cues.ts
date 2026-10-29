@@ -56,7 +56,10 @@ export const WALKTHROUGH_CUES: readonly ShowcaseCue<WalkthroughScene>[] = [
     startMs: 108_900,
     endMs: 130_500,
     scene: 'move',
-    presenter: { eyebrow: 'The money moves', title: 'Moved here, so the bank can watch it grow.' },
+    presenter: {
+      eyebrow: 'PSD2 payment',
+      title: 'Her tap is a PSD2 payment instruction. The deposit comes here.',
+    },
   },
   {
     id: 'later',

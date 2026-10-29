@@ -74,10 +74,7 @@ export async function loadCaseState(caseId: string): Promise<CaseState> {
     linkedAccounts,
     transfers,
   ] = await Promise.all([
-    supabase
-      .from('applications')
-      .select('id, product, state, catalogue_id')
-      .eq('case_id', caseId),
+    supabase.from('applications').select('id, product, state, catalogue_id').eq('case_id', caseId),
     supabase.from('product_interests').select('product, status').eq('case_id', caseId),
     supabase.from('plans').select('id, status').eq('case_id', caseId),
     supabase.from('application_requests').select('id, status'),
@@ -126,11 +123,13 @@ export async function loadCaseState(caseId: string): Promise<CaseState> {
     reusedBy,
     linkedAccounts: linkedAccounts.data ?? [],
     // `numeric` columns arrive as strings from PostgREST. A card compares its amount as a number.
-    transfers: ((transfers.data ?? []) as {
-      to_application_id: string | null
-      amount: number | string
-      state: string
-    }[]).map((row) => ({ ...row, amount: Number(row.amount) })),
+    transfers: (
+      (transfers.data ?? []) as {
+        to_application_id: string | null
+        amount: number | string
+        state: string
+      }[]
+    ).map((row) => ({ ...row, amount: Number(row.amount) })),
   }
 }
 
@@ -324,7 +323,10 @@ export function settledState(card: Card, state: CaseState): Settled | undefined 
       if (transfer.state === 'settled') {
         return {
           label: `${euro(card.amount)} landed in ${card.toLabel}`,
-          note: card.cadence === 'monthly' ? 'The first of them. The rest follow each month.' : 'Settled.',
+          note:
+            card.cadence === 'monthly'
+              ? 'The first of them. The rest follow each month.'
+              : 'Settled.',
         }
       }
       if (transfer.state === 'failed') {
@@ -366,11 +368,11 @@ export function settledTransfer(transfer: {
   return transfer.cadence === 'monthly'
     ? {
         label: `${euro(transfer.amount)} a month to ${transfer.toLabel}`,
-        note: 'Set up. The first one is on its way; Baz will say when it lands.',
+        note: 'Set up through Nexus under PSD2. The first one is on its way; Baz will say when it lands.',
       }
     : {
         label: `${euro(transfer.amount)} on its way to ${transfer.toLabel}`,
-        note: 'Baz will say when it lands.',
+        note: 'Instructed through Nexus under PSD2. Baz will say when it lands.',
       }
 }
 

@@ -482,10 +482,11 @@ export const WALKTHROUGH_EVENTS: readonly TranscriptEvent[] = [
     id: 'k-transfer',
     atMs: 111_400,
     card: TRANSFER_CARD,
-    settleAtMs: 113_500,
+    /* Live for the whole of "authorises a transfer and the money moves ... here", so the room reads the PSD2 strip. */
+    settleAtMs: 115_600,
     settled: {
       label: '€32,000 on its way to Your Bank of Ireland current account',
-      note: 'Baz will say when it lands.',
+      note: 'Instructed through Nexus under PSD2. Baz will say when it lands.',
     },
   },
   {

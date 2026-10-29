@@ -104,7 +104,7 @@ describe('AccountsOverviewCard', () => {
 })
 
 describe('TransferCard', () => {
-  it('initiates with the card\'s own figures and never says the money has landed', async () => {
+  it("initiates with the card's own figures and never says the money has landed", async () => {
     const onMove = vi.fn(() => Promise.resolve())
     render(<TransferCard card={transfer} onMove={onMove} />)
 
@@ -119,6 +119,14 @@ describe('TransferCard', () => {
       expect(screen.getByText('€32,000 on its way to SuperSaver')).toBeInTheDocument(),
     )
     expect(screen.queryByText(/landed/)).not.toBeInTheDocument()
+  })
+
+  it('says what the tap is before it is tapped, and after', async () => {
+    render(<TransferCard card={transfer} onMove={() => Promise.resolve()} />)
+    expect(screen.getByText('PSD2')).toBeInTheDocument()
+    expect(screen.getByText('Payment initiation')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Move it' }))
+    await waitFor(() => expect(screen.getByText(/under PSD2/)).toBeInTheDocument())
   })
 })
 
@@ -141,7 +149,9 @@ describe('settledState for the open banking cards', () => {
     expect(settledState(transfer, empty)).toBeUndefined()
     const initiated = {
       ...empty,
-      transfers: [{ to_application_id: transfer.toApplicationId, amount: 32_000, state: 'initiated' }],
+      transfers: [
+        { to_application_id: transfer.toApplicationId, amount: 32_000, state: 'initiated' },
+      ],
     }
     expect(settledState(transfer, initiated)?.label).toBe('€32,000 on its way to SuperSaver')
     const other = {
@@ -151,7 +161,9 @@ describe('settledState for the open banking cards', () => {
     expect(settledState(transfer, other)).toBeUndefined()
     const settled = {
       ...empty,
-      transfers: [{ to_application_id: transfer.toApplicationId, amount: 32_000, state: 'settled' }],
+      transfers: [
+        { to_application_id: transfer.toApplicationId, amount: 32_000, state: 'settled' },
+      ],
     }
     expect(settledState(transfer, settled)?.label).toBe('€32,000 landed in SuperSaver')
   })
