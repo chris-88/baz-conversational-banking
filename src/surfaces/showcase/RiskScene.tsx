@@ -93,11 +93,11 @@ function Picture({
   }
 }
 
+/** The opening's three journeys again, so the room sees the same products it was shown first. */
 const PRODUCTS = [
-  { icon: <PiggyBankIcon />, label: 'Savings' },
   { icon: <HomeIcon />, label: 'Mortgages' },
-  { icon: <ShieldIcon />, label: 'Protection' },
   { icon: <WalletIcon />, label: 'Accounts' },
+  { icon: <PiggyBankIcon />, label: 'Savings' },
 ] as const
 
 /** The conversation, zooming back until it is one surface in a wider financial environment. */
@@ -106,7 +106,7 @@ function Compress({ p, still }: { readonly p: number; readonly still: boolean })
   return (
     <div className="relative grid w-full max-w-3xl place-items-center">
       <div
-        className="absolute inset-0 grid grid-cols-4 items-start gap-4 pt-2"
+        className="absolute inset-x-0 top-0 mx-auto grid max-w-xl grid-cols-3 items-start gap-4 pt-2"
         style={{ opacity: Math.min(Math.max((p - 0.35) / 0.4, 0), 1) }}
       >
         {PRODUCTS.map((product) => (
