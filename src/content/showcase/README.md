@@ -11,8 +11,8 @@ from the file and the chapter ends when the track ends. Keep `durationTargetMs` 
 in step with the mastered length so the progress rail and cue bounds agree before the file
 has loaded.
 
-The opening (`opportunity.mp3`, 47.0 s) and closing (`risk.mp3`, 50.6 s) tracks are the
-mastered HeyGen narration. `walkthrough.mp3` (174.4 s) is the ElevenLabs read of the savings
+The opening (`opportunity.mp3`, 48.0 s, re-read 2026-10-29 with savings as the third
+journey) and closing (`risk.mp3`, 50.6 s) tracks are the mastered narration. `walkthrough.mp3` (174.4 s) is the ElevenLabs read of the savings
 story in `vault/docs/showcase/walkthrough-narration.md`, as spoken on 2026-10-29. Every cue in the three chapters, and every
 event in `walkthrough.ts`, sits where its words are spoken: word timestamps were taken off
 each track with a scratch run of faster-whisper (not a project dependency; the narration

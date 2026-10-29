@@ -3,15 +3,16 @@ import type { OpportunityScene, ShowcaseCue } from './types'
 /**
  * The first sixty seconds: why.
  *
- * Times are where the narrator's words land in `opportunity.mp3`: each cue starts on the
- * first word of its sentence (word timestamps taken from the track, see the README).
+ * Times are where the narrator's words land in `opportunity.mp3` (the 2026-10-29 read, 48.0 s):
+ * each cue starts on the first word of its sentence (word timestamps taken from the track, see
+ * the README).
  */
 export const OPPORTUNITY_CUES: readonly ShowcaseCue<OpportunityScene>[] = [
   {
     id: 'headline',
     chapter: 'opportunity',
     startMs: 0,
-    endMs: 7_700,
+    endMs: 7_800,
     scene: 'headline',
     presenter: {
       eyebrow: 'The opportunity',
@@ -21,8 +22,8 @@ export const OPPORTUNITY_CUES: readonly ShowcaseCue<OpportunityScene>[] = [
   {
     id: 'fragments',
     chapter: 'opportunity',
-    startMs: 7_700,
-    endMs: 20_400,
+    startMs: 7_800,
+    endMs: 21_840,
     scene: 'fragments',
     presenter: {
       eyebrow: 'Today’s experience',
@@ -32,19 +33,19 @@ export const OPPORTUNITY_CUES: readonly ShowcaseCue<OpportunityScene>[] = [
   {
     id: 'question',
     chapter: 'opportunity',
-    startMs: 20_400,
-    endMs: 24_900,
+    startMs: 21_840,
+    endMs: 25_800,
     scene: 'question',
     presenter: {
       eyebrow: 'A different starting point',
-      title: 'What if we started with what they’re actually trying to do?',
+      title: 'What if instead, we started with a simple conversation?',
     },
   },
   {
     id: 'meet',
     chapter: 'opportunity',
-    startMs: 24_900,
-    endMs: 34_500,
+    startMs: 25_800,
+    endMs: 36_920,
     scene: 'meet',
     presenter: {
       eyebrow: 'Meet Baz',
@@ -54,8 +55,8 @@ export const OPPORTUNITY_CUES: readonly ShowcaseCue<OpportunityScene>[] = [
   {
     id: 'capability',
     chapter: 'opportunity',
-    startMs: 34_500,
-    endMs: 47_040,
+    startMs: 36_920,
+    endMs: 48_000,
     scene: 'capability',
     presenter: {
       eyebrow: 'Built on what exists',

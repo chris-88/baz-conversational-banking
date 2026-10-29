@@ -8,8 +8,8 @@ import {
   LandmarkIcon,
   LightbulbIcon,
   LinkIcon,
+  PiggyBankIcon,
   SearchIcon,
-  ShieldIcon,
   TableIcon,
   UsersIcon,
   WalletIcon,
@@ -44,7 +44,13 @@ export function OpportunityScene({
   const p = still ? 1 : progress
 
   return (
-    <ChapterStage cueId={cue.id} presenter={cue.presenter} designWidth={768} maxScale={1.45} still={still}>
+    <ChapterStage
+      cueId={cue.id}
+      presenter={cue.presenter}
+      designWidth={768}
+      maxScale={1.45}
+      still={still}
+    >
       <Picture scene={cue.scene} p={p} still={still} />
     </ChapterStage>
   )
@@ -79,22 +85,22 @@ const EVENTS = [
     label: 'Marriage',
     detail: 'Married in the spring',
     brings: ['Two incomes', 'One household'],
-    /** "get married", at 3.6 s of a 7.7 s cue. */
-    at: 0.47,
+    /** "get married", "have children", "first home": 3.6, 4.7 and 6.4 s of a 7.8 s cue. */
+    at: 0.46,
   },
   {
     icon: <BabyIcon />,
     label: 'Family',
     detail: 'A baby in August',
     brings: ['Someone to provide for', 'New costs'],
-    at: 0.56,
+    at: 0.6,
   },
   {
     icon: <HomeIcon />,
     label: 'First home',
     detail: 'Renting, and want to buy',
     brings: ['A deposit', 'What they can afford'],
-    at: 0.7,
+    at: 0.82,
   },
 ] as const
 
@@ -168,22 +174,22 @@ const JOURNEYS = [
     title: 'Mortgage',
     steps: ['Application', 'Affordability', 'Documents', 'Assessment'],
     tone: 'primary',
-    /** "a mortgage", "an account", "protection": 12.0, 12.9 and 14.0 s of a 12.7 s cue from 7.7 s. */
-    at: 0.34,
+    /** "a mortgage", "an account", "savings": 12.0, 12.9 and 13.7 s of a 14.0 s cue from 7.8 s. */
+    at: 0.3,
   },
   {
     icon: <WalletIcon />,
     title: 'Accounts',
     steps: ['Identity', 'Account setup', 'Features', 'Confirmation'],
     tone: 'deep',
-    at: 0.41,
+    at: 0.37,
   },
   {
-    icon: <ShieldIcon />,
-    title: 'Protection',
-    steps: ['Health questions', 'Cover options', 'Underwriting', 'Confirmation'],
+    icon: <PiggyBankIcon />,
+    title: 'Savings',
+    steps: ['Account choice', 'Identity', 'Declarations', 'Funding'],
     tone: 'success',
-    at: 0.5,
+    at: 0.42,
   },
 ] as const
 
@@ -191,12 +197,12 @@ const REPEATED = ['Name', 'Address', 'Income']
 
 /**
  * The same three moments, and the three journeys the bank turns them into, one per word.
- * The journeys drift apart on "navigate multiple processes" and their forms light up with
- * the same three facts.
+ * The journeys drift apart on "the customer experiences life" and their forms light up with
+ * the same three facts on "they need to know the products".
  */
 function Fragments({ p, still }: { readonly p: number; readonly still: boolean }): ReactNode {
-  const spread = settle((p - 0.6) / 0.25)
-  const typed = settle((p - 0.76) / 0.12)
+  const spread = settle((p - 0.52) / 0.2)
+  const typed = settle((p - 0.7) / 0.12)
   return (
     <div className="flex w-full max-w-3xl flex-col items-center gap-6">
       <Arrive order={0} still={still}>
@@ -244,7 +250,14 @@ function OneMessage({ p, still }: { readonly p: number; readonly still: boolean 
         }}
       >
         {JOURNEYS.map((journey) => (
-          <JourneyCard key={journey.title} icon={journey.icon} title={journey.title} steps={journey.steps} tone={journey.tone} ghost />
+          <JourneyCard
+            key={journey.title}
+            icon={journey.icon}
+            title={journey.title}
+            steps={journey.steps}
+            tone={journey.tone}
+            ghost
+          />
         ))}
       </div>
 
@@ -256,9 +269,15 @@ function OneMessage({ p, still }: { readonly p: number; readonly still: boolean 
         </Arrive>
         <Arrive order={2} still={still}>
           <div className="flex flex-wrap justify-center gap-2">
-            <Chip tone="primary" icon={<HeartIcon />}>Married · spring</Chip>
-            <Chip tone="primary" icon={<BabyIcon />}>Baby · August</Chip>
-            <Chip tone="primary" icon={<HomeIcon />}>Renting → buying</Chip>
+            <Chip tone="primary" icon={<HeartIcon />}>
+              Married · spring
+            </Chip>
+            <Chip tone="primary" icon={<BabyIcon />}>
+              Baby · August
+            </Chip>
+            <Chip tone="primary" icon={<HomeIcon />}>
+              Renting → buying
+            </Chip>
           </div>
         </Arrive>
         <Arrive order={3} still={still}>
@@ -290,9 +309,7 @@ function MeetBaz({ p, still }: { readonly p: number; readonly still: boolean }):
       <div className="grid w-full grid-cols-[1fr_5.5rem_1fr_5.5rem_1fr] items-start">
         {VERBS.map((verb, index) => (
           <Fragment key={verb.label}>
-            {index > 0 && (
-              <Arrow draw={(p - (index - 1) * 0.15) / 0.4} className="pt-[33px]" />
-            )}
+            {index > 0 && <Arrow draw={(p - (index - 1) * 0.15) / 0.4} className="pt-[33px]" />}
             <Arrive order={1 + index * 2} still={still}>
               <Node icon={verb.icon} label={verb.label} detail={verb.detail} size="lg" />
             </Arrive>
@@ -301,7 +318,10 @@ function MeetBaz({ p, still }: { readonly p: number; readonly still: boolean }):
       </div>
 
       <Arrive order={7} still={still}>
-        <div className="flex flex-wrap justify-center gap-2" style={{ opacity: Math.min(Math.max((p - 0.55) / 0.3, 0), 1) }}>
+        <div
+          className="flex flex-wrap justify-center gap-2"
+          style={{ opacity: Math.min(Math.max((p - 0.55) / 0.3, 0), 1) }}
+        >
           {NEEDS.map((need) => (
             <Chip key={need} tone="primary">
               {need}
@@ -330,38 +350,38 @@ function Capabilities({ p, still }: { readonly p: number; readonly still: boolea
         className="flex w-full flex-col items-center gap-6"
         style={{ opacity: 1 - 0.85 * phone, transform: `scale(${String(1 - 0.04 * phone)})` }}
       >
-      <Arrive order={0} still={still} className="w-2/3">
-        <Surface lift className="flex items-center justify-between gap-4 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-baz-primary size-8">
-              <BazMark />
-            </span>
-            <p className="text-lg font-bold tracking-tight">The conversation</p>
-          </div>
-          <Chip tone="primary">New</Chip>
-        </Surface>
-      </Arrive>
+        <Arrive order={0} still={still} className="w-2/3">
+          <Surface lift className="flex items-center justify-between gap-4 px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-baz-primary size-8">
+                <BazMark />
+              </span>
+              <p className="text-lg font-bold tracking-tight">The conversation</p>
+            </div>
+            <Chip tone="primary">New</Chip>
+          </Surface>
+        </Arrive>
 
-      <Arrive order={1} still={still} className="-mt-6 w-full">
-        <div className="w-full">
-          <Bus columns={CAPABILITIES.length} direction="spread" draw={p / 0.6} />
-          <div className="grid grid-cols-5 gap-3 pt-1">
-            {CAPABILITIES.map((capability, index) => (
-              <Arrive key={capability.label} order={2 + index} still={still}>
-                <Surface className="flex flex-col items-center gap-2 px-2 py-4 text-center">
-                  <Tile tone="deep" size="sm">
-                    {capability.icon}
-                  </Tile>
-                  <p className="text-[12.5px] font-semibold">{capability.label}</p>
-                </Surface>
-              </Arrive>
-            ))}
+        <Arrive order={1} still={still} className="-mt-6 w-full">
+          <div className="w-full">
+            <Bus columns={CAPABILITIES.length} direction="spread" draw={p / 0.6} />
+            <div className="grid grid-cols-5 gap-3 pt-1">
+              {CAPABILITIES.map((capability, index) => (
+                <Arrive key={capability.label} order={2 + index} still={still}>
+                  <Surface className="flex flex-col items-center gap-2 px-2 py-4 text-center">
+                    <Tile tone="deep" size="sm">
+                      {capability.icon}
+                    </Tile>
+                    <p className="text-[12.5px] font-semibold">{capability.label}</p>
+                  </Surface>
+                </Arrive>
+              ))}
+            </div>
+            <p className="text-muted-foreground mt-3 text-center text-[12.5px]">
+              Already built. Already regulated. Already the bank’s.
+            </p>
           </div>
-          <p className="text-muted-foreground mt-3 text-center text-[12.5px]">
-            Already built. Already regulated. Already the bank’s.
-          </p>
-        </div>
-      </Arrive>
+        </Arrive>
       </div>
 
       {/* The hand-off: the phone the next chapter plays in, arriving over the diagram. */}

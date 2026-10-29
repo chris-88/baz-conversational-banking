@@ -24,7 +24,7 @@ export const showcaseConfig = {
       id: 'opportunity',
       label: 'Opportunity',
       src: opportunityMp3,
-      durationTargetMs: 47_040,
+      durationTargetMs: 48_000,
       captions: opportunityVtt,
     },
     walkthrough: {
