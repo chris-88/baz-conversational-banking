@@ -53,7 +53,10 @@ picture), the article route, the example prompt and the chapter labels.
 ## Fixtures
 
 - Cards reuse the explainer's (`src/content/how-it-works/story.ts`); the three new ones are
-  built here and validated against `cardSchema`.
+  built here and validated against `cardSchema`. Three of the explainer's are cut to fit the
+  phone's screen whole (plan milestones, rate rows, status steps): the room cannot scroll, so
+  a card it is meant to read has to fit under the line that introduces it, about 580 design
+  pixels. The test checks every kept row against the original.
 - `payload.ts` is the loan packet produced by the real form engine over the facts listed in
   it, pinned so the bundle does not carry the 444KB definition. `payload.test.ts` recomputes
   it. Re-pin by running the same pipeline (the test shows the calls) and copying the counts.

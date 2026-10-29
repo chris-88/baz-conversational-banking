@@ -7,6 +7,9 @@ import { Reveal } from '@/components/Primitives'
 import type { TranscriptView } from './transcript'
 import { ScriptedComposer } from './ScriptedComposer'
 
+/** The scroller's own padding, so an entry held at the top keeps its margin. */
+const PADDING = 16
+
 /**
  * The conversation on the phone, from the product's own parts.
  *
@@ -24,16 +27,27 @@ export function ShowcaseTranscript({
 }): ReactNode {
   const scroller = useRef<HTMLDivElement>(null)
 
-  /* Always to the bottom. There is no reader to respect here, unlike the live transcript. */
+  /*
+   * To the bottom, unless the newest entry is taller than the screen.
+   *
+   * There is no reader to respect here, unlike the live transcript, so each new entry brings
+   * the view down with it. A card taller than the screen is the exception: brought to the
+   * bottom it shows its last rows and loses its title, and nobody in the room can scroll up
+   * for it. Its top is held on screen instead, and the view moves on with the next line.
+   */
   useEffect(() => {
     const element = scroller.current
     if (element === null) return
+    const newest = element.lastElementChild
+    const bottom = element.scrollHeight - element.clientHeight
+    const top = newest instanceof HTMLElement ? Math.max(0, newest.offsetTop - PADDING) : bottom
+    const target = Math.min(bottom, top)
     // jsdom has no scrollTo on elements; the property assignment is the same instruction.
     if (typeof element.scrollTo !== 'function') {
-      element.scrollTop = element.scrollHeight
+      element.scrollTop = target
       return
     }
-    element.scrollTo({ top: element.scrollHeight, behavior: still ? 'auto' : 'smooth' })
+    element.scrollTo({ top: target, behavior: still ? 'auto' : 'smooth' })
   }, [view.revision, still])
 
   const firstBaz = view.entries.findIndex(
@@ -44,7 +58,7 @@ export function ShowcaseTranscript({
     <>
       <div
         ref={scroller}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
+        className="relative min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
         aria-label="The conversation"
       >
         {view.entries.map((entry, index) => {

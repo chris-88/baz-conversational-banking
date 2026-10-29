@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { cardSchema } from '@contracts/cards.ts'
 import { formSnapshot } from '@tenants/boi/forms/snapshots.ts'
 import type { FormField } from '@domain/forms/definition.ts'
+import { PLAN_CARD, RATES_CARD, STATUS_AT_START } from '@/content/how-it-works/story'
 import { showcaseConfig } from './config'
 import {
   FORM_DECLARATIONS_CARD,
   FORM_UPLOAD_CARD,
   SHOWCASE_OPTIONS_CARD,
+  SHOWCASE_PLAN_CARD,
+  SHOWCASE_RATES_CARD,
   SHOWCASE_REUSE_CARD,
   SHOWCASE_STATUS_CARD,
   UPLOAD_REQUEST_CARD,
@@ -27,7 +30,7 @@ describe('the walkthrough transcript', () => {
       const result = cardSchema.safeParse(event.card)
       expect(result.success, `${event.id}: ${result.error?.message ?? ''}`).toBe(true)
     }
-    for (const card of [SHOWCASE_OPTIONS_CARD, SHOWCASE_REUSE_CARD, SHOWCASE_STATUS_CARD, FORM_DECLARATIONS_CARD, FORM_UPLOAD_CARD, UPLOAD_REQUEST_CARD]) {
+    for (const card of [SHOWCASE_PLAN_CARD, SHOWCASE_OPTIONS_CARD, SHOWCASE_RATES_CARD, SHOWCASE_REUSE_CARD, SHOWCASE_STATUS_CARD, FORM_DECLARATIONS_CARD, FORM_UPLOAD_CARD, UPLOAD_REQUEST_CARD]) {
       expect(cardSchema.safeParse(card).success).toBe(true)
     }
   })
@@ -96,6 +99,26 @@ describe('the walkthrough transcript', () => {
       for (const product of item.usedFor) expect(SHOWCASE_REUSE_CARD.started).toContain(product)
     }
     expect(SHOWCASE_REUSE_CARD.title).toBe(`${String(SHOWCASE_REUSE_CARD.items.length)} things you never had to type`)
+  })
+
+  it('cuts the long cards to the phone’s screen without inventing anything', () => {
+    if (SHOWCASE_PLAN_CARD.type !== 'plan_proposal' || PLAN_CARD.type !== 'plan_proposal') throw new Error('shape')
+    expect(SHOWCASE_PLAN_CARD.milestones).toHaveLength(4)
+    for (const milestone of SHOWCASE_PLAN_CARD.milestones) expect(PLAN_CARD.milestones).toContainEqual(milestone)
+
+    if (SHOWCASE_RATES_CARD.type !== 'mortgage_rates' || RATES_CARD.type !== 'mortgage_rates') throw new Error('shape')
+    expect(SHOWCASE_RATES_CARD.options).toHaveLength(3)
+    for (const option of SHOWCASE_RATES_CARD.options) expect(RATES_CARD.options).toContainEqual(option)
+
+    if (SHOWCASE_STATUS_CARD.type !== 'status' || STATUS_AT_START.type !== 'status') throw new Error('shape')
+    for (const application of SHOWCASE_STATUS_CARD.applications) {
+      const original = STATUS_AT_START.applications.find((candidate) => candidate.id === application.id)
+      if (original === undefined) throw new Error(application.id)
+      const left = application.steps.filter((step) => !step.done)
+      expect(left.length).toBeLessThanOrEqual(3)
+      expect(application.outstandingCount).toBe(left.length)
+      for (const step of application.steps) expect(original.steps).toContainEqual(step)
+    }
   })
 
   it('recites the loan form’s declarations in the form’s own words', () => {

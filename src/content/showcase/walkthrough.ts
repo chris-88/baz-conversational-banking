@@ -69,13 +69,51 @@ export const SHOWCASE_REUSE_CARD: Card =
       })()
     : REUSE_CARD
 
+/*
+ * The cards are cut to the phone's screen.
+ *
+ * Nobody in the room scrolls the phone, so a card the room is meant to read has to fit the
+ * screen whole, under the line that introduces it: about 580 design pixels. The product's
+ * cards are longer than that because they are complete, and completeness is not what the
+ * room needs. The plan keeps four of its ten milestones, the rate table three of its four
+ * rows, and each application on the status card its first three outstanding steps. The reuse
+ * card is left whole because the narration counts its rows, and the transcript keeps its top
+ * on screen instead.
+ */
+
+/** Four of the plan's ten milestones, the ones that name an outcome rather than a stage. */
+export const SHOWCASE_PLAN_CARD: Card =
+  PLAN_CARD.type === 'plan_proposal'
+    ? {
+        ...PLAN_CARD,
+        milestones: PLAN_CARD.milestones.filter((milestone) =>
+          ['Deposit target reached', 'Mortgage approved', 'Mortgage protection in place', 'Home purchase completed'].some(
+            (label) => milestone.label.startsWith(label),
+          ),
+        ),
+      }
+    : PLAN_CARD
+
+/** The rate table without its ten-year row: the shortest and longest fixes and the variable. */
+export const SHOWCASE_RATES_CARD: Card =
+  RATES_CARD.type === 'mortgage_rates'
+    ? { ...RATES_CARD, options: RATES_CARD.options.filter((option) => option.id !== 'new.standard.10y.b') }
+    : RATES_CARD
+
+/** How many outstanding steps each application shows: the card lists what is left, and three say enough. */
+const STEPS_SHOWN = 3
+
 export const SHOWCASE_STATUS_CARD: Card =
   STATUS_AT_START.type === 'status'
     ? {
         ...STATUS_AT_START,
-        applications: STATUS_AT_START.applications.filter((application) =>
-          (STARTED as readonly string[]).includes(application.product),
-        ),
+        applications: STATUS_AT_START.applications
+          .filter((application) => (STARTED as readonly string[]).includes(application.product))
+          .map((application) => {
+            const done = application.steps.filter((step) => step.done)
+            const left = application.steps.filter((step) => !step.done).slice(0, STEPS_SHOWN)
+            return { ...application, steps: [...done, ...left], outstandingCount: left.length }
+          }),
       }
     : STATUS_AT_START
 
@@ -175,7 +213,7 @@ export const WALKTHROUGH_EVENTS: readonly TranscriptEvent[] = [
     kind: 'card',
     id: 'k-plan',
     atMs: 20_400,
-    card: PLAN_CARD,
+    card: SHOWCASE_PLAN_CARD,
     settleAtMs: 26_400,
     settled: { label: PLAN_CARD.type === 'plan_proposal' ? PLAN_CARD.title : 'Plan kept', note: 'Saved. You can change or stop it any time.' },
   },
@@ -221,7 +259,7 @@ export const WALKTHROUGH_EVENTS: readonly TranscriptEvent[] = [
     atMs: 49_100,
     text: 'Those are the four things the published table is indexed by, so here is what it says for you. Indicative, from the table, not advice.',
   },
-  { kind: 'card', id: 'k-rates', atMs: 49_900, card: RATES_CARD },
+  { kind: 'card', id: 'k-rates', atMs: 49_900, card: SHOWCASE_RATES_CARD },
 
   /* authenticate: 75–100 s */
   { kind: 'cut', id: 'x-auth', atMs: 54_800 },
